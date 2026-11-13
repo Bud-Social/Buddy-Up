@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { Mic, Square, X, Send } from 'lucide-react';
+import { Mic, Square, X, Send, Eye } from 'lucide-react';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 
 interface Props {
-  onSend: (blob: Blob, durationMs: number) => void;
+  onSend: (blob: Blob, durationMs: number, viewOnce: boolean) => void;
   onCancel: () => void;
+  viewOnce: boolean;
+  onToggleViewOnce: () => void;
 }
 
 function formatDuration(ms: number): string {
@@ -13,7 +15,7 @@ function formatDuration(ms: number): string {
   return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export function VoiceNoteRecorder({ onSend, onCancel }: Props) {
+export function VoiceNoteRecorder({ onSend, onCancel, viewOnce, onToggleViewOnce }: Props) {
   const { state, durationMs, audioBlob, audioUrl, start, stop, cancel, reset } = useVoiceRecorder();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
@@ -76,15 +78,13 @@ export function VoiceNoteRecorder({ onSend, onCancel }: Props) {
   const handleSend = () => {
     if (state === 'recording') {
       stop();
+      return;
     }
-  };
-
-  useEffect(() => {
-    if (state === 'done' && audioBlob) {
-      onSend(audioBlob, durationMs);
+    if (audioBlob) {
+      onSend(audioBlob, durationMs, viewOnce);
       reset();
     }
-  }, [state, audioBlob]);
+  };
 
   const handleCancel = () => {
     cancel();
@@ -110,6 +110,19 @@ export function VoiceNoteRecorder({ onSend, onCancel }: Props) {
           </div>
         )}
       </div>
+
+      {state === 'done' && (
+        <button
+          onClick={onToggleViewOnce}
+          title={viewOnce ? 'View once — tap to turn off' : 'Send as view once'}
+          aria-pressed={viewOnce}
+          className={`flex items-center gap-0.5 rounded-full px-2 py-1 text-[9px] font-bold shrink-0 self-center ${
+            viewOnce ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-black text-buddy-text-secondary border border-buddy-surface-raised'
+          }`}
+        >
+          <Eye size={10} /> 1×
+        </button>
+      )}
 
       <span className={`text-xs font-mono shrink-0 self-center ${state === 'recording' ? 'text-buddy-red font-bold' : 'text-buddy-text-secondary'}`}>
         {formatDuration(durationMs)}

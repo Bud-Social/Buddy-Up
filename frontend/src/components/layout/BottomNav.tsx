@@ -19,6 +19,10 @@ const items = [
  */
 export function BottomNav() {
   const loc = useLocation();
+  // When a conversation is open on a phone, the input bar owns the bottom of
+  // the screen — the nav steps aside instead of fighting it.
+  const chatOpen = /^\/(messages|buddies\/messages)\/[^/]+/.test(loc.pathname);
+  if (chatOpen) return null;
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-buddy-black/95 backdrop-blur-lg border-t border-buddy-surface z-40">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">

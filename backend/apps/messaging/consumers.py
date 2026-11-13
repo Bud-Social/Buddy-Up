@@ -313,6 +313,7 @@ class ChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
         media_mime = str(data.get('media_mime') or '')[:100]
         file_name = str(data.get('file_name') or '')[:255]
         reply_to_id = data.get('reply_to_id') or None
+        view_once = bool(data.get('view_once'))
         metadata = data.get('metadata', {})
         if not isinstance(metadata, dict):
             metadata = {}
@@ -330,6 +331,7 @@ class ChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
             file_name=file_name,
             reply_to_id=reply_to_id,
             metadata=metadata,
+            view_once=view_once,
         )
         if not msg:
             return
@@ -462,7 +464,7 @@ class ChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
         return not any_blocked_with_others(user_id, others)
 
     @database_sync_to_async
-    def _save_message(self, body, message_type, media_url, media_mime, file_name, reply_to_id, metadata):
+    def _save_message(self, body, message_type, media_url, media_mime, file_name, reply_to_id, metadata, view_once=False):
         from .models import Conversation, Message
         try:
             conv = Conversation.objects.get(id=self.conversation_id)
@@ -481,6 +483,7 @@ class ChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
                 file_name=file_name,
                 reply_to_id=reply_to_id,
                 metadata=metadata or {},
+                view_once=view_once,
             )
             conv.last_message_text = body[:200] if body else message_type
             conv.last_message_at = timezone.now()
@@ -516,6 +519,8 @@ class ChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
             'reply_data': reply_data,
             'metadata': msg.metadata,
             'is_read': msg.is_read,
+            'view_once': msg.view_once,
+            'view_once_opened_at': msg.view_once_opened_at.isoformat() if msg.view_once_opened_at else None,
             'reactions': {},
             'sender_data': {
                 'username': msg.sender.username,

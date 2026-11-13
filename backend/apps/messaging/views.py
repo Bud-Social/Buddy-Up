@@ -157,6 +157,19 @@ class ConversationListView(views.APIView):
 
     def get(self, request):
         kind = request.query_params.get('kind') or 'main'
+        profile = request.user.profile
+        if kind == 'communities':
+            # Community chats the viewer belongs to (is_community conversations).
+            conversations = Conversation.objects.filter(
+                participants=profile, is_community=True,
+            ).prefetch_related('participants').order_by(
+                db_models.F('last_message_at').desc(nulls_last=True)
+            )
+            serializer = ConversationSerializer(conversations, many=True, context={'request': request})
+            return Response({
+                'success': True, 'data': serializer.data, 'message': 'OK',
+                'errors': None, 'pagination': None,
+            })
         if kind not in ('main', 'buddy'):
             kind = 'main'
         conversations = Conversation.objects.filter(
@@ -166,7 +179,6 @@ class ConversationListView(views.APIView):
             db_models.F('last_message_at').desc(nulls_last=True)
         )
         # Hide DMs where either party has blocked the other.
-        profile = request.user.profile
         visible = [
             conv for conv in conversations
             if not is_conversation_blocked(conv, profile)
@@ -360,6 +372,7 @@ class MessageListView(views.APIView):
             file_name=data.get('file_name', ''),
             reply_to_id=reply_to_id,
             metadata=data.get('metadata', {}),
+            view_once=bool(data.get('view_once')),
         )
         conv.last_message_text = msg.body[:200] if msg.body else msg.message_type
         conv.last_message_at = timezone.now()
@@ -2389,5 +2402,167 @@ class CallSessionSwitchView(views.APIView):
             'success': True,
             'data': {'call_type': session.call_type, 'accepted': accept},
             'message': 'Switched to video.' if accept else 'Call stays voice.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class ViewOnceOpenedView(views.APIView):
+    """POST /messages/<id>/view-once/ — the recipient opened the payload.
+
+    Marks the message as opened, after which the serializer withholds the
+    media URL from everyone but the sender.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, message_id):
+        msg = get_object_or_404(
+            Message, id=message_id, conversation__participants=request.user.profile,
+        )
+        if msg.view_once and not msg.view_once_opened_at:
+            msg.view_once_opened_at = timezone.now()
+            msg.save(update_fields=['view_once_opened_at', 'updated_at'])
+        return Response({
+            'success': True,
+            'data': {
+                'view_once': msg.view_once,
+                'view_once_opened_at': msg.view_once_opened_at.isoformat() if msg.view_once_opened_at else None,
+            },
+            'message': 'Opened.',
+            'errors': None, 'pagination': None,
+        })
+
+
+def _conversation_label(conv, viewer):
+    """A readable title for a conversation from the viewer's perspective."""
+    if conv.is_group or conv.is_community:
+        return conv.group_name or ('Community' if conv.is_community else 'Group')
+    other = conv.participants.exclude(pk=viewer.pk).first()
+    return getattr(other, 'display_name', None) or 'Conversation'
+
+
+class CallHistoryView(views.APIView):
+    """GET /messaging/calls/ — every call touching the viewer, newest first."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        profile = request.user.profile
+        logs = (
+            CallLog.objects.filter(db_models.Q(caller=profile) | db_models.Q(callee=profile))
+            .select_related('conversation', 'caller', 'callee')
+            .order_by('-created_at')[:100]
+        )
+        # Which of those conversations has a live call right now — one query.
+        convo_ids = {log.conversation_id for log in logs}
+        active = {}
+        if convo_ids:
+            active = {
+                s.conversation_id: s
+                for s in CallSession.objects.filter(
+                    conversation_id__in=convo_ids, status__in=('ringing', 'active'),
+                ).only('id', 'conversation_id', 'call_type', 'status')
+            }
+        data = []
+        for log in logs:
+            is_outgoing = log.caller_id == profile.pk
+            other = log.callee if is_outgoing else log.caller
+            live = active.get(log.conversation_id)
+            data.append({
+                'id': str(log.id),
+                'conversation_id': str(log.conversation_id),
+                'conversation_label': _conversation_label(log.conversation, profile),
+                'counterpart_name': getattr(other, 'display_name', ''),
+                'counterpart_username': getattr(other, 'username', ''),
+                'counterpart_avatar_url': getattr(other, 'avatar_url', ''),
+                'call_type': log.call_type,
+                'status': log.status,
+                'duration_seconds': log.duration_seconds,
+                'is_outgoing': is_outgoing,
+                'active_call': {
+                    'session_id': str(live.id),
+                    'call_type': live.call_type,
+                    'status': live.status,
+                } if live else None,
+                'created_at': log.created_at.isoformat(),
+            })
+        return Response({
+            'success': True, 'data': data, 'message': 'OK',
+            'errors': None, 'pagination': None,
+        })
+
+
+class StoriesView(views.APIView):
+    """GET /messaging/stories/ — last 24h of moment posts from buddies + followed users.
+
+    Returns authors (not posts), each with their unread-first story list, so
+    the messages surface can render a story strip in one round trip.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from apps.feed.models import Post
+        from apps.profiles.models import BuddyRelationship, FollowRelationship
+        from django.db.models import Q as _Q
+
+        profile = request.user.profile
+        since = timezone.now() - timedelta(hours=24)
+
+        buddy_rows = BuddyRelationship.objects.filter(
+            status='confirmed',
+        ).filter(
+            _Q(from_user=profile) | _Q(to_user=profile),
+        ).values_list('from_user', 'to_user')
+        peer_ids = set()
+        for a, b in buddy_rows:
+            peer_ids.add(a if b == profile.pk else b)
+        following_ids = FollowRelationship.objects.filter(
+            follower=profile,
+        ).values_list('followee_id', flat=True)
+        ids = peer_ids | set(following_ids)
+
+        if not ids:
+            return Response({
+                'success': True, 'data': [], 'message': 'OK',
+                'errors': None, 'pagination': None,
+            })
+
+        posts = (
+            Post.objects.filter(
+                post_type='moment', is_deleted=False, moderation_status='clean',
+                created_at__gte=since, author_id__in=ids,
+            )
+            .select_related('author')
+            .order_by('-created_at')
+        )
+
+        grouped = {}
+        order = []
+        for post in posts:
+            aid = str(post.author_id)
+            if aid not in grouped:
+                grouped[aid] = {
+                    'user': {
+                        'user_id': str(post.author.user_id),
+                        'username': post.author.username,
+                        'display_name': post.author.display_name,
+                        'avatar_url': post.author.avatar_url or '',
+                        'verification_status': getattr(post.author, 'verification_status', 'none'),
+                    },
+                    'stories': [],
+                    'latest_at': None,
+                }
+                order.append(aid)
+            grouped[aid]['stories'].append({
+                'id': str(post.id),
+                'body': post.body,
+                'media_urls': post.media_urls or [],
+                'visibility': post.visibility,
+                'created_at': post.created_at.isoformat(),
+            })
+            if grouped[aid]['latest_at'] is None:
+                grouped[aid]['latest_at'] = post.created_at.isoformat()
+
+        data = [grouped[aid] for aid in order]
+        return Response({
+            'success': True, 'data': data, 'message': 'OK',
             'errors': None, 'pagination': None,
         })

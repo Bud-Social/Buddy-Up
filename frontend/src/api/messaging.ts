@@ -67,6 +67,9 @@ export interface Message {
   metadata: Record<string, unknown>;
   is_read: boolean;
   deleted_for: string[];
+  /** View-once media: the recipient may open the payload exactly once. */
+  view_once?: boolean;
+  view_once_opened_at?: string | null;
   sender_data: ParticipantData;
   reply_data: {
     id: string;
@@ -107,6 +110,39 @@ export interface CallParticipantInfo {
   username: string;
   avatar_url: string;
   joined_at: string | null;
+}
+
+export interface StoryReel {
+  user: {
+    user_id: string;
+    username: string;
+    display_name: string;
+    avatar_url: string;
+    verification_status?: string;
+  };
+  stories: Array<{
+    id: string;
+    body: string;
+    media_urls: string[];
+    visibility: string;
+    created_at: string;
+  }>;
+  latest_at: string | null;
+}
+
+export interface CallHistoryEntry {
+  id: string;
+  conversation_id: string;
+  conversation_label: string;
+  counterpart_name: string;
+  counterpart_username: string;
+  counterpart_avatar_url: string;
+  call_type: string;
+  status: string;
+  duration_seconds: number;
+  is_outgoing: boolean;
+  active_call: { session_id: string; call_type: string; status: string } | null;
+  created_at: string;
 }
 
 export interface CallSessionCredentials {
@@ -208,7 +244,7 @@ export const messagingApi = {
    * Buddy chats have their own inbox, so they never mix with the rest of
    * the messaging.
    */
-  getConversations: (kind: 'main' | 'buddy' = 'main') =>
+  getConversations: (kind: 'main' | 'buddy' | 'communities' = 'main') =>
     apiClient.get<ApiResponse<Conversation[]>>('/messaging/conversations/', { params: { kind } }).then((r) => r.data),
 
   /**
@@ -254,6 +290,7 @@ export const messagingApi = {
       file_name?: string;
       reply_to_id?: string;
       metadata?: Record<string, unknown>;
+      view_once?: boolean;
     },
   ) =>
     apiClient
@@ -305,6 +342,14 @@ export const messagingApi = {
       .post<ApiResponse<CallLog>>(`/messaging/conversations/${conversationId}/calls/`, data)
       .then((r) => r.data),
 
+  /** Mark a view-once message as opened by the recipient. */
+  markViewOnceOpened: (messageId: string) =>
+    apiClient
+      .post<ApiResponse<{ view_once: boolean; view_once_opened_at: string | null }>>(
+        `/messaging/messages/${messageId}/view-once/`,
+      )
+      .then((r) => r.data),
+
   // ── Multi-party LiveKit calls ────────────────────────────────────────────
   startOrJoinCall: (conversationId: string, callType: 'audio' | 'video') =>
     apiClient
@@ -316,6 +361,16 @@ export const messagingApi = {
   getActiveCallSession: (conversationId: string) =>
     apiClient
       .get<ApiResponse<CallSessionCredentials | null>>(`/messaging/conversations/${conversationId}/calls/session/`)
+      .then((r) => r.data),
+
+  getCallHistory: () =>
+    apiClient
+      .get<ApiResponse<CallHistoryEntry[]>>('/messaging/calls/')
+      .then((r) => r.data),
+
+  getStories: () =>
+    apiClient
+      .get<ApiResponse<StoryReel[]>>('/messaging/stories/')
       .then((r) => r.data),
 
   leaveCall: (conversationId: string) =>

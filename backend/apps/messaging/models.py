@@ -156,6 +156,10 @@ class Message(TimestampedModel, SoftDeleteModel):
     reply_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='replies')
     metadata = models.JSONField(default=dict)
     is_read = models.BooleanField(default=False)
+    # View-once media (photo/video/voice/audio): the recipient may open the
+    # payload exactly once. The sender keeps their own copy.
+    view_once = models.BooleanField(default=False)
+    view_once_opened_at = models.DateTimeField(null=True, blank=True)
     # Per-user soft delete: list of user_ids who have deleted this message for themselves
     deleted_for = models.JSONField(default=list)
 

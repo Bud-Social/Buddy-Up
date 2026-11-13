@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {MessageCircle,Trophy,Utensils, Search, Users, Dumbbell, Radio, TrendingUp, X, Hash, Ticket, Tag, Handshake, UserCheck, LayoutGrid } from 'lucide-react';
+import {MessageCircle,Trophy,Utensils, Search, Users, Dumbbell, Radio, TrendingUp, X, Hash, Ticket, Tag, Handshake, UserCheck, LayoutGrid, User, MapPin, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -31,8 +31,8 @@ type DiscoverTab = 'all' | 'people' | 'gyms' | 'lives' | 'topics' | 'communities
  */
 interface Suggestion {
   label: string;
-  /** An emoji or a dot colour, so the row reads at a glance. */
-  icon?: string;
+  /** Vector glyph so the row reads at a glance — an emoji does not inherit theme colour. */
+  icon?: LucideIcon;
   onPick: () => void;
 }
 
@@ -185,14 +185,14 @@ export default function Discover() {
       for (const r of ROLE_SUGGESTIONS) {
         out.push({
           label: r.label,
-          icon: '👤',
+          icon: User,
           onPick: () => { setRoleFilter(r.role); setQuery(''); },
         });
       }
       if (cityFilter) {
         out.push({
           label: `Near ${cityFilter}`,
-          icon: '📍',
+          icon: MapPin,
           onPick: () => { setCityFilter(cityFilter); setQuery(''); },
         });
       }
@@ -203,14 +203,14 @@ export default function Discover() {
       for (const c of categories.slice(0, 6)) {
         out.push({
           label: c.display_name || c.name,
-          icon: '🏋️',
+          icon: Dumbbell,
           onPick: () => { setGymCategory(c.name); setQuery(''); },
         });
       }
       if (cityFilter) {
         out.push({
           label: `Gyms near ${cityFilter}`,
-          icon: '📍',
+          icon: MapPin,
           onPick: () => { setGymCity(cityFilter); setQuery(''); },
         });
       }
@@ -221,7 +221,7 @@ export default function Discover() {
       if (liveNow.length > 0) {
         out.push({
           label: `Live now (${liveNow.length})`,
-          icon: '🔴',
+          icon: Radio,
           onPick: () => { setQuery(''); },
         });
       }
@@ -229,7 +229,7 @@ export default function Discover() {
       for (const c of categories.slice(0, 4)) {
         out.push({
           label: c,
-          icon: '📡',
+          icon: Radio,
           onPick: () => { setQuery(c); },
         });
       }
@@ -241,7 +241,7 @@ export default function Discover() {
         for (const h of hashtags.slice(0, 6)) {
           out.push({
             label: `#${h.tag}`,
-            icon: '🏷️',
+            icon: Hash,
             onPick: () => { setQuery(`#${h.tag}`); },
           });
         }
@@ -249,7 +249,7 @@ export default function Discover() {
         for (const t of FALLBACK_TOPICS) {
           out.push({
             label: `#${t}`,
-            icon: '🏷️',
+            icon: Hash,
             onPick: () => { setQuery(`#${t}`); },
           });
         }
@@ -260,7 +260,7 @@ export default function Discover() {
       for (const c of (trending?.communities ?? []).slice(0, 5)) {
         out.push({
           label: c.group_name,
-          icon: '👥',
+          icon: Users,
           onPick: () => navigate(`/communities/${c.id}`),
         });
       }
@@ -426,7 +426,7 @@ export default function Discover() {
                 onClick={s.onPick}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-buddy-surface text-sm text-buddy-text-primary hover:bg-buddy-surface-raised hover:text-buddy-green transition-colors"
               >
-                {s.icon && <span aria-hidden="true">{s.icon}</span>}
+                {s.icon && <s.icon size={13} strokeWidth={2} aria-hidden="true" />}
                 {s.label}
               </button>
             ))}

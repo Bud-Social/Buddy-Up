@@ -28,6 +28,7 @@ class SendMessageInputSerializer(serializers.Serializer):
     file_name = serializers.CharField(required=False, allow_blank=True, max_length=255)
     reply_to_id = serializers.UUIDField(required=False, allow_null=True)
     metadata = serializers.JSONField(required=False, default=dict)
+    view_once = serializers.BooleanField(required=False, default=False)
 
 
 class MessageReactionSerializer(serializers.Serializer):
@@ -45,9 +46,21 @@ class MessageSerializer(serializers.ModelSerializer):
             'id', 'conversation_id', 'sender_id', 'message_type', 'body',
             'media_url', 'media_mime', 'file_name',
             'reply_to_id', 'metadata', 'is_read', 'deleted_for',
+            'view_once', 'view_once_opened_at',
             'sender_data', 'reply_data', 'reactions', 'created_at',
         ]
         read_only_fields = ['id', 'sender_id', 'created_at']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        viewer = getattr(getattr(request, 'user', None), 'profile', None) if request else None
+        # A view-once payload is delivered exactly once. After the recipient
+        # opens it, the media URL is withheld for everyone but the sender.
+        if instance.view_once and instance.view_once_opened_at:
+            if viewer is None or viewer.pk != instance.sender.pk:
+                data['media_url'] = ''
+        return data
 
     def get_sender_data(self, obj):
         return {

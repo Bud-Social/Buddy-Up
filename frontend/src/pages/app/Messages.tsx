@@ -16,14 +16,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Send, Phone, Video, MoreVertical, Check, CheckCheck,
   X, FileText, Plus, MapPin, BarChart2, Smile, Mic, Search, Calendar, Clock, Download, Forward,
-  ChevronLeft, ChevronRight, Palette, Menu, UserCheck,
+  ChevronLeft, ChevronRight, Palette, Menu, UserCheck, Eye, EyeOff,
+  ArrowUpRight, ArrowDownLeft, Camera, Globe,
 } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/components/ui/Toast';
 import { apiClient } from '@/api/client';
 import { messagingApi } from '@/api/messaging';
-import type { Conversation, Message as MsgType, LinkPreviewData } from '@/api/messaging';
+import type { Conversation, Message as MsgType, LinkPreviewData, CallHistoryEntry, StoryReel } from '@/api/messaging';
 import { useAuthStore } from '@/store/authStore';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import type { ChatEvent } from '@/hooks/useChatSocket';
@@ -252,11 +253,11 @@ function MessageEmojiPicker({ onPick, onClose, anchorRef }: {
         theme={Theme.DARK}
         emojiStyle={EmojiStyle.APPLE}
         lazyLoadEmojis
-        searchDisabled={false}
+        searchDisabled
         skinTonesDisabled
         previewConfig={{ showPreview: false }}
-        width={320}
-        height={350}
+        width="100%"
+        height={360}
         onEmojiClick={(emojiData) => {
           lastPickAt.current = Date.now();
           onPick(emojiData.emoji);
@@ -328,9 +329,24 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   const [isTyping, setIsTyping] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [messagesLoading, setMessagesLoading] = useState(false);
+  // Tab bar on the conversations panel: messages / communities / calls / stories.
+  const [listTab, setListTab] = useState<'messages' | 'communities' | 'calls' | 'stories'>('messages');
+  const [communityConvos, setCommunityConvos] = useState<Conversation[]>([]);
+  const [communityLoading, setCommunityLoading] = useState(false);
+  const [callHistory, setCallHistory] = useState<CallHistoryEntry[] | null>(null);
+  const [callHistoryLoading, setCallHistoryLoading] = useState(false);
+  const [storyReels, setStoryReels] = useState<StoryReel[] | null>(null);
+  const [storyReelsLoading, setStoryReelsLoading] = useState(false);
+  const [storyViewer, setStoryViewer] = useState<{ reelIndex: number; storyIndex: number } | null>(null);
+  // Local "seen" set so the story ring shows unread state without a server flag.
+  const [seenStories, setSeenStories] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('buddyup-seen-stories') ?? '[]') as string[]); }
+    catch { return new Set(); }
+  });
 
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null);
+  const [viewOnce, setViewOnce] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [replyTo, setReplyTo] = useState<MsgType | null>(null);
@@ -342,6 +358,15 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showEmojiInput, setShowEmojiInput] = useState(false);
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+  const [viewOnceOpenId, setViewOnceOpenId] = useState<string | null>(null);
+
+  const openViewOnce = useCallback((msg: MsgType) => {
+    setViewOnceOpenId(msg.id);
+    setMessages((prev) => prev.map((m) => (
+      m.id === msg.id ? { ...m, view_once_opened_at: new Date().toISOString() } : m
+    )));
+    messagingApi.markViewOnceOpened(msg.id).catch(() => { /* best effort */ });
+  }, []);
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
@@ -382,7 +407,7 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   }, [messages]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const emojiToggleRef = useRef<HTMLButtonElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeConvoRef = useRef<Conversation | null>(null);
@@ -621,6 +646,75 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
     return () => clearInterval(interval);
   }, [fetchConversations]);
 
+  // The story strip lives on the messages tab, so fetch it once on mount;
+  // the tab bodies below refetch lazily when opened. Optional call: partial
+  // API mocks in tests may not implement it.
+  useEffect(() => {
+    const fetchStories = (messagingApi as { getStories?: typeof messagingApi.getStories }).getStories;
+    if (typeof fetchStories !== 'function') return;
+    setStoryReelsLoading(true);
+    fetchStories.call(messagingApi)
+      .then((res) => setStoryReels(res.data ?? []))
+      .catch(() => setStoryReels([]))
+      .finally(() => setStoryReelsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const api = messagingApi as unknown as {
+      getConversations?: typeof messagingApi.getConversations;
+      getCallHistory?: typeof messagingApi.getCallHistory;
+    };
+    if (listTab === 'communities' && communityConvos.length === 0 && !communityLoading && typeof api.getConversations === 'function') {
+      setCommunityLoading(true);
+      api.getConversations.call(messagingApi, 'communities')
+        .then((res) => setCommunityConvos(res.data ?? []))
+        .catch(() => setCommunityConvos([]))
+        .finally(() => setCommunityLoading(false));
+    }
+    if (listTab === 'calls' && callHistory === null && !callHistoryLoading && typeof api.getCallHistory === 'function') {
+      setCallHistoryLoading(true);
+      api.getCallHistory.call(messagingApi)
+        .then((res) => setCallHistory(res.data ?? []))
+        .catch(() => setCallHistory([]))
+        .finally(() => setCallHistoryLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listTab]);
+
+  const markStorySeen = useCallback((storyId: string) => {
+    setSeenStories((prev) => {
+      const next = new Set(prev);
+      next.add(storyId);
+      try { localStorage.setItem('buddyup-seen-stories', JSON.stringify([...next])); } catch { /* quota */ }
+      return next;
+    });
+  }, []);
+
+  const openReel = useCallback((reelIndex: number) => {
+    setStoryViewer({ reelIndex, storyIndex: 0 });
+  }, []);
+
+  // Mark the open story as seen, and auto-advance every 5s.
+  useEffect(() => {
+    if (!storyViewer) return;
+    const reel = storyReels?.[storyViewer.reelIndex];
+    const story = reel?.stories[storyViewer.storyIndex];
+    if (!story) return;
+    markStorySeen(story.id);
+    const t = window.setTimeout(() => {
+      setStoryViewer((cur) => {
+        if (!cur) return cur;
+        const r = storyReels?.[cur.reelIndex];
+        if (!r) return null;
+        if (cur.storyIndex + 1 < r.stories.length) return { ...cur, storyIndex: cur.storyIndex + 1 };
+        const nextReel = cur.reelIndex + 1;
+        return nextReel < (storyReels?.length ?? 0) ? { reelIndex: nextReel, storyIndex: 0 } : null;
+      });
+    }, 5000);
+    return () => window.clearTimeout(t);
+  }, [storyViewer, storyReels, markStorySeen]);
+
   const openConversation = useCallback(async (convo: Conversation, pushUrl = true) => {
     setActiveConvo(convo);
     setMessages([]);
@@ -674,12 +768,20 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   }, [messages, typingUsers]);
 
   // ── Input / typing ─────────────────────────────────────────────────────────
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setBody(e.target.value);
     if (!isTyping) { setIsTyping(true); sendTypingStart(); }
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     typingTimerRef.current = setTimeout(() => { setIsTyping(false); sendTypingStop(); }, 2500);
   };
+
+  // Auto-grow the textarea to fit its content, up to a cap.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+  }, [body]);
 
   // ── File staging ───────────────────────────────────────────────────────────
   const stageFile = useCallback((file: File) => {
@@ -696,6 +798,7 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
     if (mediaPreviewUrl) URL.revokeObjectURL(mediaPreviewUrl);
     setMediaFile(null);
     setMediaPreviewUrl(null);
+    setViewOnce(false);
   }, [mediaPreviewUrl]);
 
   // ── Send ───────────────────────────────────────────────────────────────────
@@ -706,6 +809,7 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
     media_mime?: string;
     file_name?: string;
     metadata?: Record<string, unknown>;
+    view_once?: boolean;
   }) => {
     if (!activeConvoRef.current) return;
 
@@ -748,6 +852,8 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
     else if (mediaMime.startsWith('audio/') && finalType === 'text') finalType = 'voice';
     else if (mediaMime && !mediaMime.startsWith('image/') && !mediaMime.startsWith('video/') && !mediaMime.startsWith('audio/') && finalType === 'text') finalType = 'document';
 
+    const onceFlag = opts?.view_once ?? (viewOnce && finalType !== 'text');
+
     setBody('');
     setShowEmojiInput(false);
     if (isTyping) { setIsTyping(false); sendTypingStop(); }
@@ -766,6 +872,8 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
       file_name: fileName,
       reply_to_id: replyTo?.id ?? null,
       metadata: opts?.metadata ?? {},
+      view_once: onceFlag,
+      view_once_opened_at: null,
       is_read: false,
       deleted_for: [],
       sender_data: {
@@ -801,7 +909,10 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
       file_name: fileName,
       reply_to_id: replyTo?.id ?? undefined,
       metadata: opts?.metadata ?? {},
+      view_once: onceFlag || undefined,
     };
+
+    if (onceFlag) setViewOnce(false);
 
     if (sendMessage(outgoing)) return; // socket carried it; the echo reconciles
 
@@ -822,9 +933,9 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
       console.error('[Messages] REST send failed', err);
       toast('error', err?.response?.data?.message || err?.message || 'Message not sent.');
     }
-  }, [body, mediaFile, isTyping, replyTo, sendMessage, sendTypingStop, profile, clearMediaFile, toast]);
+  }, [body, mediaFile, isTyping, replyTo, sendMessage, sendTypingStop, profile, clearMediaFile, toast, viewOnce]);
 
-  const handleVoiceNoteSend = useCallback(async (blob: Blob, duration: number) => {
+  const handleVoiceNoteSend = useCallback(async (blob: Blob, duration: number, once: boolean) => {
     setShowVoiceRecorder(false);
     if (!activeConvoRef.current) return;
     setIsUploading(true);
@@ -840,7 +951,9 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
         media_mime: up.data.mime,
         file_name: up.data.file_name,
         metadata: { duration_ms: duration },
+        view_once: once,
       });
+      setViewOnce(false);
     } catch { /* silent */ }
     finally { setIsUploading(false); }
   }, [sendTextOrMedia]);
@@ -971,7 +1084,10 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
 
   // ── RENDER ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-[calc(100dvh-8rem)] md:h-[calc(100dvh-3rem)] lg:h-dvh overflow-hidden bg-buddy-black" style={{ paddingBottom: kbHeight }}>
+    <div
+      className={`flex overflow-hidden bg-buddy-black md:h-[calc(100dvh-3rem)] lg:h-dvh ${activeConvo ? 'h-[100dvh]' : 'h-[calc(100dvh-8rem)]'}`}
+      style={{ paddingBottom: activeConvo ? 0 : kbHeight }}
+    >
       {/* Advanced Call Room overlay */}
       {callState !== 'idle' && (
         <CallRoom
@@ -1000,6 +1116,70 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
           onAddBuddy={addBuddyToCall}
         />
       )}
+
+      {/* Story viewer */}
+      {storyViewer && (() => {
+        const reel = storyReels?.[storyViewer.reelIndex];
+        const story = reel?.stories[storyViewer.storyIndex];
+        if (!reel || !story) return null;
+        const progress = (storyViewer.storyIndex + 1) / reel.stories.length;
+        const goPrev = () => setStoryViewer((cur) => {
+          if (!cur) return cur;
+          if (cur.storyIndex > 0) return { ...cur, storyIndex: cur.storyIndex - 1 };
+          return cur.reelIndex > 0 ? { reelIndex: cur.reelIndex - 1, storyIndex: (storyReels?.[cur.reelIndex - 1]?.stories.length ?? 1) - 1 } : cur;
+        });
+        const goNext = () => setStoryViewer((cur) => {
+          if (!cur) return cur;
+          const r = storyReels?.[cur.reelIndex];
+          if (!r) return null;
+          if (cur.storyIndex + 1 < r.stories.length) return { ...cur, storyIndex: cur.storyIndex + 1 };
+          const nextReel = cur.reelIndex + 1;
+          return nextReel < (storyReels?.length ?? 0) ? { reelIndex: nextReel, storyIndex: 0 } : null;
+        });
+        return (
+          <div className="fixed inset-0 z-[110] bg-black flex flex-col select-none">
+            {/* Progress bars */}
+            <div className="absolute top-2 left-2 right-2 flex gap-1 z-10">
+              {reel.stories.map((_, i) => (
+                <div key={i} className="flex-1 h-0.5 rounded-full bg-white/25 overflow-hidden">
+                  <div
+                    className="h-full bg-white rounded-full transition-all duration-300"
+                    style={{ width: i < storyViewer.storyIndex ? '100%' : i === storyViewer.storyIndex ? `${Math.round(progress * 100)}%` : '0%' }}
+                  />
+                </div>
+              ))}
+            </div>
+            {/* Reel header */}
+            <div className="absolute top-5 left-3 right-3 flex items-center gap-2 z-10">
+              <Avatar src={reel.user.avatar_url} alt={reel.user.display_name} size="sm" className="ring-1 ring-white/30" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{reel.user.display_name}</p>
+                <p className="text-[10px] text-white/60">{new Date(story.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+              <button onClick={() => setStoryViewer(null)} className="ml-auto p-2 text-white/80 hover:text-white" aria-label="Close stories">
+                <X size={22} />
+              </button>
+            </div>
+            {/* Story body */}
+            <button className="absolute left-0 top-0 bottom-0 w-1/3 z-10" onClick={goPrev} aria-label="Previous story" />
+            <button className="absolute right-0 top-0 bottom-0 w-1/3 z-10" onClick={goNext} aria-label="Next story" />
+            {story.media_urls[0] ? (
+              /\.(mp4|webm|mov)(\?|$)/i.test(story.media_urls[0]) ? (
+                <video src={story.media_urls[0]} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <img src={story.media_urls[0]} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              )
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-buddy-green/30 to-buddy-black px-8">
+                <p className="text-xl font-bold text-white text-center">{story.body}</p>
+              </div>
+            )}
+            {story.media_urls[0] && story.body && (
+              <p className="absolute bottom-10 inset-x-4 text-sm text-white text-center bg-black/40 rounded-xl px-3 py-2">{story.body}</p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Call-back dialog for call-log bubbles */}
       {callAgainFor && (
@@ -1050,19 +1230,205 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
               </button>
             )}
           </div>
-          <div className="flex items-center gap-2 bg-buddy-surface rounded-2xl px-3 py-2">
-            <Search size={15} className="text-buddy-text-secondary shrink-0" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search conversations..."
-              className="flex-1 bg-transparent text-sm focus:outline-none text-buddy-text-primary placeholder:text-buddy-text-secondary/50"
-            />
+
+          {/* Tab bar: messages / communities / calls / stories */}
+          <div className="grid grid-cols-4 rounded-2xl bg-buddy-surface p-1 mb-3">
+            {([
+              { key: 'messages', label: 'Messages' },
+              { key: 'communities', label: 'Community' },
+              { key: 'calls', label: 'Calls' },
+              { key: 'stories', label: 'Stories' },
+            ] as const).map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setListTab(key)}
+                aria-pressed={listTab === key}
+                className={`text-[11px] font-semibold rounded-xl py-1.5 transition-colors ${
+                  listTab === key ? 'bg-buddy-black text-buddy-green shadow-sm' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
+
+          {listTab !== 'stories' && (
+            <div className="flex items-center gap-2 bg-buddy-surface rounded-2xl px-3 py-2">
+              <Search size={15} className="text-buddy-text-secondary shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={listTab === 'calls' ? 'Search calls...' : listTab === 'communities' ? 'Search communities...' : 'Search conversations...'}
+                className="flex-1 bg-transparent text-sm focus:outline-none text-buddy-text-primary placeholder:text-buddy-text-secondary/50"
+              />
+            </div>
+          )}
+
+          {/* Story strip — buddies and people you follow, newest first */}
+          {!isDiscovery && listTab === 'messages' && storyReels && storyReels.length > 0 && (
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide mt-3 pb-1 -mx-1 px-1">
+              {storyReels.map((reel, i) => {
+                const unread = reel.stories.some((s) => !seenStories.has(s.id));
+                return (
+                  <button key={reel.user.user_id} onClick={() => openReel(i)} className="flex flex-col items-center gap-1 shrink-0 w-16">
+                    <span className={`p-[2.5px] rounded-full ${unread ? 'bg-gradient-to-tr from-buddy-green via-emerald-400 to-lime-300' : 'bg-buddy-surface'}`}>
+                      <Avatar src={reel.user.avatar_url} alt={reel.user.display_name} size="md" className="ring-2 ring-buddy-black" />
+                    </span>
+                    <span className="text-[9px] text-buddy-text-secondary truncate w-full text-center">{reel.user.display_name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {isLoading ? (
+        {listTab === 'calls' ? (
+          callHistory === null && callHistoryLoading ? (
+            <div className="flex-1 flex items-center justify-center text-buddy-text-secondary text-sm">Loading calls…</div>
+          ) : (callHistory ?? []).length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+              <Phone size={26} className="text-buddy-text-secondary/50" />
+              <p className="text-buddy-text-secondary text-sm">No calls yet. Start one from any chat.</p>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto divide-y divide-buddy-surface/40">
+              {(callHistory ?? []).filter((c) => !searchQuery || `${c.conversation_label} ${c.counterpart_name}`.toLowerCase().includes(searchQuery.toLowerCase())).map((call) => {
+                const when = new Date(call.created_at);
+                const today = when.toDateString() === new Date().toDateString();
+                const whenLabel = today ? when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : when.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                const dur = `${Math.floor(call.duration_seconds / 60)}:${String(call.duration_seconds % 60).padStart(2, '0')}`;
+                const missed = call.status === 'missed' || call.status === 'declined';
+                return (
+                  <div
+                    key={call.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={async () => {
+                      try {
+                        const res = await messagingApi.getConversation(call.conversation_id);
+                        if (res.data) openConversation(res.data as Conversation, true);
+                      } catch { /* closed or missing */ }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        void (async () => {
+                          try {
+                            const res = await messagingApi.getConversation(call.conversation_id);
+                            if (res.data) openConversation(res.data as Conversation, true);
+                          } catch { /* ignore */ }
+                        })();
+                      }
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-buddy-surface/50 transition-colors text-left cursor-pointer"
+                  >
+                    <span className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${missed ? 'bg-red-500/15 text-red-400' : 'bg-buddy-green/10 text-buddy-green'}`}>
+                      {call.call_type === 'video' ? <Video size={18} /> : <Phone size={18} />}
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold truncate">{call.counterpart_name || call.conversation_label}</span>
+                        <span className="flex items-center gap-2 shrink-0">
+                          {call.active_call && (
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const res = await messagingApi.getConversation(call.conversation_id);
+                                  if (res.data) {
+                                    openConversation(res.data as Conversation, true);
+                                    void startCall(call.active_call!.call_type === 'video' ? 'video' : 'audio');
+                                  }
+                                } catch { /* conversation closed to us */ }
+                              }}
+                              className="flex items-center gap-1 text-[10px] font-bold text-buddy-black bg-buddy-green rounded-full px-2 py-0.5"
+                              title="Rejoin the live call"
+                            >
+                              <Phone size={10} /> Rejoin
+                            </button>
+                          )}
+                          <span className="text-[10px] text-buddy-text-secondary shrink-0">{whenLabel}</span>
+                        </span>
+                      </span>
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-buddy-text-secondary truncate flex items-center gap-1">
+                          {call.is_outgoing ? <ArrowUpRight size={12} /> : <ArrowDownLeft size={12} />}
+                          {missed ? (call.status === 'declined' ? 'Declined' : 'Missed') : 'Answered'} · {dur}
+                        </span>
+                        <span className="text-[10px] text-buddy-text-secondary truncate shrink-0 max-w-[40%]">{call.conversation_label}</span>
+                      </span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : listTab === 'stories' ? (
+          <div className="flex-1 overflow-y-auto p-4">
+            {storyReelsLoading && !storyReels && (
+              <p className="text-center text-buddy-text-secondary text-sm py-10">Loading stories…</p>
+            )}
+            {!storyReelsLoading && storyReels && storyReels.length === 0 && (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-buddy-surface flex items-center justify-center">
+                  <Camera size={24} className="text-buddy-text-secondary" />
+                </div>
+                <p className="text-buddy-text-secondary text-sm">No stories right now.<br />Buddies and people you follow show up here.</p>
+              </div>
+            )}
+            {storyReels && storyReels.length > 0 && (
+              <div className="grid grid-cols-3 gap-3">
+                {storyReels.map((reel, i) => (
+                  <button key={reel.user.user_id} onClick={() => openReel(i)} className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-buddy-surface group">
+                    <img src={reel.stories[0]?.media_urls?.[0] ?? ''} alt={reel.user.display_name} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
+                    <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                    <span className="absolute top-1.5 left-1.5 p-[2px] rounded-full bg-buddy-green">
+                      <Avatar src={reel.user.avatar_url} alt={reel.user.display_name} size="xs" className="ring-2 ring-black" />
+                    </span>
+                    <span className="absolute bottom-1.5 left-2 right-2 text-[10px] font-semibold text-white truncate">{reel.user.display_name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : listTab === 'communities' ? (
+          communityLoading && communityConvos.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center text-buddy-text-secondary text-sm">Loading communities…</div>
+          ) : communityConvos.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+              <Globe size={26} className="text-buddy-text-secondary/50" />
+              <p className="text-buddy-text-secondary text-sm">No communities yet. Join one from the Communities page.</p>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto divide-y divide-buddy-surface/40">
+              {communityConvos.filter((c) => !searchQuery || conversationSearchText(c).includes(searchQuery.toLowerCase())).map((convo) => {
+                const isActive = activeConvo?.id === convo.id;
+                return (
+                  <button
+                    key={convo.id}
+                    onClick={() => openConversation(convo)}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 hover:bg-buddy-surface/50 transition-colors text-left ${isActive ? 'bg-buddy-surface/60' : ''}`}
+                  >
+                    <Avatar src={convo.group_avatar_url ?? ''} alt={convo.group_name} size="md" className="rounded-xl" />
+                    <span className="flex-1 min-w-0">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold truncate">{convo.group_name || 'Community'}</span>
+                        <span className="text-[10px] text-buddy-text-secondary shrink-0">{convo.last_message_at ? new Date(convo.last_message_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}</span>
+                      </span>
+                      <span className="text-xs text-buddy-text-secondary truncate block">
+                        {convo.last_message ? `${convo.last_message.sender_name === profile?.display_name ? 'You: ' : ''}${convo.last_message.body || '📎 Attachment'}` : 'No messages yet'}
+                      </span>
+                    </span>
+                    {convo.unread_count > 0 && (
+                      <span className="w-5 h-5 bg-buddy-green text-buddy-black text-[10px] font-extrabold rounded-full flex items-center justify-center shrink-0">{convo.unread_count > 9 ? '9+' : convo.unread_count}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )
+        ) : isLoading ? (
           <ConversationSkeleton />
         ) : filteredConvos.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
@@ -1376,13 +1742,13 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
 
                       {/* Reply context */}
                       {msg.reply_data && (
-                        <div className={`text-[10px] px-2.5 py-1 mb-0.5 rounded-lg max-w-full border-l-2 ${
+                        <div className={`text-[10px] px-2.5 py-1 mb-1 rounded-lg max-w-[85%] border-l-2 ${
                           isMine ? 'bg-buddy-black/10 border-buddy-black/30 text-buddy-black' : 'bg-buddy-surface-raised border-buddy-text-secondary/20 text-buddy-text-secondary'
                         }`}>
                           <span className="font-bold block truncate leading-tight">
                             {msg.reply_data.sender_name === profile?.display_name ? 'You' : msg.reply_data.sender_name}
                           </span>
-                          <span className="truncate block opacity-80 mt-px">{msg.reply_data.body || '📎 Attachment'}</span>
+                          <span className="truncate block opacity-80 mt-0.5 leading-snug">{msg.reply_data.body || '📎 Attachment'}</span>
                         </div>
                       )}
 
@@ -1499,7 +1865,28 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                           )}
 
                           {/* Media */}
-                          {!isLocation && !isPoll && !isEvent && msg.media_url && (
+                          {!isLocation && !isPoll && !isEvent && (msg.view_once && !isMine ? (
+                            msg.view_once_opened_at ? (
+                              <div className="flex items-center gap-2.5 px-3.5 py-3">
+                                <EyeOff size={17} className="opacity-60 shrink-0" />
+                                <div>
+                                  <p className="text-xs font-semibold text-buddy-text-primary">Opened</p>
+                                  <p className="text-[10px] opacity-60">View-once · media no longer available</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <button onClick={() => openViewOnce(msg)} className="flex items-center gap-2.5 px-3.5 py-3 hover:bg-buddy-surface/60 transition-colors text-left">
+                                <span className="w-9 h-9 rounded-full bg-buddy-green/15 flex items-center justify-center shrink-0">
+                                  <Eye size={18} className="text-buddy-green" />
+                                </span>
+                                <span className="min-w-0">
+                                  <span className="block text-xs font-semibold text-buddy-text-primary">View once</span>
+                                  <span className="block text-[10px] text-buddy-text-secondary">Tap to view</span>
+                                </span>
+                                <span className="text-[9px] font-bold bg-buddy-green text-buddy-black rounded-full w-5 h-5 flex items-center justify-center shrink-0">1×</span>
+                              </button>
+                            )
+                          ) : msg.media_url && (
                             <div className="max-w-full">
                               {msg.message_type === 'photo' ? (
                                 <div className="relative group/media">
@@ -1531,6 +1918,9 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                                   >
                                     <Download size={14} />
                                   </button>
+                                  {msg.view_once && isMine && (
+                                    <span className="absolute bottom-2 left-2 flex items-center gap-0.5 text-[9px] font-bold bg-black/60 text-buddy-green rounded-full px-1.5 py-0.5"><Eye size={9} /> 1×</span>
+                                  )}
                                 </div>
                               ) : msg.message_type === 'video' ? (
                                 <div className="relative group/media overflow-hidden rounded-[18px]">
@@ -1558,12 +1948,18 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                                   >
                                     <Download size={14} />
                                   </button>
+                                  {msg.view_once && isMine && (
+                                    <span className="absolute bottom-2 left-2 flex items-center gap-0.5 text-[9px] font-bold bg-black/60 text-buddy-green rounded-full px-1.5 py-0.5"><Eye size={9} /> 1×</span>
+                                  )}
                                 </div>
                               ) : msg.message_type === 'voice' ? (
                                 <div className="px-3 pt-3 pb-3 w-64">
                                   <div className={`flex items-center gap-2 mb-2 ${isMine ? 'text-buddy-black/70' : 'text-buddy-text-secondary'}`}>
                                     <Mic size={12} />
                                     <span className="text-[10px] font-semibold tracking-wide">VOICE NOTE</span>
+                                    {msg.view_once && isMine && (
+                                      <span className="flex items-center gap-0.5 text-[9px] font-bold text-buddy-green"><Eye size={9} /> 1× · {msg.view_once_opened_at ? 'Opened' : 'Not opened'}</span>
+                                    )}
                                     {msg.metadata?.duration_ms ? (
                                       <span className="text-[10px] ml-auto opacity-60">{Math.round((msg.metadata.duration_ms as number) / 1000)}s</span>
                                     ) : null}
@@ -1621,11 +2017,11 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                                 </div>
                               )}
                             </div>
-                          )}
+                          ))}
 
                           {/* Text body */}
                           {!isLocation && !isPoll && msg.body && (
-                            <p className="px-3 py-2 whitespace-pre-wrap break-words leading-snug"><RichText text={msg.body} /></p>
+                            <p className="px-3.5 py-2 whitespace-pre-wrap break-words leading-[1.45]"><RichText text={msg.body} /></p>
                           )}
 
                           {/* Link preview */}
@@ -1798,6 +2194,16 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                   <p className="text-xs font-medium truncate">{mediaFile.name}</p>
                   <p className="text-[10px] text-buddy-text-secondary">{(mediaFile.size / 1024 / 1024).toFixed(2)} MB</p>
                 </div>
+                {(mediaFile.type.startsWith('image/') || mediaFile.type.startsWith('video/') || mediaFile.type.startsWith('audio/')) && (
+                  <button
+                    onClick={() => setViewOnce((v) => !v)}
+                    title={viewOnce ? 'View once — tap to turn off' : 'Send as view once'}
+                    aria-pressed={viewOnce}
+                    className={`shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${viewOnce ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-black text-buddy-text-secondary border border-buddy-surface-raised'}`}
+                  >
+                    <Eye size={12} /> 1×
+                  </button>
+                )}
                 <button onClick={clearMediaFile} className="p-1 text-buddy-text-secondary hover:text-red-400 shrink-0">
                   <X size={16} />
                 </button>
@@ -1827,14 +2233,21 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
 
             {/* Voice recorder */}
             {showVoiceRecorder ? (
-              <VoiceNoteRecorder onSend={handleVoiceNoteSend} onCancel={() => setShowVoiceRecorder(false)} />
+              <VoiceNoteRecorder
+                viewOnce={viewOnce}
+                onToggleViewOnce={() => setViewOnce((v) => !v)}
+                onSend={handleVoiceNoteSend}
+                onCancel={() => { setShowVoiceRecorder(false); setViewOnce(false); }}
+              />
             ) : (
-              <div className="flex items-end gap-2">
+              <div className="flex items-center gap-2">
                 {/* Attachment menu */}
                 <div className="relative shrink-0">
                   <button
                     onClick={() => setShowAttachMenu((v) => !v)}
                     className="p-2.5 rounded-full bg-buddy-surface hover:bg-buddy-surface-raised text-buddy-text-secondary transition-colors"
+                    title="Attach"
+                    aria-label="Attach"
                   >
                     <Plus size={20} className={`transition-transform duration-200 ${showAttachMenu ? 'rotate-45 text-buddy-green' : ''}`} />
                   </button>
@@ -1851,11 +2264,11 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                   )}
                 </div>
 
-                {/* Text input */}
-                <div className="flex-1 flex items-end bg-buddy-surface rounded-3xl px-4 py-2.5 relative">
-                  <input
+                {/* Text input — auto-growing, vertically centered */}
+                <div className="flex-1 flex items-center bg-buddy-surface rounded-3xl px-4 py-1.5 relative">
+                  <textarea
                     ref={inputRef}
-                    type="text"
+                    rows={1}
                     value={body}
                     onChange={handleInput}
                     onKeyDown={(e) => {
@@ -1865,7 +2278,8 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                       }
                     }}
                     placeholder="Message..."
-                    className="flex-1 bg-transparent text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/40 focus:outline-none min-w-0"
+                    aria-label="Message"
+                    className="flex-1 bg-transparent text-sm leading-6 text-buddy-text-primary placeholder:text-buddy-text-secondary/40 focus:outline-none min-w-0 resize-none overflow-y-auto max-h-32 py-1.5"
                   />
                   <div className="flex items-center gap-0.5 ml-1 shrink-0">
                     <button
@@ -1877,7 +2291,7 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                       <Smile size={17} />
                     </button>
                     {!body.trim() && !mediaFile && (
-                      <button onClick={() => setShowVoiceRecorder(true)} className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-surface transition-colors">
+                      <button onClick={() => setShowVoiceRecorder(true)} className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-surface transition-colors" title="Record voice note">
                         <Mic size={17} />
                       </button>
                     )}
@@ -2051,6 +2465,40 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
           />
         </div>
       )}
+
+      {/* View-once overlay — photo/video/voice open exactly one time */}
+      {viewOnceOpenId && (() => {
+        const m = messages.find((msg) => msg.id === viewOnceOpenId);
+        if (!m) return null;
+        const body = (
+          <>
+            {m.message_type === 'photo' && (
+              <img src={m.media_url} alt="View-once photo" className="max-h-[85vh] max-w-[92vw] object-contain rounded-2xl shadow-2xl" />
+            )}
+            {m.message_type === 'video' && (
+              <video src={m.media_url} autoPlay controls playsInline className="max-h-[85vh] max-w-[92vw] bg-black rounded-2xl" />
+            )}
+            {m.message_type === 'voice' && (
+              <div className="bg-buddy-surface rounded-3xl p-6 w-72">
+                <p className="text-[10px] font-bold tracking-wide text-buddy-text-secondary mb-3 flex items-center gap-1.5"><Mic size={12} /> VOICE NOTE · VIEW ONCE</p>
+                <CustomAudioPlayer src={m.media_url} isMine={false} />
+              </div>
+            )}
+            {m.message_type !== 'photo' && m.message_type !== 'video' && m.message_type !== 'voice' && (
+              <a href={m.media_url} target="_blank" rel="noreferrer" className="text-buddy-green text-sm underline">Open attachment</a>
+            )}
+          </>
+        );
+        return (
+          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm" onClick={() => setViewOnceOpenId(null)}>
+            <button onClick={() => setViewOnceOpenId(null)} className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full bg-black/40 transition-all z-10">
+              <X size={24} />
+            </button>
+            <p className="absolute top-4 left-1/2 -translate-x-1/2 text-[10px] font-bold tracking-widest text-white/50">VIEW ONCE</p>
+            <div onClick={(e) => e.stopPropagation()}>{body}</div>
+          </div>
+        );
+      })()}
 
       {/* Chat Theme Picker */}
       {showThemePicker && (
