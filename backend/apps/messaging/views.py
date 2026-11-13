@@ -148,11 +148,20 @@ class _NoRedirectHandler(__import__('urllib.request', fromlist=['HTTPRedirectHan
 
 
 class ConversationListView(views.APIView):
+    """The conversations in one inbox.
+
+    The inbox is chosen with ``?kind=buddy``: buddy chats live in their own
+    inbox so they never mix with the rest of the messaging.
+    """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        kind = request.query_params.get('kind') or 'main'
+        if kind not in ('main', 'buddy'):
+            kind = 'main'
         conversations = Conversation.objects.filter(
             participants=request.user.profile,
+            kind=kind,
         ).prefetch_related('participants').order_by(
             db_models.F('last_message_at').desc(nulls_last=True)
         )
@@ -245,14 +254,19 @@ class StartConversationView(views.APIView):
         # Only a 1:1 thread can be a discovery thread, and it may only be
         # labelled 'discovery' when the buddy-finder rules actually allow it.
         origin = 'direct'
+        kind = 'main'
         if requested_origin == 'discovery' and len(all_participants) == 2:
             origin = 'discovery'
+            # A chat opened from the buddy finder belongs to the buddy
+            # inbox, not the general one.
+            kind = 'buddy'
 
         conv = Conversation.objects.create(
             is_group=len(all_participants) > 2,
             group_name=input_serializer.validated_data.get('group_name', ''),
             created_by=request.user.profile,
             origin=origin,
+            kind=kind,
         )
         conv.participants.set(all_participants)
 
@@ -503,7 +517,9 @@ class ConversationPromotionRespondView(views.APIView):
             promotion.save(update_fields=['status', 'responded_at'])
             conv.origin = 'buddy'
             conv.promoted_at = now
-            conv.save(update_fields=['origin', 'promoted_at'])
+            # The chat moves to the buddy inbox rather than sitting in both.
+            conv.kind = 'buddy'
+            conv.save(update_fields=['origin', 'promoted_at', 'kind'])
 
         from apps.profiles.buddy_notifications import notify_buddy_accepted
         notify_buddy_accepted(requester.user_id, profile.user_id)

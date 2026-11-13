@@ -151,20 +151,35 @@ function renderScope(scope: 'all' | 'discovery', entry: string) {
 }
 
 describe('Messages discovery scope', () => {
-  it('lists only discovery chats under the buddy route', async () => {
+  it('asks the server for the buddy inbox', async () => {
     api.getConversations.mockResolvedValue({
-      data: [
-        convo({ id: 'c1', origin: 'discovery' }),
-        convo({ id: 'c2', origin: 'direct' }),
-        convo({ id: 'c3', origin: 'group', is_group: true, group_name: 'Crew' }),
-      ],
+      data: [convo({ id: 'c1', origin: 'discovery' })],
     });
     renderScope('discovery', '/buddies/messages');
 
     expect(await screen.findByRole('heading', { name: 'Buddy chats' })).toBeDefined();
+    await waitFor(() => expect(api.getConversations).toHaveBeenCalledWith('buddy'));
+  });
+
+  it('shows the buddy inbox the server sent, unfiltered', async () => {
+    // The server files each conversation into an inbox; the page does not
+    // filter again, so what it gets is what it shows.
+    api.getConversations.mockResolvedValue({
+      data: [convo({ id: 'c1', origin: 'discovery' })],
+    });
+    renderScope('discovery', '/buddies/messages');
+
     await waitFor(() => expect(screen.getByText('Dawn')).toBeDefined());
     expect(screen.getAllByText('Dawn').length).toBe(1);
     expect(screen.queryByText('Crew')).toBeNull();
+  });
+
+  it('asks for the main inbox on the main messages surface', async () => {
+    api.getConversations.mockResolvedValue({ data: [] });
+    renderScope('all', '/messages');
+
+    await screen.findByRole('heading', { name: 'Messages' });
+    await waitFor(() => expect(api.getConversations).toHaveBeenCalledWith('main'));
   });
 
   it('offers promotion only on a promotable discovery chat', async () => {

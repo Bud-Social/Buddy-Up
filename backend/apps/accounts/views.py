@@ -450,6 +450,9 @@ class RegisterView(views.APIView):
                 display_name=display_name,
                 role=data['role'],
                 privacy_level='private',
+                # The encrypted copy of the date of birth, so "find a buddy"
+                # can show an age band without asking for it again.
+                date_of_birth=data['dob'].isoformat(),
             )
         except Exception:
             # Username collision raced between validation and insert — derive
@@ -463,6 +466,7 @@ class RegisterView(views.APIView):
                 display_name=display_name,
                 role=data['role'],
                 privacy_level='private',
+                date_of_birth=data['dob'].isoformat(),
             )
 
         # OTP token for email verification. The activation link is the primary
@@ -2739,6 +2743,12 @@ class SocialAgeSetupView(views.APIView):
         user.dob_hash = hash_dob(dob_date)
         user.is_adult = age >= 18
         user.save(update_fields=['dob_hash', 'is_adult'])
+        # Keep the encrypted copy too, so "find a buddy" does not have to ask
+        # for the date of birth a second time.
+        profile = getattr(user, 'profile', None)
+        if profile is not None:
+            profile.date_of_birth = dob_date.isoformat()
+            profile.save(update_fields=['date_of_birth'])
         _log_event(user, 'age_verified', request, metadata={'method': 'social_signup'})
 
         try:

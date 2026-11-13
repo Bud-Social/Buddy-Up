@@ -48,6 +48,11 @@ export interface BuddySearchProfile {
   visibility: string;
   incognito: boolean;
   match_count?: number;
+  /**
+   * Whether the account already holds a date of birth. When it does, the
+   * age band is derived from it and nobody is asked for it again.
+   */
+  has_birthday?: boolean;
 }
 
 export interface NearbyBuddy {
@@ -65,6 +70,45 @@ export interface NearbyBuddy {
   liked_by_me: boolean;
   liked_me: boolean;
   explanation: string;
+}
+
+/** A rating one person gave a meetup. */
+export interface BuddyMeetupRating {
+  id: string;
+  rater_username?: string;
+  rater_display_name?: string;
+  rater_avatar_url?: string;
+  score?: number;
+  note?: string;
+  rated_at?: string;
+  visible_at?: string;
+  /**
+   * False while the rating is still waiting for the other person — the
+   * score and the note are not sent until then.
+   */
+  revealed?: boolean;
+  /** True when the rating exists but has not been revealed yet. */
+  pending?: boolean;
+}
+
+/** A meetup with a buddy, and how it went. */
+export interface BuddyMeetup {
+  id: string;
+  state: 'planned' | 'met' | 'cancelled';
+  scheduled_at: string | null;
+  place: string;
+  note: string;
+  created_at: string;
+  met_at: string | null;
+  partner_username: string | null;
+  partner_display_name: string | null;
+  partner_avatar_url: string | null;
+  ratings: BuddyMeetupRating[];
+  /** The average of the ratings the viewer may see. */
+  average_score: number | null;
+  rating_count: number;
+  my_rating: BuddyMeetupRating | null;
+  can_rate: boolean;
 }
 
 /** Result of one interest ("like") toggle. */
@@ -193,6 +237,37 @@ export const profilesApi = {
 
   getSearchProfile: () =>
     apiClient.get<ApiResponse<BuddySearchProfile>>('/profiles/me/search-profile/').then((r) => r.data),
+
+  // ── Meetups with a buddy ────────────────────────────────────────────────
+  /** Every meetup I am part of. */
+  listMeetups: () =>
+    apiClient.get<ApiResponse<BuddyMeetup[]>>('/profiles/buddies/meetups/').then((r) => r.data.data),
+
+  getMeetup: (id: string) =>
+    apiClient.get<ApiResponse<BuddyMeetup>>(`/profiles/buddies/meetups/${id}/`).then((r) => r.data.data),
+
+  /** Plan a meetup with someone. */
+  createMeetup: (payload: {
+    username: string;
+    scheduled_at?: string | null;
+    place?: string;
+    note?: string;
+  }) =>
+    apiClient
+      .post<ApiResponse<BuddyMeetup>>('/profiles/buddies/meetups/', payload)
+      .then((r) => r.data.data),
+
+  /** Mark a meetup as met, or cancel it. */
+  markMeetup: (id: string, action: 'met' | 'cancelled' = 'met') =>
+    apiClient
+      .post<ApiResponse<BuddyMeetup>>(`/profiles/buddies/meetups/${id}/status/`, { action })
+      .then((r) => r.data.data),
+
+  /** Rate a meetup — a score out of five, and optionally a note. */
+  rateMeetup: (id: string, score: number, note?: string) =>
+    apiClient
+      .post<ApiResponse<BuddyMeetup>>(`/profiles/buddies/meetups/${id}/rate/`, { score, note })
+      .then((r) => r.data.data),
 
   getUserSearchProfile: (username: string, coords?: { lat?: number; lng?: number }) =>
     apiClient

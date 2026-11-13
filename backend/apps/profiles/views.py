@@ -11,11 +11,16 @@ from rest_framework.response import Response
 from .models import (
     Profile, BuddyRelationship, FollowRelationship, BlockRelationship,
     AccountabilityPing, BuddySearchProfile, BuddyInterest,
+    BuddyMeetup, BuddyMeetupRating,
 )
 from .buddy_notifications import notify_buddy_request, notify_buddy_accepted, notify_follow
 from .serializers import (
     ProfileSerializer, ProfileUpdateSerializer, OnboardingSerializer,
     PingMessageSerializer, BuddySearchProfileSerializer,
+)
+from .meetup_serializers import (
+    BuddyMeetupSerializer, BuddyMeetupCreateSerializer,
+    BuddyMeetupRatingInputSerializer,
 )
 from common.pagination import CursorPagination, PageNumberPagination
 from common.age_gating import gate_mature_queryset, request_can_access_mature, can_view_content
@@ -831,6 +836,8 @@ class UserSearchProfileView(views.APIView):
         if target != me:
             payload.pop('latitude', None)
             payload.pop('longitude', None)
+            # Whether their account holds a date of birth is their business.
+            payload.pop('has_birthday', None)
 
         data = {
             **payload,
@@ -890,13 +897,184 @@ class UserSearchProfileView(views.APIView):
         return _allowed_to_message(me, target)
 
 
+class BuddyMeetupListCreateView(views.APIView):
+    """The meetups I am part of, and planning a new one.
+
+    A meetup is with one other person. Once it has happened, each of us
+    rates it independently, and the rating reaches the other person a few
+    days later.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        meetups = (
+            BuddyMeetup.objects.filter(participants=request.user.profile)
+            .prefetch_related('participants', 'ratings__rater')
+            .order_by('-created_at')
+        )
+        serializer = BuddyMeetupSerializer(
+            meetups, many=True, context={'viewer': request.user.profile},
+        )
+        return Response({
+            'success': True, 'data': serializer.data,
+            'message': 'Meetups.', 'errors': None, 'pagination': None,
+        })
+
+    def post(self, request):
+        input_serializer = BuddyMeetupCreateSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        data = input_serializer.validated_data
+
+        partner = Profile.objects.filter(username=data['username']).first()
+        if partner is None:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'That person was not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+        if partner.user_id == request.user.profile.user_id:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You cannot plan a meetup with yourself.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if is_blocked_pair(request.user.profile, partner):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You cannot plan a meetup with this person.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        meetup = BuddyMeetup.objects.create(
+            created_by=request.user.profile,
+            scheduled_at=data.get('scheduled_at'),
+            place=data.get('place', ''),
+            note=data.get('note', ''),
+        )
+        meetup.participants.set([request.user.profile, partner])
+
+        serializer = BuddyMeetupSerializer(
+            meetup, context={'viewer': request.user.profile},
+        )
+        return Response({
+            'success': True, 'data': serializer.data,
+            'message': 'Meetup planned.', 'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class BuddyMeetupDetailView(views.APIView):
+    """One meetup, with the ratings the viewer may see."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self, request, meetup_id):
+        return get_object_or_404(
+            BuddyMeetup, id=meetup_id, participants=request.user.profile,
+        )
+
+    def get(self, request, meetup_id):
+        meetup = self.get_object(request, meetup_id)
+        serializer = BuddyMeetupSerializer(
+            meetup, context={'viewer': request.user.profile},
+        )
+        return Response({
+            'success': True, 'data': serializer.data,
+            'message': 'Meetup.', 'errors': None, 'pagination': None,
+        })
+
+
+class BuddyMeetupMarkMetView(views.APIView):
+    """Mark a meetup as met — or cancel it.
+
+    Either participant can mark it. Marking it met is what lets the two of
+    you rate how it went.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, meetup_id):
+        meetup = get_object_or_404(
+            BuddyMeetup, id=meetup_id, participants=request.user.profile,
+        )
+        action = request.data.get('action') or 'met'
+        if action not in ('met', 'cancelled'):
+            return Response({
+                'success': False, 'data': None,
+                'message': "action must be 'met' or 'cancelled'.",
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if meetup.state == 'met' and action == 'met':
+            return Response({
+                'success': False, 'data': None,
+                'message': 'This meetup was already marked as met.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+
+        meetup.state = action
+        meetup.met_at = timezone.now() if action == 'met' else None
+        meetup.met_by = request.user.profile if action == 'met' else None
+        meetup.save(update_fields=['state', 'met_at', 'met_by', 'updated_at'])
+
+        serializer = BuddyMeetupSerializer(
+            meetup, context={'viewer': request.user.profile},
+        )
+        return Response({
+            'success': True, 'data': serializer.data,
+            'message': 'Meetup updated.', 'errors': None, 'pagination': None,
+        })
+
+
+class BuddyMeetupRatingView(views.APIView):
+    """Rate a meetup.
+
+    Each side rates on its own. The rating is recorded straight away but
+    only reaches the other person a few days later.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, meetup_id):
+        meetup = get_object_or_404(
+            BuddyMeetup, id=meetup_id, participants=request.user.profile,
+        )
+        if meetup.state != 'met':
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Mark the meetup as met before rating it.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if any(r.rater_id == request.user.profile.user_id for r in meetup.ratings.all()):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You have already rated this meetup.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+
+        input_serializer = BuddyMeetupRatingInputSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        data = input_serializer.validated_data
+
+        BuddyMeetupRating.objects.create(
+            meetup=meetup,
+            rater=request.user.profile,
+            score=data['score'],
+            note=data.get('note', ''),
+        )
+
+        serializer = BuddyMeetupSerializer(
+            meetup, context={'viewer': request.user.profile},
+        )
+        return Response({
+            'success': True, 'data': serializer.data,
+            'message': 'Thanks — your rating is recorded.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
 class MySearchProfileView(views.APIView):
     """Upsert + fetch my opt-in buddy-search profile."""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         sp, _ = BuddySearchProfile.objects.get_or_create(profile=request.user.profile)
-        data = BuddySearchProfileSerializer(sp).data
+        data = BuddySearchProfileSerializer(sp, context={'request': request}).data
         data['match_count'] = self._match_count(request.user.profile, sp)
         return Response({
             'success': True,
@@ -909,7 +1087,7 @@ class MySearchProfileView(views.APIView):
 
         sp, _ = BuddySearchProfile.objects.get_or_create(profile=request.user.profile)
         was_looking = bool(sp.available_now)
-        serializer = BuddySearchProfileSerializer(sp, data=request.data, partial=True)
+        serializer = BuddySearchProfileSerializer(sp, data=request.data, partial=True, context={'request': request})
         serializer.is_valid(raise_exception=True)
         obj = serializer.save()
         updates = {}

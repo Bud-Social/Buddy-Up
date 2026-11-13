@@ -530,11 +530,12 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   // ── Fetch conversations ────────────────────────────────────────────────────
   const fetchConversations = useCallback(async () => {
     try {
-      const res = await messagingApi.getConversations();
+      // Buddy chats have their own inbox; the server decides what is in it.
+      const res = await messagingApi.getConversations(isDiscovery ? 'buddy' : 'main');
       setConversations(res.data ?? []);
     } catch { /* silent */ }
     finally { setIsLoading(false); }
-  }, []);
+  }, [isDiscovery]);
 
   useEffect(() => {
     fetchConversations();
@@ -812,20 +813,12 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
 
   // ── Filtered conversations ─────────────────────────────────────────────────
   const filteredConvos = useMemo(() => {
-    // Buddy chats are the 1-on-1 conversations that can still become — or already
-    // are — a buddy relationship. Promoting a discovery DM flips its origin to
-    // 'buddy' and the accepted record stays behind, so both are kept. Groups and
-    // communities are out of scope.
-    const scoped = isDiscovery
-      ? conversations.filter(
-        (c) => !c.is_group && !c.is_community
-          && (c.origin === 'discovery' || c.origin === 'buddy' || c.promotion_status != null),
-      )
-      : conversations;
-    if (!searchQuery.trim()) return scoped;
+    // The server already put each conversation in the right inbox, so the
+    // list is used as it comes; only the search narrows it.
+    if (!searchQuery.trim()) return conversations;
     const q = searchQuery.toLowerCase();
-    return scoped.filter((c) => conversationSearchText(c).includes(q));
-  }, [conversations, searchQuery, profile?.user_id, isDiscovery]);
+    return conversations.filter((c) => conversationSearchText(c).includes(q));
+  }, [conversations, searchQuery]);
 
   /** Ask the other participant to make this discovery chat a buddy relationship. */
   const promoteConversation = async () => {

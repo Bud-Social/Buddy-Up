@@ -255,7 +255,15 @@ class ProfileSearchSerializer(serializers.Serializer):
 
 
 class BuddySearchProfileSerializer(serializers.ModelSerializer):
-    # Opt-in DOB (YYYY-MM-DD): hashed + banded, never stored or returned.
+    """The opt-in "looking for a buddy" profile.
+
+    The age band comes from the date of birth the account already holds, so
+    nobody is asked for their birthday a second time. It is derived on the
+    way in and never returned — only the band is.
+    """
+
+    # Legacy escape hatch: only for an account that never recorded a date
+    # of birth. Once the profile has one, this is refused.
     dob = serializers.DateField(write_only=True, required=False)
 
     class Meta:
@@ -274,6 +282,8 @@ class BuddySearchProfileSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         if not data.get('display_name'):
             data['display_name'] = instance.profile.display_name
+        # The client needs to know whether to ask for a date of birth at all.
+        data['has_birthday'] = bool(instance.profile.date_of_birth)
         return data
 
     def validate_intents(self, value):
@@ -313,4 +323,46 @@ class BuddySearchProfileSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'dob': 'Must be 16 or older.'})
             attrs['dob_hash'] = hash_dob(dob)
             attrs['age_band'] = age_band_label(age)
+        else:
+            # The band follows the account's own date of birth, so it is
+            # derived here rather than asked for again.
+            band = self._band_from_account()
+            if band:
+                attrs['age_band'] = band
+                attrs['dob_hash'] = self._dob_hash_from_account()
         return attrs
+
+    def _band_from_account(self):
+        """The age band from the date of birth the account already holds."""
+        profile = getattr(self.context.get('request').user, 'profile', None) if self.context.get('request') else None
+        if profile is None:
+            profile = getattr(self.instance, 'profile', None)
+        raw = getattr(profile, 'date_of_birth', '') if profile else ''
+        if not raw:
+            return None
+        from datetime import date as date_cls
+        from common.utils import age_band_label, calculate_age
+        try:
+            dob = date_cls.fromisoformat(str(raw)[:10])
+        except ValueError:
+            return None
+        age = calculate_age(dob)
+        if age < 16:
+            return None
+        return age_band_label(age)
+
+    def _dob_hash_from_account(self):
+        """The hash of the account's date of birth, for the search profile."""
+        profile = getattr(self.context.get('request').user, 'profile', None) if self.context.get('request') else None
+        if profile is None:
+            profile = getattr(self.instance, 'profile', None)
+        raw = getattr(profile, 'date_of_birth', '') if profile else ''
+        if not raw:
+            return ''
+        from datetime import date as date_cls
+        from common.utils import hash_dob
+        try:
+            dob = date_cls.fromisoformat(str(raw)[:10])
+        except ValueError:
+            return ''
+        return hash_dob(dob)

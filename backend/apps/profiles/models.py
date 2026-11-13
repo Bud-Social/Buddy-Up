@@ -1,4 +1,8 @@
+from datetime import timedelta
+from uuid import uuid4
+
 from django.db import models
+from django.utils import timezone
 from common.models import TimestampedModel
 from common.age_gating import CONTENT_RATING_CHOICES, CONTENT_RATING_DEFAULT
 from apps.accounts.crypto import EncryptedCharField
@@ -252,6 +256,115 @@ class SharedGoal(TimestampedModel):
 
     class Meta:
         db_table = 'profiles_shared_goal'
+
+
+class BuddyMeetup(TimestampedModel):
+    """A plan to meet up with a buddy, and whether it happened.
+
+    Marking a meetup as met is what opens the rating: each person then says
+    how it went, and their rating reaches the other after a few days so a
+    rating cannot be written in the heat of the moment.
+    """
+
+    STATE_CHOICES = [
+        ('planned', 'Planned'),
+        ('met', 'Met'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    participants = models.ManyToManyField(Profile, related_name='buddy_meetups')
+    state = models.CharField(max_length=12, choices=STATE_CHOICES, default='planned')
+    scheduled_at = models.DateTimeField(null=True, blank=True)
+    place = models.CharField(max_length=140, blank=True)
+    note = models.CharField(max_length=280, blank=True)
+    created_by = models.ForeignKey(
+        Profile, on_delete=models.CASCADE, related_name='meetups_created',
+    )
+    met_at = models.DateTimeField(null=True, blank=True)
+    met_by = models.ForeignKey(
+        Profile, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='meetups_marked',
+    )
+
+    class Meta:
+        db_table = 'profiles_buddy_meetup'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['state', '-created_at']),
+            models.Index(fields=['created_by', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'Meetup {self.pk} ({self.state})'
+
+    def partner_for(self, profile):
+        """The other person in the meetup, or None."""
+        if profile is None:
+            return None
+        # A profile's primary key is its user, so its id is the user's.
+        return next(
+            (p for p in self.participants.all() if p.user_id != profile.user_id),
+            None,
+        )
+
+
+class BuddyMeetupRating(TimestampedModel):
+    """One person's rating of a meetup they attended.
+
+    Each side rates independently. A rating is written the moment the
+    meetup is marked as met, but it only reaches the other person after a
+    few days — ``visible_at`` — so the rating reflects a considered view
+    rather than the mood of the moment.
+    """
+
+    #: How long a rating waits before the other person sees it.
+    VISIBLE_AFTER_DAYS = 3
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    meetup = models.ForeignKey(
+        BuddyMeetup, on_delete=models.CASCADE, related_name='ratings',
+    )
+    rater = models.ForeignKey(
+        Profile, on_delete=models.CASCADE, related_name='meetup_ratings',
+    )
+    score = models.PositiveSmallIntegerField(help_text='1 to 5 stars')
+    note = models.CharField(max_length=280, blank=True)
+    rated_at = models.DateTimeField(auto_now_add=True)
+    visible_at = models.DateTimeField(
+        help_text='When the other participant can see this rating.',
+    )
+
+    class Meta:
+        db_table = 'profiles_buddy_meetup_rating'
+        ordering = ['-rated_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['meetup', 'rater'], name='profiles_meetup_rating_once',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['meetup', '-rated_at']),
+            models.Index(fields=['rater', '-rated_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.score} stars by @{self.rater.username}'
+
+    def save(self, *args, **kwargs):
+        if not self.visible_at:
+            self.visible_at = timezone.now() + timedelta(days=self.VISIBLE_AFTER_DAYS)
+        if self.score is not None:
+            self.score = max(1, min(5, int(self.score)))
+        super().save(*args, **kwargs)
+
+    def visible_to(self, profile) -> bool:
+        """Whether ``profile`` may see this rating."""
+        if profile is None:
+            return False
+        if profile.user_id == self.rater_id:
+            return True
+        return self.visible_at <= timezone.now()
 
 
 class BuddySearchProfile(TimestampedModel):

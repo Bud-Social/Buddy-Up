@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast';
 import { messagingApi } from '@/api';
 import { feedApi, REPORT_REASONS, type ReportReason } from '@/api/feed';
 import { profilesApi, type UserBuddySearchProfile } from '@/api/profiles';
+import { BuddyMeetups } from '@/components/features/buddy/BuddyMeetups';
 import { requestLocation } from '@/lib/geo';
 import { formatDistanceBadge } from './FindBuddy';
 
@@ -309,6 +310,9 @@ export default function FindBuddyProfile() {
           )}
         </div>
       </Card>
+
+      {/* Meetups: plan one, mark it as met, rate it afterwards. */}
+      <BuddyMeetups username={sp.username} displayName={name} />
 
       {reportOpen && (
         <Card className="p-4 space-y-3">

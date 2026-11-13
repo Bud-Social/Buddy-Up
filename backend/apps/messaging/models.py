@@ -13,12 +13,21 @@ class Conversation(TimestampedModel):
         ('community', 'Community'),
     ]
 
+    KIND_CHOICES = [
+        ('main', 'Main'),
+        ('buddy', 'Buddy'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     participants = models.ManyToManyField('profiles.Profile', related_name='conversations')
     is_group = models.BooleanField(default=False)
     # How this conversation came about: opened directly, via discovery/buddy
     # search, auto-created on buddy confirmation, group, or community.
     origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, default='direct', db_index=True)
+    # Which inbox this conversation belongs to. Buddy chats live in their own
+    # inbox so they never mix with the rest of the messaging, and promoting a
+    # chat to a buddy relationship moves it rather than duplicating it.
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES, default='main', db_index=True)
     # Set when a discovery DM is promoted to a buddy relationship.
     promoted_at = models.DateTimeField(null=True, blank=True)
     group_name = models.CharField(max_length=100, blank=True)

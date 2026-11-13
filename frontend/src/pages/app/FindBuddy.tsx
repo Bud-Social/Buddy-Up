@@ -80,6 +80,9 @@ export default function FindBuddy() {
   const [visibility, setVisibility] = useState('public');
   const [incognito, setIncognito] = useState(false);
   const [hasSavedProfile, setHasSavedProfile] = useState(false);
+  // The account already holds a date of birth for most people, so the age
+  // band is derived from it and the birthday is never asked for again.
+  const [hasBirthday, setHasBirthday] = useState(false);
   const [matchCount, setMatchCount] = useState<number | null>(null);
   const [availableUntil, setAvailableUntil] = useState<string | null>(null);
   const [msgSending, setMsgSending] = useState<Set<string>>(new Set());
@@ -142,6 +145,7 @@ export default function FindBuddy() {
         setNeighbourhood(sp.neighbourhood || '');
         setVisibility(sp.visibility || 'public');
         setIncognito(!!sp.incognito);
+        setHasBirthday(!!sp.has_birthday);
         setLookingNow(!!sp.available_now);
         setAvailableUntil(sp.available_until ?? null);
         if (sp.search_radius_km === 5 || sp.search_radius_km === 10) {
@@ -213,7 +217,7 @@ export default function FindBuddy() {
         incognito,
         available_now: looking ?? lookingNow,
         search_radius_km: radius === 'auto' ? null : radius,
-        ...(dob ? { dob } : {}),
+        ...(dob && !hasBirthday ? { dob } : {}),
         ...(coords ? { latitude: coords.lat, longitude: coords.lng } : {}),
       } as Partial<BuddySearchProfile> & { dob?: string });
       const sp = res.data as BuddySearchProfile;
@@ -439,15 +443,22 @@ export default function FindBuddy() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs text-buddy-text-secondary">Birth date (for age band {ageBand || '—'})
-                <input type="date" value={dob} onChange={(e) => setDob(e.target.value)}
-                  className="mt-1 w-full bg-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm text-buddy-text-primary focus:outline-none" />
-              </label>
+              {!hasBirthday && (
+                <label className="text-xs text-buddy-text-secondary">Birth date (for age band {ageBand || '—'})
+                  <input type="date" value={dob} onChange={(e) => setDob(e.target.value)}
+                    className="mt-1 w-full bg-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm text-buddy-text-primary focus:outline-none" />
+                </label>
+              )}
               <label className="text-xs text-buddy-text-secondary">Pace
                 <input type="text" value={pace} onChange={(e) => setPace(e.target.value)} placeholder="Easy / steady / brisk"
                   className="mt-1 w-full bg-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm placeholder:text-buddy-text-secondary/50 focus:outline-none" />
               </label>
             </div>
+            {hasBirthday && (
+              <p className="text-xs text-buddy-text-secondary">
+                Your age band ({ageBand || '—'}) comes from the date of birth on your account.
+              </p>
+            )}
             <label className="block text-xs text-buddy-text-secondary">Neighbourhood
               <input type="text" value={neighbourhood} onChange={(e) => setNeighbourhood(e.target.value)} placeholder="Kileleshwa"
                 className="mt-1 w-full bg-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm placeholder:text-buddy-text-secondary/50 focus:outline-none" />

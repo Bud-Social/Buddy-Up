@@ -19,6 +19,12 @@ urlpatterns = [
     path('me/search-profile/', views.MySearchProfileView.as_view(), name='my_search_profile'),
     path('<str:username>/search-profile/', views.UserSearchProfileView.as_view(), name='user_search_profile'),
 
+    # Meetups with a buddy, and how each of you rated them.
+    path('buddies/meetups/', views.BuddyMeetupListCreateView.as_view(), name='buddy_meetups'),
+    path('buddies/meetups/<uuid:meetup_id>/', views.BuddyMeetupDetailView.as_view(), name='buddy_meetup_detail'),
+    path('buddies/meetups/<uuid:meetup_id>/status/', views.BuddyMeetupMarkMetView.as_view(), name='buddy_meetup_status'),
+    path('buddies/meetups/<uuid:meetup_id>/rate/', views.BuddyMeetupRatingView.as_view(), name='buddy_meetup_rate'),
+
     path('presence/', views.PresenceStatusView.as_view(), name='presence'),
     path('recommendations/', views.ProfileRecommendationsView.as_view(), name='recommendations'),
     path('recommendations/feedback/', views.ProfileRecommendationFeedbackView.as_view(), name='recommendation_feedback'),
