@@ -11,6 +11,7 @@ import type { GymMembershipException } from '@/types/gym';
 import type { BuddyLive } from '@/types/live';
 import type { GymRoutinePost, GymReview } from '@/types/gym';
 import { GymDiscoursePost } from '@/components/features/gyms/GymDiscoursePost';
+import { GymCheckIn } from '@/components/features/gym/GymCheckIn';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 
@@ -322,6 +323,13 @@ export default function GymDetail() {
           )}
           <Button size="sm" variant="ghost"><Star size={14} /></Button>
         </div>
+
+        {/* Check in — what a "gym attendance" countdown follows. */}
+        {gym.is_member && (
+          <div className="mb-4">
+            <GymCheckIn slug={slug!} gymName={gym.name} />
+          </div>
+        )}
 
         {/* Tabs — horizontally scrollable, spacious */}
         <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide mb-5">

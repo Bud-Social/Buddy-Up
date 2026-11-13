@@ -1,5 +1,6 @@
 import csv
 import io
+import logging
 from datetime import timedelta
 
 from django.shortcuts import get_object_or_404
@@ -19,6 +20,7 @@ from common.age_gating import gate_mature_queryset, can_view_content
 from .models import (
     Gym, GymMembership, GymCategory, GymOnboardingChecklist,
     JoinRequest, GymInvite, GymMembershipException, VenueLocation,
+    AttendanceRecord,
 )
 from .serializers import (
     GymSerializer, CreateGymSerializer, GymMembershipSerializer,
@@ -33,6 +35,8 @@ from .models import GymRoutinePost, GymReview, GymDonation
 from apps.wallet.utils import deduct_artifacts
 from apps.wallet.serializers import ARTIFACT_VALUES
 from apps.marketplace.models import DiscountCode, DiscountUsage
+
+logger = logging.getLogger(__name__)
 
 
 PARTNER_ROLES = ['owner', 'co_owner', 'moderator']
@@ -104,7 +108,104 @@ class AttendanceListView(views.APIView):
             gym=gym,
             checked_in_at=serializer.validated_data.get('checked_in_at') or timezone.now(),
         )
+        # A gym visit is what a "gym attendance" countdown waits for.
+        _raise_gym_checkin(member)
         return Response({'success': True, 'data': AttendanceRecordSerializer(record).data}, status=status.HTTP_201_CREATED)
+
+
+def _raise_gym_checkin(profile):
+    """Advance the countdowns that follow gym visits."""
+    from apps.countdowns.services import advance_matching_countdowns
+
+    try:
+        advance_matching_countdowns(profile, 'gym_checkin')
+    except Exception:  # noqa: BLE001 — a countdown must never fail the check-in
+        logger.warning('could not advance gym countdowns for %s', profile, exc_info=True)
+
+
+class GymCheckInView(views.APIView):
+    """Check yourself in at a gym.
+
+    Only an active member can check in, and only once a day — a gym
+    visit is what a "gym attendance" countdown follows.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    #: How long a member must wait between check-ins.
+    CHECK_IN_INTERVAL = timedelta(hours=20)
+
+    def post(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        profile = request.user.profile
+
+        membership = GymMembership.objects.filter(
+            gym=gym, member=profile, subscription_active=True,
+        ).first()
+        if membership is None:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You need an active membership to check in here.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        now = timezone.now()
+        last = gym.attendance_records.filter(
+            member=profile, checked_in_at__isnull=False,
+        ).order_by('-checked_in_at').first()
+        if last and last.checked_in_at and now - last.checked_in_at < self.CHECK_IN_INTERVAL:
+            wait = self.CHECK_IN_INTERVAL - (now - last.checked_in_at)
+            hours = int(wait.total_seconds() // 3600)
+            minutes = int((wait.total_seconds() % 3600) // 60)
+            return Response({
+                'success': False, 'data': None,
+                'message': (
+                    f'You already checked in. You can check in again in '
+                    f'{hours}h {minutes}m.'
+                ),
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+
+        record = AttendanceRecord.objects.create(
+            member=profile,
+            gym=gym,
+            status='checked_in',
+            checked_in_at=now,
+            source='member',
+        )
+        _raise_gym_checkin(profile)
+
+        return Response({
+            'success': True,
+            'data': AttendanceRecordSerializer(record).data,
+            'message': f'Checked in at {gym.name}.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+    def get(self, request, gym_slug):
+        """Whether I can check in here, and when I last did."""
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        profile = request.user.profile
+        membership = GymMembership.objects.filter(
+            gym=gym, member=profile, subscription_active=True,
+        ).first()
+        last = gym.attendance_records.filter(
+            member=profile, checked_in_at__isnull=False,
+        ).order_by('-checked_in_at').first()
+        next_at = None
+        if last and last.checked_in_at:
+            candidate = last.checked_in_at + self.CHECK_IN_INTERVAL
+            if candidate > timezone.now():
+                next_at = candidate.isoformat()
+        return Response({
+            'success': True,
+            'data': {
+                'can_check_in': bool(membership) and next_at is None,
+                'is_member': bool(membership),
+                'last_check_in_at': last.checked_in_at.isoformat() if last and last.checked_in_at else None,
+                'next_check_in_at': next_at,
+            },
+            'message': 'Check-in status.', 'errors': None, 'pagination': None,
+        })
 
 
 class PartnerMetricsView(views.APIView):

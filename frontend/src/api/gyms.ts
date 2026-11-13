@@ -37,6 +37,13 @@ export interface GymListParams {
   ordering?: 'members' | 'rating' | 'newest' | 'nearest';
 }
 
+export interface GymCheckInStatus {
+  can_check_in: boolean;
+  is_member: boolean;
+  last_check_in_at: string | null;
+  next_check_in_at: string | null;
+}
+
 export const gymsApi = {
   list: (params: GymListParams = {}) =>
     apiClient.get<ApiResponse<Gym[]>>('/gyms/', { params }).then((r) => r.data),
@@ -70,6 +77,16 @@ export const gymsApi = {
 
   leave: (slug: string) =>
     apiClient.post<ApiResponse<null>>(`/gyms/${slug}/leave/`).then((r) => r.data),
+
+  /** Whether I can check in here, and when I last did. */
+  getCheckInStatus: (slug: string) =>
+    apiClient
+      .get<ApiResponse<GymCheckInStatus>>(`/gyms/${slug}/check-in/`)
+      .then((r) => r.data.data),
+
+  /** Check myself in. A gym visit is what a "gym attendance" countdown follows. */
+  checkIn: (slug: string) =>
+    apiClient.post<ApiResponse<GymCheckInStatus>>(`/gyms/${slug}/check-in/`).then((r) => r.data),
 
   getMembers: (slug: string, params?: { role?: string; q?: string }) =>
     apiClient.get<ApiResponse<GymMembership[]>>(`/gyms/${slug}/members/`, { params }).then((r) => r.data),

@@ -32,6 +32,7 @@ urlpatterns = [
     path('<str:gym_slug>/onboarding-checklist/', views.GymOnboardingChecklistView.as_view(), name='onboarding_checklist'),
     path('<str:gym_slug>/venues/', views.VenueLocationListView.as_view(), name='venues'),
     path('<str:gym_slug>/attendance/', views.AttendanceListView.as_view(), name='attendance'),
+    path('<str:gym_slug>/check-in/', views.GymCheckInView.as_view(), name='gym_check_in'),
     path('<str:gym_slug>/partner-metrics/', views.PartnerMetricsView.as_view(), name='partner_metrics'),
     path('<str:gym_slug>/members.csv', views.GymMemberCSVView.as_view(), name='member_csv'),
 ]
