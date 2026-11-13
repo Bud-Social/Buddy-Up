@@ -38,6 +38,16 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Share-a-replay lands here with a pending composer draft — open the
+    // inline composer so the long_video draft restores visibly.
+    ref.listenManual(composerExpandRequestProvider, (prev, next) {
+      if (mounted && next > (prev ?? 0)) {
+        setState(() => _composerExpanded = true);
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+        }
+      }
+    });
     Future.microtask(() {
       ref.read(feedProvider.notifier).loadFeed(tab: widget.initialTab);
       _startNewPostsPolling();

@@ -849,7 +849,9 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           ),
           GoRoute(
             path: '/messages/:conversationId',
-            parentNavigatorKey: _rootNavigatorKey,
+            // No parentNavigatorKey — inherit the shell's key. Pointing at
+            // the root navigator from inside a ShellRoute violates go_router's
+            // sub-route/parent key rule.
             builder: (_, state) {
               final conversationId =
                   state.pathParameters['conversationId'] ?? '';
@@ -901,7 +903,7 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           ),
           GoRoute(
             path: '/buddies/messages/:conversationId',
-            parentNavigatorKey: _rootNavigatorKey,
+            // Same key-inheritance rule as /messages/:conversationId.
             builder: (_, state) {
               final conversationId =
                   state.pathParameters['conversationId'] ?? '';

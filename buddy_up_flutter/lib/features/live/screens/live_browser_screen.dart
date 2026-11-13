@@ -178,9 +178,12 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
           if (i == state.lives.length) {
             return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
           }
+          final live = state.lives[i];
+          final replayProcessing =
+              live.status == 'ended' && live.replaySaved && live.replayUrl.isEmpty;
           return LiveCard(
-            live: state.lives[i],
-            onTap: () => context.push('/lives/${state.lives[i].id}'),
+            live: live,
+            onTap: replayProcessing ? null : () => context.push('/lives/${live.id}'),
             onRsvp: _handleRsvp,
           );
         },

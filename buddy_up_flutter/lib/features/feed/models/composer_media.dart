@@ -10,6 +10,8 @@ class ComposerMedia {
   final String name;
   final String type; // image | video | audio | text | file | document
   final Uint8List? bytes;
+  /// Remote URL for video that never touches local storage (replay drafts).
+  final String? remoteUrl;
 
   // Video studio results (trim + sound + captions), persisted into the media JSON.
   final int trimStartMs;
@@ -35,6 +37,7 @@ class ComposerMedia {
     required this.name,
     required this.type,
     this.bytes,
+    this.remoteUrl,
     this.trimStartMs = 0,
     this.trimEndMs = 0,
     this.durationMs,

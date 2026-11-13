@@ -6,6 +6,7 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:go_router/go_router.dart';
 
 import '../providers/live_provider.dart';
 import '../services/live_socket.dart';
@@ -13,6 +14,7 @@ import '../widgets/live_chat_overlay.dart';
 import '../widgets/reaction_overlay.dart';
 import '../widgets/pip_live_overlay.dart';
 import '../widgets/gift_picker.dart';
+import '../widgets/cohost_panel.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -23,6 +25,9 @@ import '../../../data/repositories/profile_repository.dart';
 import '../../../data/repositories/moderation_repository.dart';
 import '../../../core/api/api_client.dart';
 import '../../../router.dart';
+import '../widgets/gift_burst_overlay.dart';
+import '../../../features/analytics/providers/analytics_provider.dart';
+import '../../../features/feed/providers/feed_provider.dart';
 
 class LiveRoomScreen extends ConsumerStatefulWidget {
   final String liveId;
@@ -35,6 +40,7 @@ class LiveRoomScreen extends ConsumerStatefulWidget {
 
 class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBindingObserver {
   final GlobalKey<ReactionOverlayState> _reactionKey = GlobalKey<ReactionOverlayState>();
+  final GlobalKey<GiftBurstOverlayState> _giftBurstKey = GlobalKey<GiftBurstOverlayState>();
 
   // LiveKit
   Room? _liveKitRoom;
@@ -42,6 +48,11 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
 
   // Room data cache for PiP
   LiveRoomData? _roomData;
+
+  // Whether the local user asked to co-host and is waiting on the host.
+  bool _hasRequestedToSpeak = false;
+  // Pending speaker requests (host only) — refreshed on WS cohost events.
+  int _speakerRequestCount = 0;
 
   // Replay state — a finished live with a saved recording plays inline.
   bool _replayMarked = false;
@@ -153,6 +164,124 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
     ref.read(liveSocketProvider(widget.liveId).notifier).sendReaction(emoji);
   }
 
+  Future<void> _refreshSpeakerRequestCount() async {
+    if (!_isHost) return;
+    try {
+      final raw = await ref.read(liveRepositoryProvider).getCohostRequests(widget.liveId);
+      final data = raw['data'] as List? ?? const [];
+      if (mounted) setState(() => _speakerRequestCount = data.length);
+    } catch (_) { /* transient — the next WS ping refreshes */ }
+  }
+
+  void _onCohostEvent(LiveCohostEvent? event) {
+    if (event == null) return;
+    final name = (event.data['display_name'] ?? event.data['username'] ?? 'Someone').toString();
+    switch (event.type) {
+      case 'live_cohost_request':
+        if (_isHost) {
+          _toast('$name requested to speak');
+          _refreshSpeakerRequestCount();
+        }
+      case 'live_cohost_invite':
+        final myUsername = ref.read(authProvider).profile?.username ?? '';
+        final target = (event.data['username'] ?? '').toString();
+        if (target == myUsername) {
+          _showInviteDialog();
+        } else if (_isHost) {
+          _toast('Invited @$target');
+        }
+      case 'live_cohost_response':
+        final action = (event.data['action'] ?? '').toString();
+        if (action == 'approve') {
+          _toast('$name can now speak');
+        } else if (action == 'deny') {
+          _toast('Speaker request denied');
+        }
+        // A new co-host changes the room roster — pull it fresh.
+        ref.invalidate(liveRoomProvider(widget.liveId));
+      case 'live_cohost_removed':
+        _toast('$name removed from co-hosts');
+        ref.invalidate(liveRoomProvider(widget.liveId));
+    }
+  }
+
+  void _showInviteDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: BuddyColors.surface,
+        title: const Text('Co-host invite', style: TextStyle(color: BuddyColors.textPrimary)),
+        content: const Text('The host invited you to co-host this live.',
+            style: TextStyle(color: BuddyColors.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              try {
+                await ref.read(liveRepositoryProvider).respondCohostInvite(
+                      widget.liveId,
+                      {'action': 'decline'},
+                    );
+                if (mounted) _toast('Invite declined');
+              } catch (_) {}
+            },
+            child: const Text('Decline'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              try {
+                await ref.read(liveRepositoryProvider).respondCohostInvite(
+                      widget.liveId,
+                      {'action': 'accept'},
+                    );
+                ref.invalidate(liveRoomProvider(widget.liveId));
+                if (mounted) _toast('You are a co-host now!');
+              } catch (_) {
+                if (mounted) _toast('Could not accept the invite');
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: BuddyColors.green,
+              foregroundColor: BuddyColors.black,
+            ),
+            child: const Text('Accept'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCoHostPanel() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: BuddyColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => CoHostRequestsSheet(liveId: widget.liveId),
+    );
+  }
+
+  Future<void> _askToCoHost() async {
+    if (_hasRequestedToSpeak) return;
+    try {
+      await ref.read(liveRepositoryProvider).requestToSpeak(widget.liveId);
+      final profile = ref.read(authProvider).profile;
+      ref.read(liveSocketProvider(widget.liveId).notifier).sendCohostEvent(
+            'cohost_request',
+            {'display_name': profile?.displayName ?? ''},
+          );
+      if (mounted) {
+        setState(() => _hasRequestedToSpeak = true);
+        _toast('Request sent to host');
+      }
+    } catch (_) {
+      if (mounted) _toast('Could not send the request');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final liveId = widget.liveId;
@@ -163,6 +292,24 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
         final emoji = next.lastReaction?.emoji;
         if (emoji != null && emoji.isNotEmpty) {
           _reactionKey.currentState?.showReaction(emoji);
+        }
+      }
+      // Co-host ladder: requests badge refresh + invite accept/decline
+      // + approvals/removals.
+      if (prev == null || next.cohostSeq != prev.cohostSeq) {
+        _onCohostEvent(next.cohostEvent);
+      }
+      // Gift burst for everyone, including the sender — the server echoes
+      // the settled gift to the whole room.
+      if (prev == null || next.giftSeq != prev.giftSeq) {
+        final gift = next.lastGift;
+        if (gift != null) {
+          _giftBurstKey.currentState?.burst(
+                gift.artifactType,
+                gift.quantity,
+                gift.senderName,
+                gift.total,
+              );
         }
       }
     });
@@ -182,6 +329,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
               if (_roomData == null) {
                 _roomData = roomData;
                 _joinWithCredentials(roomData);
+                _refreshSpeakerRequestCount();
               }
             });
           });
@@ -193,6 +341,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
           }
 
           return PopScope(
+            key: const ValueKey('live-room-guard'),
             canPop: false,
             onPopInvokedWithResult: (didPop, _) {
               if (!didPop) {
@@ -206,18 +355,22 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
               body: Column(
                 children: [
                   Expanded(
-                    child: ReactionOverlay(
-                      key: _reactionKey,
-                      child: Stack(
-                        children: [
+                    child: GiftBurstOverlay(
+                      key: _giftBurstKey,
+                      child: ReactionOverlay(
+                        key: _reactionKey,
+                        child: Stack(
+                          children: [
                           _buildVideoView(live),
                           _buildOverlay(live),
                           _buildGiftTotals(),
+                          _buildCoHostStrip(),
                           _buildRoomActions(),
                           if (ref.watch(liveSocketProvider(widget.liveId).select((s) => s.feedbackPinned)) &&
                               !_isHost)
                             _buildFeedbackPinBanner(),
                         ],
+                      ),
                       ),
                     ),
                   ),
@@ -282,8 +435,8 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
 
   Widget _buildReplayShell(BuddyLive live) {
     final mux = live.muxPlaybackId;
-    final replayUrl = live.replayUrl;
     return PopScope(
+      key: const ValueKey('live-replay-guard'),
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) Navigator.of(context).pop();
@@ -323,12 +476,8 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                     ),
                   IconButton(
                     icon: const Icon(Icons.share_outlined, color: Colors.white),
-                    tooltip: 'Share replay',
-                    onPressed: () {
-                      SharePlus.instance.share(
-                        ShareParams(text: 'Watch this live replay on Buddy Up: $replayUrl'),
-                      );
-                    },
+                    tooltip: 'Share as a post',
+                    onPressed: () => _shareReplay(live),
                   ),
                 ],
               ),
@@ -343,6 +492,28 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
         ),
       ),
     );
+  }
+
+  /// Host path mirrors the web: prepare a long_video draft server-side, then
+  /// land on /feed with the inline composer open and the replay inside it.
+  /// Audience path stays a plain share link.
+  Future<void> _shareReplay(BuddyLive live) async {
+    if (!_isHost) {
+      await SharePlus.instance.share(
+        ShareParams(text: 'Watch this live replay on Buddy Up: ${live.replayUrl}'),
+      );
+      return;
+    }
+    try {
+      await ref.read(analyticsRepositoryProvider).sharePrepare({
+        'kind': 'live',
+        'obj_id': live.id,
+      });
+      ref.read(composerExpandRequestProvider.notifier).bump();
+      if (mounted) context.go('/feed');
+    } catch (_) {
+      if (mounted) _toast('Could not prepare the replay post');
+    }
   }
 
   void _showVisibilitySheet(BuddyLive live) {
@@ -573,31 +744,60 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
     );
   }
 
+  /// The host decides at the end what happens to the replay. Publishing is
+  /// gated server-side on the recording consent set at go-live; the
+  /// staff-only path also forces the visibility private so nothing public
+  /// leaks, matching the moderation-first architecture.
+  Future<void> _endLive(BuddyLive live, {required bool publish}) async {
+    try {
+      await ref.read(liveRepositoryProvider).endLive(live.id, {'save_replay': true});
+      if (!publish) {
+        try {
+          await ref.read(liveRepositoryProvider).updateVisibility(live.id, {'access': 'private'});
+        } catch (_) {
+          // Non-fatal: the replay stays unlisted by default visibility rules
+          // when consent is off; log-and-forget is honest here.
+        }
+      }
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(publish ? 'Live ended — replay will be published' : 'Live ended — replay stays private')),
+        );
+      }
+    } catch (e) {
+      _toast('Could not end the live: $e');
+    }
+  }
+
   void _confirmEndLive(BuddyLive live) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: BuddyColors.surface,
         title: const Text('End this live?', style: TextStyle(color: BuddyColors.textPrimary)),
-        content: const Text('The replay is saved by default. You can change its visibility afterwards.',
-            style: TextStyle(color: BuddyColors.textSecondary)),
+        content: const Text(
+          'The recording is always kept by moderation. Choose what goes public.',
+          style: TextStyle(color: BuddyColors.textSecondary),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Keep streaming')),
-          FilledButton(
-            onPressed: () async {
+          OutlinedButton.icon(
+            onPressed: () {
               Navigator.of(ctx).pop();
-              try {
-                await ref.read(liveRepositoryProvider).endLive(live.id, {'save_replay': true});
-                if (mounted) {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Live ended — replay saved')));
-                }
-              } catch (e) {
-                _toast('Could not end the live: $e');
-              }
+              _endLive(live, publish: false);
             },
-            style: FilledButton.styleFrom(backgroundColor: BuddyColors.red),
-            child: const Text('End live'),
+            icon: const Icon(Icons.lock_outline, size: 16),
+            label: const Text('Staff only'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _endLive(live, publish: true);
+            },
+            icon: const Icon(Icons.public, size: 16),
+            label: const Text('Publish replay'),
+            style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
           ),
         ],
       ),
@@ -948,14 +1148,31 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
 
   // ── Gift totals + actions FAB stack ─────────────────────────────────────
 
+  Widget _buildCoHostStrip() {
+    final roomData = ref.watch(liveRoomProvider(widget.liveId)).value;
+    final coHosts = roomData?.coHosts ?? const [];
+    if (coHosts.isEmpty) return const SizedBox.shrink();
+    return Positioned(
+      top: 64,
+      left: 0,
+      right: 0,
+      child: Container(
+        height: 36,
+        color: Colors.black.withValues(alpha: 0.35),
+        child: CoHostStrip(coHosts: coHosts),
+      ),
+    );
+  }
+
   Widget _buildGiftTotals() {
     final totals = ref.watch(liveSocketProvider(widget.liveId).select((s) => s.giftTotals));
     if (totals.isEmpty) return const SizedBox.shrink();
+    final coHosts = ref.watch(liveRoomProvider(widget.liveId)).value?.coHosts.length ?? 0;
     final entries = totals.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     final shown = entries.take(3);
 
     return Positioned(
-      top: 64,
+      top: coHosts > 0 ? 104 : 64,
       left: 12,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1021,12 +1238,32 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   }
 
   Widget _buildRoomActions() {
+    final roomData = ref.watch(liveRoomProvider(widget.liveId)).value;
+    final myId = ref.watch(authProvider).user?.id;
+    final isCohost = roomData?.coHosts.any((c) => c.userId == myId) ?? false;
+    final canAsk = !_isHost && !isCohost;
+
     return Positioned(
       right: 10,
       bottom: 12,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (_isHost) ...[
+            _CrownFab(count: _speakerRequestCount, onTap: _showCoHostPanel),
+            const SizedBox(height: 10),
+          ] else if (canAsk) ...[
+            FloatingActionButton.small(
+              heroTag: 'ask-cohost',
+              backgroundColor:
+                  _hasRequestedToSpeak ? BuddyColors.green : BuddyColors.surfaceRaised,
+              foregroundColor: _hasRequestedToSpeak ? BuddyColors.black : Colors.white,
+              onPressed: _askToCoHost,
+              tooltip: _hasRequestedToSpeak ? 'Request sent — waiting for host' : 'Ask to co-host',
+              child: Icon(_hasRequestedToSpeak ? Icons.check : Icons.mic_outlined),
+            ),
+            const SizedBox(height: 10),
+          ],
           FloatingActionButton.small(
             heroTag: 'rate',
             backgroundColor: BuddyColors.gold,
@@ -1174,6 +1411,54 @@ class _PollOption extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Host's co-host ladder button — crown with a badge for pending speaker
+/// requests. Opens the invite/approve sheet.
+class _CrownFab extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _CrownFab({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: BuddyColors.gold,
+      shape: const CircleBorder(),
+      elevation: 4,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              const Icon(Icons.workspace_premium, color: BuddyColors.black, size: 20),
+              if (count > 0)
+                Positioned(
+                  top: 2,
+                  right: 2,
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: const BoxDecoration(color: BuddyColors.red, shape: BoxShape.circle),
+                    child: Text(
+                      '$count',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold, height: 1.4),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -533,6 +533,19 @@ class FeedNotifier extends Notifier<FeedState> {
 
 final feedProvider = NotifierProvider<FeedNotifier, FeedState>(FeedNotifier.new);
 
+/// Bumping forces the inline composer drawer open on the feed screen — the
+/// share-a-replay flow bumps it before navigating so the freshly-restored
+/// draft is visible when the user lands.
+class ComposerExpandRequestNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
+final composerExpandRequestProvider =
+    NotifierProvider<ComposerExpandRequestNotifier, int>(ComposerExpandRequestNotifier.new);
+
 final postDetailProvider = FutureProvider.family<Post, String>((ref, postId) async {
   final repo = ref.watch(feedRepositoryProvider);
   final raw = await repo.getPost(postId);

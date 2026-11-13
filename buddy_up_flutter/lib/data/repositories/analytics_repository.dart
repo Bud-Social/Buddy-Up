@@ -57,6 +57,19 @@ abstract class AnalyticsRepository {
     @Query('period') String? period,
   });
 
+  /// Prepare a share draft server-side (draft_id + prefilled caption/tags).
+  /// Lives are shared as `long_video`; the server writes the Draft row.
+  @POST('/analytics/share/prepare/')
+  Future<dynamic> sharePrepare(@Body() Map<String, dynamic> body);
+
+  /// Publish a prepared draft — rarely called directly; the composer uses
+  /// its own create path and deletes the server draft afterwards.
+  @POST('/analytics/share/draft/{id}/publish/')
+  Future<dynamic> sharePublish(
+    @Path('id') String draftId,
+    @Body() Map<String, dynamic> body,
+  );
+
   @GET('/analytics/report/download/')
   Future<dynamic> downloadReport({
     @Query('period') String? period,

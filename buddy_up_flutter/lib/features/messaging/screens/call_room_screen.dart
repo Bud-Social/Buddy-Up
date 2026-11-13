@@ -13,6 +13,7 @@ import '../../../core/auth/auth_provider.dart';
 import '../../../data/repositories/profile_repository.dart';
 import '../../../data/models/messaging.dart';
 import '../providers/livekit_call_provider.dart';
+import '../widgets/screen_record_button.dart';
 import '../providers/messaging_provider.dart';
 import '../utils/conversation_identity.dart';
 
@@ -602,6 +603,7 @@ class _Controls extends ConsumerWidget {
               color: Colors.white24,
               onTap: openBuddyPicker,
             ),
+          if (inCall) const ScreenRecordButton(),
           if (isVideo && inCall && !PlatformIsDesktop.current)
             _ControlButton(
               icon: Icons.screen_share,

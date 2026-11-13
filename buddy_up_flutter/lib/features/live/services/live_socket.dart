@@ -83,6 +83,33 @@ class LivePoll {
   });
 }
 
+/// Co-host ladder events surfaced from the live socket — the UI listens for
+/// `cohostSeq` bumps and reads the latest payload.
+class LiveCohostEvent {
+  final String type;
+  final Map<String, dynamic> data;
+
+  const LiveCohostEvent({required this.type, required this.data});
+}
+
+/// A settled gift — artifact, quantity and who sent it. Surfaced so the UI
+/// can burst for everyone in the room, including the sender.
+class LiveGiftEvent {
+  final String artifactType;
+  final int quantity;
+  final String senderId;
+  final String senderName;
+  final int total;
+
+  const LiveGiftEvent({
+    required this.artifactType,
+    required this.quantity,
+    required this.senderId,
+    required this.senderName,
+    required this.total,
+  });
+}
+
 class LiveSocketState {
   final bool isConnected;
   final List<LiveChatMessage> chatMessages;
@@ -90,10 +117,16 @@ class LiveSocketState {
   final Map<String, int> giftTotals;
   final LivePoll? currentPoll;
   final bool feedbackPinned;
-  /// Bumps every time a reaction lands — room listens for seq changes to
-  /// float the animation.
+  /// Co-host ladder signal events — bumps on every request/invite/response/
+  /// removal event so listeners can refresh without diffing payloads.
+  final LiveCohostEvent? cohostEvent;
+  final int cohostSeq;
+  /// Bumps every time a reaction lands.
   final LiveReaction? lastReaction;
   final int reactionSeq;
+  /// Bumps every time a gift settles — the room floats the burst.
+  final LiveGiftEvent? lastGift;
+  final int giftSeq;
 
   const LiveSocketState({
     this.isConnected = false,
@@ -102,8 +135,12 @@ class LiveSocketState {
     this.giftTotals = const {},
     this.currentPoll,
     this.feedbackPinned = false,
+    this.cohostEvent,
+    this.cohostSeq = 0,
     this.lastReaction,
     this.reactionSeq = 0,
+    this.lastGift,
+    this.giftSeq = 0,
   });
 
   LiveSocketState copyWith({
@@ -114,8 +151,12 @@ class LiveSocketState {
     LivePoll? currentPoll,
     bool clearPoll = false,
     bool? feedbackPinned,
+    LiveCohostEvent? cohostEvent,
+    int? cohostSeq,
     LiveReaction? lastReaction,
     int? reactionSeq,
+    LiveGiftEvent? lastGift,
+    int? giftSeq,
   }) {
     return LiveSocketState(
       isConnected: isConnected ?? this.isConnected,
@@ -124,8 +165,12 @@ class LiveSocketState {
       giftTotals: giftTotals ?? this.giftTotals,
       currentPoll: clearPoll ? null : (currentPoll ?? this.currentPoll),
       feedbackPinned: feedbackPinned ?? this.feedbackPinned,
+      cohostEvent: cohostEvent ?? this.cohostEvent,
+      cohostSeq: cohostSeq ?? this.cohostSeq,
       lastReaction: lastReaction ?? this.lastReaction,
       reactionSeq: reactionSeq ?? this.reactionSeq,
+      lastGift: lastGift ?? this.lastGift,
+      giftSeq: giftSeq ?? this.giftSeq,
     );
   }
 }
@@ -202,6 +247,16 @@ class LiveSocketNotifier extends Notifier<LiveSocketState> {
             reactionSeq: state.reactionSeq + 1,
           );
         }
+      case 'live_cohost_invite':
+      case 'live_cohost_request':
+      case 'live_cohost_response':
+      case 'live_cohost_removed':
+        if (data is Map<String, dynamic>) {
+          state = state.copyWith(
+            cohostEvent: LiveCohostEvent(type: type!, data: data),
+            cohostSeq: state.cohostSeq + 1,
+          );
+        }
       case 'live_chat':
         if (data is Map<String, dynamic>) {
           final line = LiveChatMessage.fromJson(data);
@@ -214,11 +269,26 @@ class LiveSocketNotifier extends Notifier<LiveSocketState> {
           state = state.copyWith(viewerCount: (data['count'] as num).toInt());
         }
       case 'live_gift':
-        if (data is Map && data['totals'] is Map) {
-          final totals = (data['totals'] as Map).map(
-            (k, v) => MapEntry(k.toString(), (v as num?)?.toInt() ?? 0),
-          );
-          state = state.copyWith(giftTotals: totals);
+        if (data is Map) {
+          if (data['totals'] is Map) {
+            final totals = (data['totals'] as Map).map(
+              (k, v) => MapEntry(k.toString(), (v as num?)?.toInt() ?? 0),
+            );
+            state = state.copyWith(giftTotals: totals);
+          }
+          if (data['gift'] is Map<String, dynamic>) {
+            final g = data['gift'] as Map<String, dynamic>;
+            state = state.copyWith(
+              lastGift: LiveGiftEvent(
+                artifactType: (g['artifact_type'] ?? 'gift').toString(),
+                quantity: (g['quantity'] as num?)?.toInt() ?? 1,
+                senderId: (g['sender_id'] ?? '').toString(),
+                senderName: (g['sender_name'] ?? 'Anonymous').toString(),
+                total: (g['total'] as num?)?.toInt() ?? 0,
+              ),
+              giftSeq: state.giftSeq + 1,
+            );
+          }
         }
       case 'live_poll':
         if (data is Map) {
@@ -268,6 +338,11 @@ class LiveSocketNotifier extends Notifier<LiveSocketState> {
 
   void sendFeedbackPin(bool pinned) =>
       _send({'type': 'feedback_pin', 'data': {'pinned': pinned}});
+
+  /// Co-host ladder signalling relayed through the room — the web sends the
+  /// same events; the host's invite/response lands on the invitee/requester.
+  void sendCohostEvent(String type, Map<String, dynamic> data) =>
+      _send({'type': type, 'data': data});
 
   void setPollVote(int option) {
     final poll = state.currentPoll;

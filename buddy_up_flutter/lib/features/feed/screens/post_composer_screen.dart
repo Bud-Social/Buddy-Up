@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -83,6 +85,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
 
   String? _serverDraftId;
   Timer? _draftDebounce;
+  Player? _remoteVideoPlayer;
+  VideoController? _remoteVideoController;
 
   @override
   void initState() {
@@ -135,7 +139,18 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       // Restore studio media whose local files still exist.
       final restoredMedia = <ComposerMedia>[];
       for (final entry in latest.mediaUrls) {
-        if (!entry.trim().startsWith('{')) continue;
+        if (!entry.trim().startsWith('{')) {
+          // Plain URL media — a replay share draft carries the remote file.
+          final url = entry.trim();
+          final name = Uri.tryParse(url)?.pathSegments.lastOrNull;
+          _media.add(ComposerMedia(
+            path: '',
+            name: name?.isNotEmpty == true ? name! : 'replay.mp4',
+            type: 'video',
+            remoteUrl: url,
+          ));
+          continue;
+        }
         try {
           final decoded = jsonDecode(entry) as Map<String, dynamic>;
           final list = decoded['buddyup_media'] as List? ?? [];
@@ -193,6 +208,16 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           _pollOptionControllers.add(TextEditingController());
         }
       });
+      if (_postType == 'long_video') {
+        final remote = _media.where((m) => m.remoteUrl != null).firstOrNull;
+        if (remote != null && mounted) {
+          _remoteVideoPlayer = Player();
+          _remoteVideoController = VideoController(_remoteVideoPlayer!);
+          _remoteVideoPlayer!
+            ..setVolume(90)
+            ..open(Media(remote.remoteUrl!), play: true);
+        }
+      }
     } catch (_) {}
   }
 
@@ -262,6 +287,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     for (final c in _pollOptionControllers) {
       c.dispose();
     }
+    _remoteVideoPlayer?.dispose();
     super.dispose();
   }
 
@@ -483,6 +509,13 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             '${_pollMinSelections < 1 ? 1 : (_pollMinSelections > maxSel ? maxSel : _pollMinSelections)}';
         data['poll_max_selections'] = '$maxSel';
       }
+    } else if (_postType == 'long_video') {
+      // Replay drafts are already remote — publish straight from the URL.
+      data['media_urls'] = _media
+          .map((m) => m.remoteUrl ?? m.path)
+          .where((e) => e.isNotEmpty)
+          .toList();
+      data['comments_disabled'] = '$_commentsEnabled';
     } else {
       // text / photo / video
       final uploadable =
@@ -829,6 +862,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (_postType == 'long_video') _buildLongVideoPreview(),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -928,6 +962,25 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           side: const BorderSide(color: BuddyColors.surfaceRaised),
         );
       }).toList(),
+    );
+  }
+
+  /// The replay the user is about to publish — media_kit player pinned
+  /// above the caption, only for the long_video path from a share draft.
+  Widget _buildLongVideoPreview() {
+    if (_remoteVideoController == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Container(
+            color: Colors.black,
+            child: Video(controller: _remoteVideoController!),
+          ),
+        ),
+      ),
     );
   }
 

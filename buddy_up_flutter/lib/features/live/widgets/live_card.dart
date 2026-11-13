@@ -56,11 +56,29 @@ class LiveCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      isLive ? 'LIVE' : (isScheduled ? 'Scheduled' : 'Replay'),
+                      isLive
+                          ? 'LIVE'
+                          : (isScheduled ? 'Scheduled' : 'Replay'),
                       style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
+                if (!isLive && !isScheduled && live.replaySaved && live.replayUrl.isEmpty)
+                  Positioned(
+                    top: 44,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: BuddyColors.gold.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'PROCESSING…',
+                        style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
                 if (isLive)
                   Positioned(
                     top: 12,

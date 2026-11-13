@@ -32,11 +32,14 @@ class CallHost extends ConsumerWidget {
 
     if (overlay == null) return child;
 
-    return Stack(
-      children: [
-        child,
-        overlay,
-      ],
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Stack(
+        children: [
+          child,
+          overlay,
+        ],
+      ),
     );
   }
 }
