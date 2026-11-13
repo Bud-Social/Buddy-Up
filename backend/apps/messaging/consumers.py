@@ -589,7 +589,7 @@ class LiveConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
     # Event types a live-room client may send. Anything else is dropped.
     ALLOWED_EVENT_TYPES = {
         'chat', 'reaction', 'gift', 'cohost_invite', 'cohost_request',
-        'cohost_response', 'cohost_removed',
+        'cohost_response', 'cohost_removed', 'feedback_pin',
     }
     # Only the live's host may broadcast these (verified against DB records).
     HOST_ONLY_EVENT_TYPES = {'cohost_invite', 'cohost_removed'}
@@ -628,6 +628,23 @@ class LiveConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
             'type': 'connected',
             'data': {'user_id': self.user_id, 'live_id': self.live_id, 'viewer_count': viewer_count},
         })
+        # A first-time viewer is announced in the chat as a system line, the
+        # way a doorman nods. Hosts and co-hosts are skipped — they are not
+        # "joining", and the host must not badge themselves.
+        welcome = await database_sync_to_async(self._welcome_if_first_join)()
+        if welcome:
+            await self.channel_layer.group_send(self.group_name, {
+                'type': 'live_chat',
+                'data': {
+                    'type': 'live_chat',
+                    'system': 'join',
+                    'user_id': None,
+                    'display_name': '',
+                    'avatar_url': '',
+                    'message': welcome,
+                    'timestamp': time.time(),
+                },
+            })
 
     async def disconnect(self, close_code):
         if getattr(self, 'rejected', False):
@@ -656,6 +673,36 @@ class LiveConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
         except BuddyLive.DoesNotExist:
             return False
         return can_access_live(live, self.profile) and has_live_admission(live, self.profile)
+
+    def _welcome_if_first_join(self):
+        """Return the welcome line, or None. First join per (live, user) only."""
+        profile = getattr(self, 'profile', None)
+        if profile is None:
+            return None
+        try:
+            live = BuddyLive.objects.only('id', 'host_id').get(id=self.live_id)
+        except BuddyLive.DoesNotExist:
+            return None
+        if live.host_id == profile.pk:
+            return None
+        if live.co_hosts.filter(pk=profile.pk).exists():
+            return None
+        name = profile.display_name or profile.username or 'Someone'
+        key = f'live_welcomed:{self.live_id}:{profile.pk}'
+        try:
+            first = cache.add(key, '1', timeout=21600)
+        except Exception:  # noqa: BLE001 - locmem fallback behaves the same
+            first = self._viewer_sets_add(key)
+        return f'{name} joined the live' if first else None
+
+    @staticmethod
+    def _viewer_sets_add(key):
+        global _viewer_sets
+        bucket = _viewer_sets.setdefault(f'welcomes:{key}', set())
+        if key in bucket:
+            return False
+        bucket.add(key)
+        return True
 
     def _update_viewer_peak(self, viewer_count):
         try:
@@ -805,6 +852,19 @@ class LiveConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
                 logger.warning('Rate limited live gift from user=%s live=%s', self.user_id, self.live_id)
                 return
             await self._handle_gift(content)
+        elif event_type == 'feedback_pin':
+            if not self._limiter.allow('live_cohost'):
+                return
+            role = await database_sync_to_async(self._load_live_role)()
+            if role != 'host':
+                logger.warning('Dropped feedback_pin from user=%s role=%s live=%s',
+                               self.user_id, role, self.live_id)
+                return
+            pinned = bool((content.get('data') or {}).get('pinned')) if isinstance(content.get('data'), dict) else False
+            await self.channel_layer.group_send(self.group_name, {
+                'type': 'live_feedback_pin',
+                'data': {'type': 'live_feedback_pin', 'pinned': pinned},
+            })
         else:
             if not self._limiter.allow('live_cohost'):
                 return
@@ -911,6 +971,9 @@ class LiveConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
     async def live_cohost_request(self, event): await self.send_json(event)
     async def live_cohost_response(self, event): await self.send_json(event)
     async def live_cohost_removed(self, event): await self.send_json(event)
+    async def live_poll(self, event): await self.send_json(event)
+    async def live_poll_update(self, event): await self.send_json(event)
+    async def live_feedback_pin(self, event): await self.send_json(event)
 
 
 # ─── Gym group chat consumer ─────────────────────────────────────────────────

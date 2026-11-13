@@ -171,4 +171,8 @@ export const moderationApi = {
    */
   getExplanation: (flagId: string) =>
     apiClient.get<ApiResponse<FlagExplanation>>(`/moderation/content-flags/${flagId}/explanation/`).then((r) => r.data.data),
+
+  /** Report a live / a user — lands in the moderation queue. */
+  createReport: (payload: { target_user: string; reason: string; description?: string; content_url?: string }) =>
+    apiClient.post<ApiResponse<UserReport>>('/moderation/reports/', payload).then((r) => r.data),
 };

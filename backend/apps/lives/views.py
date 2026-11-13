@@ -20,7 +20,10 @@ from .serializers import (
     RecordingChunkInputSerializer,
 )
 from .provider_service import get_live_credentials, generate_live_channel_id
-from .access import can_access_live, has_live_admission, may_publish_media
+from .access import (
+    can_access_live, has_live_admission, may_publish_media,
+    replay_visibility_q, muted_host_ids,
+)
 from apps.profiles.models import Profile
 from apps.wallet.models import ArtifactTransaction
 
@@ -46,6 +49,9 @@ class LiveBrowserView(views.APIView):
             queryset = BuddyLive.objects.filter(status='scheduled', scheduled_for__gte=timezone.now()).order_by('scheduled_for')
         elif tab == 'replays':
             queryset = BuddyLive.objects.filter(status='ended', replay_saved=True).order_by('-ended_at')
+            queryset = queryset.filter(
+                replay_visibility_q(request.user.profile),
+            ).distinct()
             if mine:
                 queryset = queryset.filter(
                     db_models.Q(host=request.user.profile) | db_models.Q(co_hosts=request.user.profile)
@@ -57,6 +63,16 @@ class LiveBrowserView(views.APIView):
 
         if category:
             queryset = queryset.filter(category=category)
+
+        # Lives the viewer asked not to see again ("never recommend this host",
+        # "not interested in this one").
+        queryset = queryset.exclude(host_id__in=muted_host_ids(request.user.profile))
+        if tab in ('live', 'upcoming', 'scheduled'):
+            from .models import LiveNotInterested
+            hidden_ids = LiveNotInterested.objects.filter(
+                user=request.user.profile,
+            ).values_list('live_id', flat=True)
+            queryset = queryset.exclude(id__in=hidden_ids)
 
         # A taken-down live -- including its recording and replay -- must not sit
         # in the browser or replays tab. `status` is the broadcast lifecycle
@@ -281,12 +297,10 @@ class JoinLiveView(views.APIView):
             live, request, can_publish=may_publish_media(live, user),
         )
 
-        # Track attendee
-        role = 'host' if user == live.host else 'co_host' if live.co_hosts.filter(id=user.id).exists() else 'attendee'
-        attendee = LiveAttendee.objects.filter(live=live, user=user).order_by('-joined_at').first()
-        if attendee is None:
-            LiveAttendee.objects.create(live=live, user=user, role=role)
-        else:
+        # Track attendee — rejoins are idempotent, never a duplicate row.
+        role = 'host' if user == live.host else ('co_host' if live.co_hosts.filter(pk=user.pk).exists() else 'attendee')
+        attendee, created = LiveAttendee.objects.get_or_create(live=live, user=user, defaults={'role': role})
+        if not created:
             attendee.role = role
             attendee.left_at = None
             attendee.save(update_fields=['role', 'left_at'])
@@ -644,7 +658,7 @@ class CohostInviteView(views.APIView):
                 'message': 'You are already the host.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
-        if live.co_hosts.filter(id=profile.id).exists():
+        if live.co_hosts.filter(pk=profile.pk).exists():
             return Response({
                 'success': False, 'data': None,
                 'message': f'@{profile.username} is already a co-host.',
@@ -751,7 +765,7 @@ class RequestToSpeakView(views.APIView):
                 'message': 'You are already the host.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
-        if live.co_hosts.filter(id=profile.id).exists():
+        if live.co_hosts.filter(pk=profile.pk).exists():
             return Response({
                 'success': False, 'data': None,
                 'message': 'You are already a co-host.',
@@ -914,6 +928,7 @@ class UserLivesView(views.APIView):
             queryset = BuddyLive.objects.filter(host=profile, status='scheduled')
         elif tab == 'replays':
             queryset = BuddyLive.objects.filter(host=profile, status='ended', replay_saved=True)
+            queryset = queryset.filter(replay_visibility_q(request.user.profile)).distinct()
         elif tab == 'co_hosted':
             queryset = BuddyLive.objects.filter(co_hosts=profile)
         else:
@@ -948,7 +963,7 @@ class InitiateClientRecordingView(views.APIView):
 
     def post(self, request, live_id):
         live = get_object_or_404(BuddyLive, id=live_id)
-        if live.host != request.user.profile and not live.co_hosts.filter(id=request.user.profile.id).exists():
+        if live.host != request.user.profile and not live.co_hosts.filter(pk=request.user.profile.pk).exists():
             return Response({
                 'success': False, 'data': None,
                 'message': 'Only the host or co-host can initiate recording.',
@@ -979,7 +994,7 @@ class UploadReplayChunkView(views.APIView):
 
     def post(self, request, live_id):
         live = get_object_or_404(BuddyLive, id=live_id)
-        if live.host != request.user.profile and not live.co_hosts.filter(id=request.user.profile.id).exists():
+        if live.host != request.user.profile and not live.co_hosts.filter(pk=request.user.profile.pk).exists():
             return Response({
                 'success': False, 'data': None,
                 'message': 'Only the host or co-host can upload recording chunks.',
@@ -1043,7 +1058,7 @@ class CompleteClientReplayView(views.APIView):
 
     def post(self, request, live_id):
         live = get_object_or_404(BuddyLive, id=live_id)
-        if live.host != request.user.profile and not live.co_hosts.filter(id=request.user.profile.id).exists():
+        if live.host != request.user.profile and not live.co_hosts.filter(pk=request.user.profile.pk).exists():
             return Response({
                 'success': False, 'data': None,
                 'message': 'Only the host or co-host can complete a replay.',
@@ -1180,3 +1195,325 @@ class LiveRecordingDownloadView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response(status=status.HTTP_302_FOUND, headers={'Location': archive_url})
+
+
+# ─── Live visibility, feedback, polls, mutes ──────────────────────────────────
+
+from datetime import timedelta  # noqa: E402
+
+from django.db.models import Count  # noqa: E402
+
+from .models import LiveFeedback, LiveHostMute, LiveNotInterested, LivePoll, LivePollVote  # noqa: E402
+from .access import is_host_or_cohost  # noqa: E402
+
+
+def _profile(request):
+    profile = getattr(request.user, 'profile', None)
+    return profile
+
+
+def _admitted_to(live, profile, host_ok=True):
+    if host_ok and is_host_or_cohost(live, profile):
+        return True
+    return can_access_live(live, profile) or has_live_admission(live, profile)
+
+
+class LiveVisibilityView(views.APIView):
+    """PATCH /lives/<live_id>/visibility/ — host flips the audience, live and replay."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        profile = _profile(request)
+        if not is_host_or_cohost(live, profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host or a co-host can change visibility.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        access = (request.data.get('access') or '').strip()
+        valid = ('public', 'buddies', 'gym_members', 'private')
+        if access not in valid:
+            return Response({
+                'success': False, 'data': None,
+                'message': f"access must be one of {', '.join(valid)}.",
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        live.access = access
+        live.save(update_fields=['access', 'updated_at'])
+        return Response({
+            'success': True,
+            'data': {'access': live.access},
+            'message': 'Visibility updated.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class LiveFeedbackView(views.APIView):
+    """POST a 1-5 star rating (upsert). GET the host aggregate, or your own row."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        profile = _profile(request)
+        if not _admitted_to(live, profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Join the live before leaving feedback.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        try:
+            rating = int(request.data.get('rating'))
+        except (TypeError, ValueError):
+            rating = 0
+        if rating < 1 or rating > 5:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'rating must be between 1 and 5.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        comment = (request.data.get('comment') or '').strip()[:500]
+        obj, _ = LiveFeedback.objects.update_or_create(
+            live=live, user=profile,
+            defaults={'rating': rating, 'comment': comment},
+        )
+        return Response({
+            'success': True,
+            'data': {'rating': obj.rating, 'comment': obj.comment},
+            'message': 'Feedback saved.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+    def get(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        profile = _profile(request)
+        if is_host_or_cohost(live, profile):
+            rows = live.feedback.select_related('user').order_by('-created_at')
+            agg = rows.aggregate(count=Count('id'))
+            avg = rows.aggregate(avg=db_models.Avg('rating'))['avg'] or 0
+            recent = [
+                {
+                    'rating': r.rating,
+                    'comment': r.comment,
+                    'display_name': r.user.display_name,
+                    'avatar_url': r.user.avatar_url or '',
+                }
+                for r in rows[:20]
+            ]
+            return Response({
+                'success': True,
+                'data': {'count': agg['count'], 'average': round(avg, 2), 'recent': recent},
+                'message': 'OK', 'errors': None, 'pagination': None,
+            })
+        own = live.feedback.filter(user=profile).first()
+        return Response({
+            'success': True,
+            'data': {'rating': own.rating, 'comment': own.comment} if own else None,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+
+def _poll_payload(poll, live=None):
+    data = {
+        'poll_id': str(poll.id),
+        'question': poll.question,
+        'options': poll.options,
+        'duration_seconds': poll.duration_seconds,
+        'dispatched_at': poll.dispatched_at.isoformat() if poll.dispatched_at else None,
+        'ends_at': poll.ends_at.isoformat() if poll.ends_at else None,
+    }
+    if poll.dispatched_at:
+        votes = list(poll.votes.values_list('option', flat=True))
+        tally = [0] * len(poll.options)
+        for v in votes:
+            if 0 <= v < len(tally):
+                tally[v] += 1
+        data['tally'] = tally
+        data['total_votes'] = len(votes)
+    return data
+
+
+class LivePollCreateView(views.APIView):
+    """POST /lives/<live_id>/polls/ — host schedules an audience poll."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        profile = _profile(request)
+        if not is_host_or_cohost(live, profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host or a co-host can create a poll.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        question = (request.data.get('question') or '').strip()[:200]
+        options = request.data.get('options') or []
+        if not isinstance(options, list) or len(options) < 2 or len(options) > 6:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'options must be a list of 2-6 choices.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        options = [str(o).strip()[:80] for o in options if str(o).strip()]
+        if len(options) < 2:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Every option needs text.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            show_after = int(request.data.get('show_after_seconds', 300))
+            duration = int(request.data.get('duration_seconds', 60))
+        except (TypeError, ValueError):
+            show_after, duration = 300, 60
+        show_after = max(10, min(show_after, 3600))
+        duration = max(15, min(duration, 600))
+
+        poll = LivePoll.objects.create(
+            live=live, host=profile, question=question, options=options,
+            show_after_seconds=show_after, duration_seconds=duration,
+        )
+        from .tasks import broadcast_live_poll
+        broadcast_live_poll.apply_async(args=[str(live.id), str(poll.id)], countdown=show_after)
+        return Response({
+            'success': True,
+            'data': _poll_payload(poll),
+            'message': 'Poll scheduled.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class LivePollCurrentView(views.APIView):
+    """GET /lives/<live_id>/polls/current/ — the poll the room is seeing right now."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        profile = _profile(request)
+        if not _admitted_to(live, profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Join the live to see its poll.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        poll = (
+            live.polls.filter(dispatched_at__isnull=False)
+            .order_by('-dispatched_at')
+            .first()
+        )
+        if poll and poll.ends_at and poll.ends_at > timezone.now():
+            data = _poll_payload(poll, live)
+            own = poll.votes.filter(user=profile).first()
+            data['your_vote'] = own.option if own else None
+            return Response({
+                'success': True, 'data': data,
+                'message': 'OK', 'errors': None, 'pagination': None,
+            })
+        return Response({
+            'success': True, 'data': None,
+            'message': 'No active poll.', 'errors': None, 'pagination': None,
+        })
+
+
+class LivePollVoteView(views.APIView):
+    """POST /lives/<live_id>/polls/<poll_id>/vote/ {option}"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id, poll_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        profile = _profile(request)
+        if not _admitted_to(live, profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Join the live to vote.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        poll = get_object_or_404(LivePoll, id=poll_id, live=live)
+        if not poll.dispatched_at or not poll.ends_at or poll.ends_at <= timezone.now():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'This poll is closed.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+        try:
+            option = int(request.data.get('option'))
+        except (TypeError, ValueError):
+            option = -1
+        if option < 0 or option >= len(poll.options):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'option is out of range.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        LivePollVote.objects.update_or_create(
+            poll=poll, user=profile, defaults={'option': option},
+        )
+        votes = list(poll.votes.values_list('option', flat=True))
+        tally = [0] * len(poll.options)
+        for v in votes:
+            if 0 <= v < len(tally):
+                tally[v] += 1
+        # Everyone in the room sees the numbers move, not just the voter.
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(f'live_{live.id}', {
+                'type': 'live_poll_update',
+                'data': {
+                    'type': 'live_poll_update',
+                    'poll_id': str(poll.id),
+                    'tally': tally,
+                    'total_votes': len(votes),
+                },
+            })
+        except Exception:  # noqa: BLE001 - tally delivery is best-effort
+            pass
+        return Response({
+            'success': True,
+            'data': {'tally': tally, 'total_votes': len(votes), 'your_vote': option},
+            'message': 'Vote recorded.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class LiveNotInterestedView(views.APIView):
+    """POST toggles "not interested in this live" for the browser listing."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        profile = _profile(request)
+        obj, created = LiveNotInterested.objects.get_or_create(live=live, user=profile)
+        if not created:
+            obj.delete()
+        return Response({
+            'success': True,
+            'data': {'not_interested': created},
+            'message': 'Noted. We will show this live less.' if created else 'Restored.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class LiveHostMuteView(views.APIView):
+    """POST toggles "never recommend lives from this host"."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        profile = _profile(request)
+        if profile == live.host:
+            return Response({
+                'success': False, 'data': None,
+                'message': "You cannot mute yourself.",
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        obj, created = LiveHostMute.objects.get_or_create(host=live.host, user=profile)
+        if not created:
+            obj.delete()
+        return Response({
+            'success': True,
+            'data': {'muted': created},
+            'message': "You will not be recommended lives from this host." if created else 'Restored.',
+            'errors': None, 'pagination': None,
+        })

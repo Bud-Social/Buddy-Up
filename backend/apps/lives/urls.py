@@ -26,6 +26,13 @@ urlpatterns = [
     path('<uuid:live_id>/recording/download/', views.LiveRecordingDownloadView.as_view(), name='recording_download'),
     path('<uuid:live_id>/attendees/', views.LiveAttendeesView.as_view(), name='attendees'),
     path('<uuid:live_id>/replay/view/', views.ReplayViewRecordView.as_view(), name='replay_view'),
+    path('<uuid:live_id>/visibility/', views.LiveVisibilityView.as_view(), name='visibility'),
+    path('<uuid:live_id>/feedback/', views.LiveFeedbackView.as_view(), name='feedback'),
+    path('<uuid:live_id>/polls/', views.LivePollCreateView.as_view(), name='polls'),
+    path('<uuid:live_id>/polls/current/', views.LivePollCurrentView.as_view(), name='poll_current'),
+    path('<uuid:live_id>/polls/<uuid:poll_id>/vote/', views.LivePollVoteView.as_view(), name='poll_vote'),
+    path('<uuid:live_id>/not-interested/', views.LiveNotInterestedView.as_view(), name='not_interested'),
+    path('<uuid:live_id>/mute-host/', views.LiveHostMuteView.as_view(), name='mute_host'),
     path('gym/<uuid:gym_id>/schedule/', views.GymScheduleView.as_view(), name='gym_schedule'),
     path('profile/<str:username>/', views.UserLivesView.as_view(), name='user_lives'),
 ]

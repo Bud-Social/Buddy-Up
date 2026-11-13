@@ -389,3 +389,51 @@ def send_live_reminders():
 
                 live.reminders_sent = live.reminders_sent + [str(threshold)]
                 live.save(update_fields=['reminders_sent'])
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=10)
+def broadcast_live_poll(self, live_id: str, poll_id: str):
+    """Fire the audience poll at its scheduled minute.
+
+    stamped once, so a retry never double-broadcasts; voting is anchored to
+    ``dispatched_at``, not to when the host clicked create.
+    """
+    import json as _json
+
+    try:
+        from .models import LivePoll
+    except Exception as exc:  # noqa: BLE001
+        logger.exception('broadcast_live_poll import failed: %s', exc)
+        raise self.retry(exc=exc)
+
+    poll = LivePoll.objects.select_related('live').filter(id=poll_id).first()
+    if not poll:
+        logger.warning('broadcast_live_poll: poll %s vanished', poll_id)
+        return
+    if poll.dispatched_at:
+        return  # already broadcast (retry after a crash)
+
+    now = timezone.now()
+    poll.dispatched_at = now
+    poll.save(update_fields=['dispatched_at', 'updated_at'])
+
+    payload = {
+        'type': 'live_poll',
+        'data': {
+            'type': 'live_poll',
+            'poll_id': str(poll.id),
+            'question': poll.question,
+            'options': _json.loads(_json.dumps(poll.options)),
+            'duration_seconds': poll.duration_seconds,
+            'dispatched_at': now.isoformat(),
+            'ends_at': poll.ends_at.isoformat() if poll.ends_at else None,
+        },
+    }
+    try:
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(f'live_{live_id}', payload)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception('broadcast_live_poll group_send failed: %s', exc)
+        raise self.retry(exc=exc)

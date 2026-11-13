@@ -2226,7 +2226,22 @@ def _draft_payload(draft):
         'source': None,
     }
 
-    if draft.source_kind == 'countdown' and draft.source_countdown:
+    if draft.source_kind == 'live' and draft.source_live:
+        obj = draft.source_live
+        duration_minutes = 0
+        if obj.started_at and obj.ended_at:
+            duration_minutes = max(1, round((obj.ended_at - obj.started_at).total_seconds() / 60))
+        payload['source'] = {
+            'kind': 'live',
+            'id': str(obj.id),
+            'title': obj.title,
+            'live_type': obj.live_type,
+            'viewer_peak': obj.viewer_peak,
+            'duration_minutes': duration_minutes,
+            'replay_url': obj.replay_url or '',
+            'mux_status': obj.mux_status,
+        }
+    elif draft.source_kind == 'countdown' and draft.source_countdown:
         obj = draft.source_countdown
         payload['source'] = {
             'kind': 'countdown',

@@ -2,6 +2,18 @@ import { apiClient } from './client';
 import type { ApiResponse } from '@/types';
 import type { BuddyLive, LiveCredentials, LiveRoomData } from '@/types/live';
 
+export interface LivePollData {
+  poll_id: string;
+  question: string;
+  options: string[];
+  duration_seconds: number;
+  dispatched_at: string | null;
+  ends_at: string | null;
+  tally?: number[];
+  total_votes?: number;
+  your_vote?: number | null;
+}
+
 export interface LiveBrowserParams {
   tab?: 'live' | 'scheduled' | 'replays' | 'upcoming';
   category?: string;
@@ -115,6 +127,30 @@ export const livesApi = {
 
   respondToSpeakRequest: (liveId: string, username: string, action: 'approve' | 'deny') =>
     apiClient.post<ApiResponse<null>>(`/lives/${liveId}/co-host/respond-request/`, { username, action }).then((r) => r.data),
+
+  updateVisibility: (liveId: string, access: 'public' | 'buddies' | 'gym_members' | 'private') =>
+    apiClient.patch<ApiResponse<{ access: string }>>(`/lives/${liveId}/visibility/`, { access }).then((r) => r.data),
+
+  submitFeedback: (liveId: string, rating: number, comment = '') =>
+    apiClient.post<ApiResponse<{ rating: number; comment: string }>>(`/lives/${liveId}/feedback/`, { rating, comment }).then((r) => r.data),
+
+  getFeedback: (liveId: string) =>
+    apiClient.get<ApiResponse<{ count: number; average: number; recent: Array<{ rating: number; comment: string; display_name: string; avatar_url: string }> } | { rating: number; comment: string } | null>>(`/lives/${liveId}/feedback/`).then((r) => r.data),
+
+  createPoll: (liveId: string, payload: { question: string; options: string[]; show_after_seconds: number; duration_seconds: number }) =>
+    apiClient.post<ApiResponse<LivePollData>>(`/lives/${liveId}/polls/`, payload).then((r) => r.data),
+
+  getCurrentPoll: (liveId: string) =>
+    apiClient.get<ApiResponse<LivePollData | null>>(`/lives/${liveId}/polls/current/`).then((r) => r.data),
+
+  votePoll: (liveId: string, pollId: string, option: number) =>
+    apiClient.post<ApiResponse<{ tally: number[]; total_votes: number; your_vote: number }>>(`/lives/${liveId}/polls/${pollId}/vote/`, { option }).then((r) => r.data),
+
+  toggleNotInterested: (liveId: string) =>
+    apiClient.post<ApiResponse<{ not_interested: boolean }>>(`/lives/${liveId}/not-interested/`).then((r) => r.data),
+
+  toggleMuteHost: (liveId: string) =>
+    apiClient.post<ApiResponse<{ muted: boolean }>>(`/lives/${liveId}/mute-host/`).then((r) => r.data),
 
   initClientRecording: (liveId: string) =>
     apiClient.post<ApiResponse<{ session_id: string }>>(`/lives/${liveId}/recording/init/`).then((r) => r.data),

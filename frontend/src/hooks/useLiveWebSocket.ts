@@ -2,11 +2,13 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 
 export interface ChatMessage {
-  user_id: string;
+  user_id: string | null;
   display_name: string;
   avatar_url: string;
   message: string;
   timestamp: number;
+  /** 'join' marks a system line ("X joined the live") rendered centered and muted. */
+  system?: string | null;
   gift?: {
     tx_id: string;
     artifact_type: string;
@@ -38,11 +40,24 @@ export interface CohostEvent {
   action?: string;
 }
 
+export interface LivePoll {
+  poll_id: string;
+  question: string;
+  options: string[];
+  duration_seconds: number;
+  dispatched_at: string | null;
+  ends_at: string | null;
+  tally?: number[];
+  total_votes?: number;
+  your_vote?: number | null;
+}
+
 export type GiftTotals = Record<string, number>;
 
 export interface LiveWebSocketEvent {
   type: 'live_chat' | 'live_reaction' | 'live_viewer_count' | 'live_gift' | 'connected'
-    | 'live_cohost_invite' | 'live_cohost_request' | 'live_cohost_response' | 'live_cohost_removed';
+    | 'live_cohost_invite' | 'live_cohost_request' | 'live_cohost_response' | 'live_cohost_removed'
+    | 'live_poll' | 'live_poll_update' | 'live_feedback_pin';
   data: any;
 }
 
@@ -60,6 +75,8 @@ export function useLiveWebSocket(liveId: string | undefined) {
   const [viewerCount, setViewerCount] = useState(0);
   const [giftTotals, setGiftTotals] = useState<GiftTotals>({});
   const [cohostEvents, setCohostEvents] = useState<CohostEvent[]>([]);
+  const [currentPoll, setCurrentPoll] = useState<LivePoll | null>(null);
+  const [feedbackPinned, setFeedbackPinned] = useState(false);
 
   const connect = useCallback(() => {
     if (!liveId || !accessToken) return;
@@ -116,6 +133,34 @@ export function useLiveWebSocket(liveId: string | undefined) {
           case 'live_cohost_response':
           case 'live_cohost_removed':
             setCohostEvents((prev) => [...prev.slice(-19), { ...(msg.data as CohostEvent), action: msg.type.replace('live_cohost_', '') }]);
+            break;
+
+          case 'live_poll':
+            if (msg.data && 'poll_id' in msg.data) {
+              setCurrentPoll({
+                poll_id: String(msg.data.poll_id),
+                question: String(msg.data.question ?? ''),
+                options: Array.isArray(msg.data.options) ? msg.data.options.map(String) : [],
+                duration_seconds: Number(msg.data.duration_seconds ?? 60),
+                dispatched_at: msg.data.dispatched_at ?? null,
+                ends_at: msg.data.ends_at ?? null,
+                tally: undefined,
+                total_votes: 0,
+                your_vote: null,
+              });
+            }
+            break;
+
+          case 'live_poll_update':
+            if (msg.data && 'poll_id' in msg.data) {
+              setCurrentPoll((prev) => prev && prev.poll_id === String(msg.data.poll_id)
+                ? { ...prev, tally: msg.data.tally ?? prev.tally, total_votes: msg.data.total_votes ?? prev.total_votes }
+                : prev);
+            }
+            break;
+
+          case 'live_feedback_pin':
+            setFeedbackPinned(Boolean(msg.data?.pinned));
             break;
         }
       } catch {}
@@ -184,6 +229,12 @@ export function useLiveWebSocket(liveId: string | undefined) {
     }
   }, []);
 
+  const sendFeedbackPin = useCallback((pinned: boolean) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'feedback_pin', data: { pinned } }));
+    }
+  }, []);
+
   return {
     isConnected,
     chatMessages,
@@ -191,9 +242,13 @@ export function useLiveWebSocket(liveId: string | undefined) {
     viewerCount,
     giftTotals,
     cohostEvents,
+    currentPoll,
+    setCurrentPoll,
+    feedbackPinned,
     sendChat,
     sendReaction,
     sendGift,
     sendCohostEvent,
+    sendFeedbackPin,
   };
 }

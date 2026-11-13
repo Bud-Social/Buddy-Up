@@ -10,7 +10,9 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { livesApi } from '@/api/lives';
+import { analyticsApi } from '@/api/analytics';
 import { profilesApi } from '@/api';
+import { useAuthStore } from '@/store/authStore';
 import ReplayPlayer from '@/components/live/ReplayPlayer';
 import type { BuddyLive } from '@/types/live';
 import type { Profile } from '@/types';
@@ -21,6 +23,7 @@ const CATEGORIES = ['strength', 'cardio', 'hiit', 'yoga', 'pilates', 'stretching
 
 export default function Lives() {
   const navigate = useNavigate();
+  const myUserId = useAuthStore((s) => s.profile?.user_id || '');
   const { category } = useParams<{ category?: string }>();
   const [tab, setTab] = useState<Tab>('live');
   const [replayScope, setReplayScope] = useState<'all' | 'mine'>('all');
@@ -243,6 +246,19 @@ export default function Lives() {
           replayUrl={replayLive.replay_url}
           muxPlaybackId={replayLive.mux_playback_id}
           liveId={replayLive.id}
+          access={replayLive.access}
+          isHost={replayLive.host?.user_id === myUserId}
+          onShareReplay={async () => {
+            try {
+              const draft = await analyticsApi.sharePrepare({ kind: 'live', obj_id: replayLive.id });
+              navigate(`/create?draft=${draft.draft_id}`);
+            } catch {
+              /* leave the player open; nothing published */
+            }
+          }}
+          onVisibilityChange={(access) => {
+            livesApi.updateVisibility(replayLive.id, access).catch(() => {});
+          }}
           onClose={() => setReplayLive(null)}
         />
       )}

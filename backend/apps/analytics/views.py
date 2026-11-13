@@ -498,13 +498,15 @@ class PrepareShareView(views.APIView):
         kind = request.data.get('kind')
         obj_id = request.data.get('obj_id')
 
-        if kind not in ('activity', 'workout', 'countdown') or not obj_id:
+        if kind not in ('activity', 'workout', 'countdown', 'live') or not obj_id:
             return Response({'success': False, 'data': None,
-                             'message': 'kind (activity|workout|countdown) and obj_id are required.',
+                             'message': 'kind (activity|workout|countdown|live) and obj_id are required.',
                              'errors': None, 'pagination': None},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        if kind == 'countdown':
+        if kind == 'live':
+            draft, obj = self._prepare_live(request, profile, obj_id)
+        elif kind == 'countdown':
             draft, obj = self._prepare_countdown(request, profile, obj_id)
         else:
             draft, obj = self._prepare_activity_or_workout(profile, kind, obj_id)
@@ -566,6 +568,39 @@ class PrepareShareView(views.APIView):
                 + (f' @ {obj.weight_kg}kg' if obj.weight_kg else '')
             )
             draft.tags = ['workout', obj.workout_type]
+        return draft, obj
+
+    def _prepare_live(self, request, profile, obj_id):
+        """A live replay shares as a video post, carrying the room's numbers."""
+        from apps.feed.models import Draft
+        from apps.lives.models import BuddyLive
+        from apps.lives.access import is_host_or_cohost
+
+        obj = get_object_or_404(BuddyLive, id=obj_id)
+        if not is_host_or_cohost(obj, profile):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only the host or a co-host can share this live.')
+
+        duration_minutes = 0
+        if obj.started_at and obj.ended_at:
+            duration_minutes = max(1, round((obj.ended_at - obj.started_at).total_seconds() / 60))
+
+        draft = Draft(
+            author=profile,
+            post_type='long_video',
+            visibility=request.data.get('visibility', 'public'),
+            source_kind='live',
+            source_live=obj,
+        )
+        if obj.replay_url:
+            draft.media_urls = [obj.replay_url]
+        body = (request.data.get('body') or '').strip()
+        draft.body = body or (
+            f'🎥 Replay: {obj.title}'
+            + (f' — {duration_minutes} min' if duration_minutes else '')
+            + (f' · peak {obj.viewer_peak} viewers.' if obj.viewer_peak else '.')
+        )
+        draft.tags = ['live', obj.live_type]
         return draft, obj
 
     def _prepare_countdown(self, request, profile, obj_id):
@@ -633,10 +668,11 @@ class PublishDraftView(views.APIView):
         draft.source_activity = None
         draft.source_workout = None
         draft.source_countdown = None
+        draft.source_live = None
         draft.source_kind = ''
         draft.save(update_fields=[
             'source_activity', 'source_workout', 'source_countdown',
-            'source_kind', 'updated_at',
+            'source_live', 'source_kind', 'updated_at',
         ])
 
         return Response({
@@ -678,6 +714,20 @@ def _source_metrics(draft):
             'weight_kg': obj.weight_kg,
             'duration_minutes': obj.duration_minutes,
             'calories': obj.calories_burned,
+        }
+    if draft.source_kind == 'live' and draft.source_live:
+        obj = draft.source_live
+        duration_minutes = 0
+        if obj.started_at and obj.ended_at:
+            duration_minutes = max(1, round((obj.ended_at - obj.started_at).total_seconds() / 60))
+        return {
+            'source': 'share_draft',
+            'source_kind': 'live',
+            'title': obj.title,
+            'live_type': obj.live_type,
+            'viewer_peak': obj.viewer_peak,
+            'unique_viewers': obj.replay_views.values('viewer').distinct().count(),
+            'duration_minutes': duration_minutes,
         }
     if draft.source_kind == 'countdown' and draft.source_countdown:
         obj = draft.source_countdown

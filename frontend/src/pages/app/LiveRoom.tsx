@@ -6,14 +6,19 @@ import {
   MessageCircle, MessageCircleOff, Send,
   LogOut, Shield, Gift, X, Crown, Coins, Headphones,
   Monitor, ChevronDown, PictureInPicture2, UserPlus, Reply,
+  MoreVertical, Star, Flag, Flame, Ban, EyeOff, BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 import { livesApi } from '@/api/lives';
+import { moderationApi } from '@/api/moderation';
+import { profilesApi } from '@/api/profiles';
+import { useToast } from '@/components/ui/Toast';
 import { track } from '@/lib/analytics';
 import { useLiveWebSocket } from '@/hooks/useLiveWebSocket';
 import { useAuthStore } from '@/store/authStore';
+import { walletApi } from '@/api/wallet';
 import { useArtifactStore } from '@/store/artifactStore';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import useSimulatedAttendees from '@/hooks/useSimulatedAttendees';
@@ -31,6 +36,8 @@ const REACTIONS = [
   { emoji: '⭐', label: 'Star' },
   { emoji: '😂', label: 'LOL' },
   { emoji: '👏', label: 'Clap' },
+  { emoji: '🙌', label: 'Raise Hands' },
+  { emoji: '💯', label: '100' },
 ];
 
 interface FloatingGift {
@@ -68,13 +75,67 @@ export default function LiveRoom() {
     viewerCount,
     giftTotals,
     cohostEvents,
+    currentPoll,
+    setCurrentPoll,
+    feedbackPinned,
     sendChat,
     sendReaction,
     sendGift,
     sendCohostEvent,
+    sendFeedbackPin,
   } = useLiveWebSocket(liveId);
 
+  useToast();
+
+  // ── Live enhancement state ───────────────────────────────────────────────
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showReportSheet, setShowReportSheet] = useState(false);
+  const [reportReason, setReportReason] = useState('spam');
+  const [notInterested, setNotInterested] = useState(false);
+  const [hostMuted, setHostMuted] = useState(false);
+  const [showPollComposer, setShowPollComposer] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollShowAfter, setPollShowAfter] = useState(300);
+  const [pollDuration, setPollDuration] = useState(60);
+  const [pollCreating, setPollCreating] = useState(false);
+  const [nowTick, setNowTick] = useState(Date.now());
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [hostFeedback, setHostFeedback] = useState<{ count: number; average: number; recent: Array<{ rating: number; comment: string; display_name: string; avatar_url: string }> } | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [unseenWhilePaused, setUnseenWhilePaused] = useState(0);
+  const nearBottomRef = useRef(true);
+  const prevChatLenRef = useRef(0);
+
   const artifactBalance = useArtifactStore((s) => s.balance);
+  const setArtifactBalance = useArtifactStore((s) => s.setBalance);
+
+  // The artifact store is the room's wallet — nothing else populates it, so
+  // the gift picker would always see 0 and every gift attempt would bounce
+  // to the recharge prompt. Hydrate it from the wallet on mount and keep it
+  // honest after every gift sent.
+  useEffect(() => {
+    walletApi.getBalance().then((res) => {
+      const next = { dumbbell: 0, barbell: 0, burpee: 0, squat: 0, sprint: 0, pr: 0, champion: 0 };
+      for (const item of res?.data?.regular_balance ?? []) {
+        if (item.artifact_type in next) next[item.artifact_type as keyof typeof next] = item.quantity;
+      }
+      setArtifactBalance(next);
+    }).catch(() => {});
+  }, [setArtifactBalance]);
+
+  const refreshArtifactBalance = useCallback(() => {
+    walletApi.getBalance().then((res) => {
+      const next = { dumbbell: 0, barbell: 0, burpee: 0, squat: 0, sprint: 0, pr: 0, champion: 0 };
+      for (const item of res?.data?.regular_balance ?? []) {
+        if (item.artifact_type in next) next[item.artifact_type as keyof typeof next] = item.quantity;
+      }
+      setArtifactBalance(next);
+    }).catch(() => {});
+  }, [setArtifactBalance]);
 
   const ARTIFACT_LIST = [
     { type: 'dumbbell', label: 'Dumbbell', value: 0.10 },
@@ -100,6 +161,180 @@ export default function LiveRoom() {
     setCohostToast(message);
     setTimeout(() => setCohostToast(''), 2500);
   }, []);
+
+  // 1-second ticker for poll countdowns and hourglass animations.
+  useEffect(() => {
+    const t = window.setInterval(() => setNowTick(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  // A late joiner picks up the poll already on the table.
+  useEffect(() => {
+    if (!liveId || !wsConnected || currentPoll) return;
+    livesApi.getCurrentPoll(liveId).then((resp) => {
+      const poll = (resp as unknown as { data: typeof currentPoll })?.data ?? (resp as { data?: typeof currentPoll })?.data;
+      if (poll) setCurrentPoll(poll);
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveId, wsConnected]);
+
+  // The host sees the room's aggregate once the feedback form is pinned.
+  useEffect(() => {
+    if (!liveId || !feedbackPinned || !isHost) return;
+    livesApi.getFeedback(liveId).then((resp) => {
+      const data = (resp as unknown as { data?: { count: number; average: number; recent: Array<{ rating: number; comment: string; display_name: string; avatar_url: string }> } }).data;
+      if (data && 'count' in data) setHostFeedback(data);
+    }).catch(() => {});
+  }, [liveId, feedbackPinned, isHost]);
+
+  // Chat auto-scroll: pinned to latest unless the user scrolled away.
+  // Scrolling back to the bottom (or hitting Jump to latest) re-engages it.
+  useEffect(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    if (prevChatLenRef.current === 0) {
+      el.scrollTop = el.scrollHeight;
+    } else if (chatMessages.length > prevChatLenRef.current) {
+      const delta = chatMessages.length - prevChatLenRef.current;
+      if (nearBottomRef.current) {
+        el.scrollTop = el.scrollHeight;
+      } else {
+        setUnseenWhilePaused((n) => n + delta);
+      }
+    }
+    prevChatLenRef.current = chatMessages.length;
+  }, [chatMessages]);
+
+  // Re-pin when the panel opens.
+  useEffect(() => {
+    if (!showChat) return;
+    const el = chatScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+    prevChatLenRef.current = chatMessages.length;
+    nearBottomRef.current = true;
+    setUnseenWhilePaused(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showChat]);
+
+  const handleChatScroll = useCallback(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const near = distance < 80;
+    nearBottomRef.current = near;
+    if (near) setUnseenWhilePaused(0);
+  }, []);
+
+  const jumpToLatest = useCallback(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    nearBottomRef.current = true;
+    setUnseenWhilePaused(0);
+  }, []);
+
+  const createPollNow = useCallback(async () => {
+    if (!liveId) return;
+    const options = pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (!pollQuestion.trim() || options.length < 2 || pollCreating) return;
+    setPollCreating(true);
+    try {
+      await livesApi.createPoll(liveId, {
+        question: pollQuestion.trim(),
+        options,
+        show_after_seconds: pollShowAfter,
+        duration_seconds: pollDuration,
+      });
+      setShowPollComposer(false);
+      setPollQuestion('');
+      setPollOptions(['', '']);
+      showCohostToast(`Poll scheduled ${pollShowAfter >= 60 ? `${Math.round(pollShowAfter / 60)}m` : `${pollShowAfter}s`} into the live`);
+    } catch {
+      showCohostToast('Could not create the poll');
+    } finally {
+      setPollCreating(false);
+    }
+  }, [liveId, pollQuestion, pollOptions, pollShowAfter, pollDuration, pollCreating, showCohostToast]);
+
+  const voteInPoll = useCallback(async (option: number) => {
+    if (!liveId || !currentPoll) return;
+    try {
+      const resp = await livesApi.votePoll(liveId, currentPoll.poll_id, option);
+      const data = (resp as unknown as { data?: { tally: number[]; total_votes: number; your_vote: number } }).data;
+      if (data) setCurrentPoll({ ...currentPoll, tally: data.tally, total_votes: data.total_votes, your_vote: data.your_vote });
+    } catch {
+      showCohostToast('Vote did not land — the poll may have closed');
+    }
+  }, [liveId, currentPoll, setCurrentPoll, showCohostToast]);
+
+  const submitFeedback = useCallback(async () => {
+    if (!liveId || feedbackRating < 1 || feedbackSent) return;
+    try {
+      await livesApi.submitFeedback(liveId, feedbackRating, feedbackComment.trim());
+      setFeedbackSent(true);
+    } catch {
+      showCohostToast('Could not send feedback');
+    }
+  }, [liveId, feedbackRating, feedbackComment, feedbackSent, showCohostToast]);
+
+  const followHost = useCallback(async () => {
+    const hostName = roomData?.host_name;
+    if (!hostName) return;
+    try {
+      await profilesApi.follow(hostName);
+      showCohostToast(`Following ${roomData?.host_name}`);
+    } catch {
+      showCohostToast('Could not follow right now');
+    } finally {
+      setShowMoreMenu(false);
+    }
+  }, [roomData?.host_name, showCohostToast]);
+
+  const reportLive = useCallback(async () => {
+    if (!liveId || !roomData?.host_name) return;
+    try {
+      await moderationApi.createReport({
+        target_user: roomData.host_user_id ?? '',
+        reason: reportReason,
+        description: `Reported from the live room: ${roomData.title ?? ''}`.trim(),
+        content_url: `/live/${liveId}`,
+      });
+      showCohostToast('Report sent to moderation');
+    } catch {
+      showCohostToast('Could not file the report');
+    } finally {
+      setShowReportSheet(false);
+      setShowMoreMenu(false);
+    }
+  }, [liveId, roomData, reportReason, showCohostToast]);
+
+  const notInterestedNow = useCallback(async () => {
+    if (!liveId) return;
+    try {
+      const resp = await livesApi.toggleNotInterested(liveId);
+      const data = (resp as unknown as { data?: { not_interested: boolean } }).data;
+      if (data) {
+        setNotInterested(data.not_interested);
+        showCohostToast(data.not_interested ? 'We will show this live less' : 'Restored to your feed');
+      }
+    } catch {} finally {
+      setShowMoreMenu(false);
+    }
+  }, [liveId, showCohostToast]);
+
+  const muteHostNow = useCallback(async () => {
+    if (!liveId) return;
+    try {
+      const resp = await livesApi.toggleMuteHost(liveId);
+      const data = (resp as unknown as { data?: { muted: boolean } }).data;
+      if (data) {
+        setHostMuted(data.muted);
+        showCohostToast(data.muted ? 'You will not be recommended this host' : 'Recommendations restored');
+      }
+    } catch {} finally {
+      setShowMoreMenu(false);
+    }
+  }, [liveId, showCohostToast]);
 
   const [attendees, setAttendees] = useState<AttendeeInfo[]>([]);
   const [isSharingScreen, setIsSharingScreen] = useState(false);
@@ -233,7 +468,9 @@ export default function LiveRoom() {
     }
     sendGift(artifactType, 1);
     addFloatingGift(artifactType);
-  }, [artifactBalance, sendGift, addFloatingGift]);
+    // Re-read the wallet so the picker reflects what is actually left.
+    window.setTimeout(refreshArtifactBalance, 800);
+  }, [artifactBalance, sendGift, addFloatingGift, refreshArtifactBalance]);
 
   const openGiftPicker = useCallback(() => {
     setShowGiftPicker(true);
@@ -794,8 +1031,10 @@ export default function LiveRoom() {
     sendReaction(emoji);
   }, [sendReaction]);
 
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Implicit form submission depends on focus routing, which the gift picker
+  // breaks — pressing Enter in the input did nothing once a gift was attached.
+  // Drive the submit explicitly from the input's own keydown instead.
+  const submitChat = () => {
     if (!chatInput.trim() && !selectedGift) return;
     const payload: { message: string; gift?: { artifact_type: string; quantity: number } } = { message: chatInput.trim() };
     if (selectedGift) {
@@ -806,6 +1045,11 @@ export default function LiveRoom() {
     setChatInput('');
     setSelectedGift(null);
     setReplyTo(null);
+  };
+
+  const handleSendChat = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitChat();
   };
 
   const liveMessages = chatMessages.slice(-15);
@@ -892,6 +1136,34 @@ export default function LiveRoom() {
             <span className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-buddy-green' : 'bg-buddy-red'}`} />
             {wsConnected ? 'Live' : 'Offline'}
           </span>
+          {!isHost && (
+            <div className="relative">
+              <button
+                onClick={() => setShowMoreMenu((v) => !v)}
+                className="p-2 rounded-full hover:bg-buddy-surface text-buddy-text-primary transition-colors"
+                title="More actions"
+                aria-label="More actions"
+              ><MoreVertical size={18} /></button>
+              {showMoreMenu && (
+                <div className="absolute right-0 top-full mt-2 z-50 w-60 bg-buddy-surface border border-buddy-surface-raised rounded-2xl shadow-2xl overflow-hidden py-1.5 text-sm text-buddy-text-primary">
+                  <button onClick={followHost} className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-buddy-surface-raised">
+                    <UserPlus size={16} className="text-buddy-green" /> Follow {roomData?.host_name || 'host'}
+                  </button>
+                  <button onClick={() => { setShowReportSheet(true); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-buddy-surface-raised">
+                    <Flag size={16} className="text-amber-400" /> Report live
+                  </button>
+                  <button onClick={notInterestedNow} className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-buddy-surface-raised">
+                    {notInterested ? <Check size={16} className="text-buddy-green" /> : <EyeOff size={16} className="text-buddy-text-secondary" />}
+                    Not interested in this live
+                  </button>
+                  <button onClick={muteHostNow} className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-buddy-surface-raised">
+                    {hostMuted ? <Check size={16} className="text-buddy-green" /> : <Ban size={16} className="text-red-400" />}
+                    Never recommend this host
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -1225,6 +1497,11 @@ export default function LiveRoom() {
               <div className="max-h-[140px] overflow-y-auto px-4 pt-6 pb-2 bg-gradient-to-t from-buddy-black/80 via-buddy-black/40 to-transparent">
                 <div className="flex flex-col-reverse gap-1.5">
                   {[...liveMessages].reverse().map((msg, i) => (
+                    msg.system === 'join' ? (
+                      <div key={`${msg.timestamp}-${i}`} className="text-center text-[10px] text-white/50">
+                        👋 {msg.message}
+                      </div>
+                    ) : (
                     <div key={`${msg.timestamp}-${i}`} className="flex items-start gap-2 text-sm">
                       <Avatar src={msg.avatar_url} alt={msg.display_name} size="sm" className="shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
@@ -1243,6 +1520,7 @@ export default function LiveRoom() {
                         )}
                       </div>
                     </div>
+                    )
                   ))}
                 </div>
               </div>
@@ -1259,6 +1537,11 @@ export default function LiveRoom() {
           )}
         </div>
 
+        {/* ACTIVE POLL CARD */}
+        {currentPoll && (
+          <PollCard poll={currentPoll} nowTick={nowTick} isHost={!!isHost} onVote={voteInPoll} />
+        )}
+
         {/* BOTTOM CONTROLS */}
         {connectionState !== 'connecting' && connectionState !== 'failed' && (
           <div className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-t from-buddy-black/90 via-buddy-black/60 to-transparent">
@@ -1269,14 +1552,37 @@ export default function LiveRoom() {
               >{isMicOn ? <Mic size={16} className="opacity-80" /> : <MicOff size={16} />}</button>
             </div>
 
-            <div className="flex gap-1">
-              {REACTIONS.map(({ emoji, label }) => (
-                <button key={emoji} onClick={() => handleReaction(emoji)}
-                  title={label}
-                  className="p-2 rounded-full bg-buddy-surface/50 hover:bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary transition-colors text-lg"
-                >{emoji}</button>
-              ))}
+            <div className="relative">
+              <button onClick={() => setShowReactionPicker((v) => !v)}
+                title="Send a reaction"
+                className={`p-2.5 rounded-full transition-colors ${showReactionPicker ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-surface text-buddy-text-primary'}`}
+              ><Flame size={16} /></button>
+              {showReactionPicker && (
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 bg-buddy-black/95 border border-buddy-surface rounded-2xl p-2 shadow-2xl grid grid-cols-4 gap-1.5">
+                  {REACTIONS.map(({ emoji, label }) => (
+                    <button key={emoji}
+                      onClick={() => { handleReaction(emoji); setShowReactionPicker(false); }}
+                      title={label}
+                      className="p-2 rounded-xl hover:bg-buddy-green/10 text-2xl leading-none transition-colors"
+                    >{emoji}</button>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* Host: schedule a poll + pin the feedback form */}
+            {isHost && (
+              <>
+                <button onClick={() => setShowPollComposer(true)}
+                  className="p-2.5 rounded-full bg-buddy-surface text-buddy-text-primary hover:text-buddy-green transition-colors"
+                  title="Schedule a poll for the room"
+                ><BarChart3 size={16} /></button>
+                <button onClick={() => sendFeedbackPin(!feedbackPinned)}
+                  className={`p-2.5 rounded-full transition-colors ${feedbackPinned ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-surface text-buddy-text-primary hover:text-buddy-green'}`}
+                  title={feedbackPinned ? 'Unpin the feedback form' : 'Pin a feedback form on chat'}
+                ><Star size={16} /></button>
+              </>
+            )}
 
             {/* Screen share — host/co-host only */}
             {(isHost || roomData?.co_hosts?.some((ch) => ch.user_id === myUserId)) && (
@@ -1336,6 +1642,18 @@ export default function LiveRoom() {
           <div className={`absolute inset-0 z-40 flex ${isDesktop ? 'justify-end' : 'flex-col justify-end'}`}>
             <div className="flex-1 bg-buddy-black/50" onClick={() => setShowChat(false)} />
             <div className={`flex flex-col bg-buddy-black/95 ${isDesktop ? 'w-80 border-l border-buddy-surface' : 'w-full h-[55vh] border-t border-buddy-surface rounded-t-2xl'}`}>
+              {feedbackPinned && (
+                <PinnedFeedbackCard
+                  isHost={!!isHost}
+                  hostFeedback={hostFeedback}
+                  feedbackRating={feedbackRating}
+                  setFeedbackRating={setFeedbackRating}
+                  feedbackComment={feedbackComment}
+                  setFeedbackComment={setFeedbackComment}
+                  feedbackSent={feedbackSent}
+                  onSubmit={submitFeedback}
+                />
+              )}
               <div className="flex items-center justify-between px-4 py-3 border-b border-buddy-surface shrink-0">
                 <h3 className="text-sm font-semibold">Live Chat</h3>
                 <div className="flex items-center gap-2">
@@ -1344,11 +1662,16 @@ export default function LiveRoom() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              <div ref={chatScrollRef} onScroll={handleChatScroll} className="relative flex-1 overflow-y-auto p-3 space-y-2">
                 {chatMessages.length === 0 && (
                   <p className="text-center text-buddy-text-secondary/50 text-sm mt-8">No messages yet. Say hi!</p>
                 )}
                 {[...chatMessages].sort((a) => (a.priority ? -1 : 1)).map((msg, i) => (
+                  msg.system === 'join' ? (
+                    <div key={i} className="text-center text-[11px] text-buddy-text-secondary py-1">
+                      <span className="bg-buddy-black/60 rounded-full px-2.5 py-1">👋 {msg.message}</span>
+                    </div>
+                  ) : (
                   <div key={i} className={`flex gap-2 ${msg.user_id === myUserId ? 'flex-row-reverse' : ''} ${msg.priority ? 'bg-buddy-green/5 -mx-3 px-3 py-1.5 rounded-lg border border-buddy-green/20' : ''}`}>
                     <Avatar src={msg.avatar_url} alt={msg.display_name} size="sm" className="shrink-0" />
                     <div className={`max-w-[80%] ${msg.user_id === myUserId ? 'items-end' : ''}`}>
@@ -1388,7 +1711,17 @@ export default function LiveRoom() {
                       </div>
                     </div>
                   </div>
+                  )
                 ))}
+
+                {unseenWhilePaused > 0 && (
+                  <button
+                    onClick={jumpToLatest}
+                    className="sticky bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-buddy-green text-buddy-black text-xs font-semibold rounded-full pl-3 pr-3.5 py-1.5 shadow-lg hover:bg-buddy-green-soft"
+                  >
+                    <ChevronDown size={13} /> Jump to latest{unseenWhilePaused > 1 ? ` (${unseenWhilePaused})` : ''}
+                  </button>
+                )}
                 <div ref={chatEndRef} className="h-px" />
               </div>
 
@@ -1417,6 +1750,7 @@ export default function LiveRoom() {
                   ><Gift size={16} /></button>
                 )}
                 <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); submitChat(); } }}
                   placeholder={selectedGift ? `Gifting ${selectedGift.qty}x ${selectedGift.type}...` : 'Type a message...'}
                   className="flex-1 bg-buddy-surface rounded-xl px-3 py-2 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
                 />
@@ -1533,6 +1867,220 @@ export default function LiveRoom() {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {showReportSheet && (
+        <div className="fixed inset-0 z-[60] bg-buddy-black/80 flex items-end sm:items-center justify-center sm:p-4">
+          <div className="bg-buddy-surface rounded-t-2xl sm:rounded-2xl w-full max-w-md p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold flex items-center gap-2"><Flag size={16} className="text-amber-400" /> Report this live</h2>
+              <button onClick={() => setShowReportSheet(false)} className="text-buddy-text-secondary p-1"><X size={18} /></button>
+            </div>
+            <p className="text-xs text-buddy-text-secondary">Reported lives go to the moderation queue. Choose the closest reason.</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ['spam', 'Spam'],
+                ['harassment', 'Harassment'],
+                ['nudity', 'Nudity / Sexual Content'],
+                ['violence', 'Violence'],
+                ['hate_speech', 'Hate Speech'],
+                ['misinformation', 'Misinformation'],
+                ['adult_ungated', 'Adult content not marked Mature'],
+                ['other', 'Other'],
+              ].map(([value, label]) => (
+                <button key={value}
+                  onClick={() => setReportReason(value)}
+                  className={`text-left text-xs rounded-xl border px-3 py-2.5 transition-colors ${reportReason === value ? 'border-buddy-green text-buddy-green bg-buddy-green/10' : 'border-buddy-surface-raised text-buddy-text-primary hover:border-buddy-text-secondary'}`}
+                >{label}</button>
+              ))}
+            </div>
+            <Button className="w-full" onClick={reportLive}>Submit report</Button>
+          </div>
+        </div>
+      )}
+
+      {showPollComposer && (
+        <div className="fixed inset-0 z-[60] bg-buddy-black/80 flex items-end sm:items-center justify-center sm:p-4">
+          <div className="bg-buddy-surface rounded-t-2xl sm:rounded-2xl w-full max-w-md p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold flex items-center gap-2"><BarChart3 size={16} className="text-buddy-green" /> Ask the room</h2>
+              <button onClick={() => setShowPollComposer(false)} className="text-buddy-text-secondary p-1"><X size={18} /></button>
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-buddy-text-secondary uppercase tracking-wide">Question</label>
+              <input value={pollQuestion} onChange={(e) => setPollQuestion(e.target.value)}
+                maxLength={200} autoFocus
+                placeholder="e.g. Who wants a follow-along set?"
+                className="mt-1 w-full bg-buddy-black rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-buddy-green/40" />
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-buddy-text-secondary uppercase tracking-wide">Options</label>
+              <div className="mt-1 space-y-2">
+                {pollOptions.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-[11px] text-buddy-text-secondary w-4">{i + 1}.</span>
+                    <input value={opt}
+                      onChange={(e) => setPollOptions((prev) => prev.map((o, j) => (j === i ? e.target.value : o)))}
+                      maxLength={80}
+                      placeholder={`Option ${i + 1}`}
+                      className="flex-1 bg-buddy-black rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-buddy-green/40" />
+                    {pollOptions.length > 2 && (
+                      <button onClick={() => setPollOptions((prev) => prev.filter((_, j) => j !== i))}
+                        className="text-buddy-text-secondary hover:text-buddy-red"><X size={16} /></button>
+                    )}
+                  </div>
+                ))}
+                {pollOptions.length < 6 && (
+                  <button onClick={() => setPollOptions((prev) => [...prev, ''])} className="text-xs text-buddy-green font-semibold px-2 py-1">+ Add option</button>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-semibold text-buddy-text-secondary uppercase tracking-wide">Show after</label>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {[[120, '2m'], [300, '5m'], [600, '10m'], [1800, '30m']].map(([v, label]) => (
+                    <button key={v} onClick={() => setPollShowAfter(v as number)}
+                      className={`text-xs rounded-lg px-2.5 py-1.5 ${pollShowAfter === v ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-black text-buddy-text-primary'}`}
+                    >{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-buddy-text-secondary uppercase tracking-wide">Open for</label>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {[[30, '30s'], [60, '60s'], [120, '2m'], [180, '3m']].map(([v, label]) => (
+                    <button key={v} onClick={() => setPollDuration(v as number)}
+                      className={`text-xs rounded-lg px-2.5 py-1.5 ${pollDuration === v ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-black text-buddy-text-primary'}`}
+                    >{label}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <Button className="w-full" disabled={!pollQuestion.trim() || pollOptions.filter((o) => o.trim()).length < 2 || pollCreating} onClick={createPollNow}>
+              {pollCreating ? 'Scheduling…' : 'Schedule poll'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ─── Poll card shown while an audience poll is open ─────────────────────────
+function PollCard({ poll, nowTick, isHost, onVote }: {
+  poll: import('@/hooks/useLiveWebSocket').LivePoll;
+  nowTick: number;
+  isHost: boolean;
+  onVote: (option: number) => void;
+}) {
+  const endsAt = poll.ends_at ? new Date(poll.ends_at).getTime() : null;
+  const durationMs = Math.max(1, (poll.duration_seconds ?? 60) * 1000);
+  const remainingMs = endsAt ? Math.max(0, endsAt - nowTick) : durationMs;
+  const ended = endsAt ? remainingMs <= 0 : false;
+  const voted = poll.your_vote != null;
+  const tally = poll.tally ?? [];
+  const total = poll.total_votes ?? tally.reduce((a, b) => a + b, 0);
+  const pct = (i: number) => (total > 0 ? Math.round(((tally[i] ?? 0) / total) * 100) : 0);
+  const secsLeft = Math.ceil(remainingMs / 1000);
+
+  return (
+    <div className="absolute left-1/2 -translate-x-1/2 bottom-20 z-30 w-[min(92vw,340px)] rounded-2xl border border-buddy-surface bg-buddy-black/95 backdrop-blur p-3.5 shadow-2xl">
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-buddy-green flex items-center gap-1.5"><BarChart3 size={11} /> {isHost ? 'Your poll' : 'Live poll'}</p>
+        <span className={`text-[10px] tabular-nums ${ended ? 'text-buddy-text-secondary' : 'text-buddy-text-primary'}`}>
+          {ended ? 'Closed' : `${secsLeft}s left`}
+        </span>
+      </div>
+      <p className="text-sm font-semibold text-buddy-text-primary leading-snug">{poll.question}</p>
+
+      {/* countdown bar */}
+      {!ended && (
+        <div className="mt-1.5 h-1 rounded-full bg-buddy-surface overflow-hidden">
+          <div className="h-full bg-buddy-green transition-all duration-1000" style={{ width: `${(remainingMs / durationMs) * 100}%` }} />
+        </div>
+      )}
+
+      <div className="mt-2 space-y-1.5">
+        {poll.options.map((opt, i) => {
+          const share = pct(i);
+          const showResults = voted || ended;
+          return showResults ? (
+            <div key={i} className={`relative rounded-xl border px-3 py-2 text-xs overflow-hidden ${poll.your_vote === i ? 'border-buddy-green/50' : 'border-buddy-surface'}`}>
+              <div className="absolute inset-y-0 left-0 bg-buddy-green/15 transition-all duration-500" style={{ width: `${share}%` }} />
+              <div className="relative flex items-center justify-between gap-2">
+                <span className="text-buddy-text-primary">{opt}</span>
+                <span className="tabular-nums text-buddy-text-secondary">{share}% · {tally[i] ?? 0}</span>
+              </div>
+            </div>
+          ) : (
+            <button key={i} onClick={() => onVote(i)}
+              className="w-full text-left text-xs rounded-xl border border-buddy-surface bg-buddy-surface/60 px-3 py-2.5 hover:border-buddy-green/50 hover:bg-buddy-green/5 transition-colors text-buddy-text-primary"
+            >{opt}</button>
+          );
+        })}
+      </div>
+      {total > 0 && (
+        <p className="mt-1.5 text-center text-[10px] text-buddy-text-secondary">{total} vote{total === 1 ? '' : 's'}</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Feedback form pinned by the host on the chat panel ─────────────────────
+function PinnedFeedbackCard({ isHost, hostFeedback, feedbackRating, setFeedbackRating, feedbackComment, setFeedbackComment, feedbackSent, onSubmit }: {
+  isHost: boolean;
+  hostFeedback: { count: number; average: number; recent: Array<{ rating: number; comment: string; display_name: string; avatar_url: string }> } | null;
+  feedbackRating: number;
+  setFeedbackRating: (n: number) => void;
+  feedbackComment: string;
+  setFeedbackComment: (s: string) => void;
+  feedbackSent: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="shrink-0 border-b border-amber-500/20 bg-amber-500/[0.07] px-4 py-2.5 space-y-1.5">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-amber-400 flex items-center gap-1.5"><Star size={11} /> How is the session going?</p>
+        {isHost && hostFeedback && (
+          <span className="text-[10px] text-buddy-text-secondary tabular-nums">{hostFeedback.count} · avg {hostFeedback.average.toFixed(1)}★</span>
+        )}
+      </div>
+
+      {isHost ? (
+        hostFeedback && hostFeedback.count > 0 ? (
+          <div className="max-h-24 overflow-y-auto space-y-1.5">
+            {hostFeedback.recent.filter((r) => r.comment).slice(0, 6).map((r, i) => (
+              <div key={i} className="flex items-start gap-1.5 text-[11px]">
+                <span className="text-amber-400 shrink-0">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                <span className="text-buddy-text-primary"><span className="text-buddy-text-secondary">{r.display_name}:</span> {r.comment}</span>
+              </div>
+            ))}
+            {hostFeedback.recent.every((r) => !r.comment) && (
+              <p className="text-[11px] text-buddy-text-secondary">Ratings only so far — no comments yet.</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-[11px] text-buddy-text-secondary">Waiting on the room…</p>
+        )
+      ) : feedbackSent ? (
+        <p className="text-[11px] text-buddy-green flex items-center gap-1.5"><Check size={12} /> Thanks — the host sees your feedback live.</p>
+      ) : (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button key={n} onClick={() => setFeedbackRating(n)} className="p-0.5" aria-label={`${n} star${n > 1 ? 's' : ''}`}>
+                <Star size={17} className={n <= feedbackRating ? 'fill-amber-400 text-amber-400' : 'text-buddy-text-secondary/40'} />
+              </button>
+            ))}
+          </div>
+          <input value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)}
+            maxLength={200} placeholder="One line… (optional)"
+            className="flex-1 min-w-0 bg-buddy-black/60 rounded-lg px-2 py-1 text-[11px] outline-none placeholder:text-buddy-text-secondary/50" />
+          <button onClick={onSubmit} disabled={feedbackRating < 1}
+            className="shrink-0 text-[10px] font-semibold rounded-lg bg-amber-400/90 text-buddy-black px-2.5 py-1.5 disabled:opacity-30">Send</button>
         </div>
       )}
     </div>

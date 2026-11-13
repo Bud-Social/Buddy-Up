@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import BuddyLive, LiveAttendee
+from .access import replay_admitted as _replay_admitted
 
 
 class EndLiveInputSerializer(serializers.Serializer):
@@ -47,6 +48,18 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
             'avatar_url': obj.host.avatar_url,
             'verification_status': obj.host.verification_status,
         }
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        viewer = getattr(getattr(request, 'user', None), 'profile', None) if request else None
+        if viewer is None or not _replay_admitted(instance, viewer):
+            # A live marked for a small audience must not publish its
+            # recording to the world through the serializer.
+            data['replay_url'] = ''
+            data['recording_status'] = 'not_recorded'
+            data['mux_status'] = 'not_created'
+        return data
 
     def get_viewer_count(self, obj):
         return getattr(obj, 'viewer_count_cache', obj.viewer_peak)

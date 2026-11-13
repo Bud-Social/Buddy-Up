@@ -19,6 +19,7 @@ class BuddyLive(TimestampedModel):
         ('public', 'Public'),
         ('buddies', 'Buddies Only'),
         ('gym_members', 'Gym Members'),
+        ('private', 'Only Me'),
     ]
     STATUS_CHOICES = [
         ('scheduled', 'Scheduled'),
@@ -168,3 +169,97 @@ class LiveReplayView(TimestampedModel):
 
     def __str__(self):
         return f'{self.viewer_id} replayed {self.live_id} x{self.views}'
+
+
+class LiveFeedback(TimestampedModel):
+    """A viewer's rating of a live, upsertable while the host has it pinned.
+
+    One row per (live, viewer) — feedback is one tap, not a form, so a
+    second submission is an edit rather than a new vote. The host sees the
+    aggregate and recent comments; the viewer sees only their own.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    live = models.ForeignKey(BuddyLive, on_delete=models.CASCADE, related_name='feedback')
+    user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='live_feedback')
+    rating = models.PositiveSmallIntegerField()
+    comment = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        db_table = 'lives_feedback'
+        unique_together = ('live', 'user')
+        indexes = [models.Index(fields=['live', '-created_at'])]
+
+    def __str__(self):
+        return f'{self.user_id} rated {self.live_id} {self.rating}'
+
+
+class LivePoll(TimestampedModel):
+    """A host-scheduled audience poll shown a few minutes into a live.
+
+    ``show_after_seconds`` is the offset from creation; Celery fires the
+    broadcast at that mark. ``dispatched_at`` is stamped when the poll goes
+    out, so a late joiner can still fetch it and the vote window is anchored
+    to when the audience actually saw it.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    live = models.ForeignKey(BuddyLive, on_delete=models.CASCADE, related_name='polls')
+    host = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='hosted_polls')
+    question = models.CharField(max_length=200)
+    options = models.JSONField(default=list)
+    show_after_seconds = models.PositiveIntegerField(default=300)
+    duration_seconds = models.PositiveIntegerField(default=60)
+    dispatched_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'lives_poll'
+        ordering = ['-created_at']
+
+    @property
+    def ends_at(self):
+        if not self.dispatched_at:
+            return None
+        from datetime import timedelta
+        return self.dispatched_at + timedelta(seconds=self.duration_seconds)
+
+    def __str__(self):
+        return f'poll {self.question[:40]}'
+
+
+class LivePollVote(TimestampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    poll = models.ForeignKey(LivePoll, on_delete=models.CASCADE, related_name='votes')
+    user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='live_poll_votes')
+    option = models.PositiveSmallIntegerField()
+
+    class Meta:
+        db_table = 'lives_poll_vote'
+        unique_together = ('poll', 'user')
+
+    def __str__(self):
+        return f'{self.user_id} -> {self.poll_id}:{self.option}'
+
+
+class LiveNotInterested(TimestampedModel):
+    """Viewer asked not to be shown this live in the browser again."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    live = models.ForeignKey(BuddyLive, on_delete=models.CASCADE, related_name='not_interested')
+    user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='lives_not_interested')
+
+    class Meta:
+        db_table = 'lives_not_interested'
+        unique_together = ('live', 'user')
+
+
+class LiveHostMute(TimestampedModel):
+    """Viewer asked to never be recommended lives from this host again."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    host = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='host_mutes')
+    user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='muted_live_hosts')
+
+    class Meta:
+        db_table = 'lives_host_mute'
+        unique_together = ('host', 'user')
