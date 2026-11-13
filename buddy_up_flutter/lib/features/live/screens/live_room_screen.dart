@@ -214,6 +214,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                           _buildOverlay(live),
                           _buildGiftTotals(),
                           _buildRoomActions(),
+                          if (ref.watch(liveSocketProvider(widget.liveId).select((s) => s.feedbackPinned)) &&
+                              !_isHost)
+                            _buildFeedbackPinBanner(),
                         ],
                       ),
                     ),
@@ -971,6 +974,48 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  /// Host pinned "rate this live" — audience sees a gold nudge they can act
+  /// on or dismiss; it never blocks the feed of the room.
+  bool _feedbackPinDismissed = false;
+
+  Widget _buildFeedbackPinBanner() {
+    if (_feedbackPinDismissed) return const SizedBox.shrink();
+    return Positioned(
+      left: 12,
+      right: 12,
+      bottom: 12,
+      child: Material(
+        color: Colors.black.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(16),
+        elevation: 6,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _showFeedbackSheet(hostMode: false),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.star_rounded, color: BuddyColors.gold, size: 22),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'The host would love your feedback — rate this live',
+                    style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18, color: Colors.white70),
+                  onPressed: () => setState(() => _feedbackPinDismissed = true),
+                  tooltip: 'Dismiss',
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
