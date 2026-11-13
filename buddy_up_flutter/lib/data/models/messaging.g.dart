@@ -648,3 +648,20 @@ Map<String, dynamic> _$ChatEventReactToJson(ChatEventReact instance) =>
       'reactions': instance.reactions,
       'runtimeType': instance.$type,
     };
+
+ChatEventCallSignal _$ChatEventCallSignalFromJson(Map<String, dynamic> json) =>
+    ChatEventCallSignal(
+      signalType: json['signalType'] as String,
+      data: json['data'] as Map<String, dynamic>,
+      callType: json['callType'] as String? ?? 'audio',
+      $type: json['runtimeType'] as String?,
+    );
+
+Map<String, dynamic> _$ChatEventCallSignalToJson(
+  ChatEventCallSignal instance,
+) => <String, dynamic>{
+  'signalType': instance.signalType,
+  'data': instance.data,
+  'callType': instance.callType,
+  'runtimeType': instance.$type,
+};

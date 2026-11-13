@@ -443,6 +443,14 @@ sealed class ChatEvent with _$ChatEvent {
     @Default(<String, int>{}) Map<String, int> reactions,
   }) = ChatEventReact;
 
+  /// Call signalling that rides the chat socket: switch requests/responses
+  /// and stray legacy call-end pings. The room control UI listens for these.
+  const factory ChatEvent.callSignal({
+    required String signalType,
+    required Map<String, dynamic> data,
+    @Default('audio') String callType,
+  }) = ChatEventCallSignal;
+
   factory ChatEvent.fromJson(Map<String, dynamic> json) =>
       _$ChatEventFromJson(json);
 }

@@ -269,6 +269,15 @@ class LiveKitCallController extends Notifier<LiveKitCallState> {
     try { await _room?.disconnect(); } catch (_) {}
     _room = null;
   }
+
+  /// Force the camera on/off — used by the accepted voice→video switch.
+  /// [toggleCamera] flips whatever the current state is; this sets it.
+  Future<void> setCamera(bool enabled) async {
+    final lp = _room?.localParticipant;
+    if (lp == null) return;
+    try { await lp.setCameraEnabled(enabled); } catch (_) {}
+    _rebuildTiles();
+  }
 }
 
 final liveKitCallProvider =

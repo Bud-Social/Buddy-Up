@@ -23,6 +23,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
   bool _isLoading = false;
   bool _hasSearched = false;
   String _roleFilter = '';
+  String _cityFilter = '';
   Map<String, dynamic>? _trending;
   late ProfileRepository _profileRepo;
 
@@ -35,6 +36,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
     _profileRepo = ProfileRepository(ApiClient().dio);
     _loadTrending();
     _loadRecommendations();
+    _loadMyCity();
   }
 
   Future<void> _loadRecommendations() async {
@@ -56,6 +58,17 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
   }
 
   Set<String> _interestTokens = {};
+
+  String _myCity = '';
+
+  /// The viewer's own city — powers the "near me" suggestions.
+  Future<void> _loadMyCity() async {
+    try {
+      final profile = await _profileRepo.getMyProfile();
+      final city = profile.locationCity;
+      if (mounted && city.isNotEmpty) setState(() => _myCity = city);
+    } catch (_) {}
+  }
 
   Future<void> _loadTrending() async {
     try {
@@ -116,10 +129,15 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
 
   Future<void> _search() async {
     final query = _searchController.text.trim();
-    if (query.length < 2) return;
+    if (query.length < 2 && _roleFilter.isEmpty && _cityFilter.isEmpty) return;
     setState(() => _isLoading = true);
     try {
-      final result = await _profileRepo.searchProfiles(query, _roleFilter.isNotEmpty ? _roleFilter : null, 1);
+      final result = await _profileRepo.searchProfiles(
+        query,
+        _roleFilter.isNotEmpty ? _roleFilter : null,
+        1,
+        location: _cityFilter.isNotEmpty ? _cityFilter : null,
+      );
       setState(() {
         _results = result['data'] as List? ?? result['results'] as List? ?? [];
         _hasSearched = true;
@@ -138,6 +156,73 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
     } catch (e) {
       if (mounted) showToast(context, 'Failed.', type: ToastType.error);
     }
+  }
+
+  /// The "pick something specific" row on the empty-search state — every
+  /// chip does something real: narrows the people search, or opens the
+  /// surface where that thing lives. Icons, never emoji.
+  Widget _buildSuggestions() {
+    final tags = ((_trending?['hashtags'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>();
+    final chips = <Widget>[
+      if (_myCity.isNotEmpty)
+        _SuggestionChip(
+          icon: Icons.place_outlined,
+          label: 'Trainers in $_myCity',
+          onTap: () {
+            setState(() {
+              _roleFilter = 'trainer';
+              _cityFilter = _myCity;
+            });
+            _search();
+          },
+        ),
+      _SuggestionChip(
+        icon: Icons.medical_services_outlined,
+        label: 'Practitioners',
+        onTap: () {
+          setState(() {
+            _roleFilter = 'practitioner';
+            _cityFilter = '';
+          });
+          _search();
+        },
+      ),
+      _SuggestionChip(
+        icon: Icons.videocam_outlined,
+        label: 'Lives happening now',
+        onTap: () => context.push('/lives'),
+      ),
+      _SuggestionChip(
+        icon: Icons.groups_outlined,
+        label: 'Active communities',
+        onTap: () => context.push('/communities'),
+      ),
+      ...tags.take(2).map((h) {
+        final tag = (h['tag'] as String? ?? '').replaceAll('#', '');
+        return _SuggestionChip(
+          icon: Icons.local_fire_department_outlined,
+          label: '#$tag',
+          onTap: () {
+            _searchController.text = tag;
+            _search();
+          },
+        );
+      }),
+    ];
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final chip in chips)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: chip,
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -178,7 +263,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
                           selected: selected,
                           onSelected: (v) {
                             setState(() => _roleFilter = role);
-                            if (_searchController.text.trim().length >= 2) _search();
+                            _search();
                           },
                           selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                           backgroundColor: BuddyColors.surface,
@@ -189,6 +274,31 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
                     }).toList(),
                   ),
                 ),
+                if (_roleFilter.isNotEmpty || _cityFilter.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      children: [
+                        if (_roleFilter.isNotEmpty)
+                          _ActiveFilterChip(
+                            label: _roleLabels[_roleFilter] ?? _roleFilter,
+                            onRemove: () => setState(() => _roleFilter = ''),
+                          ),
+                        if (_cityFilter.isNotEmpty) ...[
+                          if (_roleFilter.isNotEmpty) const SizedBox(width: 6),
+                          _ActiveFilterChip(
+                            label: _cityFilter,
+                            icon: Icons.place_outlined,
+                            onRemove: () => setState(() => _cityFilter = ''),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                if (!_hasSearched) ...[
+                  const SizedBox(height: 10),
+                  _buildSuggestions(),
+                ],
               ],
             ),
           ),
@@ -511,6 +621,76 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 6),
         Text(title, style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
       ],
+    );
+  }
+}
+
+class _SuggestionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _SuggestionChip({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: BuddyColors.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: BuddyColors.green),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActiveFilterChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onRemove;
+
+  const _ActiveFilterChip({required this.label, this.icon = Icons.filter_list, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: BuddyColors.green.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onRemove,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 13, color: BuddyColors.green),
+              const SizedBox(width: 5),
+              Text(label,
+                  style: const TextStyle(color: BuddyColors.green, fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 4),
+              const Icon(Icons.close, size: 13, color: BuddyColors.green),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

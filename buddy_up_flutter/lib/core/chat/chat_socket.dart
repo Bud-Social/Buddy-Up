@@ -280,6 +280,16 @@ class ChatSocket {
           messageId: data['message_id'] as String?,
           count: data['count'] as int? ?? 0,
         );
+      case 'call_switch_request':
+      case 'call_switch_response':
+      case 'call_switched_to_video':
+      case 'call_end':
+      case 'call_decline':
+        return ChatEvent.callSignal(
+          signalType: type,
+          data: data['data'] as Map<String, dynamic>? ?? {},
+          callType: data['call_type'] as String? ?? 'audio',
+        );
       case 'react':
         return ChatEvent.react(
           conversationId: data['conversation_id'] as String? ?? '',

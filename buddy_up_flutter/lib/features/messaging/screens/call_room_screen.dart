@@ -5,26 +5,124 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' show VideoTrackRenderer, VideoViewFit;
 
-import '../../../core/theme/app_theme.dart';
+import '../../../core/audio/ringtone.dart';
 import '../../../shared/widgets/avatar.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/auth/auth_provider.dart';
+import '../../../data/repositories/profile_repository.dart';
+import '../../../data/models/messaging.dart';
 import '../providers/livekit_call_provider.dart';
 import '../providers/messaging_provider.dart';
 import '../utils/conversation_identity.dart';
-import '../../../core/auth/auth_provider.dart';
 
 /// Full-screen multi-party LiveKit call room. Participant grid for N people,
-/// camera-off placeholders with avatars, mute/camera/screen-share controls.
-class CallRoomScreen extends ConsumerWidget {
+/// camera-off placeholders with avatars, mute/camera/screen-share controls,
+/// buddy invites, and the voice→video switch handshake.
+class CallRoomScreen extends ConsumerStatefulWidget {
   const CallRoomScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CallRoomScreen> createState() => _CallRoomScreenState();
+}
+
+class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
+  /// Display name of the remote person who asked for the video switch, if any.
+  String? _switchRequestFrom;
+  bool _switchPending = false;
+  StreamSubscription<dynamic>? _socketSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ringback while we wait for the other side to pick up.
+    Ringtone.playLoop('ringback', 'assets/ringtones/ringback.wav');
+    WidgetsBinding.instance.addPostFrameCallback((_) => _wireSocket());
+  }
+
+  @override
+  void dispose() {
+    Ringtone.stop('ringback');
+    _socketSub?.cancel();
+    super.dispose();
+  }
+
+  void _wireSocket() {
+    final convoId = ref.read(liveKitCallProvider).conversationId;
+    if (convoId.isEmpty) return;
+    final socket = ref.read(chatSocketProvider(convoId));
+    if (socket == null) return;
+    _socketSub?.cancel();
+    _socketSub = socket.events.listen((event) {
+      event.when(
+        message: (_) {},
+        typingStart: (_, _, _, _) {},
+        typingStop: (_, _) {},
+        read: (_, _, _, _) {},
+        react: (_, _, _) {},
+        callSignal: (signalType, data, _) {
+          switch (signalType) {
+            case 'call_switch_request':
+              if (!mounted) return;
+              setState(() =>
+                  _switchRequestFrom = (data['from_display_name'] ?? data['from_username'] ?? 'Someone') as String);
+              Ringtone.playLoop('switch-request', 'assets/ringtones/ringback.wav');
+              Future<void>.delayed(const Duration(seconds: 2),
+                  () => Ringtone.stop('switch-request'));
+            case 'call_switch_response':
+              if (data['accepted'] == true) {
+                ref.read(liveKitCallProvider.notifier).setCamera(true);
+              }
+              if (mounted) setState(() => _switchPending = false);
+            case 'call_switched_to_video':
+              ref.read(liveKitCallProvider.notifier).setCamera(true);
+          }
+        },
+      );
+    });
+  }
+
+  void _requestVideoSwitch() {
+    if (_switchPending) return;
+    final profile = ref.read(authProvider).profile;
+    final convoId = ref.read(liveKitCallProvider).conversationId;
+    final socket = ref.read(chatSocketProvider(convoId));
+    setState(() => _switchPending = true);
+    socket?.sendCallSignal('call_switch_request', {
+      'from_user_id': ref.read(authProvider).user?.id,
+      'from_username': profile?.username,
+      'from_display_name': profile?.displayName,
+      'from_avatar_url': profile?.avatarUrl,
+    }, callType: 'audio');
+  }
+
+  void _acceptSwitch() {
+    final convoId = ref.read(liveKitCallProvider).conversationId;
+    ref.read(messagingRepositoryProvider).switchCallType(convoId, {'accept': true}).ignore();
+    final socket = ref.read(chatSocketProvider(convoId));
+    socket?.sendCallSignal('call_switch_response', {'accepted': true}, callType: 'audio');
+    ref.read(liveKitCallProvider.notifier).setCamera(true);
+    Ringtone.stop('switch-request');
+    setState(() => _switchRequestFrom = null);
+  }
+
+  void _declineSwitch() {
+    final convoId = ref.read(liveKitCallProvider).conversationId;
+    ref.read(messagingRepositoryProvider).switchCallType(convoId, {'accept': false}).ignore();
+    final socket = ref.read(chatSocketProvider(convoId));
+    socket?.sendCallSignal('call_switch_response', {'accepted': false}, callType: 'audio');
+    Ringtone.stop('switch-request');
+    setState(() => _switchRequestFrom = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(liveKitCallProvider);
-    final conversations =
-        ref.watch(conversationsProvider).conversations;
-    final convo = conversations
-        .where((c) => c.id == state.conversationId)
-        .firstOrNull;
+    if (state.phase == LkCallPhase.inCall || state.phase == LkCallPhase.ended) {
+      Ringtone.stop('ringback');
+    }
+    final conversations = ref.watch(conversationsProvider).conversations;
+    final convo = conversations.where((c) => c.id == state.conversationId).firstOrNull;
     final myUserId = ref.watch(authProvider).user?.id;
     final identity = ConversationIdentity.of(convo, myUserId);
 
@@ -39,6 +137,12 @@ class CallRoomScreen extends ConsumerWidget {
             else ...[
               _StatusBar(state: state),
               const SizedBox(height: 8),
+              if (_switchRequestFrom != null)
+                _SwitchRequestBanner(
+                  fromName: _switchRequestFrom!,
+                  onAccept: _acceptSwitch,
+                  onDecline: _declineSwitch,
+                ),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -55,9 +159,62 @@ class CallRoomScreen extends ConsumerWidget {
                   ),
                 ),
             ],
-            _Controls(state: state),
+            _Controls(
+              state: state,
+              switchPending: _switchPending,
+              onRequestVideoSwitch: _requestVideoSwitch,
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SwitchRequestBanner extends StatelessWidget {
+  final String fromName;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  const _SwitchRequestBanner({
+    required this.fromName,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: BuddyColors.surfaceRaised,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: BuddyColors.green.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '$fromName wants to switch to video',
+              style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
+            ),
+          ),
+          TextButton(
+            onPressed: onDecline,
+            child: const Text('Decline', style: TextStyle(color: BuddyColors.textSecondary)),
+          ),
+          FilledButton.icon(
+            onPressed: onAccept,
+            icon: const Icon(Icons.videocam, size: 16),
+            label: const Text('Accept'),
+            style: FilledButton.styleFrom(
+              backgroundColor: BuddyColors.green,
+              foregroundColor: BuddyColors.black,
+              minimumSize: const Size(0, 36),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -73,7 +230,7 @@ class _PreCall extends StatelessWidget {
     final String label;
     switch (state.phase) {
       case LkCallPhase.calling:
-        label = 'Calling...';
+        label = 'Calling…';
         break;
       case LkCallPhase.ended:
         label = 'Call ended';
@@ -125,8 +282,6 @@ class _StatusBarState extends State<_StatusBar> {
   }
 
   String get _elapsed {
-    // Duration is approximated from when the room reached in-call; a
-    // server-side started_at is available via the session API if needed.
     return '${widget.state.tiles.length} in call';
   }
 
@@ -147,6 +302,117 @@ class _StatusBarState extends State<_StatusBar> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Buddy picker — tap a buddy to ring them into the live call.
+class _BuddyPicker extends ConsumerStatefulWidget {
+  final String conversationId;
+  const _BuddyPicker({required this.conversationId});
+
+  @override
+  ConsumerState<_BuddyPicker> createState() => _BuddyPickerState();
+}
+
+class _BuddyPickerState extends ConsumerState<_BuddyPicker> {
+  List<Map<String, dynamic>>? _buddies;
+  bool _loading = true;
+  bool _adding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final username = ref.read(authProvider).profile?.username ?? '';
+      final raw = await ProfileRepository(ApiClient().dio).getBuddies(username);
+      final data = raw['data'] as List? ?? raw['results'] as List? ?? const [];
+      if (!mounted) return;
+      setState(() {
+        _buddies = data.cast<Map<String, dynamic>>();
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _add(String buddyUserId) async {
+    if (_adding) return;
+    setState(() => _adding = true);
+    try {
+      await ref
+          .read(messagingRepositoryProvider)
+          .addCallBuddy(widget.conversationId, {'buddy_user_id': buddyUserId});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ringing them…')),
+        );
+        Navigator.of(context).pop();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _adding = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not add them — are you still in the call?')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Add a buddy to the call',
+                style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 17)),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator(color: BuddyColors.green)),
+              )
+            else if (_buddies == null || _buddies!.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('No buddies yet — add some from Find a Buddy.',
+                    style: TextStyle(color: BuddyColors.textSecondary)),
+              )
+            else
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 320),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _buddies!.length,
+                  itemBuilder: (_, i) {
+                    final b = _buddies![i];
+                    final name = (b['display_name'] ?? b['username'] ?? '') as String;
+                    final avatar = (b['avatar_url'] ?? '') as String;
+                    final userId = (b['user_id'] ?? b['id'] ?? '') as String;
+                    return ListTile(
+                      leading: Avatar(src: avatar, alt: name, size: AvatarSize.md),
+                      title: Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: BuddyColors.textPrimary)),
+                      trailing: const Icon(Icons.call_outlined, color: BuddyColors.green, size: 20),
+                      onTap: () => _add(userId),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -265,7 +531,14 @@ class _Tile extends StatelessWidget {
 
 class _Controls extends ConsumerWidget {
   final LiveKitCallState state;
-  const _Controls({required this.state});
+  final bool switchPending;
+  final VoidCallback onRequestVideoSwitch;
+
+  const _Controls({
+    required this.state,
+    required this.switchPending,
+    required this.onRequestVideoSwitch,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -276,11 +549,23 @@ class _Controls extends ConsumerWidget {
     final isVideo = state.callType == 'video';
     final inCall = state.phase == LkCallPhase.inCall;
 
+    void openBuddyPicker() {
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: BuddyColors.surface,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => _BuddyPicker(conversationId: state.conversationId),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 12, 0, 24),
       child: Wrap(
         alignment: WrapAlignment.center,
-        spacing: 18,
+        spacing: 16,
         runSpacing: 10,
         children: [
           _ControlButton(
@@ -302,6 +587,20 @@ class _Controls extends ConsumerWidget {
               label: isCameraOff ? 'Camera on' : 'Camera off',
               color: isCameraOff ? BuddyColors.green : Colors.white24,
               onTap: controller.toggleCamera,
+            ),
+          if (!isVideo && inCall)
+            _ControlButton(
+              icon: Icons.videocam,
+              label: switchPending ? 'Requested…' : 'Go video',
+              color: switchPending ? Colors.white24 : Colors.white24,
+              onTap: onRequestVideoSwitch,
+            ),
+          if (inCall)
+            _ControlButton(
+              icon: Icons.person_add_outlined,
+              label: 'Add buddy',
+              color: Colors.white24,
+              onTap: openBuddyPicker,
             ),
           if (isVideo && inCall && !PlatformIsDesktop.current)
             _ControlButton(

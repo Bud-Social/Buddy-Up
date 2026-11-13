@@ -26,8 +26,9 @@ abstract class ProfileRepository {
   Future<dynamic> searchProfiles(
     @Query('q') String query,
     @Query('role') String? role,
-    @Query('page') int? page,
-  );
+    @Query('page') int? page, {
+    @Query('location') String? location,
+  });
 
   @GET('/profiles/onboarding/')
   Future<OnboardingData> getOnboarding();

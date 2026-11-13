@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/audio/ringtone.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../providers/livekit_call_provider.dart';
@@ -7,16 +8,35 @@ import '../providers/messaging_provider.dart';
 
 /// Full-screen incoming call prompt shown while an invite is pending.
 /// Accept joins the conversation's LiveKit session; decline dismisses it.
-class IncomingCallOverlay extends ConsumerWidget {
+/// Rings (looped) until answered or dismissed.
+class IncomingCallOverlay extends ConsumerStatefulWidget {
   const IncomingCallOverlay({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<IncomingCallOverlay> createState() => _IncomingCallOverlayState();
+}
+
+class _IncomingCallOverlayState extends ConsumerState<IncomingCallOverlay> {
+  @override
+  void initState() {
+    super.initState();
+    Ringtone.playLoop('incoming', 'assets/ringtones/incoming_ring.wav');
+  }
+
+  @override
+  void dispose() {
+    Ringtone.stop('incoming');
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final invite = ref.watch(pendingInviteProvider);
     if (invite == null) return const SizedBox.shrink();
 
     Future<void> accept() async {
       final details = invite;
+      await Ringtone.stop('incoming');
       ref.read(pendingInviteProvider.notifier).set(null);
       await ref.read(liveKitCallProvider.notifier).join(
             details.conversationId,
@@ -24,7 +44,10 @@ class IncomingCallOverlay extends ConsumerWidget {
           );
     }
 
-    void decline() => ref.read(pendingInviteProvider.notifier).set(null);
+    Future<void> decline() async {
+      await Ringtone.stop('incoming');
+      ref.read(pendingInviteProvider.notifier).set(null);
+    }
 
     return Positioned.fill(
       child: Material(

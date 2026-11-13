@@ -116,12 +116,18 @@ class _ProfileRepository implements ProfileRepository {
   }
 
   @override
-  Future<dynamic> searchProfiles(String query, String? role, int? page) async {
+  Future<dynamic> searchProfiles(
+    String query,
+    String? role,
+    int? page, {
+    String? location,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'q': query,
       r'role': role,
       r'page': page,
+      r'location': location,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

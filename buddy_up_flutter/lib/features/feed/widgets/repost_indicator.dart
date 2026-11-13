@@ -12,6 +12,11 @@ class RepostIndicator extends StatefulWidget {
   final String? viewerAvatarUrl;
   final String? viewerDisplayName;
 
+  /// The id the server sends in the reposters list — the profile's user id.
+  /// The account id is a fallback; comparing against this is what keeps a
+  /// viewer who reposted from drawing themselves twice.
+  final String? viewerUserId;
+
   const RepostIndicator({
     super.key,
     this.reposters = const [],
@@ -19,6 +24,7 @@ class RepostIndicator extends StatefulWidget {
     this.viewerReposted = false,
     this.viewerAvatarUrl,
     this.viewerDisplayName,
+    this.viewerUserId,
   });
 
   @override
@@ -146,13 +152,18 @@ class _RepostIndicatorState extends State<RepostIndicator>
   Widget _buildStackedAvatars(BuildContext context, List<ReposterData> people) {
     final viewerSlot = (widget.viewerAvatarUrl ?? '').isNotEmpty;
     // Skip a backend echo of the viewer — the animated slot below owns it.
-    final visible = people
-        .where((r) =>
-            !viewerSlot ||
-            r.avatarUrl != widget.viewerAvatarUrl)
-        .take(3)
+    // Compare ids first (what the server sends); fall back to the avatar
+    // for payloads that predate the id comparison on the web.
+    final viewerId = widget.viewerUserId ?? '';
+    final filtered = people
+        .where((r) {
+          final id = r.userId ?? '';
+          if (viewerId.isNotEmpty && id.isNotEmpty) return id != viewerId;
+          return !viewerSlot || r.avatarUrl != widget.viewerAvatarUrl;
+        })
         .toList();
-    final overflow = people.length - visible.length;
+    final visible = filtered.take(3).toList();
+    final overflow = filtered.length - visible.length;
     // Width grows with the slot count; the viewer slot reserves space while
     // scaled to 0 so the exit animation doesn't reflow the row.
     final extra = (overflow > 0 ? 1 : 0) + (viewerSlot ? 1 : 0);

@@ -203,6 +203,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         react: (conversationId, messageId, reactions) {
           ref.read(messagesProvider(widget.conversationId).notifier).updateMessage(messageId, reactions);
         },
+        callSignal: (_, _, _) {},
       );
     });
   }
@@ -231,6 +232,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       // A thread we cannot read still shows its messages; only the header
       // falls back to generic text.
     }
+  }
+
+  /// Call-log event bubble tapped — the web's "call again" dialog.
+  void _showCallAgainDialog(Message msg) {
+    final call = (msg.metadata['call'] as Map?)?.cast<String, dynamic>();
+    final isVideo = call?['call_type'] == 'video';
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: BuddyColors.surface,
+        title: const Text('Call again?', style: TextStyle(color: BuddyColors.textPrimary)),
+        content: Text(
+          isVideo ? 'Start a video call in this chat?' : 'Start a voice call in this chat?',
+          style: const TextStyle(color: BuddyColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Not now'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _startCall(isVideo ? 'video' : 'audio');
+            },
+            icon: Icon(isVideo ? Icons.videocam : Icons.phone),
+            label: Text(isVideo ? 'Video' : 'Voice'),
+            style: FilledButton.styleFrom(
+              backgroundColor: BuddyColors.green,
+              foregroundColor: BuddyColors.black,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Recipient tapped the view-once pill. Flip the local copy first (the
@@ -634,6 +670,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             receiverBubbleColor: _receiverColor,
                             onReply: () => setState(() => _replyToMessage = msg),
                             onOpenViewOnce: _openViewOnce,
+                            onCallAgain: _showCallAgainDialog,
                             onReact: (emoji) {
                               final socket = ref.read(chatSocketProvider(widget.conversationId));
                               socket?.sendReact(msg.id, emoji);

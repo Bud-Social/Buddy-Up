@@ -199,6 +199,7 @@ class _PostCardState extends ConsumerState<PostCard> {
   @override
   Widget build(BuildContext context) {
     final viewer = ref.watch(authProvider).profile;
+    final viewerUserId = viewer?.userId ?? ref.read(authProvider).user?.id;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
       padding: const EdgeInsets.all(16),
@@ -216,6 +217,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                 viewerReposted: true,
                 viewerAvatarUrl: viewer?.avatarUrl,
                 viewerDisplayName: viewer?.displayName,
+                viewerUserId: viewerUserId,
               ),
 
             _buildHeader(context),

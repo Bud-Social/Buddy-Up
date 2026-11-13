@@ -17,6 +17,7 @@ class MessageBubble extends StatelessWidget {
   final void Function()? onDelete;
   final void Function()? onForward;
   final void Function(Message message)? onOpenViewOnce;
+  final void Function(Message message)? onCallAgain;
   final Color? senderBubbleColor;
   final Color? receiverBubbleColor;
 
@@ -30,6 +31,7 @@ class MessageBubble extends StatelessWidget {
     this.onDelete,
     this.onForward,
     this.onOpenViewOnce,
+    this.onCallAgain,
     this.senderBubbleColor,
     this.receiverBubbleColor,
   });
@@ -348,6 +350,45 @@ class MessageBubble extends StatelessWidget {
               ),
             ],
           ),
+        );
+      case 'event':
+        // Backend writes call logs as `event` messages with metadata.call —
+        // render the call row, tap to call back (the web's "call again").
+        final call = (message.metadata['call'] as Map?)?.cast<String, dynamic>();
+        if (call != null) {
+          final isVideo = call['call_type'] == 'video';
+          final missed = call['status'] == 'missed';
+          final body = message.body.isNotEmpty ? message.body : (isVideo ? 'Video call' : 'Voice call');
+          return InkWell(
+            onTap: onCallAgain == null ? null : () => onCallAgain!(message),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isVideo ? Icons.videocam_outlined : Icons.phone_outlined,
+                    size: 18,
+                    color: missed ? BuddyColors.red : BuddyColors.green,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    body,
+                    style: TextStyle(
+                      color: missed ? BuddyColors.red : BuddyColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return Text(
+          message.body,
+          style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 15),
         );
       case 'poll':
         return Container(

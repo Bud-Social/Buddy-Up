@@ -8,10 +8,10 @@ class ReactionOverlay extends StatefulWidget {
   const ReactionOverlay({super.key, required this.child, this.onReact});
 
   @override
-  State<ReactionOverlay> createState() => _ReactionOverlayState();
+  State<ReactionOverlay> createState() => ReactionOverlayState();
 }
 
-class _ReactionOverlayState extends State<ReactionOverlay> with TickerProviderStateMixin {
+class ReactionOverlayState extends State<ReactionOverlay> with TickerProviderStateMixin {
   final List<_FloatingReaction> _activeReactions = [];
 
   void showReaction(String emoji) {
