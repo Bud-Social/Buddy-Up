@@ -175,7 +175,7 @@ export const profilesApi = {
   ping: (username: string, message?: string) =>
     apiClient.post<ApiResponse<{ ping_id: string }>>(`/profiles/${username}/ping/`, { message }).then((r) => r.data),
 
-  searchProfiles: (params: { q: string; limit?: number }) =>
+  searchProfiles: (params: { q: string; limit?: number; role?: string; location?: string }) =>
     apiClient.get<ApiResponse<Profile[]>>('/profiles/search/', { params }).then((r) => r.data),
 
   getRecommendations: (limit = 20) =>

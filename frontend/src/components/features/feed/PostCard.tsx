@@ -541,7 +541,9 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
   const { toast } = useToast();
   const viewerAvatar = useAuthStore((s) => s.profile?.avatar_url);
   const viewerName = useAuthStore((s) => s.profile?.display_name);
-  const viewer = useAuthStore((s) => s.user);
+  // The repost ribbon compares against the id the server sends for the
+  // viewer — the profile's user id — with the account id as a fallback.
+  const viewerUserId = useAuthStore((s) => s.profile?.user_id ?? s.user?.id ?? null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuView, setMenuView] = useState<'main' | 'report' | 'block'>('main');
   const [selectedReason, setSelectedReason] = useState<string>('spam');
@@ -945,7 +947,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
           <AvatarPopStyle />
           <div className="flex items-center -space-x-2 flex-shrink-0">
             {(post.reposters || [])
-              .filter((r: any) => r.user_id !== viewer?.id)
+              .filter((r: any) => !viewerUserId || r.user_id !== viewerUserId)
               .slice(0, 3)
               .map((reposter: any, idx: number) => (
                 <Avatar key={reposter.user_id || idx} src={reposter.avatar_url} alt={reposter.display_name} size="xs" className="ring-2 ring-buddy-green/30" style={{ zIndex: 3 - idx }} verificationStatus={reposter.verification_status} />
@@ -957,9 +959,9 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
             >
               <Avatar src={viewerAvatar} alt={viewerName || 'You'} size="xs" className="ring-2 ring-buddy-green" />
             </span>
-            {(post.reposters || []).filter((r: any) => r.user_id !== viewer?.id).length > 3 && (
+            {(post.reposters || []).filter((r: any) => !viewerUserId || r.user_id !== viewerUserId).length > 3 && (
               <div className="w-6 h-6 rounded-full bg-buddy-surface-raised text-[10px] font-bold flex items-center justify-center ring-2 ring-buddy-green/30">
-                +{(post.reposters || []).filter((r: any) => r.user_id !== viewer?.id).length - 3}
+                +{(post.reposters || []).filter((r: any) => !viewerUserId || r.user_id !== viewerUserId).length - 3}
               </div>
             )}
           </div>

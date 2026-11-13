@@ -22,6 +22,49 @@ import type { BuddyLive } from '@/types/live';
 
 type DiscoverTab = 'all' | 'people' | 'gyms' | 'lives' | 'topics' | 'communities';
 
+/**
+ * A suggestion the user can pick instead of typing.
+ *
+ * Each one does something real: it narrows the search, or it opens the
+ * place where that thing lives. A tab that only says "browse gyms" gives
+ * the user nothing to act on.
+ */
+interface Suggestion {
+  label: string;
+  /** An emoji or a dot colour, so the row reads at a glance. */
+  icon?: string;
+  onPick: () => void;
+}
+
+/** The roles a profile can hold — what someone can be found by. */
+const ROLE_SUGGESTIONS = [
+  { label: 'Trainers', role: 'trainer' },
+  { label: 'Practitioners', role: 'practitioner' },
+  { label: 'Distributors', role: 'distributor' },
+];
+
+/**
+ * The categories a gym can have, for when the platform has none of its own.
+ *
+ * A tab with nothing to offer is the same as a tab that does not exist,
+ * so there is always something to pick.
+ */
+const FALLBACK_GYM_CATEGORIES = [
+  { name: 'fitness', display_name: 'Fitness' },
+  { name: 'strength', display_name: 'Strength & weights' },
+  { name: 'crossfit', display_name: 'CrossFit' },
+  { name: 'yoga', display_name: 'Yoga & pilates' },
+  { name: 'boxing', display_name: 'Boxing & martial arts' },
+  { name: 'running', display_name: 'Running' },
+  { name: 'swimming', display_name: 'Swimming' },
+  { name: 'climbing', display_name: 'Climbing' },
+];
+
+/** Topics worth offering when nothing is trending yet. */
+const FALLBACK_TOPICS = [
+  'fitness', 'workout', 'running', 'gym', 'yoga', 'nutrition', 'marathon', 'recovery',
+];
+
 export default function Discover() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -32,6 +75,13 @@ export default function Discover() {
   const [buddyRequested, setBuddyRequested] = useState<Set<string>>(new Set());
   const [showAllPeople, setShowAllPeople] = useState(false);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
+  // Narrowings the user can pick from the suggestions.
+  const [roleFilter, setRoleFilter] = useState<string>('');
+  const [gymCategory, setGymCategory] = useState<string>('');
+  const [gymCity, setGymCity] = useState<string>('');
+  // Where the user is, so "near me" means something to them.
+  const [cityFilter, setCityFilter] = useState<string>('');
+  const [gymCategories, setGymCategories] = useState<{ name: string; display_name: string }[]>([]);
 
   const handleBuddyUp = async (username: string) => {
     try {
@@ -64,11 +114,20 @@ export default function Discover() {
     setIsSearching(true);
     try {
       if (activeTab === 'people' || activeTab === 'all') {
-        const res = await profilesApi.searchProfiles({ q, limit: 20 });
+        const res = await profilesApi.searchProfiles({
+          q,
+          limit: 20,
+          ...(roleFilter ? { role: roleFilter } : {}),
+          ...(cityFilter ? { location: cityFilter } : {}),
+        });
         setPeople(res.data);
       }
       if (activeTab === 'gyms' || activeTab === 'all') {
-        const res = await gymsApi.list({ q });
+        const res = await gymsApi.list({
+          q,
+          ...(gymCategory ? { category: gymCategory } : {}),
+          ...(gymCity ? { city: gymCity } : {}),
+        });
         setGyms(res.data);
       }
       if (activeTab === 'lives' || activeTab === 'all') {
@@ -82,7 +141,7 @@ export default function Discover() {
     } catch {} finally {
       setIsSearching(false);
     }
-  }, [activeTab]);
+  }, [activeTab, roleFilter, cityFilter, gymCategory, gymCity]);
 
   useEffect(() => {
     if (query.length >= 2) {
@@ -96,9 +155,123 @@ export default function Discover() {
     profilesApi.getDiscoverTrending().then((res) => setTrending(res.data)).catch(() => {});
   }, [query.length]);
 
+  // The gym categories, so the Gyms tab can suggest a real category.
+  useEffect(() => {
+    gymsApi.getCategories()
+      .then((res) => setGymCategories(res.data || []))
+      .catch(() => {});
+  }, []);
+
+  // The user's own city, so "near me" is a real place.
+  useEffect(() => {
+    const city = useAuthStore.getState().profile?.location_city;
+    if (city) setCityFilter(city);
+  }, []);
+
   useEffect(() => {
     track('discover.tab_view', { properties: { tab: activeTab } });
   }, [activeTab]);
+
+  /**
+   * What this tab suggests, when there is no query yet.
+   *
+   * Each suggestion narrows the list or opens the place the thing lives —
+   * a tab should offer something specific, not just a heading.
+   */
+  const suggestions: Suggestion[] = useMemo(() => {
+    const out: Suggestion[] = [];
+
+    if (activeTab === 'people' || activeTab === 'all') {
+      for (const r of ROLE_SUGGESTIONS) {
+        out.push({
+          label: r.label,
+          icon: '👤',
+          onPick: () => { setRoleFilter(r.role); setQuery(''); },
+        });
+      }
+      if (cityFilter) {
+        out.push({
+          label: `Near ${cityFilter}`,
+          icon: '📍',
+          onPick: () => { setCityFilter(cityFilter); setQuery(''); },
+        });
+      }
+    }
+
+    if (activeTab === 'gyms' || activeTab === 'all') {
+      const categories = gymCategories.length ? gymCategories : FALLBACK_GYM_CATEGORIES;
+      for (const c of categories.slice(0, 6)) {
+        out.push({
+          label: c.display_name || c.name,
+          icon: '🏋️',
+          onPick: () => { setGymCategory(c.name); setQuery(''); },
+        });
+      }
+      if (cityFilter) {
+        out.push({
+          label: `Gyms near ${cityFilter}`,
+          icon: '📍',
+          onPick: () => { setGymCity(cityFilter); setQuery(''); },
+        });
+      }
+    }
+
+    if (activeTab === 'lives' || activeTab === 'all') {
+      const liveNow = lives.filter((l) => l.status === 'live');
+      if (liveNow.length > 0) {
+        out.push({
+          label: `Live now (${liveNow.length})`,
+          icon: '🔴',
+          onPick: () => { setQuery(''); },
+        });
+      }
+      const categories = Array.from(new Set(lives.map((l) => l.category).filter(Boolean)));
+      for (const c of categories.slice(0, 4)) {
+        out.push({
+          label: c,
+          icon: '📡',
+          onPick: () => { setQuery(c); },
+        });
+      }
+    }
+
+    if (activeTab === 'topics' || activeTab === 'all') {
+      const hashtags = trending?.hashtags ?? [];
+      if (hashtags.length) {
+        for (const h of hashtags.slice(0, 6)) {
+          out.push({
+            label: `#${h.tag}`,
+            icon: '🏷️',
+            onPick: () => { setQuery(`#${h.tag}`); },
+          });
+        }
+      } else {
+        for (const t of FALLBACK_TOPICS) {
+          out.push({
+            label: `#${t}`,
+            icon: '🏷️',
+            onPick: () => { setQuery(`#${t}`); },
+          });
+        }
+      }
+    }
+
+    if (activeTab === 'communities' || activeTab === 'all') {
+      for (const c of (trending?.communities ?? []).slice(0, 5)) {
+        out.push({
+          label: c.group_name,
+          icon: '👥',
+          onPick: () => navigate(`/communities/${c.id}`),
+        });
+      }
+    }
+
+    // The All tab would otherwise list everything at once, which is no
+    // better than no list at all.
+    return activeTab === 'all' ? out.slice(0, 10) : out;
+  }, [
+    activeTab, cityFilter, gymCategories, lives, trending, navigate,
+  ]);
 
   const filteredTopics = useMemo(() => {
     const tags = trending?.hashtags ?? [];
@@ -130,14 +303,31 @@ export default function Discover() {
     if (query.length >= 2) return;
     if (activeTab === 'people' || activeTab === 'all') {
       setIsSearching(true);
-      profilesApi.getRecommendations()
-        .then((res) => setPeople((res.data || []).map((r) => r.profile)))
-        .catch(() => setPeople([]))
-        .finally(() => setIsSearching(false));
+      if (roleFilter || cityFilter) {
+        // A narrowing is in play — search within it rather than falling
+        // back to the generic recommendations.
+        profilesApi.searchProfiles({
+          q: '',
+          limit: 20,
+          ...(roleFilter ? { role: roleFilter } : {}),
+          ...(cityFilter ? { location: cityFilter } : {}),
+        })
+          .then((res) => setPeople(res.data || []))
+          .catch(() => setPeople([]))
+          .finally(() => setIsSearching(false));
+      } else {
+        profilesApi.getRecommendations()
+          .then((res) => setPeople((res.data || []).map((r) => r.profile)))
+          .catch(() => setPeople([]))
+          .finally(() => setIsSearching(false));
+      }
     }
     if (activeTab === 'gyms' || activeTab === 'all') {
       if (activeTab !== 'all') setIsSearching(true);
-      gymsApi.list({})
+      gymsApi.list({
+        ...(gymCategory ? { category: gymCategory } : {}),
+        ...(gymCity ? { city: gymCity } : {}),
+      })
         .then((res) => setGyms(res.data || []))
         .catch(() => setGyms([]))
         .finally(() => { if (activeTab !== 'all') setIsSearching(false); });
@@ -145,7 +335,21 @@ export default function Discover() {
     if (activeTab === 'lives' || activeTab === 'all') {
       livesApi.browse({ tab: 'live' }).then((res) => setLives(res.data || [])).catch(() => {});
     }
-  }, [activeTab, query.length]);
+  }, [activeTab, query.length, roleFilter, cityFilter, gymCategory, gymCity]);
+
+  /**
+   * Switch tab.
+   *
+   * A narrowing only applies to the tab it came from — a role filter has
+   * no meaning under Gyms — so it is cleared when the tab changes.
+   */
+  const switchTab = (tab: DiscoverTab) => {
+    setActiveTab(tab);
+    setRoleFilter('');
+    setGymCategory('');
+    setGymCity('');
+    if (tab !== 'people' && tab !== 'all') setCityFilter('');
+  };
 
   return (
     <div className="max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto p-4 space-y-6">
@@ -194,7 +398,7 @@ export default function Discover() {
           return (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => switchTab(tab.key)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
                 isActive
                   ? 'bg-buddy-green text-buddy-black'
@@ -208,13 +412,59 @@ export default function Discover() {
         })}
       </div>
 
+      {/* What this tab suggests — so a tap on a tab offers something to
+          act on rather than only a heading. */}
+      {query.length < 2 && !isSearching && suggestions.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-buddy-text-secondary">
+            {activeTab === 'all' ? 'Suggested for you' : `Suggested ${tabs.find((t) => t.key === activeTab)?.label.toLowerCase()}`}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((s) => (
+              <button
+                key={s.label}
+                onClick={s.onPick}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-buddy-surface text-sm text-buddy-text-primary hover:bg-buddy-surface-raised hover:text-buddy-green transition-colors"
+              >
+                {s.icon && <span aria-hidden="true">{s.icon}</span>}
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* The narrowing in play, so it is never a silent filter. */}
+      {(roleFilter || cityFilter || gymCategory || gymCity) && (
+        <div className="flex items-center gap-2 text-xs text-buddy-text-secondary">
+          <span>Filtered by</span>
+          {[roleFilter, cityFilter, gymCategory, gymCity].filter(Boolean).map((f) => (
+            <button
+              key={f}
+              onClick={() => {
+                setRoleFilter('');
+                setCityFilter('');
+                setGymCategory('');
+                setGymCity('');
+              }}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-buddy-green/15 text-buddy-green"
+            >
+              {f}
+              <X size={11} />
+            </button>
+          ))}
+        </div>
+      )}
+
       {isSearching && (
         <div className="flex justify-center py-12">
           <div className="w-6 h-6 border-2 border-buddy-green border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
-      {!isSearching && query.length < 2 && trending && (
+      {/* The mixed feed belongs to the All tab — the other tabs show their
+          own content below. */}
+      {!isSearching && query.length < 2 && activeTab === 'all' && trending && (
         <div className="space-y-6">
           {(trending.hashtags ?? []).length > 0 && (
             <div>

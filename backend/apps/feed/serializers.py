@@ -241,7 +241,12 @@ class PostSerializer(serializers.ModelSerializer):
         return obj.gym_tag.name if obj.gym_tag else None
 
     def get_reposters(self, obj):
-        """Reposter ribbon, derived from PostRepost log rows on this post."""
+        """Reposter ribbon, derived from PostRepost log rows on this post.
+
+        The viewer's own repost is left out. The card draws the viewer's
+        avatar separately as "you", so leaving it in the list would show
+        them twice — once as themselves and once by name.
+        """
         request = self.context.get('request')
         if not obj.reposts.count():
             return []
@@ -258,6 +263,10 @@ class PostSerializer(serializers.ModelSerializer):
         except Exception:  # noqa: BLE001 — attribution ordering is best-effort
             pass
         reposts = list(obj.reposts.filter(is_deleted=False).select_related('profile')[:20])
+        if viewer is not None:
+            # A profile's primary key is its user, so the repost row's
+            # profile id is the user's id.
+            reposts = [r for r in reposts if r.profile_id != viewer.user_id]
         # TikTok-style attribution: accounts the viewer follows first.
         reposts.sort(key=lambda r: (r.profile_id not in followed_ids, r.created_at))
         return [

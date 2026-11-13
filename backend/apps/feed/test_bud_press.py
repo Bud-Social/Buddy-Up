@@ -411,6 +411,20 @@ class RepostVisibilityTests(TestCase):
         reposters = row['reposters']
         self.assertTrue(all(r.get('followed_by_viewer') for r in reposters[:2]))
 
+    def test_the_viewer_is_left_out_of_the_reposters_list(self):
+        """The card draws the viewer's avatar as "you" separately.
+
+        Leaving it in the list would show them twice: once as themselves and
+        once by name.
+        """
+        data = self._feed(self.follower)
+        row = next(
+            p for p in data
+            if (p.get('original_post_data') or {}).get('id') == str(self.post.id)
+        )
+        viewer_id = str(self.follower.profile.user_id)
+        self.assertNotIn(viewer_id, [r['user_id'] for r in row['reposters']])
+
 
 class CommentsDisabledTests(TestCase):
     def setUp(self):

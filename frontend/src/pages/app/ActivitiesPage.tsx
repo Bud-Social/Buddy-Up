@@ -279,6 +279,25 @@ export default function ActivitiesPage() {
         </div>
       </div>
 
+      {/* Countdowns live next door — the mobile nav points here now. */}
+      <button
+        onClick={() => navigate('/countdowns')}
+        className="flex items-center justify-between w-full rounded-xl border border-buddy-border bg-buddy-surface px-4 py-3 text-left hover:border-buddy-green/40 transition-colors"
+      >
+        <span className="flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl bg-buddy-green/15 text-buddy-green flex items-center justify-center">
+            <Timer size={18} />
+          </span>
+          <span>
+            <span className="block text-sm font-semibold text-buddy-text-primary">Countdowns</span>
+            <span className="block text-xs text-buddy-text-secondary">
+              Streaks, sobriety, gym attendance and more
+            </span>
+          </span>
+        </span>
+        <span className="text-buddy-text-secondary text-sm">→</span>
+      </button>
+
       {/* Activity type tabs */}
       <div className="bg-buddy-surface rounded-xl border border-buddy-border p-1">
         <div className="flex gap-1 px-1 py-1">

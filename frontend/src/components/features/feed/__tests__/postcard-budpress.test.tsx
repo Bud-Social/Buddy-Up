@@ -166,6 +166,26 @@ describe('PostCard repost avatar overlay', () => {
     fireEvent.click(screen.getByTestId('rail-repost'));
     expect(await screen.findByTestId('repost-viewer-avatar')).toBeInTheDocument();
   });
+
+  it('shows the viewer once when they are also in the reposters list', async () => {
+    // The server leaves the viewer out of the list, but a cached payload
+    // may still carry them — the ribbon must not show them twice.
+    feedApiMock.repost.mockResolvedValue(ok({ action: 'reposted', repost_count: 1 }));
+    const { container } = renderCard(
+      makePost({
+        id: 'post-10',
+        is_reposted_by_me: true,
+        reposters: [{ user_id: 'u-viewer', display_name: 'Viewer One', avatar_url: '' }],
+      }),
+    );
+
+    await screen.findByTestId('repost-viewer-avatar');
+    const ribbon = container.querySelector('[data-testid="repost-viewer-avatar"]')?.parentElement;
+    // The viewer's own avatar, and nobody else from the reposters list.
+    expect(ribbon?.querySelectorAll('img')).toHaveLength(1);
+    expect(screen.getByText('You reposted')).toBeInTheDocument();
+    expect(screen.queryByText('Viewer One')).not.toBeInTheDocument();
+  });
 });
 
 describe('PostCard three-dots menu', () => {

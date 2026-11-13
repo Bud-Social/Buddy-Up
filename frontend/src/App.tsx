@@ -104,7 +104,7 @@ function LocationConsentDialog({ onClose }: { onClose: () => void }) {
               onClick={handleSave}
               disabled={saving}
               className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 ${
-                saving ? 'bg-buddy-surface text-buddy-text-secondary' : 'bg-buddy-green text-buddy-white hover:bg-buddy-green/90'
+                saving ? 'bg-buddy-surface text-buddy-text-secondary' : 'bg-buddy-green text-buddy-black hover:bg-buddy-green/90'
               }`}
             >
               {saving ? 'Saving…' : 'Continue'}
