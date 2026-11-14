@@ -511,3 +511,87 @@ class CountdownTemplateSeedTests(TestCase):
         self.user.save()
         resp = self.client.post('/api/v1/countdowns/templates/seed/', format='json')
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class RoutineTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email='rt@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(user=self.user, username='rtuser', display_name='RT User')
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+
+    def test_gym_and_custom_other_types_are_accepted(self):
+        gym = self.client.post('/api/v1/countdowns/routines/', {
+            'type': 'gym', 'name': 'Gym 4x', 'target': 4, 'unit': 'sessions',
+        }, format='json')
+        self.assertEqual(gym.status_code, status.HTTP_201_CREATED)
+
+        other = self.client.post('/api/v1/countdowns/routines/', {
+            'type': 'other', 'custom_name': 'Cold shower', 'target': 1, 'unit': 'session',
+        }, format='json')
+        self.assertEqual(other.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(other.data['data']['custom_name'], 'Cold shower')
+        self.assertEqual(other.data['data']['display_name'], 'Cold shower')
+
+        missing = self.client.post('/api/v1/countdowns/routines/', {
+            'type': 'other', 'name': '', 'target': 1, 'unit': 'session',
+        }, format='json')
+        self.assertEqual(missing.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_manual_checkin_and_reorder(self):
+        first = self.client.post('/api/v1/countdowns/routines/', {
+            'type': 'workout', 'name': 'Strength', 'tracking': 'manual',
+        }, format='json').data['data']
+        second = self.client.post('/api/v1/countdowns/routines/', {
+            'type': 'run', 'name': 'Run',
+        }, format='json').data['data']
+
+        reordered = self.client.post('/api/v1/countdowns/routines/reorder/', {
+            'ordered_ids': [second['id'], first['id']],
+        }, format='json')
+        self.assertEqual(reordered.status_code, status.HTTP_200_OK)
+        self.assertEqual(reordered.data['data'][0]['id'], second['id'])
+
+        checked = self.client.post(f"/api/v1/countdowns/routines/{first['id']}/checkin/", {
+            'value': 30, 'note': 'Done',
+        }, format='json')
+        self.assertEqual(checked.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(checked.data['data']['routine']['streak'], 1)
+        self.assertEqual(checked.data['data']['check_in']['source'], 'manual')
+
+    def test_highlights_upload_and_delete(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        routine = self.client.post('/api/v1/countdowns/routines/', {
+            'type': 'gym', 'name': 'Gym',
+        }, format='json').data['data']
+        image = SimpleUploadedFile('shot.jpg', b'fake-bytes', 'image/jpeg')
+        response = self.client.post(
+            f"/api/v1/countdowns/routines/{routine['id']}/highlights/",
+            {'kind': 'photo', 'file': image}, format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        highlight_id = response.data['data']['id']
+
+        listed = self.client.get(f"/api/v1/countdowns/routines/{routine['id']}/highlights/?kind=photo")
+        self.assertEqual(len(listed.data['data']), 1)
+
+        deleted = self.client.delete(
+            f"/api/v1/countdowns/routines/{routine['id']}/highlights/{highlight_id}/"
+        )
+        self.assertEqual(deleted.status_code, status.HTTP_200_OK)
+
+    def test_share_as_story_keeps_overlay_position(self):
+        from apps.feed.models import Post
+
+        routine = self.client.post('/api/v1/countdowns/routines/', {
+            'type': 'gym', 'name': 'Gym', 'target': 4, 'unit': 'sessions',
+        }, format='json').data['data']
+
+        response = self.client.post(f"/api/v1/countdowns/routines/{routine['id']}/share/", {
+            'as_story': True, 'overlay_position': 'bottom',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        post = Post.objects.get(id=response.data['data']['post_id'])
+        self.assertEqual(post.post_type, 'moment')
+        self.assertEqual(post.workout_log_data['overlay_position'], 'bottom')
+        self.assertEqual(post.workout_log_data['routine_name'], 'Gym')

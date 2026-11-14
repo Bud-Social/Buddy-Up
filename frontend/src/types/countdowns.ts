@@ -91,28 +91,71 @@ export interface UpdateUserCountdown {
   auto_advance_signal?: string;
 }
 
-export type RoutineType = 'walk' | 'run' | 'cycle' | 'hike' | 'workout';
+export type RoutineType = 'walk' | 'run' | 'cycle' | 'hike' | 'workout' | 'gym' | 'other';
+export type RoutineActivation = 'week' | 'month' | 'holiday';
+export type RoutineTracking = 'app' | 'manual';
+export type HighlightKind = 'photo' | 'voice' | 'video';
+
+export interface RoutineHighlight {
+  id: string;
+  routine: string;
+  kind: HighlightKind;
+  file_url: string;
+  thumbnail_url: string;
+  caption: string;
+  duration_ms: number | null;
+  created_at: string;
+}
+
+export interface RoutineCheckIn {
+  id: string;
+  routine: string;
+  value: number | null;
+  note: string;
+  source: 'app' | 'manual';
+  occurred_at: string;
+  created_at: string;
+}
 
 export interface Routine {
   id: string;
   type: RoutineType;
+  type_label: string;
+  custom_name: string;
+  display_name: string;
   name: string;
   target: number;
   unit: string;
   days: number[];
+  target_day: number | null;
+  time_of_day: string | null;
+  reminder_minutes: number[];
+  activation: RoutineActivation;
+  tracking: RoutineTracking;
+  sort_order: number;
   streak: number;
   completed_today: boolean;
+  last_checkin_at: string | null;
   is_active: boolean;
+  checkin_count: number;
+  highlights: RoutineHighlight[];
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateRoutine {
   type: RoutineType;
-  name: string;
+  name?: string;
+  custom_name?: string;
   target: number;
   unit: string;
   days?: number[];
+  target_day?: number | null;
+  time_of_day?: string | null;
+  reminder_minutes?: number[];
+  activation?: RoutineActivation;
+  tracking?: RoutineTracking;
+  sort_order?: number;
   streak?: number;
   completed_today?: boolean;
 }

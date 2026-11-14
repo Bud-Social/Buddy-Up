@@ -226,6 +226,19 @@ export interface CountdownSummary {
   };
 }
 
+export interface RoutineCategoryRow {
+  category: string;
+  label: string;
+  count: number;
+}
+
+export interface RoutineSummary {
+  active_routines: number;
+  total_checkins: number;
+  by_category: RoutineCategoryRow[];
+  by_tracking: { tracking: string; count: number }[];
+}
+
 export interface AnalyticsSummaryData {
   period: AnalyticsPeriod;
   user: {
@@ -242,6 +255,7 @@ export interface AnalyticsSummaryData {
   lives: LivesSummary;
   spending: SpendingSummary;
   programmes: ProgrammesSummary;
+  routines?: RoutineSummary;
 }
 
 export interface AnalyticsReportResult {

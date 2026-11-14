@@ -2,15 +2,26 @@ from datetime import timedelta
 
 from rest_framework import views, permissions, status
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
-from .models import CountdownTemplate, UserCountdown, Routine
+from .models import (
+    CountdownTemplate, UserCountdown, Routine, RoutineCheckIn, RoutineHighlight,
+)
 from .serializers import (
     CountdownEventSerializer, CountdownTemplateSerializer,
-    UserCountdownSerializer, RoutineSerializer,
+    UserCountdownSerializer, RoutineSerializer, RoutineCheckInSerializer,
+    RoutineHighlightSerializer, RoutineReorderSerializer,
 )
 from .services import advance_matching_countdowns
+
+import os
+import uuid
 
 
 def _format_remaining(delta: timedelta) -> str:
@@ -331,18 +342,21 @@ class RoutineDetailView(views.APIView):
         obj = self.get_object(pk)
         return Response({
             'success': True,
-            'data': RoutineSerializer(obj).data,
+            'data': RoutineSerializer(obj, context={'request': request, 'include_highlights': True}).data,
             'message': 'OK', 'errors': None, 'pagination': None,
         })
 
     def patch(self, request, pk):
         obj = self.get_object(pk)
-        serializer = RoutineSerializer(obj, data=request.data, partial=True, context={'request': request})
+        serializer = RoutineSerializer(
+            obj, data=request.data, partial=True,
+            context={'request': request},
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({
             'success': True,
-            'data': RoutineSerializer(serializer.instance).data,
+            'data': RoutineSerializer(serializer.instance, context={'request': request}).data,
             'message': 'Updated.', 'errors': None, 'pagination': None,
         })
 
@@ -354,3 +368,223 @@ class RoutineDetailView(views.APIView):
             'success': True, 'data': None,
             'message': 'Deleted.', 'errors': None, 'pagination': None,
         })
+
+
+class RoutineReorderView(views.APIView):
+    """Persist a drag-and-drop order for the user's routines."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = RoutineReorderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        profile = request.user.profile
+        owned = set(
+            Routine.objects.filter(user=profile, id__in=serializer.validated_data['ordered_ids'])
+            .values_list('id', flat=True)
+        )
+        for index, routine_id in enumerate(serializer.validated_data['ordered_ids']):
+            if routine_id not in owned:
+                continue
+            Routine.objects.filter(id=routine_id, user=profile).update(sort_order=index)
+        qs = Routine.objects.filter(user=profile, is_active=True)
+        return Response({
+            'success': True,
+            'data': RoutineSerializer(qs, many=True).data,
+            'message': 'Order saved.', 'errors': None, 'pagination': {'count': qs.count()},
+        })
+
+
+class RoutineCheckInView(views.APIView):
+    """Check in a routine session, in-app or by hand."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        routine = get_object_or_404(Routine, id=pk, user=request.user.profile)
+        value = request.data.get('value')
+        if value is not None:
+            try:
+                value = int(value)
+            except (TypeError, ValueError):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'value must be a whole number.', 'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            if value < 0:
+                value = 0
+
+        occurred_raw = (request.data.get('occurred_at') or '').strip()
+        occurred_at = parse_datetime(occurred_raw) if occurred_raw else timezone.now()
+        if occurred_at is None:
+            occurred_at = timezone.now()
+
+        checkin = RoutineCheckIn.objects.create(
+            routine=routine,
+            value=value,
+            note=(request.data.get('note') or '').strip()[:300],
+            source='manual' if routine.tracking == 'manual' else 'app',
+            occurred_at=occurred_at,
+        )
+        Routine.objects.filter(pk=routine.pk).update(
+            streak=F('streak') + 1,
+            completed_today=True,
+            last_checkin_at=occurred_at,
+        )
+        routine.refresh_from_db()
+        return Response({
+            'success': True,
+            'data': {
+                'routine': RoutineSerializer(routine).data,
+                'check_in': RoutineCheckInSerializer(checkin).data,
+            },
+            'message': 'Checked in.', 'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class RoutineCheckInListView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        routine = get_object_or_404(Routine, id=pk, user=request.user.profile)
+        rows = routine.check_ins.all()[:50]
+        return Response({
+            'success': True, 'data': RoutineCheckInSerializer(rows, many=True).data,
+            'message': 'OK', 'errors': None, 'pagination': {'count': routine.check_ins.count()},
+        })
+
+
+class RoutineHighlightListView(views.APIView):
+    """Highlights (photo/voice/video) attached to a routine."""
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request, pk):
+        routine = get_object_or_404(Routine, id=pk, user=request.user.profile)
+        kind = request.query_params.get('kind')
+        qs = routine.highlights.all()
+        if kind in ('photo', 'voice', 'video'):
+            qs = qs.filter(kind=kind)
+        return Response({
+            'success': True, 'data': RoutineHighlightSerializer(qs[:60], many=True).data,
+            'message': 'OK', 'errors': None, 'pagination': {'count': qs.count()},
+        })
+
+    def post(self, request, pk):
+        routine = get_object_or_404(Routine, id=pk, user=request.user.profile)
+        kind = request.data.get('kind', 'photo')
+        if kind not in ('photo', 'voice', 'video'):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'kind must be photo, voice or video.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        upload = request.FILES.get('file') or request.FILES.get('media')
+        file_url = (request.data.get('file_url') or '').strip()
+        if not upload and not file_url:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'A file or file_url is required.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if upload:
+            if upload.size > 60 * 1024 * 1024:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'{upload.name} is larger than 60 MB.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            ext = os.path.splitext(upload.name)[1].lower()
+            saved_name = default_storage.save(
+                f'routines/{routine.id}/highlights/{uuid.uuid4().hex}{ext}',
+                ContentFile(upload.read()),
+            )
+            file_url = default_storage.url(saved_name)
+
+        try:
+            duration_ms = int(request.data.get('duration_ms') or 0)
+        except (TypeError, ValueError):
+            duration_ms = None
+
+        highlight = RoutineHighlight.objects.create(
+            routine=routine,
+            kind=kind,
+            file_url=file_url,
+            thumbnail_url=(request.data.get('thumbnail_url') or '').strip()[:1000],
+            caption=(request.data.get('caption') or '').strip()[:200],
+            duration_ms=duration_ms or None,
+        )
+        return Response({
+            'success': True,
+            'data': RoutineHighlightSerializer(highlight).data,
+            'message': 'Highlight saved.', 'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class RoutineHighlightDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, pk, highlight_id):
+        routine = get_object_or_404(Routine, id=pk, user=request.user.profile)
+        highlight = get_object_or_404(RoutineHighlight, id=highlight_id, routine=routine)
+        highlight.delete()
+        return Response({
+            'success': True, 'data': None,
+            'message': 'Highlight removed.', 'errors': None, 'pagination': None,
+        })
+
+
+class RoutineShareView(views.APIView):
+    """Share a routine as a feed post or a moment (story).
+
+    The metrics card is rendered by the client from ``workout_log_data``; the
+    user-chosen overlay position travels with it so a story and a feed post
+    can place the numbers differently.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        from apps.feed.models import Post
+
+        routine = get_object_or_404(Routine, id=pk, user=request.user.profile)
+        as_story = bool(request.data.get('as_story'))
+        overlay = (request.data.get('overlay_position') or 'middle').strip().lower()
+        if overlay not in ('top', 'middle', 'bottom'):
+            overlay = 'middle'
+        media_url = (request.data.get('media_url') or '').strip()
+        visibility = request.data.get('visibility', 'public')
+        if visibility not in ('public', 'buddies', 'gym_members', 'private'):
+            visibility = 'public'
+
+        body = (request.data.get('body') or '').strip() or (
+            f'{routine.display_name} — {routine.streak} day streak '
+            f'({routine.target} {routine.unit}).'
+        )
+        metrics = {
+            'routine_id': str(routine.id),
+            'routine_name': routine.display_name,
+            'type': routine.type,
+            'streak': routine.streak,
+            'target': routine.target,
+            'unit': routine.unit,
+            'activation': routine.activation,
+            'overlay_position': overlay,
+            'source': 'routine_share',
+        }
+        post = Post.objects.create(
+            author=request.user.profile,
+            post_type='moment' if as_story else 'workout_log',
+            body=body,
+            visibility=visibility,
+            media_urls=[media_url] if media_url else [],
+            workout_log_data=metrics,
+        )
+        return Response({
+            'success': True,
+            'data': {
+                'post_id': str(post.id),
+                'post_type': post.post_type,
+                'overlay_position': overlay,
+            },
+            'message': 'Shared.', 'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)

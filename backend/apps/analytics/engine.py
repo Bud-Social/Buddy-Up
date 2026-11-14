@@ -575,6 +575,40 @@ def summarize_programmes(profile, cutoff):
     }
 
 
+def summarize_routines(profile, cutoff):
+    """Routine categories, cadence and which routines are actually running.
+
+    ``RoutineCheckIn`` is the completion record for both in-app and manual
+    routines, so the same numbers cover off-app habits.
+    """
+    from apps.countdowns.models import Routine, RoutineCheckIn
+
+    routines = list(Routine.objects.filter(user=profile, is_active=True))
+    checkins = RoutineCheckIn.objects.filter(routine__user=profile)
+    if cutoff:
+        checkins = checkins.filter(occurred_at__gte=cutoff)
+
+    by_category = Counter()
+    by_tracking = Counter()
+    for row in checkins.values('routine__type', 'routine__tracking').annotate(count=Count('id')):
+        by_category[row['routine__type']] += row['count']
+        by_tracking[row['routine__tracking']] += row['count']
+
+    labels = dict(Routine.ROUTINE_TYPES)
+    return {
+        'active_routines': len(routines),
+        'total_checkins': checkins.count(),
+        'by_category': [
+            {'category': key, 'label': labels.get(key, key), 'count': by_category[key]}
+            for key in labels if by_category.get(key)
+        ],
+        'by_tracking': [
+            {'tracking': key, 'count': by_tracking[key]}
+            for key in ('app', 'manual') if by_tracking.get(key)
+        ],
+    }
+
+
 def build_summary(profile, period='all'):
     cutoff = period_cutoff(period)
     workouts = summarize_workouts(profile, cutoff)
@@ -585,6 +619,7 @@ def build_summary(profile, period='all'):
     spending = summarize_spending(profile, cutoff)
     programmes = summarize_programmes(profile, cutoff)
     nutrition = summarize_nutrition(profile, cutoff)
+    routines = summarize_routines(profile, cutoff)
 
     return json_safe({
         'period': period,
@@ -602,6 +637,7 @@ def build_summary(profile, period='all'):
         'spending': spending,
         'programmes': programmes,
         'nutrition': nutrition,
+        'routines': routines,
     })
 
 

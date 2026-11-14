@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Activity as ActivityIcon, Dumbbell, Utensils, Scale, Flame, Wallet, Radio, Clock,
+  Target, CheckCircle2,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/analytics/StatCard';
@@ -102,6 +103,42 @@ export function OverviewTab({ period }: Props) {
         <StatCard label="Spent (Artifacts)" value={formatNumber(spending.total_artifacts_spent)} sub={`${spending.total_transactions} transactions`} icon={<Wallet size={18} />} />
         <StatCard label="Programmes" value={programmes.programmes_purchased} sub={`${programmes.active_enrolments} in progress`} icon={<Radio size={18} />} />
       </div>
+
+      {/* Routines — the off-app habits tracked by hand plus in-app routines */}
+      {summary.routines && (
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-heading font-semibold">Routines</h3>
+            <span className="text-xs text-buddy-text-secondary">
+              {formatNumber(summary.routines.total_checkins)} check-ins this period
+            </span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard label="Active Routines" value={formatNumber(summary.routines.active_routines)} sub="In rotation" icon={<Target size={18} />} />
+            {summary.routines.by_tracking.map((row) => (
+              <StatCard
+                key={row.tracking}
+                label={row.tracking === 'manual' ? 'Manual Check-ins' : 'In-app Check-ins'}
+                value={formatNumber(row.count)}
+                sub={row.tracking === 'manual' ? 'Off-app habits' : 'Tracked in-app'}
+                icon={<CheckCircle2 size={18} />}
+              />
+            ))}
+          </div>
+          {summary.routines.by_category.length > 0 && (
+            <div>
+              <p className="text-xs text-buddy-text-secondary mb-1.5">By category</p>
+              <div className="flex flex-wrap gap-1.5">
+                {summary.routines.by_category.map((row) => (
+                  <span key={row.category} className="text-xs bg-buddy-green/10 text-buddy-green px-2.5 py-1 rounded-full">
+                    {row.label} · {row.count}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Activity distance chart */}
       <Card className="p-4">

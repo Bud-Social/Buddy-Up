@@ -9,6 +9,9 @@ import type {
   UpdateUserCountdown,
   Routine,
   CreateRoutine,
+  RoutineCheckIn,
+  RoutineHighlight,
+  HighlightKind,
 } from '@/types/countdowns';
 
 export const countdownsApi = {
@@ -73,4 +76,53 @@ export const countdownsApi = {
 
   deleteRoutine: (id: string) =>
     apiClient.delete(`/countdowns/routines/${id}/`).then((r) => r.data),
+
+  /** Persist a drag-and-drop order for the routines list. */
+  reorderRoutines: (orderedIds: string[]) =>
+    apiClient
+      .post<ApiResponse<Routine[]>>('/countdowns/routines/reorder/', { ordered_ids: orderedIds })
+      .then((r) => r.data.data),
+
+  /** Logged for in-app and off-app routines alike. */
+  checkInRoutine: (id: string, data: { value?: number; note?: string; occurred_at?: string } = {}) =>
+    apiClient
+      .post<ApiResponse<{ routine: Routine; check_in: RoutineCheckIn }>>(`/countdowns/routines/${id}/checkin/`, data)
+      .then((r) => r.data.data),
+
+  listRoutineCheckIns: (id: string) =>
+    apiClient
+      .get<ApiResponse<RoutineCheckIn[]>>(`/countdowns/routines/${id}/checkins/`)
+      .then((r) => r.data.data),
+
+  listRoutineHighlights: (id: string, kind?: HighlightKind) =>
+    apiClient
+      .get<ApiResponse<RoutineHighlight[]>>(`/countdowns/routines/${id}/highlights/`, { params: kind ? { kind } : undefined })
+      .then((r) => r.data.data),
+
+  uploadRoutineHighlight: (id: string, kind: HighlightKind, file: File, caption?: string) => {
+    const form = new FormData();
+    form.append('kind', kind);
+    form.append('file', file);
+    if (caption) form.append('caption', caption);
+    return apiClient
+      .post<ApiResponse<RoutineHighlight>>(`/countdowns/routines/${id}/highlights/`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data.data);
+  },
+
+  deleteRoutineHighlight: (id: string, highlightId: string) =>
+    apiClient.delete(`/countdowns/routines/${id}/highlights/${highlightId}/`).then((r) => r.data),
+
+  /** Share the routine as a moment (story) or a workout_log post. */
+  shareRoutine: (
+    id: string,
+    data: { as_story?: boolean; overlay_position?: 'top' | 'middle' | 'bottom'; visibility?: string; media_url?: string; body?: string },
+  ) =>
+    apiClient
+      .post<ApiResponse<{ post_id: string; post_type: string; overlay_position: string }>>(
+        `/countdowns/routines/${id}/share/`,
+        data,
+      )
+      .then((r) => r.data.data),
 };

@@ -307,7 +307,7 @@ class CountdownEvent(TimestampedModel):
 
 
 class Routine(TimestampedModel):
-    """A recurring habit routine (walk, run, cycle, hike, workout)."""
+    """A recurring habit routine (walk, run, cycle, hike, workout, gym, other)."""
 
     ROUTINE_TYPES = [
         ('walk', 'Walking'),
@@ -315,6 +315,19 @@ class Routine(TimestampedModel):
         ('cycle', 'Cycling'),
         ('hike', 'Hiking'),
         ('workout', 'Workout'),
+        ('gym', 'Gym'),
+        ('other', 'Other'),
+    ]
+    # ``week``/``month``/``holiday`` is the activation selector: which calendar
+    # window the routine is meant to be judged over.
+    ACTIVATION_CHOICES = [
+        ('week', 'Weekly'),
+        ('month', 'Monthly'),
+        ('holiday', 'Holiday'),
+    ]
+    TRACKING_CHOICES = [
+        ('app', 'In-app'),
+        ('manual', 'Manual / off-app'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -322,21 +335,104 @@ class Routine(TimestampedModel):
         'profiles.Profile', on_delete=models.CASCADE, related_name='routines',
     )
     type = models.CharField(max_length=15, choices=ROUTINE_TYPES)
+    # Free-text name for ``other`` routines; blank for the built-in types,
+    # which show their label instead.
+    custom_name = models.CharField(max_length=60, blank=True)
     name = models.CharField(max_length=120)
     target = models.PositiveIntegerField(default=30, help_text='Target value per session')
     unit = models.CharField(max_length=20, default='min', help_text='steps, km, min')
-    days = models.JSONField(default=list, help_text='Active days of week [0-6, 0=Sunday]')
+    # Active days of week, Monday=0 … Sunday=6. The model used to document
+    # Sunday=0; the UI has always sent Monday=0, so the contract is now
+    # explicit and consistent everywhere.
+    days = models.JSONField(default=list, help_text='Active days of week [0-6, 0=Monday]')
+    # The day the routine is judged on (a long run, a weekly weigh-in).
+    target_day = models.PositiveSmallIntegerField(null=True, blank=True)
+    time_of_day = models.TimeField(null=True, blank=True)
+    # Minutes before the session to fire a reminder, e.g. [60, 15].
+    reminder_minutes = models.JSONField(default=list)
+    activation = models.CharField(max_length=10, choices=ACTIVATION_CHOICES, default='week')
+    # ``manual`` routines are things the app cannot observe (mobility, cold
+    # shower); they are checked in by hand instead of being auto-completed.
+    tracking = models.CharField(max_length=10, choices=TRACKING_CHOICES, default='app')
+    sort_order = models.IntegerField(default=0)
     streak = models.PositiveIntegerField(default=0)
     completed_today = models.BooleanField(default=False)
+    last_checkin_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'countdowns_routine'
-        ordering = ['-created_at']
+        ordering = ['sort_order', '-created_at']
         indexes = [
             models.Index(fields=['user', '-created_at']),
             models.Index(fields=['user', 'is_active']),
+            models.Index(fields=['user', 'sort_order']),
         ]
 
     def __str__(self):
         return f'{self.name}: {self.target} {self.unit}'
+
+    @property
+    def display_name(self):
+        if self.type == 'other' and self.custom_name:
+            return self.custom_name
+        return self.name or dict(self.ROUTINE_TYPES).get(self.type, self.type)
+
+
+class RoutineCheckIn(TimestampedModel):
+    """A completed routine session.
+
+    In-app routines are checked in from the app; ``manual`` routines (cold
+    showers, mobility, off-app training) are logged here by hand. Both feed the
+    same streak and the same analytics.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    routine = models.ForeignKey(Routine, on_delete=models.CASCADE, related_name='check_ins')
+    value = models.PositiveIntegerField(null=True, blank=True)
+    note = models.CharField(max_length=300, blank=True)
+    source = models.CharField(max_length=15, default='app')
+    occurred_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'countdowns_routine_checkin'
+        ordering = ['-occurred_at']
+        indexes = [
+            models.Index(fields=['routine', '-occurred_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.routine_id} check-in at {self.occurred_at:%Y-%m-%d %H:%M}'
+
+
+class RoutineHighlight(TimestampedModel):
+    """A photo, voice note or video attached to a routine.
+
+    Highlights are the material the routine's share sheet uses, and they are
+    kept in their own tabs so a routine can accumulate evidence without
+    flooding the feed.
+    """
+
+    KIND_CHOICES = [
+        ('photo', 'Photo'),
+        ('voice', 'Voice'),
+        ('video', 'Video'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    routine = models.ForeignKey(Routine, on_delete=models.CASCADE, related_name='highlights')
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES)
+    file_url = models.URLField(max_length=1000)
+    thumbnail_url = models.URLField(max_length=1000, blank=True)
+    caption = models.CharField(max_length=200, blank=True)
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'countdowns_routine_highlight'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['routine', 'kind']),
+        ]
+
+    def __str__(self):
+        return f'{self.kind} highlight for {self.routine_id}'
