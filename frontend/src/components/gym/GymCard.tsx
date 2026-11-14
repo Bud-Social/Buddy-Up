@@ -78,7 +78,7 @@ export function GymCard({ gym, showDistance = true, onClick }: GymCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-heading font-semibold text-sm truncate">{gym.name}</h3>
-            <VerifiedGymBadge verified={gym.is_verified} />
+            <VerifiedGymBadge verified={gym.is_verified} tier={gym.tier} />
             {gym.subscription_type === 'paid' && <Badge variant="gold" label="Paid" size="sm" />}
             {gym.registration_status === 'verified' && (
               <Badge variant="blue" label="Registered" size="sm" />

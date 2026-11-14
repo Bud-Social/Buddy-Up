@@ -282,7 +282,7 @@ export default function GymDetail() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-heading text-xl font-semibold">{gym.name}</h1>
-              <VerifiedGymBadge verified={gym.is_verified} size="md" />
+              <VerifiedGymBadge verified={gym.is_verified} tier={gym.tier} size="md" />
             </div>
             <p className="text-xs text-buddy-text-secondary">@{gym.handle} · {memberCount} members</p>
             {(gym.location_summary?.venue_count ?? 0) > 0 && (

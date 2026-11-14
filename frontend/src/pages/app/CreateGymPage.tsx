@@ -8,7 +8,7 @@ import { GymHeroPreview } from '@/components/gym/GymHeroPreview';
 import { uploadToCloudinary } from '@/lib/uploader';
 import { emptyVenueDraft, type VenueDraft } from '@/components/gym/venueDraft';
 import { gymsApi } from '@/api/gyms';
-import type { GymCategory, GymCategoryPricing } from '@/types';
+import type { GymCategory, GymCategoryPricing, GymTier } from '@/types';
 
 const RULE_TEMPLATES = [
   'No harassment or hate speech',
@@ -41,6 +41,10 @@ export default function CreateGymPage() {
   const [tagInput, setTagInput] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
+  const [tier, setTier] = useState<GymTier>('regular');
+  const [onlineCapacity, setOnlineCapacity] = useState('');
+  const [physicalCapacity, setPhysicalCapacity] = useState('');
+  const [currentlyServing, setCurrentlyServing] = useState('');
   const [categoryPricing, setCategoryPricing] = useState<GymCategoryPricing[]>([]);
   const [venues, setVenues] = useState<VenueDraft[]>([emptyVenueDraft(true)]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -210,6 +214,10 @@ export default function CreateGymPage() {
         handle: handle.trim().toLowerCase(),
         description: description.trim(),
         category: selectedCategoryIds.map((id) => categories.find((c) => c.id === id)?.name).filter(Boolean).join(',') || 'other',
+        tier,
+        online_capacity: onlineCapacity === '' ? 0 : Math.max(0, Math.floor(Number(onlineCapacity) || 0)),
+        physical_capacity: physicalCapacity === '' ? 0 : Math.max(0, Math.floor(Number(physicalCapacity) || 0)),
+        currently_serving: currentlyServing === '' ? 0 : Math.max(0, Math.floor(Number(currentlyServing) || 0)),
         category_ids: selectedCategoryIds.filter((id) => !String(id).startsWith('custom_')),
         access_type: accessType,
         subscription_type: subscriptionType,
@@ -338,7 +346,7 @@ export default function CreateGymPage() {
         </div>
 
         <div className="flex gap-1 mb-6">
-          {[1, 2, 3, 4, 5].map((s) => (
+          {[1, 2, 3, 4, 5, 6].map((s) => (
             <div key={s} className={`flex-1 h-1 rounded-full ${s <= step ? 'bg-buddy-green' : 'bg-buddy-surface-raised'}`} />
           ))}
         </div>
@@ -618,6 +626,79 @@ export default function CreateGymPage() {
         {step === 4 && (
           <div className="space-y-5">
             <div>
+              <h2 className="text-sm font-semibold mb-1">Level &amp; capacity</h2>
+              <p className="text-xs text-buddy-text-secondary mb-3">
+                Tell members what to expect. The tier sets your verified badge
+                colour, and the capacities tell visitors how big you are.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {([
+                  { key: 'regular' as GymTier, label: 'Regular', desc: 'White badge · everyday gym', box: 'bg-white', icon: 'text-buddy-black' },
+                  { key: 'midlevel' as GymTier, label: 'Mid-Level', desc: 'Blue badge · established gym', box: 'bg-buddy-blue', icon: 'text-white' },
+                  { key: 'executive' as GymTier, label: 'Executive', desc: 'Gold badge · flagship gym', box: 'bg-buddy-gold', icon: 'text-buddy-black' },
+                ]).map(({ key, label, desc, box, icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setTier(key)}
+                    aria-pressed={tier === key}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-colors ${
+                      tier === key
+                        ? 'border-buddy-green bg-buddy-green/5'
+                        : 'border-buddy-surface-raised hover:border-buddy-green/40'
+                    }`}
+                  >
+                    <span className={`w-12 h-12 rounded-full flex items-center justify-center ${box}`}>
+                      <Dumbbell size={22} className={icon} />
+                    </span>
+                    <span className="text-xs font-semibold text-buddy-text-primary">{label}</span>
+                    <span className="text-[10px] text-buddy-text-secondary text-center leading-snug">{desc}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                <Input
+                  label="Online capacity"
+                  type="number"
+                  min={0}
+                  value={onlineCapacity}
+                  onChange={(e) => setOnlineCapacity(e.target.value)}
+                  placeholder="e.g. 50"
+                />
+                <Input
+                  label="Physical capacity"
+                  type="number"
+                  min={0}
+                  value={physicalCapacity}
+                  onChange={(e) => setPhysicalCapacity(e.target.value)}
+                  placeholder="e.g. 200"
+                />
+                <Input
+                  label="Already serving"
+                  type="number"
+                  min={0}
+                  value={currentlyServing}
+                  onChange={(e) => setCurrentlyServing(e.target.value)}
+                  placeholder="e.g. 40"
+                />
+              </div>
+              <p className="text-[11px] text-buddy-text-secondary mt-1.5">
+                Capacity of 0 means unspecified — not that you have no room.
+                Already serving is the number of members you currently have on
+                the floor; it is shown as context for new members.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setStep(3)} className="flex-1">Back</Button>
+              <Button className="flex-1" size="lg" onClick={() => setStep(5)}>Next</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="space-y-5">
+            <div>
               <h2 className="text-sm font-semibold mb-1">Branding</h2>
               <p className="text-xs text-buddy-text-secondary mb-3">
                 Upload a logo and cover image — these appear everywhere your gym
@@ -672,6 +753,10 @@ export default function CreateGymPage() {
               categories={categories.filter((c) => selectedCategoryIds.includes(c.id))}
               accessType={accessType}
               subscriptionType={subscriptionType}
+              tier={tier}
+              onlineCapacity={onlineCapacity === '' ? 0 : Math.max(0, Math.floor(Number(onlineCapacity) || 0))}
+              physicalCapacity={physicalCapacity === '' ? 0 : Math.max(0, Math.floor(Number(physicalCapacity) || 0))}
+              currentlyServing={currentlyServing === '' ? 0 : Math.max(0, Math.floor(Number(currentlyServing) || 0))}
               locationLabel={(() => {
                 const primary = venues.find((v) => v.is_primary) ?? venues[0];
                 return primary?.city || primary?.address || '';
@@ -713,13 +798,13 @@ export default function CreateGymPage() {
             </div>
 
             <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => setStep(3)} className="flex-1">Back</Button>
-              <Button className="flex-1" size="lg" onClick={() => setStep(5)}>Next</Button>
+              <Button variant="ghost" onClick={() => setStep(4)} className="flex-1">Back</Button>
+              <Button className="flex-1" size="lg" onClick={() => setStep(6)}>Next</Button>
             </div>
           </div>
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <div className="space-y-5">
             <div className="rounded-3xl border border-buddy-surface p-4 bg-buddy-surface-raised space-y-3">
               <p className="text-sm font-semibold">Review your gym</p>
@@ -779,7 +864,7 @@ export default function CreateGymPage() {
             </div>
 
             <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => setStep(4)} className="flex-1">Back</Button>
+              <Button variant="ghost" onClick={() => setStep(5)} className="flex-1">Back</Button>
               <Button className="flex-1" size="lg" onClick={handleCreate} isLoading={isSubmitting}>Create Gym</Button>
             </div>
           </div>

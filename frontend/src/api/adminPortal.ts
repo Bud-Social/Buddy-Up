@@ -231,6 +231,10 @@ export interface PortalGym {
   category?: string | null;
   access_type?: string | null;
   subscription_type?: string | null;
+  tier?: string | null;
+  online_capacity?: number | null;
+  physical_capacity?: number | null;
+  currently_serving?: number | null;
   /** Liveness is SoftDeleteModel's `is_deleted` — Gym has no is_active column. */
   is_deleted?: boolean;
   deleted_at?: string | null;
@@ -250,6 +254,7 @@ export interface PortalGymFilters extends PortalPaginationParams {
   access_type?: string;
   category?: string;
   is_verified?: boolean;
+  tier?: string;
   q?: string;
 }
 

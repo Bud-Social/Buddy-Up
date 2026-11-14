@@ -31,6 +31,11 @@ class Gym(TimestampedModel, SoftDeleteModel):
         ('paid', 'Paid'),
         ('tiered', 'Tiered'),
     ]
+    TIER_CHOICES = [
+        ('regular', 'Regular'),
+        ('midlevel', 'Mid-Level'),
+        ('executive', 'Executive'),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(max_length=60, unique=True)
@@ -45,6 +50,13 @@ class Gym(TimestampedModel, SoftDeleteModel):
     categories = models.ManyToManyField(GymCategory, related_name='gyms', blank=True)
     access_type = models.CharField(max_length=8, choices=ACCESS_CHOICES, default='public')
     subscription_type = models.CharField(max_length=15, choices=SUBSCRIPTION_CHOICES, default='free')
+    tier = models.CharField(max_length=12, choices=TIER_CHOICES, default='regular')
+    # Delivery capacity. 0 = not declared / unlimited. The physical_serving
+    # number is what the owner already serves at the physical space; the
+    # member_count field is kept in sync by the normal join/leave flow.
+    online_capacity = models.PositiveIntegerField(default=0)
+    physical_capacity = models.PositiveIntegerField(default=0)
+    currently_serving = models.PositiveIntegerField(default=0)
     monthly_fee_artifacts = models.JSONField(null=True, blank=True)
     join_fee_artifacts = models.JSONField(null=True, blank=True)
     wallet_balance = models.JSONField(default=dict)

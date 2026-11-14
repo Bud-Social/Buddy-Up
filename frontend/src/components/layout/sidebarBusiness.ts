@@ -40,7 +40,9 @@ export function businessEntries(flags: BusinessRoleFlags): BusinessEntry[] {
   if (flags.hasCreator) entries.push({ key: 'creator', to: '/creator-insights', label: 'Creator Insights', shortLabel: 'Insights' });
   if (flags.hasShop) entries.push({ key: 'shop', to: '/marketplace/creator', label: 'Shop', shortLabel: 'Shop' });
   if (flags.hasEvents) entries.push({ key: 'events', to: '/marketplace/events', label: 'My Events', shortLabel: 'Events' });
-  if (flags.gymSlug) entries.push({ key: 'gym', to: `/gyms/${flags.gymSlug}/manage`, label: 'My Gym', shortLabel: 'Gym' });
+  // Point at /my-gyms, which lists every gym the viewer manages, instead of
+  // the single-slug link that only worked for the first owned gym.
+  if (flags.gymSlug) entries.push({ key: 'gym', to: '/my-gyms', label: 'My Gyms', shortLabel: 'Gyms' });
   if (flags.hasStation) entries.push({ key: 'stations', to: '/marketplace/stations', label: 'My Stations', shortLabel: 'Stations' });
   if (flags.isCourier) entries.push({ key: 'courier', to: '/marketplace/delivery', label: 'Courier', shortLabel: 'Courier' });
   return entries;

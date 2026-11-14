@@ -44,6 +44,13 @@ const VERIFIED_OPTIONS = [
   { value: 'false', label: 'Unverified' },
 ];
 
+const TIER_OPTIONS = [
+  { value: 'all', label: 'Any tier' },
+  { value: 'regular', label: 'Regular' },
+  { value: 'midlevel', label: 'Mid-Level' },
+  { value: 'executive', label: 'Executive' },
+];
+
 const boolOrUndef = (v: string) => (v === 'all' ? undefined : v === 'true');
 
 export default function AdminGyms() {
@@ -51,6 +58,7 @@ export default function AdminGyms() {
   const [access, setAccess] = useState('all');
   const [category, setCategory] = useState('all');
   const [verified, setVerified] = useState('all');
+  const [tier, setTier] = useState('all');
   const [expanded, setExpanded] = useState<string | null>(null);
   const debouncedQuery = useDebounced(query);
   const action = usePortalAction();
@@ -61,8 +69,9 @@ export default function AdminGyms() {
       access_type: access,
       category,
       is_verified: boolOrUndef(verified),
+      tier: tier === 'all' ? undefined : tier,
     }),
-    [debouncedQuery, access, category, verified],
+    [debouncedQuery, access, category, verified, tier],
   );
 
   const fetcher = useCallback((params: Record<string, unknown>) => adminPortalApi.getGyms(params as never), []);
@@ -124,6 +133,7 @@ export default function AdminGyms() {
           <FilterSelect label="Access" value={access} options={ACCESS_OPTIONS} onChange={setAccess} />
           <FilterSelect label="Category" value={category} options={CATEGORY_OPTIONS} onChange={setCategory} />
           <FilterSelect label="Verification" value={verified} options={VERIFIED_OPTIONS} onChange={setVerified} />
+          <FilterSelect label="Tier" value={tier} options={TIER_OPTIONS} onChange={setTier} />
         </div>
       </Card>
 
@@ -154,6 +164,7 @@ export default function AdminGyms() {
                       <BooleanBadge value={gym.is_verified} trueLabel="Verified" falseLabel="Unverified" />
                       <BooleanBadge value={gym.is_deleted !== true} trueLabel="Active" falseLabel="Inactive" />
                       <StatusBadge status={gym.registration_status} />
+                      {gym.tier && <StatusBadge status={`${gym.tier} tier`} />}
                       {gym.offers_online_coaching && <StatusBadge status="online coaching" />}
                     </div>
                     <p className="text-xs text-buddy-text-secondary mt-1">
@@ -193,6 +204,10 @@ export default function AdminGyms() {
                     <DataRow label="Gym ID">{text(gym.id)}</DataRow>
                     <DataRow label="Handle">{text(gym.handle)}</DataRow>
                     <DataRow label="Subscription">{text(gym.subscription_type)}</DataRow>
+                    <DataRow label="Tier">{text(gym.tier)}</DataRow>
+                    <DataRow label="Online capacity">{typeof gym.online_capacity === 'number' ? gym.online_capacity.toString() : '—'}</DataRow>
+                    <DataRow label="Physical capacity">{typeof gym.physical_capacity === 'number' ? gym.physical_capacity.toString() : '—'}</DataRow>
+                    <DataRow label="Already serving">{typeof gym.currently_serving === 'number' ? gym.currently_serving.toString() : '—'}</DataRow>
                     <DataRow label="Registration status">{text(gym.registration_status)}</DataRow>
                     <DataRow label="Legal name">{text(gym.registration?.legal_name)}</DataRow>
                     <DataRow label="Registration number">{text(gym.registration?.registration_number)}</DataRow>

@@ -812,6 +812,7 @@ class GymListView(PortalView):
         qs = Gym.objects.all()
         qs = filter_text(request, qs, ['name', 'handle', 'location_city'])
         qs = filter_choice(request, qs, 'access_type', Gym.ACCESS_CHOICES)
+        qs = filter_choice(request, qs, 'tier', Gym.TIER_CHOICES)
         category = (_params(request).get('category') or '').strip()
         if category:
             qs = qs.filter(category__icontains=category)

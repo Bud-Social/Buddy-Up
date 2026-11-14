@@ -25,7 +25,7 @@ describe('businessEntries', () => {
   });
 
   it('builds the gym destination from the owned gym\'s slug', () => {
-    expect(businessEntries({ ...NONE, gymSlug: 'legit-gym' })[0].to).toBe('/gyms/legit-gym/manage');
+    expect(businessEntries({ ...NONE, gymSlug: 'legit-gym' })[0].to).toBe('/my-gyms');
   });
 
   it('does not unlock the gym destination without a slug', () => {
@@ -54,7 +54,7 @@ describe('businessEntries', () => {
 
   it('shortens the two labels that would otherwise wrap in the switcher', () => {
     const entries = businessEntries({ ...NONE, hasCreator: true, hasShop: true, hasEvents: true, gymSlug: 'g', hasStation: true });
-    expect(entries.map((e) => e.shortLabel)).toEqual(['Insights', 'Shop', 'Events', 'Gym', 'Stations']);
-    expect(entries.map((e) => e.label)).toEqual(['Creator Insights', 'Shop', 'My Events', 'My Gym', 'My Stations']);
+    expect(entries.map((e) => e.shortLabel)).toEqual(['Insights', 'Shop', 'Events', 'Gyms', 'Stations']);
+    expect(entries.map((e) => e.label)).toEqual(['Creator Insights', 'Shop', 'My Events', 'My Gyms', 'My Stations']);
   });
 });

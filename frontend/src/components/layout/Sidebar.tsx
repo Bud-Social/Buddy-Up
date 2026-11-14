@@ -30,6 +30,10 @@ const bottom = [{ to: '/settings', icon: Settings, label: 'Settings' }, { to: '/
  * The section list and the role switcher are both built from `businessEntries`
  * in `sidebarBusiness.ts`, so a destination the operator does not hold is never
  * rendered — in one or the other.
+ *
+ * Gyms link to /my-gyms, the page listing every gym the viewer manages,
+ * rather than a single gym — otherwise multi-gym owners had no page
+ * that admitted the rest existed.
  */
 function businessEntries(roles: ReturnType<typeof useBusinessRoles>): NavEntry[] {
   const icons: Record<BusinessRoleKey, typeof Store> = {

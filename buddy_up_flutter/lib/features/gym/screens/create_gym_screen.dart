@@ -23,6 +23,10 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
   String _accessType = 'public';
   String _subscriptionType = 'free';
   String _category = '';
+  String _tier = 'regular';
+  final _onlineCapController = TextEditingController();
+  final _physicalCapController = TextEditingController();
+  final _servingController = TextEditingController();
   bool _isSubmitting = false;
   bool _handleAvailable = true;
 
@@ -34,6 +38,9 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
     _cityController.dispose();
     _countryController.dispose();
     _customCategoryController.dispose();
+    _onlineCapController.dispose();
+    _physicalCapController.dispose();
+    _servingController.dispose();
     super.dispose();
   }
 
@@ -64,6 +71,10 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
         category: effectiveCategory,
         accessType: _accessType,
         subscriptionType: _subscriptionType,
+        tier: _tier,
+        onlineCapacity: int.tryParse(_onlineCapController.text) ?? 0,
+        physicalCapacity: int.tryParse(_physicalCapController.text) ?? 0,
+        currentlyServing: int.tryParse(_servingController.text) ?? 0,
         locationCity: _cityController.text.trim(),
         locationCountry: _countryController.text.trim(),
       );
@@ -193,6 +204,38 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
                   ),
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 16),
+            const Text('Level & capacity', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                for (final t in ['regular', 'midlevel', 'executive'])
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: ChoiceChip(
+                        label: Text(t[0].toUpperCase() + t.substring(1), style: const TextStyle(fontSize: 10)),
+                        selected: _tier == t,
+                        onSelected: (_) => setState(() => _tier = t),
+                        selectedColor: BuddyColors.green.withValues(alpha: 0.2),
+                        labelStyle: TextStyle(
+                          color: _tier == t ? BuddyColors.green : BuddyColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(child: BuddyInput(label: 'Online seats', controller: _onlineCapController, hint: '0 = unspecified', keyboardType: TextInputType.number)),
+                const SizedBox(width: 12),
+                Expanded(child: BuddyInput(label: 'Physical seats', controller: _physicalCapController, hint: '0 = unspecified', keyboardType: TextInputType.number)),
+                const SizedBox(width: 12),
+                Expanded(child: BuddyInput(label: 'Already serving', controller: _servingController, hint: 'e.g. 40', keyboardType: TextInputType.number)),
+              ],
             ),
             const SizedBox(height: 16),
             Row(

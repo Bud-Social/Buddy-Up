@@ -49,12 +49,14 @@ void main() {
       expect(entries.single.route, '/marketplace/events');
     });
 
-    test('a gym owner is routed to that gym’s manage screen', () {
+    test('a gym owner sees the managed-gyms page', () {
       final entries = businessEntries(
         const BusinessRoleFlags(gymSlug: 'iron-foundry', gymName: 'Iron Foundry'),
       );
-      expect(entries.single.route, '/gyms/iron-foundry/manage');
-      expect(entries.single.subtitle, 'Iron Foundry');
+      expect(entries.single.route, '/my-gyms');
+      expect(entries.single.label, 'My Gyms');
+      expect(entries.single.shortLabel, 'Gyms');
+      expect(entries.single.subtitle, isNotEmpty);
     });
 
     test('a gym with a handle but no name still gets a usable subtitle', () {

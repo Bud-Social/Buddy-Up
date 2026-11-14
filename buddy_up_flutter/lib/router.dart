@@ -29,6 +29,7 @@ import 'features/gym/screens/gym_list_screen.dart';
 import 'features/gym/screens/gym_detail_screen.dart';
 import 'features/gym/screens/create_gym_screen.dart';
 import 'features/gym/screens/gym_manage_screen.dart';
+import 'features/gym/screens/my_gyms_screen.dart';
 import 'features/live/screens/live_browser_screen.dart';
 import 'features/live/screens/live_room_screen.dart';
 import 'features/live/screens/create_live_screen.dart';
@@ -283,6 +284,11 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         builder: (_, _) => const WorkoutFormScreen(),
       ),
       // Gym routes
+      GoRoute(
+        path: '/my-gyms',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const MyGymsScreen(),
+      ),
       GoRoute(
         path: '/gyms/create',
         parentNavigatorKey: _rootNavigatorKey,

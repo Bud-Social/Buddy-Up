@@ -39,12 +39,12 @@ function renderCard(gym: Gym) {
 describe('GymCard', () => {
   it('marks a verified gym with the dumbbell badge', () => {
     renderCard({ ...baseGym, is_verified: true });
-    expect(screen.getByLabelText('Verified gym')).toBeInTheDocument();
+    expect(screen.getByLabelText('regular verified gym')).toBeInTheDocument();
   });
 
   it('does not mark an unverified gym', () => {
     renderCard(baseGym);
-    expect(screen.queryByLabelText('Verified gym')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('regular verified gym')).not.toBeInTheDocument();
   });
 
   it('names the followed members shown on the right and counts the rest', () => {

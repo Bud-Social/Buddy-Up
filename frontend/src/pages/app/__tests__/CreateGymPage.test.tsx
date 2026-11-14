@@ -60,15 +60,32 @@ describe('Gym creation wizard', () => {
     await user.type(screen.getByPlaceholderText('Location name'), 'Downtown');
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
-    // Step 4: branding — logo, cover, preview gallery (all optional).
+    // Step 4: level & capacity (all optional, defaults to regular).
+    expect(screen.getByText('Level & capacity', { selector: 'h2' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Mid-Level/ }));
+    await user.type(screen.getByLabelText('Online capacity'), '20');
+    await user.type(screen.getByLabelText('Physical capacity'), '80');
+    await user.type(screen.getByLabelText('Already serving'), '12');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    // Step 5: branding — logo, cover, preview gallery (all optional).
     expect(screen.getByText('Branding', { selector: 'h2' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
-    // Step 5: review, then create.
+    // Step 6: review, then create.
     expect(screen.getByText('Review your gym')).toBeInTheDocument();
     expect(screen.getByText('Downtown')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Create Gym' }));
 
+    await waitFor(() => expect(api.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Test Gym',
+        tier: 'midlevel',
+        online_capacity: 20,
+        physical_capacity: 80,
+        currently_serving: 12,
+      }),
+    ));
     await waitFor(() => expect(api.createVenue).toHaveBeenCalledWith(
       'test_gym',
       expect.objectContaining({ name: 'Downtown', is_primary: true }),

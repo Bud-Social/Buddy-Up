@@ -47,7 +47,8 @@ class GymSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'handle', 'description', 'logo_url', 'cover_url',
             'category', 'content_rating', 'categories', 'access_type',
-            'subscription_type',
+            'subscription_type', 'tier',
+            'online_capacity', 'physical_capacity', 'currently_serving',
             'monthly_fee_artifacts', 'join_fee_artifacts', 'category_pricing',
             'is_verified', 'is_reviews_enabled', 'is_donations_enabled',
             'average_rating', 'review_count', 'recent_reviewers',
@@ -302,13 +303,17 @@ class CreateGymSerializer(serializers.ModelSerializer):
         child=serializers.IntegerField(), write_only=True, required=False
     )
     category_pricing = CategoryPricingInputSerializer(many=True, required=False)
+    online_capacity = serializers.IntegerField(min_value=0, required=False, default=0)
+    physical_capacity = serializers.IntegerField(min_value=0, required=False, default=0)
+    currently_serving = serializers.IntegerField(min_value=0, required=False, default=0)
 
     class Meta:
         model = Gym
         fields = [
             'name', 'handle', 'description', 'category', 'content_rating',
             'category_ids', 'logo_url', 'cover_url',
-            'access_type', 'subscription_type',
+            'access_type', 'subscription_type', 'tier',
+            'online_capacity', 'physical_capacity', 'currently_serving',
             'monthly_fee_artifacts', 'join_fee_artifacts',
             'rules', 'tags', 'location_city', 'location_country',
             'offers_online_coaching', 'coaching_types',

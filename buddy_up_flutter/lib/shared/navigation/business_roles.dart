@@ -137,14 +137,12 @@ List<BusinessEntry> businessEntries(BusinessRoleFlags flags) {
   }
   final slug = flags.gymSlug;
   if (slug != null && slug.isNotEmpty) {
-    entries.add(BusinessEntry(
+    entries.add(const BusinessEntry(
       key: BusinessRoleKey.gym,
-      route: '/gyms/$slug/manage',
-      label: 'My Gym',
-      shortLabel: 'Gym',
-      subtitle: flags.gymName?.isNotEmpty == true
-          ? flags.gymName!
-          : 'Members, requests, schedule and reviews',
+      route: '/my-gyms',
+      label: 'My Gyms',
+      shortLabel: 'Gyms',
+      subtitle: 'Every gym you manage — members, locations, coaching',
     ));
   }
   if (flags.hasStation) {

@@ -1,36 +1,54 @@
-import { BadgeCheck, Dumbbell } from 'lucide-react';
+import type { GymTier } from '@/types/gym';
+import { Dumbbell } from 'lucide-react';
 
 interface VerifiedGymBadgeProps {
   /** Renders nothing when the gym has not been verified. */
   verified: boolean;
+  /** Badge colour fill. Regular = white, midlevel = blue, executive = gold. */
+  tier?: GymTier;
   size?: 'sm' | 'md';
   className?: string;
 }
 
+const TIER_STYLE: Record<GymTier, { box: string; icon: string }> = {
+  regular: {
+    box: 'bg-white',
+    icon: 'text-buddy-black',
+  },
+  midlevel: {
+    box: 'bg-buddy-blue',
+    icon: 'text-white',
+  },
+  executive: {
+    box: 'bg-buddy-gold',
+    icon: 'text-buddy-black',
+  },
+};
+
+const SIZE = {
+  sm: { box: 'w-6 h-6', dumbbell: 12 },
+  md: { box: 'w-8 h-8', dumbbell: 16 },
+};
+
 /**
- * The verified-gym mark: a dumbbell with a blue tick.
+ * The verified-gym mark.
  *
- * Deliberately distinct from the person-level trainer/practitioner badges —
- * a verified gym is a business claim, not a professional one.
+ * Filled circles — regular white, mid-level blue, executive gold — dumbbell
+ * inside. Deliberately distinct from the person-level trainer/practitioner
+ * badges: a verified gym is a business claim, not a professional one.
  */
-export function VerifiedGymBadge({ verified, size = 'sm', className }: VerifiedGymBadgeProps) {
+export function VerifiedGymBadge({ verified, tier = 'regular', size = 'sm', className }: VerifiedGymBadgeProps) {
   if (!verified) return null;
-  const box = size === 'sm' ? 'w-6 h-6' : 'w-8 h-8';
-  const dumbbell = size === 'sm' ? 12 : 16;
-  const tick = size === 'sm' ? 11 : 14;
+  const style = TIER_STYLE[tier] ?? TIER_STYLE.regular;
+  const { box, dumbbell } = SIZE[size];
 
   return (
     <span
-      className={`relative inline-flex items-center justify-center rounded-full bg-buddy-blue/15 text-buddy-blue ${box} ${className || ''}`}
-      title="Verified gym"
-      aria-label="Verified gym"
+      className={`inline-flex items-center justify-center rounded-full ${box} ${style.box} ${className || ''}`}
+      title={`${tier} gym`}
+      aria-label={`${tier} verified gym`}
     >
-      <Dumbbell size={dumbbell} strokeWidth={2.4} />
-      <BadgeCheck
-        size={tick}
-        className="absolute -bottom-1 -right-1 text-buddy-blue fill-buddy-black stroke-buddy-blue"
-        strokeWidth={2.6}
-      />
+      <Dumbbell size={dumbbell} strokeWidth={2.4} className={style.icon} />
     </span>
   );
 }

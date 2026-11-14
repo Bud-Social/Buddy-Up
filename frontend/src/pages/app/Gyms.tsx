@@ -200,15 +200,34 @@ export default function Gyms() {
       ) : (
         <>
           {error && <ErrorBanner message={error} onRetry={fetchGyms} className="mb-3" />}
+          {tab === 'my_gyms' && (
+            <p className="text-xs text-buddy-text-secondary mb-2">
+              Gyms you manage can be opened below — each one has its own console: members, requests, locations, online coaching, announcements, setup.
+            </p>
+          )}
           <div className="space-y-3">
-          {gyms.map((gym) => (
-            <GymCard
-              key={gym.id}
-              gym={gym}
-              showDistance={showDistance}
-              onClick={() => navigate(`/gyms/${gym.handle}`)}
-            />
-          ))}
+          {gyms.map((gym) => {
+            const canManage = gym.membership_role === 'owner' || gym.membership_role === 'co_owner';
+            return (
+              <div key={gym.id} className="flex flex-col gap-2">
+                <GymCard
+                  gym={gym}
+                  showDistance={showDistance}
+                  onClick={() => navigate(`/gyms/${gym.handle}`)}
+                />
+                {canManage && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="self-start"
+                    onClick={() => navigate(`/gyms/${gym.handle}/manage`)}
+                  >
+                    Manage {gym.name}
+                  </Button>
+                )}
+              </div>
+            );
+          })}
           </div>
         </>
       )}

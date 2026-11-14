@@ -1,5 +1,6 @@
 import { Dumbbell, MapPin, ShieldCheck, Users } from 'lucide-react';
-import type { GymCategory } from '@/types/gym';
+import type { GymCategory, GymTier } from '@/types/gym';
+import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';
 
 interface GymHeroPreviewProps {
   name: string;
@@ -9,7 +10,16 @@ interface GymHeroPreviewProps {
   categories: GymCategory[];
   accessType: string;
   subscriptionType: string;
+  tier?: GymTier;
+  /** Visitors don't see an unverified badge until the gym is registered. */
+  verified?: boolean;
   memberCount?: number;
+  /** How many members the gym can coach online; 0 = unspecified. */
+  onlineCapacity?: number;
+  /** How many members the gym can hold physically; 0 = unspecified. */
+  physicalCapacity?: number;
+  /** How many members the gym already serves on the floor. */
+  currentlyServing?: number;
   /** City of the primary venue, if one has been added. */
   locationLabel?: string;
 }
@@ -30,7 +40,12 @@ export function GymHeroPreview({
   categories,
   accessType,
   subscriptionType,
+  tier = 'regular',
+  verified = false,
   memberCount = 0,
+  onlineCapacity = 0,
+  physicalCapacity = 0,
+  currentlyServing = 0,
   locationLabel,
 }: GymHeroPreviewProps) {
   const displayName = name.trim() || 'Your gym';
@@ -63,18 +78,30 @@ export function GymHeroPreview({
             )}
           </div>
           <div className="pb-0.5">
-            <p className="font-heading font-semibold text-sm leading-tight">{displayName}</p>
-            <p className="text-[10px] text-buddy-text-secondary">@{displayHandle}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-heading font-semibold text-sm leading-tight">{displayName}</p>
+              <VerifiedGymBadge verified={verified} tier={tier} size="sm" />
+            </div>
+            <p className="text-[10px] text-buddy-text-secondary">@{displayHandle} · {tier}</p>
           </div>
         </div>
       </div>
 
       {/* Meta row: members · rating · access · categories. */}
       <div className="p-3 space-y-2">
-        <div className="flex items-center gap-3 text-[11px] text-buddy-text-secondary">
+        <div className="flex items-center gap-3 text-[11px] text-buddy-text-secondary flex-wrap">
           <span className="flex items-center gap-1"><Users size={12} /> {memberCount} members</span>
           <span className="flex items-center gap-1 capitalize"><ShieldCheck size={12} /> {accessType}</span>
           <span>{subscriptionType === 'paid' ? 'Paid' : 'Free'}</span>
+          {(onlineCapacity > 0 || physicalCapacity > 0 || currentlyServing > 0) && (
+            <span className="text-[10px] text-buddy-text-secondary/80">
+              ·{' '}
+              {onlineCapacity > 0 ? `${onlineCapacity} online` : ''}
+              {onlineCapacity > 0 && physicalCapacity > 0 ? ' · ' : ''}
+              {physicalCapacity > 0 ? `${physicalCapacity} seats` : ''}
+              {currentlyServing > 0 ? ` · ${currentlyServing} serving` : ''}
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-1">
           {categories.length > 0

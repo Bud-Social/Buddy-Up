@@ -1,5 +1,6 @@
 export type GymAccess = 'public' | 'private' | 'secret';
 export type SubscriptionType = 'free' | 'members_free' | 'paid' | 'tiered';
+export type GymTier = 'regular' | 'midlevel' | 'executive';
 export type GymRole = 'owner' | 'co_owner' | 'trainer' | 'moderator' | 'member' | 'guest';
 
 export interface OwnerData {
@@ -40,6 +41,10 @@ export interface Gym {
   categories: GymCategory[];
   access_type: GymAccess;
   subscription_type: SubscriptionType;
+  tier: GymTier;
+  online_capacity: number;
+  physical_capacity: number;
+  currently_serving: number;
   monthly_fee_artifacts: Record<string, number> | null;
   join_fee_artifacts: Record<string, number> | null;
   category_pricing: GymCategoryPricing[];

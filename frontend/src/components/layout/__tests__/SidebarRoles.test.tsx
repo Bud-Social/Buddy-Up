@@ -64,7 +64,7 @@ const renderSidebar = () =>
  */
 const isBusinessHref = (href: string) =>
   ['/marketplace/creator', '/marketplace/events', '/marketplace/stations', '/marketplace/delivery'].includes(href)
-  || /^\/gyms\/[^/]+\/manage$/.test(href);
+  || href === '/my-gyms' || /^\/gyms\/[^/]+\/manage$/.test(href);
 
 const hrefs = () => screen.getAllByRole('link').map((a) => a.getAttribute('href'));
 
@@ -128,16 +128,16 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     gyms.list.mockResolvedValue(envelope([{ handle: 'legitgym', name: 'Legit Gym', membership_role: 'owner' }]));
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'My Gym' })).toBeInTheDocument());
-    expect(screen.getByRole('link', { name: 'My Gym' })).toHaveAttribute('href', '/gyms/legitgym/manage');
+    await waitFor(() => expect(screen.getByRole('link', { name: 'My Gyms' })).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'My Gyms' })).toHaveAttribute('href', '/my-gyms');
   });
 
-  it('shows My Gym for a co_owner too', async () => {
+  it('shows My Gyms for a co_owner too', async () => {
     defaultProbes();
     gyms.list.mockResolvedValue(envelope([{ handle: 'sidegym', name: 'Side Gym', membership_role: 'co_owner' }]));
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'My Gym' })).toHaveAttribute('href', '/gyms/sidegym/manage'));
+    await waitFor(() => expect(screen.getByRole('link', { name: 'My Gyms' })).toHaveAttribute('href', '/my-gyms'));
   });
 
   it('hides My Gym for a plain member of someone else\'s gym', async () => {
@@ -146,7 +146,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     renderSidebar();
 
     await waitFor(() => expect(screen.getByRole('link', { name: 'Gyms' })).toBeInTheDocument());
-    expect(screen.queryByRole('link', { name: 'My Gym' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'My Gyms' })).not.toBeInTheDocument();
     expect(screen.queryByText('Your business')).not.toBeInTheDocument();
   });
 
@@ -199,13 +199,13 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
 
     await waitFor(() => expect(screen.getByText('Your business')).toBeInTheDocument());
     expect(hrefs().filter((h) => h && isBusinessHref(h)).sort()).toEqual([
-      '/gyms/legitgym/manage',
       '/marketplace/creator',
       '/marketplace/delivery',
       '/marketplace/events',
       '/marketplace/stations',
+      '/my-gyms',
     ]);
-    for (const label of ['Shop', 'My Events', 'My Gym', 'My Stations', 'Courier']) {
+    for (const label of ['Shop', 'My Events', 'My Gyms', 'My Stations', 'Courier']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
     }
   });
@@ -286,7 +286,7 @@ describe('Sidebar — role switcher', () => {
     const switcher = await screen.findByLabelText('Switch between your roles');
     const options = Array.from(switcher.querySelectorAll('option')).map((o) => o.getAttribute('value'));
     // Placeholder first, then one entry per destination — no more, no less.
-    expect(options).toEqual(['', '/marketplace/creator', '/marketplace/events', '/gyms/legitgym/manage', '/marketplace/delivery']);
+    expect(options).toEqual(['', '/marketplace/creator', '/marketplace/events', '/my-gyms', '/marketplace/delivery']);
     expect(options).not.toContain('/marketplace/stations');
   });
 

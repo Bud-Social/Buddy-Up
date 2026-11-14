@@ -375,7 +375,9 @@ class PortalGymSerializer(serializers.ModelSerializer):
             'id', 'name', 'handle', 'category', 'access_type',
             'subscription_type', 'is_verified', 'is_deleted', 'deleted_at',
             'member_count', 'location_city', 'location_country', 'created_at',
-            'offers_online_coaching', 'registration_status', 'registration',
+            'offers_online_coaching', 'tier', 'online_capacity',
+            'physical_capacity', 'currently_serving',
+            'registration_status', 'registration',
             'verification_submission_id',
         ]
 

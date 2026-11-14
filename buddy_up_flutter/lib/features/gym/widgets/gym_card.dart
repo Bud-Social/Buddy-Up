@@ -73,7 +73,7 @@ class GymCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      VerifiedGymBadge(verified: gym.isVerified),
+                      VerifiedGymBadge(verified: gym.isVerified, tier: gym.tier),
                     ],
                   ),
                   const SizedBox(height: 4),

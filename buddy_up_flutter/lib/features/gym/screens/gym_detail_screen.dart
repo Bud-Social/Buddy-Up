@@ -265,7 +265,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                         Expanded(
                           child: Text(gym.name, style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
                         ),
-                        if (gym.isVerified) const VerifiedGymBadge(verified: true, size: 20),
+                        if (gym.isVerified) VerifiedGymBadge(verified: true, tier: gym.tier, size: 20),
                       ],
                     ),
                     const SizedBox(height: 4),
