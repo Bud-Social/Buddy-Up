@@ -69,7 +69,7 @@ export function ReportTab({ period }: Props) {
             <div>
               <h3 className="font-heading font-semibold">Comprehensive Report</h3>
               <p className="text-sm text-buddy-text-secondary">
-                A watermarked summary of your {titleCase(period)} progress — workouts, activity, nutrition, body, lives &amp; spending.
+                A watermarked summary of your {titleCase(period)} progress — workouts, activity, routines, body, lives &amp; spending.
               </p>
             </div>
           </div>
@@ -155,6 +155,8 @@ export function ReportTab({ period }: Props) {
                   <Row k="Avg pace" v={s.activity.avg_pace ? `${Math.floor(s.activity.avg_pace / 60)}:${String(Math.round(s.activity.avg_pace % 60)).padStart(2, '0')} /km` : '—'} />
                   <Row k="Lives joined" v={formatNumber(s.lives.joined_count)} />
                   <Row k="Lives time" v={formatDuration(s.lives.total_duration_seconds)} />
+                  {s.routines && <Row k="Routine check-ins" v={formatNumber(s.routines.total_checkins)} />}
+                  {s.routines && <Row k="Active routines" v={formatNumber(s.routines.active_routines)} />}
                   <Row k="Spent" v={`${formatNumber(s.spending.total_artifacts_spent)} artifacts`} />
                   <Row k="Weight change" v={s.body.weight_change_kg != null ? `${s.body.weight_change_kg >= 0 ? '+' : ''}${s.body.weight_change_kg} kg` : '—'} />
                 </dl>

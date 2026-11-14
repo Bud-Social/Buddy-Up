@@ -106,6 +106,7 @@ def render_report_image(summary, period_label):
     lives = summary.get('lives', {})
     spending = summary.get('spending', {})
     programmes = summary.get('programmes', {})
+    routines = summary.get('routines', {})
 
     # Row 1 — big numbers
     draw.line([(40, 430), (1040, 430)], fill=_LINE, width=2)
@@ -170,6 +171,16 @@ def render_report_image(summary, period_label):
         ('Time in lives', _fmt_duration(lives.get('total_duration_seconds', 0))),
     ]
     y = _draw_section(draw, col, y, 'LIVE SESSIONS', rows, header_font, row_font, row_font, 280)
+
+    # Routines
+    y += 30
+    rows = [
+        ('Active routines', str(routines.get('active_routines', 0))),
+        ('Check-ins', str(routines.get('total_checkins', 0))),
+    ]
+    for row in (routines.get('by_category') or [])[:3]:
+        rows.append((row.get('label') or row.get('category'), str(row.get('count', 0))))
+    y = _draw_section(draw, col, y, 'ROUTINES', rows, header_font, row_font, row_font, 280)
 
     # Spending
     col = right
