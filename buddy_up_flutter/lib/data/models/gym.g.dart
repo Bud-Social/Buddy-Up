@@ -81,6 +81,42 @@ Map<String, dynamic> _$GymCategoryPricingToJson(_GymCategoryPricing instance) =>
       'is_free': instance.isFree,
     };
 
+_FollowedMember _$FollowedMemberFromJson(Map<String, dynamic> json) =>
+    _FollowedMember(
+      userId: json['user_id'] as String,
+      username: json['username'] as String,
+      displayName: json['display_name'] as String,
+      avatarUrl: json['avatar_url'] as String,
+    );
+
+Map<String, dynamic> _$FollowedMemberToJson(_FollowedMember instance) =>
+    <String, dynamic>{
+      'user_id': instance.userId,
+      'username': instance.username,
+      'display_name': instance.displayName,
+      'avatar_url': instance.avatarUrl,
+    };
+
+_LocationSummary _$LocationSummaryFromJson(Map<String, dynamic> json) =>
+    _LocationSummary(
+      hasPhysical: json['has_physical'] as bool? ?? false,
+      venueCount: (json['venue_count'] as num?)?.toInt() ?? 0,
+      cities:
+          (json['cities'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
+      nearestKm: (json['nearest_km'] as num?)?.toDouble() ?? null,
+    );
+
+Map<String, dynamic> _$LocationSummaryToJson(_LocationSummary instance) =>
+    <String, dynamic>{
+      'has_physical': instance.hasPhysical,
+      'venue_count': instance.venueCount,
+      'cities': instance.cities,
+      'nearest_km': instance.nearestKm,
+    };
+
 _Gym _$GymFromJson(Map<String, dynamic> json) => _Gym(
   id: json['id'] as String,
   name: json['name'] as String,
@@ -130,6 +166,18 @@ _Gym _$GymFromJson(Map<String, dynamic> json) => _Gym(
       const <OwnerData>[],
   membershipRole: json['membership_role'] as String?,
   isMember: json['is_member'] as bool? ?? false,
+  followedMembers:
+      (json['followed_members'] as List<dynamic>?)
+          ?.map((e) => FollowedMember.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <FollowedMember>[],
+  followedMembersCount: (json['followed_members_count'] as num?)?.toInt() ?? 0,
+  locationSummary: json['location_summary'] == null
+      ? null
+      : LocationSummary.fromJson(
+          json['location_summary'] as Map<String, dynamic>,
+        ),
+  registrationStatus: json['registration_status'] as String? ?? 'unverified',
   createdAt: json['created_at'] as String,
   updatedAt: json['updated_at'] as String?,
 );
@@ -163,6 +211,10 @@ Map<String, dynamic> _$GymToJson(_Gym instance) => <String, dynamic>{
   'owner_data': instance.ownerData,
   'membership_role': instance.membershipRole,
   'is_member': instance.isMember,
+  'followed_members': instance.followedMembers,
+  'followed_members_count': instance.followedMembersCount,
+  'location_summary': instance.locationSummary,
+  'registration_status': instance.registrationStatus,
   'created_at': instance.createdAt,
   'updated_at': instance.updatedAt,
 };

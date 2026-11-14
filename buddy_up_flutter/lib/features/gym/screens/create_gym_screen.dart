@@ -18,6 +18,7 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
   final _descriptionController = TextEditingController();
   final _cityController = TextEditingController();
   final _countryController = TextEditingController();
+  final _customCategoryController = TextEditingController();
 
   String _accessType = 'public';
   String _subscriptionType = 'free';
@@ -32,6 +33,7 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
     _descriptionController.dispose();
     _cityController.dispose();
     _countryController.dispose();
+    _customCategoryController.dispose();
     super.dispose();
   }
 
@@ -51,13 +53,15 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
     setState(() => _isSubmitting = true);
     try {
       final repo = ref.read(gymRepositoryProvider);
+      final customCategory = _customCategoryController.text.trim();
+      final effectiveCategory = customCategory.isNotEmpty ? customCategory : _category;
       final payload = CreateGymPayload(
         name: _nameController.text.trim(),
         handle: _handleController.text.trim().isNotEmpty
             ? _handleController.text.trim()
             : _nameController.text.trim().toLowerCase().replaceAll(' ', '_'),
         description: _descriptionController.text.trim(),
-        category: _category,
+        category: effectiveCategory,
         accessType: _accessType,
         subscriptionType: _subscriptionType,
         locationCity: _cityController.text.trim(),
@@ -138,6 +142,12 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
               ),
               loading: () => const Text('Loading...', style: TextStyle(color: BuddyColors.textSecondary)),
               error: (e, _) => Text('$e', style: const TextStyle(color: BuddyColors.red)),
+            ),
+            const SizedBox(height: 8),
+            BuddyInput(
+              label: 'Custom category (optional)',
+              controller: _customCategoryController,
+              hint: 'e.g. calisthenics — overrides the selection above',
             ),
             const SizedBox(height: 16),
             const Text('Access Type', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),

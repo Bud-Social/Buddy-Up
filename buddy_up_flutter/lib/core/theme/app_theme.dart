@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class BuddyColors {
   static const Color green = Color(0xFF4ADE80);
+  static const Color blue = Color(0xFF3B82F6);
   static const Color black = Color(0xFF0F0F0F);
   static const Color surface = Color(0xFF1C1C1C);
   static const Color surfaceRaised = Color(0xFF2C2C2C);

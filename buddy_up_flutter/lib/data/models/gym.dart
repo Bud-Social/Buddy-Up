@@ -68,6 +68,32 @@ abstract class GymCategoryPricing with _$GymCategoryPricing {
 }
 
 @freezed
+abstract class FollowedMember with _$FollowedMember {
+  const factory FollowedMember({
+    @JsonKey(name: 'user_id') required String userId,
+    required String username,
+    @JsonKey(name: 'display_name') required String displayName,
+    @JsonKey(name: 'avatar_url') required String avatarUrl,
+  }) = _FollowedMember;
+
+  factory FollowedMember.fromJson(Map<String, dynamic> json) =>
+      _$FollowedMemberFromJson(json);
+}
+
+@freezed
+abstract class LocationSummary with _$LocationSummary {
+  const factory LocationSummary({
+    @JsonKey(name: 'has_physical') @Default(false) bool hasPhysical,
+    @JsonKey(name: 'venue_count') @Default(0) int venueCount,
+    @Default(<String>[]) List<String> cities,
+    @JsonKey(name: 'nearest_km') @Default(null) double? nearestKm,
+  }) = _LocationSummary;
+
+  factory LocationSummary.fromJson(Map<String, dynamic> json) =>
+      _$LocationSummaryFromJson(json);
+}
+
+@freezed
 abstract class Gym with _$Gym {
   const factory Gym({
     required String id,
@@ -98,6 +124,11 @@ abstract class Gym with _$Gym {
     @JsonKey(name: 'owner_data') @Default(<OwnerData>[]) List<OwnerData> ownerData,
     @JsonKey(name: 'membership_role') String? membershipRole,
     @JsonKey(name: 'is_member') @Default(false) bool isMember,
+    // Phase A: followed-member social proof + multi-location summary.
+    @JsonKey(name: 'followed_members') @Default(<FollowedMember>[]) List<FollowedMember> followedMembers,
+    @JsonKey(name: 'followed_members_count') @Default(0) int followedMembersCount,
+    @JsonKey(name: 'location_summary') LocationSummary? locationSummary,
+    @JsonKey(name: 'registration_status') @Default('unverified') String registrationStatus,
     @JsonKey(name: 'created_at') required String createdAt,
     @JsonKey(name: 'updated_at') String? updatedAt,
   }) = _Gym;

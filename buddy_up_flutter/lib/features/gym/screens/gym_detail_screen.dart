@@ -5,6 +5,7 @@ import '../providers/gym_provider.dart';
 import '../widgets/gym_tab_bar.dart';
 import '../widgets/schedule_post_card.dart';
 import '../widgets/review_card.dart';
+import '../widgets/verified_gym_badge.dart';
 import '../widgets/member_tile.dart';
 import '../../../core/api/api_error.dart';
 import '../../../shared/widgets/avatar.dart';
@@ -264,7 +265,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                         Expanded(
                           child: Text(gym.name, style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
                         ),
-                        if (gym.isVerified) const Icon(Icons.verified, color: BuddyColors.green, size: 20),
+                        if (gym.isVerified) const VerifiedGymBadge(verified: true, size: 20),
                       ],
                     ),
                     const SizedBox(height: 4),

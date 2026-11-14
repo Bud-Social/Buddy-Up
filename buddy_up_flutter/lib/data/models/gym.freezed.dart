@@ -1122,9 +1122,559 @@ as bool,
 
 
 /// @nodoc
+mixin _$FollowedMember {
+
+@JsonKey(name: 'user_id') String get userId; String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;
+/// Create a copy of FollowedMember
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FollowedMemberCopyWith<FollowedMember> get copyWith => _$FollowedMemberCopyWithImpl<FollowedMember>(this as FollowedMember, _$identity);
+
+  /// Serializes this FollowedMember to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FollowedMember&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl);
+
+@override
+String toString() {
+  return 'FollowedMember(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FollowedMemberCopyWith<$Res>  {
+  factory $FollowedMemberCopyWith(FollowedMember value, $Res Function(FollowedMember) _then) = _$FollowedMemberCopyWithImpl;
+@useResult
+$Res call({
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl
+});
+
+
+
+
+}
+/// @nodoc
+class _$FollowedMemberCopyWithImpl<$Res>
+    implements $FollowedMemberCopyWith<$Res> {
+  _$FollowedMemberCopyWithImpl(this._self, this._then);
+
+  final FollowedMember _self;
+  final $Res Function(FollowedMember) _then;
+
+/// Create a copy of FollowedMember
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? avatarUrl = null,}) {
+  return _then(_self.copyWith(
+userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
+as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [FollowedMember].
+extension FollowedMemberPatterns on FollowedMember {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _FollowedMember value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _FollowedMember() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _FollowedMember value)  $default,){
+final _that = this;
+switch (_that) {
+case _FollowedMember():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _FollowedMember value)?  $default,){
+final _that = this;
+switch (_that) {
+case _FollowedMember() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _FollowedMember() when $default != null:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)  $default,) {final _that = this;
+switch (_that) {
+case _FollowedMember():
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)?  $default,) {final _that = this;
+switch (_that) {
+case _FollowedMember() when $default != null:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _FollowedMember implements FollowedMember {
+  const _FollowedMember({@JsonKey(name: 'user_id') required this.userId, required this.username, @JsonKey(name: 'display_name') required this.displayName, @JsonKey(name: 'avatar_url') required this.avatarUrl});
+  factory _FollowedMember.fromJson(Map<String, dynamic> json) => _$FollowedMemberFromJson(json);
+
+@override@JsonKey(name: 'user_id') final  String userId;
+@override final  String username;
+@override@JsonKey(name: 'display_name') final  String displayName;
+@override@JsonKey(name: 'avatar_url') final  String avatarUrl;
+
+/// Create a copy of FollowedMember
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$FollowedMemberCopyWith<_FollowedMember> get copyWith => __$FollowedMemberCopyWithImpl<_FollowedMember>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$FollowedMemberToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FollowedMember&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl);
+
+@override
+String toString() {
+  return 'FollowedMember(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$FollowedMemberCopyWith<$Res> implements $FollowedMemberCopyWith<$Res> {
+  factory _$FollowedMemberCopyWith(_FollowedMember value, $Res Function(_FollowedMember) _then) = __$FollowedMemberCopyWithImpl;
+@override @useResult
+$Res call({
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl
+});
+
+
+
+
+}
+/// @nodoc
+class __$FollowedMemberCopyWithImpl<$Res>
+    implements _$FollowedMemberCopyWith<$Res> {
+  __$FollowedMemberCopyWithImpl(this._self, this._then);
+
+  final _FollowedMember _self;
+  final $Res Function(_FollowedMember) _then;
+
+/// Create a copy of FollowedMember
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? avatarUrl = null,}) {
+  return _then(_FollowedMember(
+userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
+as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$LocationSummary {
+
+@JsonKey(name: 'has_physical') bool get hasPhysical;@JsonKey(name: 'venue_count') int get venueCount; List<String> get cities;@JsonKey(name: 'nearest_km') double? get nearestKm;
+/// Create a copy of LocationSummary
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$LocationSummaryCopyWith<LocationSummary> get copyWith => _$LocationSummaryCopyWithImpl<LocationSummary>(this as LocationSummary, _$identity);
+
+  /// Serializes this LocationSummary to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LocationSummary&&(identical(other.hasPhysical, hasPhysical) || other.hasPhysical == hasPhysical)&&(identical(other.venueCount, venueCount) || other.venueCount == venueCount)&&const DeepCollectionEquality().equals(other.cities, cities)&&(identical(other.nearestKm, nearestKm) || other.nearestKm == nearestKm));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,hasPhysical,venueCount,const DeepCollectionEquality().hash(cities),nearestKm);
+
+@override
+String toString() {
+  return 'LocationSummary(hasPhysical: $hasPhysical, venueCount: $venueCount, cities: $cities, nearestKm: $nearestKm)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $LocationSummaryCopyWith<$Res>  {
+  factory $LocationSummaryCopyWith(LocationSummary value, $Res Function(LocationSummary) _then) = _$LocationSummaryCopyWithImpl;
+@useResult
+$Res call({
+@JsonKey(name: 'has_physical') bool hasPhysical,@JsonKey(name: 'venue_count') int venueCount, List<String> cities,@JsonKey(name: 'nearest_km') double? nearestKm
+});
+
+
+
+
+}
+/// @nodoc
+class _$LocationSummaryCopyWithImpl<$Res>
+    implements $LocationSummaryCopyWith<$Res> {
+  _$LocationSummaryCopyWithImpl(this._self, this._then);
+
+  final LocationSummary _self;
+  final $Res Function(LocationSummary) _then;
+
+/// Create a copy of LocationSummary
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? hasPhysical = null,Object? venueCount = null,Object? cities = null,Object? nearestKm = freezed,}) {
+  return _then(_self.copyWith(
+hasPhysical: null == hasPhysical ? _self.hasPhysical : hasPhysical // ignore: cast_nullable_to_non_nullable
+as bool,venueCount: null == venueCount ? _self.venueCount : venueCount // ignore: cast_nullable_to_non_nullable
+as int,cities: null == cities ? _self.cities : cities // ignore: cast_nullable_to_non_nullable
+as List<String>,nearestKm: freezed == nearestKm ? _self.nearestKm : nearestKm // ignore: cast_nullable_to_non_nullable
+as double?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [LocationSummary].
+extension LocationSummaryPatterns on LocationSummary {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _LocationSummary value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _LocationSummary() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _LocationSummary value)  $default,){
+final _that = this;
+switch (_that) {
+case _LocationSummary():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _LocationSummary value)?  $default,){
+final _that = this;
+switch (_that) {
+case _LocationSummary() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'has_physical')  bool hasPhysical, @JsonKey(name: 'venue_count')  int venueCount,  List<String> cities, @JsonKey(name: 'nearest_km')  double? nearestKm)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _LocationSummary() when $default != null:
+return $default(_that.hasPhysical,_that.venueCount,_that.cities,_that.nearestKm);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'has_physical')  bool hasPhysical, @JsonKey(name: 'venue_count')  int venueCount,  List<String> cities, @JsonKey(name: 'nearest_km')  double? nearestKm)  $default,) {final _that = this;
+switch (_that) {
+case _LocationSummary():
+return $default(_that.hasPhysical,_that.venueCount,_that.cities,_that.nearestKm);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'has_physical')  bool hasPhysical, @JsonKey(name: 'venue_count')  int venueCount,  List<String> cities, @JsonKey(name: 'nearest_km')  double? nearestKm)?  $default,) {final _that = this;
+switch (_that) {
+case _LocationSummary() when $default != null:
+return $default(_that.hasPhysical,_that.venueCount,_that.cities,_that.nearestKm);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _LocationSummary implements LocationSummary {
+  const _LocationSummary({@JsonKey(name: 'has_physical') this.hasPhysical = false, @JsonKey(name: 'venue_count') this.venueCount = 0, final  List<String> cities = const <String>[], @JsonKey(name: 'nearest_km') this.nearestKm = null}): _cities = cities;
+  factory _LocationSummary.fromJson(Map<String, dynamic> json) => _$LocationSummaryFromJson(json);
+
+@override@JsonKey(name: 'has_physical') final  bool hasPhysical;
+@override@JsonKey(name: 'venue_count') final  int venueCount;
+ final  List<String> _cities;
+@override@JsonKey() List<String> get cities {
+  if (_cities is EqualUnmodifiableListView) return _cities;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_cities);
+}
+
+@override@JsonKey(name: 'nearest_km') final  double? nearestKm;
+
+/// Create a copy of LocationSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$LocationSummaryCopyWith<_LocationSummary> get copyWith => __$LocationSummaryCopyWithImpl<_LocationSummary>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$LocationSummaryToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LocationSummary&&(identical(other.hasPhysical, hasPhysical) || other.hasPhysical == hasPhysical)&&(identical(other.venueCount, venueCount) || other.venueCount == venueCount)&&const DeepCollectionEquality().equals(other._cities, _cities)&&(identical(other.nearestKm, nearestKm) || other.nearestKm == nearestKm));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,hasPhysical,venueCount,const DeepCollectionEquality().hash(_cities),nearestKm);
+
+@override
+String toString() {
+  return 'LocationSummary(hasPhysical: $hasPhysical, venueCount: $venueCount, cities: $cities, nearestKm: $nearestKm)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$LocationSummaryCopyWith<$Res> implements $LocationSummaryCopyWith<$Res> {
+  factory _$LocationSummaryCopyWith(_LocationSummary value, $Res Function(_LocationSummary) _then) = __$LocationSummaryCopyWithImpl;
+@override @useResult
+$Res call({
+@JsonKey(name: 'has_physical') bool hasPhysical,@JsonKey(name: 'venue_count') int venueCount, List<String> cities,@JsonKey(name: 'nearest_km') double? nearestKm
+});
+
+
+
+
+}
+/// @nodoc
+class __$LocationSummaryCopyWithImpl<$Res>
+    implements _$LocationSummaryCopyWith<$Res> {
+  __$LocationSummaryCopyWithImpl(this._self, this._then);
+
+  final _LocationSummary _self;
+  final $Res Function(_LocationSummary) _then;
+
+/// Create a copy of LocationSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? hasPhysical = null,Object? venueCount = null,Object? cities = null,Object? nearestKm = freezed,}) {
+  return _then(_LocationSummary(
+hasPhysical: null == hasPhysical ? _self.hasPhysical : hasPhysical // ignore: cast_nullable_to_non_nullable
+as bool,venueCount: null == venueCount ? _self.venueCount : venueCount // ignore: cast_nullable_to_non_nullable
+as int,cities: null == cities ? _self._cities : cities // ignore: cast_nullable_to_non_nullable
+as List<String>,nearestKm: freezed == nearestKm ? _self.nearestKm : nearestKm // ignore: cast_nullable_to_non_nullable
+as double?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$Gym {
 
- String get id; String get name; String get handle; String get description; String get logoUrl; String get coverUrl; String get category;@JsonKey(name: 'content_rating') String get contentRating; List<GymCategory> get categories;@JsonKey(name: 'access_type') String get accessType;@JsonKey(name: 'subscription_type') String get subscriptionType;@JsonKey(name: 'is_verified') bool get isVerified;@JsonKey(name: 'is_reviews_enabled') bool get isReviewsEnabled;@JsonKey(name: 'is_donations_enabled') bool get isDonationsEnabled;@JsonKey(name: 'average_rating') double? get averageRating;@JsonKey(name: 'review_count') int get reviewCount;@JsonKey(name: 'recent_reviewers') List<MemberData> get recentReviewers; List<String> get rules; List<String> get tags;@JsonKey(name: 'member_count') int get memberCount;@JsonKey(name: 'active_today') int get activeToday;@JsonKey(name: 'location_city') String get locationCity;@JsonKey(name: 'location_country') String get locationCountry;@JsonKey(name: 'delivery_modes') List<String> get deliveryModes;@JsonKey(name: 'distance_km') double? get distanceKm;@JsonKey(name: 'owner_data') List<OwnerData> get ownerData;@JsonKey(name: 'membership_role') String? get membershipRole;@JsonKey(name: 'is_member') bool get isMember;@JsonKey(name: 'created_at') String get createdAt;@JsonKey(name: 'updated_at') String? get updatedAt;
+ String get id; String get name; String get handle; String get description; String get logoUrl; String get coverUrl; String get category;@JsonKey(name: 'content_rating') String get contentRating; List<GymCategory> get categories;@JsonKey(name: 'access_type') String get accessType;@JsonKey(name: 'subscription_type') String get subscriptionType;@JsonKey(name: 'is_verified') bool get isVerified;@JsonKey(name: 'is_reviews_enabled') bool get isReviewsEnabled;@JsonKey(name: 'is_donations_enabled') bool get isDonationsEnabled;@JsonKey(name: 'average_rating') double? get averageRating;@JsonKey(name: 'review_count') int get reviewCount;@JsonKey(name: 'recent_reviewers') List<MemberData> get recentReviewers; List<String> get rules; List<String> get tags;@JsonKey(name: 'member_count') int get memberCount;@JsonKey(name: 'active_today') int get activeToday;@JsonKey(name: 'location_city') String get locationCity;@JsonKey(name: 'location_country') String get locationCountry;@JsonKey(name: 'delivery_modes') List<String> get deliveryModes;@JsonKey(name: 'distance_km') double? get distanceKm;@JsonKey(name: 'owner_data') List<OwnerData> get ownerData;@JsonKey(name: 'membership_role') String? get membershipRole;@JsonKey(name: 'is_member') bool get isMember;@JsonKey(name: 'followed_members') List<FollowedMember> get followedMembers;@JsonKey(name: 'followed_members_count') int get followedMembersCount;@JsonKey(name: 'location_summary') LocationSummary? get locationSummary;@JsonKey(name: 'registration_status') String get registrationStatus;@JsonKey(name: 'created_at') String get createdAt;@JsonKey(name: 'updated_at') String? get updatedAt;
 /// Create a copy of Gym
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1137,16 +1687,16 @@ $GymCopyWith<Gym> get copyWith => _$GymCopyWithImpl<Gym>(this as Gym, _$identity
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Gym&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&const DeepCollectionEquality().equals(other.categories, categories)&&(identical(other.accessType, accessType) || other.accessType == accessType)&&(identical(other.subscriptionType, subscriptionType) || other.subscriptionType == subscriptionType)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.isReviewsEnabled, isReviewsEnabled) || other.isReviewsEnabled == isReviewsEnabled)&&(identical(other.isDonationsEnabled, isDonationsEnabled) || other.isDonationsEnabled == isDonationsEnabled)&&(identical(other.averageRating, averageRating) || other.averageRating == averageRating)&&(identical(other.reviewCount, reviewCount) || other.reviewCount == reviewCount)&&const DeepCollectionEquality().equals(other.recentReviewers, recentReviewers)&&const DeepCollectionEquality().equals(other.rules, rules)&&const DeepCollectionEquality().equals(other.tags, tags)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.activeToday, activeToday) || other.activeToday == activeToday)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&const DeepCollectionEquality().equals(other.deliveryModes, deliveryModes)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&const DeepCollectionEquality().equals(other.ownerData, ownerData)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.isMember, isMember) || other.isMember == isMember)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Gym&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&const DeepCollectionEquality().equals(other.categories, categories)&&(identical(other.accessType, accessType) || other.accessType == accessType)&&(identical(other.subscriptionType, subscriptionType) || other.subscriptionType == subscriptionType)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.isReviewsEnabled, isReviewsEnabled) || other.isReviewsEnabled == isReviewsEnabled)&&(identical(other.isDonationsEnabled, isDonationsEnabled) || other.isDonationsEnabled == isDonationsEnabled)&&(identical(other.averageRating, averageRating) || other.averageRating == averageRating)&&(identical(other.reviewCount, reviewCount) || other.reviewCount == reviewCount)&&const DeepCollectionEquality().equals(other.recentReviewers, recentReviewers)&&const DeepCollectionEquality().equals(other.rules, rules)&&const DeepCollectionEquality().equals(other.tags, tags)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.activeToday, activeToday) || other.activeToday == activeToday)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&const DeepCollectionEquality().equals(other.deliveryModes, deliveryModes)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&const DeepCollectionEquality().equals(other.ownerData, ownerData)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.isMember, isMember) || other.isMember == isMember)&&const DeepCollectionEquality().equals(other.followedMembers, followedMembers)&&(identical(other.followedMembersCount, followedMembersCount) || other.followedMembersCount == followedMembersCount)&&(identical(other.locationSummary, locationSummary) || other.locationSummary == locationSummary)&&(identical(other.registrationStatus, registrationStatus) || other.registrationStatus == registrationStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,name,handle,description,logoUrl,coverUrl,category,contentRating,const DeepCollectionEquality().hash(categories),accessType,subscriptionType,isVerified,isReviewsEnabled,isDonationsEnabled,averageRating,reviewCount,const DeepCollectionEquality().hash(recentReviewers),const DeepCollectionEquality().hash(rules),const DeepCollectionEquality().hash(tags),memberCount,activeToday,locationCity,locationCountry,const DeepCollectionEquality().hash(deliveryModes),distanceKm,const DeepCollectionEquality().hash(ownerData),membershipRole,isMember,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,id,name,handle,description,logoUrl,coverUrl,category,contentRating,const DeepCollectionEquality().hash(categories),accessType,subscriptionType,isVerified,isReviewsEnabled,isDonationsEnabled,averageRating,reviewCount,const DeepCollectionEquality().hash(recentReviewers),const DeepCollectionEquality().hash(rules),const DeepCollectionEquality().hash(tags),memberCount,activeToday,locationCity,locationCountry,const DeepCollectionEquality().hash(deliveryModes),distanceKm,const DeepCollectionEquality().hash(ownerData),membershipRole,isMember,const DeepCollectionEquality().hash(followedMembers),followedMembersCount,locationSummary,registrationStatus,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'Gym(id: $id, name: $name, handle: $handle, description: $description, logoUrl: $logoUrl, coverUrl: $coverUrl, category: $category, contentRating: $contentRating, categories: $categories, accessType: $accessType, subscriptionType: $subscriptionType, isVerified: $isVerified, isReviewsEnabled: $isReviewsEnabled, isDonationsEnabled: $isDonationsEnabled, averageRating: $averageRating, reviewCount: $reviewCount, recentReviewers: $recentReviewers, rules: $rules, tags: $tags, memberCount: $memberCount, activeToday: $activeToday, locationCity: $locationCity, locationCountry: $locationCountry, deliveryModes: $deliveryModes, distanceKm: $distanceKm, ownerData: $ownerData, membershipRole: $membershipRole, isMember: $isMember, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Gym(id: $id, name: $name, handle: $handle, description: $description, logoUrl: $logoUrl, coverUrl: $coverUrl, category: $category, contentRating: $contentRating, categories: $categories, accessType: $accessType, subscriptionType: $subscriptionType, isVerified: $isVerified, isReviewsEnabled: $isReviewsEnabled, isDonationsEnabled: $isDonationsEnabled, averageRating: $averageRating, reviewCount: $reviewCount, recentReviewers: $recentReviewers, rules: $rules, tags: $tags, memberCount: $memberCount, activeToday: $activeToday, locationCity: $locationCity, locationCountry: $locationCountry, deliveryModes: $deliveryModes, distanceKm: $distanceKm, ownerData: $ownerData, membershipRole: $membershipRole, isMember: $isMember, followedMembers: $followedMembers, followedMembersCount: $followedMembersCount, locationSummary: $locationSummary, registrationStatus: $registrationStatus, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -1157,11 +1707,11 @@ abstract mixin class $GymCopyWith<$Res>  {
   factory $GymCopyWith(Gym value, $Res Function(Gym) _then) = _$GymCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String handle, String description, String logoUrl, String coverUrl, String category,@JsonKey(name: 'content_rating') String contentRating, List<GymCategory> categories,@JsonKey(name: 'access_type') String accessType,@JsonKey(name: 'subscription_type') String subscriptionType,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'is_reviews_enabled') bool isReviewsEnabled,@JsonKey(name: 'is_donations_enabled') bool isDonationsEnabled,@JsonKey(name: 'average_rating') double? averageRating,@JsonKey(name: 'review_count') int reviewCount,@JsonKey(name: 'recent_reviewers') List<MemberData> recentReviewers, List<String> rules, List<String> tags,@JsonKey(name: 'member_count') int memberCount,@JsonKey(name: 'active_today') int activeToday,@JsonKey(name: 'location_city') String locationCity,@JsonKey(name: 'location_country') String locationCountry,@JsonKey(name: 'delivery_modes') List<String> deliveryModes,@JsonKey(name: 'distance_km') double? distanceKm,@JsonKey(name: 'owner_data') List<OwnerData> ownerData,@JsonKey(name: 'membership_role') String? membershipRole,@JsonKey(name: 'is_member') bool isMember,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
+ String id, String name, String handle, String description, String logoUrl, String coverUrl, String category,@JsonKey(name: 'content_rating') String contentRating, List<GymCategory> categories,@JsonKey(name: 'access_type') String accessType,@JsonKey(name: 'subscription_type') String subscriptionType,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'is_reviews_enabled') bool isReviewsEnabled,@JsonKey(name: 'is_donations_enabled') bool isDonationsEnabled,@JsonKey(name: 'average_rating') double? averageRating,@JsonKey(name: 'review_count') int reviewCount,@JsonKey(name: 'recent_reviewers') List<MemberData> recentReviewers, List<String> rules, List<String> tags,@JsonKey(name: 'member_count') int memberCount,@JsonKey(name: 'active_today') int activeToday,@JsonKey(name: 'location_city') String locationCity,@JsonKey(name: 'location_country') String locationCountry,@JsonKey(name: 'delivery_modes') List<String> deliveryModes,@JsonKey(name: 'distance_km') double? distanceKm,@JsonKey(name: 'owner_data') List<OwnerData> ownerData,@JsonKey(name: 'membership_role') String? membershipRole,@JsonKey(name: 'is_member') bool isMember,@JsonKey(name: 'followed_members') List<FollowedMember> followedMembers,@JsonKey(name: 'followed_members_count') int followedMembersCount,@JsonKey(name: 'location_summary') LocationSummary? locationSummary,@JsonKey(name: 'registration_status') String registrationStatus,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 
-
+$LocationSummaryCopyWith<$Res>? get locationSummary;
 
 }
 /// @nodoc
@@ -1174,7 +1724,7 @@ class _$GymCopyWithImpl<$Res>
 
 /// Create a copy of Gym
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? handle = null,Object? description = null,Object? logoUrl = null,Object? coverUrl = null,Object? category = null,Object? contentRating = null,Object? categories = null,Object? accessType = null,Object? subscriptionType = null,Object? isVerified = null,Object? isReviewsEnabled = null,Object? isDonationsEnabled = null,Object? averageRating = freezed,Object? reviewCount = null,Object? recentReviewers = null,Object? rules = null,Object? tags = null,Object? memberCount = null,Object? activeToday = null,Object? locationCity = null,Object? locationCountry = null,Object? deliveryModes = null,Object? distanceKm = freezed,Object? ownerData = null,Object? membershipRole = freezed,Object? isMember = null,Object? createdAt = null,Object? updatedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? handle = null,Object? description = null,Object? logoUrl = null,Object? coverUrl = null,Object? category = null,Object? contentRating = null,Object? categories = null,Object? accessType = null,Object? subscriptionType = null,Object? isVerified = null,Object? isReviewsEnabled = null,Object? isDonationsEnabled = null,Object? averageRating = freezed,Object? reviewCount = null,Object? recentReviewers = null,Object? rules = null,Object? tags = null,Object? memberCount = null,Object? activeToday = null,Object? locationCity = null,Object? locationCountry = null,Object? deliveryModes = null,Object? distanceKm = freezed,Object? ownerData = null,Object? membershipRole = freezed,Object? isMember = null,Object? followedMembers = null,Object? followedMembersCount = null,Object? locationSummary = freezed,Object? registrationStatus = null,Object? createdAt = null,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -1204,12 +1754,28 @@ as List<String>,distanceKm: freezed == distanceKm ? _self.distanceKm : distanceK
 as double?,ownerData: null == ownerData ? _self.ownerData : ownerData // ignore: cast_nullable_to_non_nullable
 as List<OwnerData>,membershipRole: freezed == membershipRole ? _self.membershipRole : membershipRole // ignore: cast_nullable_to_non_nullable
 as String?,isMember: null == isMember ? _self.isMember : isMember // ignore: cast_nullable_to_non_nullable
-as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as bool,followedMembers: null == followedMembers ? _self.followedMembers : followedMembers // ignore: cast_nullable_to_non_nullable
+as List<FollowedMember>,followedMembersCount: null == followedMembersCount ? _self.followedMembersCount : followedMembersCount // ignore: cast_nullable_to_non_nullable
+as int,locationSummary: freezed == locationSummary ? _self.locationSummary : locationSummary // ignore: cast_nullable_to_non_nullable
+as LocationSummary?,registrationStatus: null == registrationStatus ? _self.registrationStatus : registrationStatus // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
+/// Create a copy of Gym
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$LocationSummaryCopyWith<$Res>? get locationSummary {
+    if (_self.locationSummary == null) {
+    return null;
+  }
 
+  return $LocationSummaryCopyWith<$Res>(_self.locationSummary!, (value) {
+    return _then(_self.copyWith(locationSummary: value));
+  });
+}
 }
 
 
@@ -1291,10 +1857,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String handle,  String description,  String logoUrl,  String coverUrl,  String category, @JsonKey(name: 'content_rating')  String contentRating,  List<GymCategory> categories, @JsonKey(name: 'access_type')  String accessType, @JsonKey(name: 'subscription_type')  String subscriptionType, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'is_reviews_enabled')  bool isReviewsEnabled, @JsonKey(name: 'is_donations_enabled')  bool isDonationsEnabled, @JsonKey(name: 'average_rating')  double? averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'recent_reviewers')  List<MemberData> recentReviewers,  List<String> rules,  List<String> tags, @JsonKey(name: 'member_count')  int memberCount, @JsonKey(name: 'active_today')  int activeToday, @JsonKey(name: 'location_city')  String locationCity, @JsonKey(name: 'location_country')  String locationCountry, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'distance_km')  double? distanceKm, @JsonKey(name: 'owner_data')  List<OwnerData> ownerData, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'is_member')  bool isMember, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String handle,  String description,  String logoUrl,  String coverUrl,  String category, @JsonKey(name: 'content_rating')  String contentRating,  List<GymCategory> categories, @JsonKey(name: 'access_type')  String accessType, @JsonKey(name: 'subscription_type')  String subscriptionType, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'is_reviews_enabled')  bool isReviewsEnabled, @JsonKey(name: 'is_donations_enabled')  bool isDonationsEnabled, @JsonKey(name: 'average_rating')  double? averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'recent_reviewers')  List<MemberData> recentReviewers,  List<String> rules,  List<String> tags, @JsonKey(name: 'member_count')  int memberCount, @JsonKey(name: 'active_today')  int activeToday, @JsonKey(name: 'location_city')  String locationCity, @JsonKey(name: 'location_country')  String locationCountry, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'distance_km')  double? distanceKm, @JsonKey(name: 'owner_data')  List<OwnerData> ownerData, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'is_member')  bool isMember, @JsonKey(name: 'followed_members')  List<FollowedMember> followedMembers, @JsonKey(name: 'followed_members_count')  int followedMembersCount, @JsonKey(name: 'location_summary')  LocationSummary? locationSummary, @JsonKey(name: 'registration_status')  String registrationStatus, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Gym() when $default != null:
-return $default(_that.id,_that.name,_that.handle,_that.description,_that.logoUrl,_that.coverUrl,_that.category,_that.contentRating,_that.categories,_that.accessType,_that.subscriptionType,_that.isVerified,_that.isReviewsEnabled,_that.isDonationsEnabled,_that.averageRating,_that.reviewCount,_that.recentReviewers,_that.rules,_that.tags,_that.memberCount,_that.activeToday,_that.locationCity,_that.locationCountry,_that.deliveryModes,_that.distanceKm,_that.ownerData,_that.membershipRole,_that.isMember,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.handle,_that.description,_that.logoUrl,_that.coverUrl,_that.category,_that.contentRating,_that.categories,_that.accessType,_that.subscriptionType,_that.isVerified,_that.isReviewsEnabled,_that.isDonationsEnabled,_that.averageRating,_that.reviewCount,_that.recentReviewers,_that.rules,_that.tags,_that.memberCount,_that.activeToday,_that.locationCity,_that.locationCountry,_that.deliveryModes,_that.distanceKm,_that.ownerData,_that.membershipRole,_that.isMember,_that.followedMembers,_that.followedMembersCount,_that.locationSummary,_that.registrationStatus,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -1312,10 +1878,10 @@ return $default(_that.id,_that.name,_that.handle,_that.description,_that.logoUrl
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String handle,  String description,  String logoUrl,  String coverUrl,  String category, @JsonKey(name: 'content_rating')  String contentRating,  List<GymCategory> categories, @JsonKey(name: 'access_type')  String accessType, @JsonKey(name: 'subscription_type')  String subscriptionType, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'is_reviews_enabled')  bool isReviewsEnabled, @JsonKey(name: 'is_donations_enabled')  bool isDonationsEnabled, @JsonKey(name: 'average_rating')  double? averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'recent_reviewers')  List<MemberData> recentReviewers,  List<String> rules,  List<String> tags, @JsonKey(name: 'member_count')  int memberCount, @JsonKey(name: 'active_today')  int activeToday, @JsonKey(name: 'location_city')  String locationCity, @JsonKey(name: 'location_country')  String locationCountry, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'distance_km')  double? distanceKm, @JsonKey(name: 'owner_data')  List<OwnerData> ownerData, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'is_member')  bool isMember, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String handle,  String description,  String logoUrl,  String coverUrl,  String category, @JsonKey(name: 'content_rating')  String contentRating,  List<GymCategory> categories, @JsonKey(name: 'access_type')  String accessType, @JsonKey(name: 'subscription_type')  String subscriptionType, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'is_reviews_enabled')  bool isReviewsEnabled, @JsonKey(name: 'is_donations_enabled')  bool isDonationsEnabled, @JsonKey(name: 'average_rating')  double? averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'recent_reviewers')  List<MemberData> recentReviewers,  List<String> rules,  List<String> tags, @JsonKey(name: 'member_count')  int memberCount, @JsonKey(name: 'active_today')  int activeToday, @JsonKey(name: 'location_city')  String locationCity, @JsonKey(name: 'location_country')  String locationCountry, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'distance_km')  double? distanceKm, @JsonKey(name: 'owner_data')  List<OwnerData> ownerData, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'is_member')  bool isMember, @JsonKey(name: 'followed_members')  List<FollowedMember> followedMembers, @JsonKey(name: 'followed_members_count')  int followedMembersCount, @JsonKey(name: 'location_summary')  LocationSummary? locationSummary, @JsonKey(name: 'registration_status')  String registrationStatus, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Gym():
-return $default(_that.id,_that.name,_that.handle,_that.description,_that.logoUrl,_that.coverUrl,_that.category,_that.contentRating,_that.categories,_that.accessType,_that.subscriptionType,_that.isVerified,_that.isReviewsEnabled,_that.isDonationsEnabled,_that.averageRating,_that.reviewCount,_that.recentReviewers,_that.rules,_that.tags,_that.memberCount,_that.activeToday,_that.locationCity,_that.locationCountry,_that.deliveryModes,_that.distanceKm,_that.ownerData,_that.membershipRole,_that.isMember,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.handle,_that.description,_that.logoUrl,_that.coverUrl,_that.category,_that.contentRating,_that.categories,_that.accessType,_that.subscriptionType,_that.isVerified,_that.isReviewsEnabled,_that.isDonationsEnabled,_that.averageRating,_that.reviewCount,_that.recentReviewers,_that.rules,_that.tags,_that.memberCount,_that.activeToday,_that.locationCity,_that.locationCountry,_that.deliveryModes,_that.distanceKm,_that.ownerData,_that.membershipRole,_that.isMember,_that.followedMembers,_that.followedMembersCount,_that.locationSummary,_that.registrationStatus,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1332,10 +1898,10 @@ return $default(_that.id,_that.name,_that.handle,_that.description,_that.logoUrl
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String handle,  String description,  String logoUrl,  String coverUrl,  String category, @JsonKey(name: 'content_rating')  String contentRating,  List<GymCategory> categories, @JsonKey(name: 'access_type')  String accessType, @JsonKey(name: 'subscription_type')  String subscriptionType, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'is_reviews_enabled')  bool isReviewsEnabled, @JsonKey(name: 'is_donations_enabled')  bool isDonationsEnabled, @JsonKey(name: 'average_rating')  double? averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'recent_reviewers')  List<MemberData> recentReviewers,  List<String> rules,  List<String> tags, @JsonKey(name: 'member_count')  int memberCount, @JsonKey(name: 'active_today')  int activeToday, @JsonKey(name: 'location_city')  String locationCity, @JsonKey(name: 'location_country')  String locationCountry, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'distance_km')  double? distanceKm, @JsonKey(name: 'owner_data')  List<OwnerData> ownerData, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'is_member')  bool isMember, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String handle,  String description,  String logoUrl,  String coverUrl,  String category, @JsonKey(name: 'content_rating')  String contentRating,  List<GymCategory> categories, @JsonKey(name: 'access_type')  String accessType, @JsonKey(name: 'subscription_type')  String subscriptionType, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'is_reviews_enabled')  bool isReviewsEnabled, @JsonKey(name: 'is_donations_enabled')  bool isDonationsEnabled, @JsonKey(name: 'average_rating')  double? averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'recent_reviewers')  List<MemberData> recentReviewers,  List<String> rules,  List<String> tags, @JsonKey(name: 'member_count')  int memberCount, @JsonKey(name: 'active_today')  int activeToday, @JsonKey(name: 'location_city')  String locationCity, @JsonKey(name: 'location_country')  String locationCountry, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'distance_km')  double? distanceKm, @JsonKey(name: 'owner_data')  List<OwnerData> ownerData, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'is_member')  bool isMember, @JsonKey(name: 'followed_members')  List<FollowedMember> followedMembers, @JsonKey(name: 'followed_members_count')  int followedMembersCount, @JsonKey(name: 'location_summary')  LocationSummary? locationSummary, @JsonKey(name: 'registration_status')  String registrationStatus, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Gym() when $default != null:
-return $default(_that.id,_that.name,_that.handle,_that.description,_that.logoUrl,_that.coverUrl,_that.category,_that.contentRating,_that.categories,_that.accessType,_that.subscriptionType,_that.isVerified,_that.isReviewsEnabled,_that.isDonationsEnabled,_that.averageRating,_that.reviewCount,_that.recentReviewers,_that.rules,_that.tags,_that.memberCount,_that.activeToday,_that.locationCity,_that.locationCountry,_that.deliveryModes,_that.distanceKm,_that.ownerData,_that.membershipRole,_that.isMember,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.name,_that.handle,_that.description,_that.logoUrl,_that.coverUrl,_that.category,_that.contentRating,_that.categories,_that.accessType,_that.subscriptionType,_that.isVerified,_that.isReviewsEnabled,_that.isDonationsEnabled,_that.averageRating,_that.reviewCount,_that.recentReviewers,_that.rules,_that.tags,_that.memberCount,_that.activeToday,_that.locationCity,_that.locationCountry,_that.deliveryModes,_that.distanceKm,_that.ownerData,_that.membershipRole,_that.isMember,_that.followedMembers,_that.followedMembersCount,_that.locationSummary,_that.registrationStatus,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -1347,7 +1913,7 @@ return $default(_that.id,_that.name,_that.handle,_that.description,_that.logoUrl
 @JsonSerializable()
 
 class _Gym implements Gym {
-  const _Gym({required this.id, required this.name, required this.handle, this.description = '', this.logoUrl = '', this.coverUrl = '', this.category = '', @JsonKey(name: 'content_rating') this.contentRating = 'general', final  List<GymCategory> categories = const <GymCategory>[], @JsonKey(name: 'access_type') this.accessType = 'public', @JsonKey(name: 'subscription_type') this.subscriptionType = 'free', @JsonKey(name: 'is_verified') this.isVerified = false, @JsonKey(name: 'is_reviews_enabled') this.isReviewsEnabled = true, @JsonKey(name: 'is_donations_enabled') this.isDonationsEnabled = false, @JsonKey(name: 'average_rating') this.averageRating, @JsonKey(name: 'review_count') this.reviewCount = 0, @JsonKey(name: 'recent_reviewers') final  List<MemberData> recentReviewers = const <MemberData>[], final  List<String> rules = const <String>[], final  List<String> tags = const <String>[], @JsonKey(name: 'member_count') this.memberCount = 0, @JsonKey(name: 'active_today') this.activeToday = 0, @JsonKey(name: 'location_city') this.locationCity = '', @JsonKey(name: 'location_country') this.locationCountry = '', @JsonKey(name: 'delivery_modes') final  List<String> deliveryModes = const <String>[], @JsonKey(name: 'distance_km') this.distanceKm, @JsonKey(name: 'owner_data') final  List<OwnerData> ownerData = const <OwnerData>[], @JsonKey(name: 'membership_role') this.membershipRole, @JsonKey(name: 'is_member') this.isMember = false, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _categories = categories,_recentReviewers = recentReviewers,_rules = rules,_tags = tags,_deliveryModes = deliveryModes,_ownerData = ownerData;
+  const _Gym({required this.id, required this.name, required this.handle, this.description = '', this.logoUrl = '', this.coverUrl = '', this.category = '', @JsonKey(name: 'content_rating') this.contentRating = 'general', final  List<GymCategory> categories = const <GymCategory>[], @JsonKey(name: 'access_type') this.accessType = 'public', @JsonKey(name: 'subscription_type') this.subscriptionType = 'free', @JsonKey(name: 'is_verified') this.isVerified = false, @JsonKey(name: 'is_reviews_enabled') this.isReviewsEnabled = true, @JsonKey(name: 'is_donations_enabled') this.isDonationsEnabled = false, @JsonKey(name: 'average_rating') this.averageRating, @JsonKey(name: 'review_count') this.reviewCount = 0, @JsonKey(name: 'recent_reviewers') final  List<MemberData> recentReviewers = const <MemberData>[], final  List<String> rules = const <String>[], final  List<String> tags = const <String>[], @JsonKey(name: 'member_count') this.memberCount = 0, @JsonKey(name: 'active_today') this.activeToday = 0, @JsonKey(name: 'location_city') this.locationCity = '', @JsonKey(name: 'location_country') this.locationCountry = '', @JsonKey(name: 'delivery_modes') final  List<String> deliveryModes = const <String>[], @JsonKey(name: 'distance_km') this.distanceKm, @JsonKey(name: 'owner_data') final  List<OwnerData> ownerData = const <OwnerData>[], @JsonKey(name: 'membership_role') this.membershipRole, @JsonKey(name: 'is_member') this.isMember = false, @JsonKey(name: 'followed_members') final  List<FollowedMember> followedMembers = const <FollowedMember>[], @JsonKey(name: 'followed_members_count') this.followedMembersCount = 0, @JsonKey(name: 'location_summary') this.locationSummary, @JsonKey(name: 'registration_status') this.registrationStatus = 'unverified', @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _categories = categories,_recentReviewers = recentReviewers,_rules = rules,_tags = tags,_deliveryModes = deliveryModes,_ownerData = ownerData,_followedMembers = followedMembers;
   factory _Gym.fromJson(Map<String, dynamic> json) => _$GymFromJson(json);
 
 @override final  String id;
@@ -1414,6 +1980,16 @@ class _Gym implements Gym {
 
 @override@JsonKey(name: 'membership_role') final  String? membershipRole;
 @override@JsonKey(name: 'is_member') final  bool isMember;
+ final  List<FollowedMember> _followedMembers;
+@override@JsonKey(name: 'followed_members') List<FollowedMember> get followedMembers {
+  if (_followedMembers is EqualUnmodifiableListView) return _followedMembers;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_followedMembers);
+}
+
+@override@JsonKey(name: 'followed_members_count') final  int followedMembersCount;
+@override@JsonKey(name: 'location_summary') final  LocationSummary? locationSummary;
+@override@JsonKey(name: 'registration_status') final  String registrationStatus;
 @override@JsonKey(name: 'created_at') final  String createdAt;
 @override@JsonKey(name: 'updated_at') final  String? updatedAt;
 
@@ -1430,16 +2006,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Gym&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&const DeepCollectionEquality().equals(other._categories, _categories)&&(identical(other.accessType, accessType) || other.accessType == accessType)&&(identical(other.subscriptionType, subscriptionType) || other.subscriptionType == subscriptionType)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.isReviewsEnabled, isReviewsEnabled) || other.isReviewsEnabled == isReviewsEnabled)&&(identical(other.isDonationsEnabled, isDonationsEnabled) || other.isDonationsEnabled == isDonationsEnabled)&&(identical(other.averageRating, averageRating) || other.averageRating == averageRating)&&(identical(other.reviewCount, reviewCount) || other.reviewCount == reviewCount)&&const DeepCollectionEquality().equals(other._recentReviewers, _recentReviewers)&&const DeepCollectionEquality().equals(other._rules, _rules)&&const DeepCollectionEquality().equals(other._tags, _tags)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.activeToday, activeToday) || other.activeToday == activeToday)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&const DeepCollectionEquality().equals(other._deliveryModes, _deliveryModes)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&const DeepCollectionEquality().equals(other._ownerData, _ownerData)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.isMember, isMember) || other.isMember == isMember)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Gym&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&const DeepCollectionEquality().equals(other._categories, _categories)&&(identical(other.accessType, accessType) || other.accessType == accessType)&&(identical(other.subscriptionType, subscriptionType) || other.subscriptionType == subscriptionType)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.isReviewsEnabled, isReviewsEnabled) || other.isReviewsEnabled == isReviewsEnabled)&&(identical(other.isDonationsEnabled, isDonationsEnabled) || other.isDonationsEnabled == isDonationsEnabled)&&(identical(other.averageRating, averageRating) || other.averageRating == averageRating)&&(identical(other.reviewCount, reviewCount) || other.reviewCount == reviewCount)&&const DeepCollectionEquality().equals(other._recentReviewers, _recentReviewers)&&const DeepCollectionEquality().equals(other._rules, _rules)&&const DeepCollectionEquality().equals(other._tags, _tags)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.activeToday, activeToday) || other.activeToday == activeToday)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&const DeepCollectionEquality().equals(other._deliveryModes, _deliveryModes)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&const DeepCollectionEquality().equals(other._ownerData, _ownerData)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.isMember, isMember) || other.isMember == isMember)&&const DeepCollectionEquality().equals(other._followedMembers, _followedMembers)&&(identical(other.followedMembersCount, followedMembersCount) || other.followedMembersCount == followedMembersCount)&&(identical(other.locationSummary, locationSummary) || other.locationSummary == locationSummary)&&(identical(other.registrationStatus, registrationStatus) || other.registrationStatus == registrationStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,name,handle,description,logoUrl,coverUrl,category,contentRating,const DeepCollectionEquality().hash(_categories),accessType,subscriptionType,isVerified,isReviewsEnabled,isDonationsEnabled,averageRating,reviewCount,const DeepCollectionEquality().hash(_recentReviewers),const DeepCollectionEquality().hash(_rules),const DeepCollectionEquality().hash(_tags),memberCount,activeToday,locationCity,locationCountry,const DeepCollectionEquality().hash(_deliveryModes),distanceKm,const DeepCollectionEquality().hash(_ownerData),membershipRole,isMember,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,id,name,handle,description,logoUrl,coverUrl,category,contentRating,const DeepCollectionEquality().hash(_categories),accessType,subscriptionType,isVerified,isReviewsEnabled,isDonationsEnabled,averageRating,reviewCount,const DeepCollectionEquality().hash(_recentReviewers),const DeepCollectionEquality().hash(_rules),const DeepCollectionEquality().hash(_tags),memberCount,activeToday,locationCity,locationCountry,const DeepCollectionEquality().hash(_deliveryModes),distanceKm,const DeepCollectionEquality().hash(_ownerData),membershipRole,isMember,const DeepCollectionEquality().hash(_followedMembers),followedMembersCount,locationSummary,registrationStatus,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'Gym(id: $id, name: $name, handle: $handle, description: $description, logoUrl: $logoUrl, coverUrl: $coverUrl, category: $category, contentRating: $contentRating, categories: $categories, accessType: $accessType, subscriptionType: $subscriptionType, isVerified: $isVerified, isReviewsEnabled: $isReviewsEnabled, isDonationsEnabled: $isDonationsEnabled, averageRating: $averageRating, reviewCount: $reviewCount, recentReviewers: $recentReviewers, rules: $rules, tags: $tags, memberCount: $memberCount, activeToday: $activeToday, locationCity: $locationCity, locationCountry: $locationCountry, deliveryModes: $deliveryModes, distanceKm: $distanceKm, ownerData: $ownerData, membershipRole: $membershipRole, isMember: $isMember, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Gym(id: $id, name: $name, handle: $handle, description: $description, logoUrl: $logoUrl, coverUrl: $coverUrl, category: $category, contentRating: $contentRating, categories: $categories, accessType: $accessType, subscriptionType: $subscriptionType, isVerified: $isVerified, isReviewsEnabled: $isReviewsEnabled, isDonationsEnabled: $isDonationsEnabled, averageRating: $averageRating, reviewCount: $reviewCount, recentReviewers: $recentReviewers, rules: $rules, tags: $tags, memberCount: $memberCount, activeToday: $activeToday, locationCity: $locationCity, locationCountry: $locationCountry, deliveryModes: $deliveryModes, distanceKm: $distanceKm, ownerData: $ownerData, membershipRole: $membershipRole, isMember: $isMember, followedMembers: $followedMembers, followedMembersCount: $followedMembersCount, locationSummary: $locationSummary, registrationStatus: $registrationStatus, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -1450,11 +2026,11 @@ abstract mixin class _$GymCopyWith<$Res> implements $GymCopyWith<$Res> {
   factory _$GymCopyWith(_Gym value, $Res Function(_Gym) _then) = __$GymCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String handle, String description, String logoUrl, String coverUrl, String category,@JsonKey(name: 'content_rating') String contentRating, List<GymCategory> categories,@JsonKey(name: 'access_type') String accessType,@JsonKey(name: 'subscription_type') String subscriptionType,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'is_reviews_enabled') bool isReviewsEnabled,@JsonKey(name: 'is_donations_enabled') bool isDonationsEnabled,@JsonKey(name: 'average_rating') double? averageRating,@JsonKey(name: 'review_count') int reviewCount,@JsonKey(name: 'recent_reviewers') List<MemberData> recentReviewers, List<String> rules, List<String> tags,@JsonKey(name: 'member_count') int memberCount,@JsonKey(name: 'active_today') int activeToday,@JsonKey(name: 'location_city') String locationCity,@JsonKey(name: 'location_country') String locationCountry,@JsonKey(name: 'delivery_modes') List<String> deliveryModes,@JsonKey(name: 'distance_km') double? distanceKm,@JsonKey(name: 'owner_data') List<OwnerData> ownerData,@JsonKey(name: 'membership_role') String? membershipRole,@JsonKey(name: 'is_member') bool isMember,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
+ String id, String name, String handle, String description, String logoUrl, String coverUrl, String category,@JsonKey(name: 'content_rating') String contentRating, List<GymCategory> categories,@JsonKey(name: 'access_type') String accessType,@JsonKey(name: 'subscription_type') String subscriptionType,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'is_reviews_enabled') bool isReviewsEnabled,@JsonKey(name: 'is_donations_enabled') bool isDonationsEnabled,@JsonKey(name: 'average_rating') double? averageRating,@JsonKey(name: 'review_count') int reviewCount,@JsonKey(name: 'recent_reviewers') List<MemberData> recentReviewers, List<String> rules, List<String> tags,@JsonKey(name: 'member_count') int memberCount,@JsonKey(name: 'active_today') int activeToday,@JsonKey(name: 'location_city') String locationCity,@JsonKey(name: 'location_country') String locationCountry,@JsonKey(name: 'delivery_modes') List<String> deliveryModes,@JsonKey(name: 'distance_km') double? distanceKm,@JsonKey(name: 'owner_data') List<OwnerData> ownerData,@JsonKey(name: 'membership_role') String? membershipRole,@JsonKey(name: 'is_member') bool isMember,@JsonKey(name: 'followed_members') List<FollowedMember> followedMembers,@JsonKey(name: 'followed_members_count') int followedMembersCount,@JsonKey(name: 'location_summary') LocationSummary? locationSummary,@JsonKey(name: 'registration_status') String registrationStatus,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 
-
+@override $LocationSummaryCopyWith<$Res>? get locationSummary;
 
 }
 /// @nodoc
@@ -1467,7 +2043,7 @@ class __$GymCopyWithImpl<$Res>
 
 /// Create a copy of Gym
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? handle = null,Object? description = null,Object? logoUrl = null,Object? coverUrl = null,Object? category = null,Object? contentRating = null,Object? categories = null,Object? accessType = null,Object? subscriptionType = null,Object? isVerified = null,Object? isReviewsEnabled = null,Object? isDonationsEnabled = null,Object? averageRating = freezed,Object? reviewCount = null,Object? recentReviewers = null,Object? rules = null,Object? tags = null,Object? memberCount = null,Object? activeToday = null,Object? locationCity = null,Object? locationCountry = null,Object? deliveryModes = null,Object? distanceKm = freezed,Object? ownerData = null,Object? membershipRole = freezed,Object? isMember = null,Object? createdAt = null,Object? updatedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? handle = null,Object? description = null,Object? logoUrl = null,Object? coverUrl = null,Object? category = null,Object? contentRating = null,Object? categories = null,Object? accessType = null,Object? subscriptionType = null,Object? isVerified = null,Object? isReviewsEnabled = null,Object? isDonationsEnabled = null,Object? averageRating = freezed,Object? reviewCount = null,Object? recentReviewers = null,Object? rules = null,Object? tags = null,Object? memberCount = null,Object? activeToday = null,Object? locationCity = null,Object? locationCountry = null,Object? deliveryModes = null,Object? distanceKm = freezed,Object? ownerData = null,Object? membershipRole = freezed,Object? isMember = null,Object? followedMembers = null,Object? followedMembersCount = null,Object? locationSummary = freezed,Object? registrationStatus = null,Object? createdAt = null,Object? updatedAt = freezed,}) {
   return _then(_Gym(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -1497,13 +2073,29 @@ as List<String>,distanceKm: freezed == distanceKm ? _self.distanceKm : distanceK
 as double?,ownerData: null == ownerData ? _self._ownerData : ownerData // ignore: cast_nullable_to_non_nullable
 as List<OwnerData>,membershipRole: freezed == membershipRole ? _self.membershipRole : membershipRole // ignore: cast_nullable_to_non_nullable
 as String?,isMember: null == isMember ? _self.isMember : isMember // ignore: cast_nullable_to_non_nullable
-as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as bool,followedMembers: null == followedMembers ? _self._followedMembers : followedMembers // ignore: cast_nullable_to_non_nullable
+as List<FollowedMember>,followedMembersCount: null == followedMembersCount ? _self.followedMembersCount : followedMembersCount // ignore: cast_nullable_to_non_nullable
+as int,locationSummary: freezed == locationSummary ? _self.locationSummary : locationSummary // ignore: cast_nullable_to_non_nullable
+as LocationSummary?,registrationStatus: null == registrationStatus ? _self.registrationStatus : registrationStatus // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
 
+/// Create a copy of Gym
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$LocationSummaryCopyWith<$Res>? get locationSummary {
+    if (_self.locationSummary == null) {
+    return null;
+  }
 
+  return $LocationSummaryCopyWith<$Res>(_self.locationSummary!, (value) {
+    return _then(_self.copyWith(locationSummary: value));
+  });
+}
 }
 
 
