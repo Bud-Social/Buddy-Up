@@ -84,6 +84,7 @@ const StationManage = lazy(() => import('@/pages/app/StationManage'));
 const CourierDashboard = lazy(() => import('@/pages/app/CourierDashboard'));
 const CourierRegister = lazy(() => import('@/pages/app/CourierRegister'));
 const GymManage = lazy(() => import('@/pages/app/GymManage'));
+const CreatorInsightsPage = lazy(() => import('@/pages/app/CreatorInsightsPage'));
 
 const DiscountCodeAnalyticsPage = lazy(() => import('@/pages/app/DiscountCodeAnalytics'));
 const ShopDetail = lazy(() => import('@/pages/app/ShopDetail'));
@@ -295,6 +296,7 @@ export const router = createBrowserRouter([
           // by a two-person verification decision, not chosen at registration.
           { path: '/verification/categories', element: <SWrapper><CategoryApplication /></SWrapper> },
           { path: '/analytics', element: <SWrapper><AnalyticsPage /></SWrapper> },
+          { path: '/creator-insights', element: <SWrapper><CreatorInsightsPage /></SWrapper> },
           { path: '/countdowns', element: <SWrapper><CountdownsPage /></SWrapper> },
           { path: '/activities', element: <SWrapper><ActivitiesPage /></SWrapper> },
           { path: '/activities/new', element: <SWrapper><NewActivity /></SWrapper> },

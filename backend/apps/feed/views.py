@@ -2004,6 +2004,7 @@ class CreatorInsightsView(views.APIView):
                 saves_agg=db_models.Count('saves', distinct=True),
             )
             .order_by('-created_at')
+            .prefetch_related('media')
         )
 
         # Aggregate focus/watch-time events for all of the author's posts in
@@ -2063,6 +2064,17 @@ class CreatorInsightsView(views.APIView):
         }
         for p in posts:
             pid = str(p.id)
+            # A per-post preview: type, opening words and the first media
+            # thumbnail, so the insights screen shows the content it measured.
+            preview_url = ''
+            preview_poster = ''
+            if isinstance(p.media_urls, list) and p.media_urls:
+                preview_url = str(p.media_urls[0])[:1000]
+            else:
+                media_rows = list(p.media.all().only('url', 'poster_url', 'media_type')[:1])
+                if media_rows:
+                    preview_url = media_rows[0].url
+                    preview_poster = media_rows[0].poster_url or ''
             focus = focus_by_post.get(pid, {'sessions': 0, 'total_ms': 0})
             sessions = focus['sessions']
             total_ms = focus['total_ms']
@@ -2097,6 +2109,10 @@ class CreatorInsightsView(views.APIView):
             items.append(
                 {
                     'post_id': pid,
+                    'post_type': p.post_type,
+                    'body': (p.body or '').strip()[:160],
+                    'media_url': preview_url,
+                    'poster_url': preview_poster,
                     'views': p.view_count,
                     'likes': p.likes_agg,
                     'comments': p.comments_agg,

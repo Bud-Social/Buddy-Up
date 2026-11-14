@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, CalendarDays, MessageCircle, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, LayoutDashboard, Activity, UsersRound, HeartHandshake, Footprints, Bike, MapPin, CalendarRange, Store, Timer, Map as MapIcon } from 'lucide-react';
+import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, CalendarDays, MessageCircle, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, LayoutDashboard, Activity, UsersRound, HeartHandshake, Footprints, Bike, MapPin, CalendarRange, Store, Timer, Map as MapIcon, BarChart3 } from 'lucide-react';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useAuthStore } from '@/store/authStore';
 import { useBusinessRoles } from '@/hooks/useBusinessRoles';
@@ -33,6 +33,7 @@ const bottom = [{ to: '/settings', icon: Settings, label: 'Settings' }, { to: '/
  */
 function businessEntries(roles: ReturnType<typeof useBusinessRoles>): NavEntry[] {
   const icons: Record<BusinessRoleKey, typeof Store> = {
+    creator: BarChart3,
     shop: Store,
     events: CalendarRange,
     gym: Dumbbell,

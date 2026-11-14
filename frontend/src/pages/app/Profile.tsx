@@ -22,7 +22,7 @@ import type { Gym } from '@/types';
 import { PostCard } from '@/components/features/feed/PostCard';
 import { CommunityPostCard } from '@/components/features/feed/CommunityPostCard';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
-import { CreatorInsights } from '@/components/features/feed/CreatorInsights';
+
 import { AchievementsTab } from '@/components/profile/AchievementsTab';
 import { feedApi } from '@/api/feed';
 import { messagingApi } from '@/api/messaging';
@@ -42,7 +42,6 @@ export default function Profile() {
   const [commentPostId, setCommentPostId] = useState<{ postId: string; communityId?: string } | null>(null);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
-  const [showInsights, setShowInsights] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editBio, setEditBio] = useState(profile?.bio || '');
   const [editDisplayName, setEditDisplayName] = useState(profile?.display_name || '');
@@ -281,23 +280,12 @@ export default function Profile() {
             variant="ghost"
             size="sm"
             className="flex-1 gap-1.5"
-            onClick={() => setShowInsights((s) => !s)}
-            aria-expanded={showInsights}
+            onClick={() => navigate('/creator-insights')}
           >
             <BarChart3 size={14} /> Creator insights
           </Button>
         </div>
       </Card>
-
-      {showInsights && (
-        <Card className="p-4 mb-6" data-testid="insights-panel">
-          <div className="flex items-center gap-2 mb-3">
-            <BarChart3 size={16} className="text-buddy-green" />
-            <h3 className="font-heading font-semibold text-sm">Creator insights</h3>
-          </div>
-          <CreatorInsights />
-        </Card>
-      )}
 
       <div className="flex border-b border-buddy-surface mb-4">
         {(['posts', 'reposts', 'saved', 'lives', 'gyms', 'achievements'] as ProfileTab[]).map((tab) => (

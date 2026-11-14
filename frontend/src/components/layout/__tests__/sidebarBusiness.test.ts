@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { businessEntries, type BusinessRoleFlags } from '@/components/layout/sidebarBusiness';
 
 const NONE: BusinessRoleFlags = {
+  hasCreator: false,
   hasShop: false,
   hasEvents: false,
   gymSlug: null,
@@ -15,6 +16,7 @@ describe('businessEntries', () => {
   });
 
   it('unlocks each destination independently', () => {
+    expect(businessEntries({ ...NONE, hasCreator: true }).map((e) => e.key)).toEqual(['creator']);
     expect(businessEntries({ ...NONE, hasShop: true }).map((e) => e.key)).toEqual(['shop']);
     expect(businessEntries({ ...NONE, hasEvents: true }).map((e) => e.key)).toEqual(['events']);
     expect(businessEntries({ ...NONE, gymSlug: 'legitgym' }).map((e) => e.key)).toEqual(['gym']);
@@ -32,17 +34,18 @@ describe('businessEntries', () => {
 
   it('orders a multi-role operator by working priority', () => {
     const all = businessEntries({
+      hasCreator: true,
       hasShop: true,
       hasEvents: true,
       gymSlug: 'legitgym',
       hasStation: true,
       isCourier: true,
     });
-    expect(all.map((e) => e.key)).toEqual(['shop', 'events', 'gym', 'stations', 'courier']);
+    expect(all.map((e) => e.key)).toEqual(['creator', 'shop', 'events', 'gym', 'stations', 'courier']);
   });
 
   it('gives every destination a route, a nav label and a switcher label', () => {
-    for (const entry of businessEntries({ ...NONE, hasShop: true, hasEvents: true, gymSlug: 'g', hasStation: true, isCourier: true })) {
+    for (const entry of businessEntries({ ...NONE, hasCreator: true, hasShop: true, hasEvents: true, gymSlug: 'g', hasStation: true, isCourier: true })) {
       expect(entry.to.startsWith('/')).toBe(true);
       expect(entry.label).toBeTruthy();
       expect(entry.shortLabel).toBeTruthy();
@@ -50,8 +53,8 @@ describe('businessEntries', () => {
   });
 
   it('shortens the two labels that would otherwise wrap in the switcher', () => {
-    const entries = businessEntries({ ...NONE, hasShop: true, hasEvents: true, gymSlug: 'g', hasStation: true });
-    expect(entries.map((e) => e.shortLabel)).toEqual(['Shop', 'Events', 'Gym', 'Stations']);
-    expect(entries.map((e) => e.label)).toEqual(['Shop', 'My Events', 'My Gym', 'My Stations']);
+    const entries = businessEntries({ ...NONE, hasCreator: true, hasShop: true, hasEvents: true, gymSlug: 'g', hasStation: true });
+    expect(entries.map((e) => e.shortLabel)).toEqual(['Insights', 'Shop', 'Events', 'Gym', 'Stations']);
+    expect(entries.map((e) => e.label)).toEqual(['Creator Insights', 'Shop', 'My Events', 'My Gym', 'My Stations']);
   });
 });

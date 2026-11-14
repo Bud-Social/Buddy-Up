@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { marketplaceApi } from '@/api/marketplace';
 import { stationsApi, deriveOwnedStations, type StationOwnerIdentity } from '@/api/stations';
 import { gymsApi } from '@/api/gyms';
+import { feedApi } from '@/api/feed';
 import { useAuthStore } from '@/store/authStore';
 import type { Gym } from '@/types';
 
@@ -28,6 +29,8 @@ export interface BusinessRoles {
   hasStation: boolean;
   /** Has a `DeliveryPersonnel` row. */
   isCourier: boolean;
+  /** Has at least one authored post — the thing creator insights measures. */
+  hasCreator: boolean;
 }
 
 const EMPTY: BusinessRoles = {
@@ -38,6 +41,7 @@ const EMPTY: BusinessRoles = {
   gymName: null,
   hasStation: false,
   isCourier: false,
+  hasCreator: false,
 };
 
 /**
@@ -123,7 +127,19 @@ export function useBusinessRoles(): BusinessRoles {
         await marketplaceApi.getCourierSummary();
         return true;
       }, false),
-    ]).then(([hasShop, hasEvents, gym, hasStation, isCourier]) => {
+      // Any authored post makes the user a creator; an insights payload with
+      // at least one item is the honest probe. Empty payload ⇒ no entry.
+      probe(async () => {
+        const res = await feedApi.getCreatorInsights();
+        const payload = res?.data as unknown;
+        const items = Array.isArray(payload)
+          ? payload
+          : (payload && typeof payload === 'object' && Array.isArray((payload as { items?: unknown[] }).items)
+            ? (payload as { items: unknown[] }).items
+            : []);
+        return items.length > 0;
+      }, false),
+    ]).then(([hasShop, hasEvents, gym, hasStation, isCourier, hasCreator]) => {
       if (cancelled) return;
       setRoles({
         loading: false,
@@ -133,6 +149,7 @@ export function useBusinessRoles(): BusinessRoles {
         gymName: gym?.name ?? null,
         hasStation,
         isCourier,
+        hasCreator,
       });
     });
 

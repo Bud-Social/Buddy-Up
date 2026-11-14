@@ -250,6 +250,11 @@ export interface Comment {
  *  defensive: the backend may omit keys while it is being built in parallel. */
 export interface CreatorInsightItem {
   post_id: string;
+  /** Preview of the content these metrics describe. */
+  post_type?: string;
+  body?: string;
+  media_url?: string;
+  poster_url?: string;
   views?: number;
   likes?: number;
   comments?: number;
