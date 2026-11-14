@@ -7,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from common.utils import hash_dob
 from apps.accounts.models import User
 from apps.profiles.models import Profile
-from .models import Gym, GymCategory, GymMembership, JoinRequest, GymInvite, GymRoutinePost, GymReview, RoutineSlotEnrollment
+from .models import Gym, GymCategory, GymMembership, JoinRequest, GymInvite, GymRoutinePost, GymReview, RoutineSlotEnrollment, GymCategoryPricing
 
 
 class GymCrudTests(TestCase):
@@ -917,3 +917,99 @@ class GymRoutinePostModerationTests(TestCase):
         self._auth('schedowner')
         response = self.client.delete(f'{self.URL}{GymRoutinePost.objects.get(gym=other).id}/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class GymPricingCreationTests(TestCase):
+    """The Phase A pricing path: paid subscription + per-category pricing rows."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(email='pricing@test.com', password='TestPass123!')
+        self.user.dob_hash = hash_dob(date(1995, 6, 15))
+        self.user.email_verified = True
+        self.user.save()
+        Profile.objects.create(user=self.user, username='pricingowner', display_name='Pricing Owner')
+        refresh = RefreshToken.for_user(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+        self.cat = GymCategory.objects.create(name='strength', display_name='Strength', is_active=True)
+
+    def test_paid_subscription_with_category_pricing_creates_rows(self):
+        response = self.client.post('/api/v1/gyms/create/', {
+            'name': 'Pricing Gym',
+            'handle': 'pricinggym',
+            'category': 'strength',
+            'access_type': 'public',
+            'subscription_type': 'paid',
+            'category_ids': [self.cat.id],
+            'category_pricing': [
+                {'category': self.cat.id, 'fee_per_month': '25.00', 'is_free': False},
+            ],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        gym = Gym.objects.get(handle='pricinggym')
+        self.assertTrue(
+            GymCategoryPricing.objects.filter(gym=gym, category=self.cat).exists(),
+        )
+
+    def test_pricing_entry_with_no_fees_and_not_free_is_rejected(self):
+        response = self.client.post('/api/v1/gyms/create/', {
+            'name': 'Pricing Gym Two',
+            'handle': 'pricinggymtwo',
+            'category': 'strength',
+            'access_type': 'public',
+            'subscription_type': 'paid',
+            'category_ids': [self.cat.id],
+            'category_pricing': [
+                {'category': self.cat.id, 'is_free': False},
+            ],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class GymMediaUploadTests(TestCase):
+    """Videos must not go through the image storage.
+
+    Cloudinary uploads video bytes as images unless the video storage is used,
+    so a short MP4 used to come back as an opaque 500 from the gallery upload.
+    """
+
+    def setUp(self):
+        from unittest import mock
+        self.mock = mock
+        self.client = APIClient()
+        self.user = User.objects.create_user(email='media@t.com', password='TestPass123!')
+        self.user.dob_hash = hash_dob(date(2000, 6, 15))
+        self.user.email_verified = True
+        self.user.save()
+        self.profile = Profile.objects.create(user=self.user, username='mediaowner', display_name='Media Owner')
+        self.gym = Gym.objects.create(name='Media Gym', handle='mediagym', category='fitness', access_type='public')
+        GymMembership.objects.create(gym=self.gym, member=self.profile, role='owner')
+        refresh = RefreshToken.for_user(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+
+    def _upload(self, kind, filename, content, content_type):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        payload = {'kind': kind, 'file': SimpleUploadedFile(filename, content, content_type=content_type)}
+        return self.client.post(f'/api/v1/gyms/mediagym/media/', payload, format='multipart')
+
+    def test_photo_uploads_with_default_storage(self):
+        response = self._upload('photo', 'shot.jpg', b'\xff\xd8\xff\xe0fake', 'image/jpeg')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['data'][0]['kind'], 'photo')
+
+    def test_video_uploads_route_to_video_storage(self):
+        fake_storage = self.mock.Mock()
+        fake_storage.save.return_value = 'gyms/x/media/clip.mp4'
+        fake_storage.url.side_effect = lambda name: f'https://cdn.example.com/{name}'
+
+        with (
+            self.mock.patch('django.conf.settings.CLOUDINARY_CLOUD_NAME', 'testcloud'),
+            self.mock.patch('django.conf.settings.CLOUDINARY_API_KEY', 'key'),
+            self.mock.patch('cloudinary_storage.storage.VideoMediaCloudinaryStorage',
+                            return_value=fake_storage),
+        ):
+            response = self._upload('video', 'clip.mp4', b'\x00\x00\x00\x18ftyp', 'video/mp4')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['data'][0]['kind'], 'video')
+        fake_storage.save.assert_called_once()

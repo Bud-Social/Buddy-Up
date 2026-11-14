@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Globe, Lock, EyeOff, X, ArrowUp, ArrowDown, Check, AlertCircle, MapPin } from 'lucide-react';
+import { Globe, Lock, EyeOff, X, ArrowUp, ArrowDown, Check, AlertCircle, MapPin, Upload, Image as ImageIcon, Dumbbell } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { VenueDraftEditor } from '@/components/gym/VenueDraftEditor';
+import { GymHeroPreview } from '@/components/gym/GymHeroPreview';
+import { uploadToCloudinary } from '@/lib/uploader';
 import { emptyVenueDraft, type VenueDraft } from '@/components/gym/venueDraft';
 import { gymsApi } from '@/api/gyms';
 import type { GymCategory, GymCategoryPricing } from '@/types';
@@ -44,6 +46,12 @@ export default function CreateGymPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const handleDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [galleryFiles, setGalleryFiles] = useState<Array<{ id: string; file: File; kind: 'photo' | 'video'; previewUrl: string }>>([]);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     gymsApi.getCategories().then((res) => {
@@ -248,6 +256,17 @@ export default function CreateGymPage() {
         }
       }
 
+      // Preview gallery uploads need the gym to exist. Failure is non-fatal:
+      // the owner can re-upload from Manage → Setup.
+      const photos = galleryFiles.filter((g) => g.kind === 'photo').map((g) => g.file);
+      const videos = galleryFiles.filter((g) => g.kind === 'video').map((g) => g.file);
+      try {
+        if (photos.length > 0) await gymsApi.uploadMedia(createdHandle, photos, 'photo');
+        if (videos.length > 0) await gymsApi.uploadMedia(createdHandle, videos, 'video');
+      } catch {
+        // Non-fatal: the manage console can re-upload.
+      }
+
       navigate(`/gyms/${createdHandle}`);
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
@@ -258,6 +277,48 @@ export default function CreateGymPage() {
   };
 
   const isStep1Valid = name.trim() && handle.trim() && selectedCategoryIds.length > 0;
+  // Logo/cover uploads go straight to Cloudinary via the signed-upload
+  // manager; the gym row only stores the resulting URLs.
+  const uploadBrandingImage = async (file: File, kind: 'logo' | 'cover') => {
+    if (kind === 'logo') setLogoUploading(true);
+    else setCoverUploading(true);
+    setError('');
+    try {
+      const uploaded = await uploadToCloudinary(file);
+      if (kind === 'logo') setLogoUrl(uploaded.url);
+      else setCoverUrl(uploaded.url);
+    } catch (err: unknown) {
+      const message = (err as { message?: string })?.message || 'Upload failed';
+      setError(`Could not upload that image: ${message}`);
+    } finally {
+      if (kind === 'logo') setLogoUploading(false);
+      else setCoverUploading(false);
+    }
+  };
+
+  const addGalleryFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const next = [...galleryFiles];
+    for (const file of Array.from(files)) {
+      const kind = file.type.startsWith('video') ? 'video' as const : 'photo' as const;
+      next.push({
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        file,
+        kind,
+        previewUrl: URL.createObjectURL(file),
+      });
+    }
+    setGalleryFiles(next.slice(0, 24));
+  };
+
+  const removeGalleryFile = (id: string) => {
+    setGalleryFiles((prev) => {
+      const target = prev.find((item) => item.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((item) => item.id !== id);
+    });
+  };
+
   const canGoNext = step === 1 ? isStep1Valid : true;
 
   const handleCheckIcon = handleChecking
@@ -277,7 +338,7 @@ export default function CreateGymPage() {
         </div>
 
         <div className="flex gap-1 mb-6">
-          {[1, 2, 3, 4].map((s) => (
+          {[1, 2, 3, 4, 5].map((s) => (
             <div key={s} className={`flex-1 h-1 rounded-full ${s <= step ? 'bg-buddy-green' : 'bg-buddy-surface-raised'}`} />
           ))}
         </div>
@@ -556,26 +617,110 @@ export default function CreateGymPage() {
 
         {step === 4 && (
           <div className="space-y-5">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5">Gym Logo URL</label>
-                <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://example.com/logo.png" />
-                {logoUrl && (
-                  <img src={logoUrl} alt="Gym logo preview" className="mt-3 h-20 w-20 rounded-full object-cover border border-buddy-surface" />
-                )}
-              </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Branding</h2>
+              <p className="text-xs text-buddy-text-secondary mb-3">
+                Upload a logo and cover image — these appear everywhere your gym
+                shows up. Then add photos and videos so visitors see the space
+                before joining.
+              </p>
 
-              <div>
-                <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5">Cover Image URL</label>
-                <Input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="https://example.com/cover.jpg" />
-                {coverUrl && (
-                  <div className="mt-3 overflow-hidden rounded-2xl border border-buddy-surface">
-                    <img src={coverUrl} alt="Gym cover preview" className="h-40 w-full object-cover" />
+              <div className="grid grid-cols-2 gap-3">
+                {/* Logo */}
+                <div className="bg-buddy-surface rounded-2xl border border-buddy-surface-raised p-3 space-y-2">
+                  <p className="text-xs text-buddy-text-secondary">Logo (square)</p>
+                  <div className="aspect-square rounded-xl bg-buddy-surface-raised flex items-center justify-center overflow-hidden">
+                    {logoUrl
+                      ? <img src={logoUrl} alt="Logo preview" className="w-full h-full object-contain" />
+                      : <Dumbbell size={30} className="text-buddy-text-secondary/30" />}
                   </div>
-                )}
+                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadBrandingImage(f, 'logo'); e.target.value = ''; }} />
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button size="sm" variant="outline" onClick={() => logoInputRef.current?.click()} isLoading={logoUploading}>
+                      {logoUrl ? 'Replace' : 'Upload'}
+                    </Button>
+                    {logoUrl && <Button size="sm" variant="ghost" onClick={() => setLogoUrl('')}>Remove</Button>}
+                  </div>
+                </div>
+
+                {/* Cover */}
+                <div className="bg-buddy-surface rounded-2xl border border-buddy-surface-raised p-3 space-y-2">
+                  <p className="text-xs text-buddy-text-secondary">Cover (wide)</p>
+                  <div className="aspect-square rounded-xl bg-buddy-surface-raised flex items-center justify-center overflow-hidden">
+                    {coverUrl
+                      ? <img src={coverUrl} alt="Cover preview" className="w-full h-full object-cover" />
+                      : <ImageIcon size={30} className="text-buddy-text-secondary/30" />}
+                  </div>
+                  <input ref={coverInputRef} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadBrandingImage(f, 'cover'); e.target.value = ''; }} />
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button size="sm" variant="outline" onClick={() => coverInputRef.current?.click()} isLoading={coverUploading}>
+                      {coverUrl ? 'Replace' : 'Upload'}
+                    </Button>
+                    {coverUrl && <Button size="sm" variant="ghost" onClick={() => setCoverUrl('')}>Remove</Button>}
+                  </div>
+                </div>
               </div>
             </div>
 
+            <GymHeroPreview
+              name={name}
+              handle={handle}
+              coverUrl={coverUrl}
+              logoUrl={logoUrl}
+              categories={categories.filter((c) => selectedCategoryIds.includes(c.id))}
+              accessType={accessType}
+              subscriptionType={subscriptionType}
+              locationLabel={(() => {
+                const primary = venues.find((v) => v.is_primary) ?? venues[0];
+                return primary?.city || primary?.address || '';
+              })()}
+            />
+
+            <div>
+              <h3 className="text-sm font-semibold mb-1">Preview photos &amp; videos</h3>
+              <p className="text-xs text-buddy-text-secondary mb-3">
+                Optional, but the strongest signal a visitor gets. Equipment,
+                classes, the vibe — up to 24 items.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {galleryFiles.map((item) => (
+                  <div key={item.id} className="relative w-24 h-24 rounded-xl overflow-hidden bg-buddy-surface-raised group">
+                    {item.kind === 'video'
+                      ? <video src={item.previewUrl} className="w-full h-full object-cover" muted playsInline />
+                      : <img src={item.previewUrl} alt="" className="w-full h-full object-cover" />}
+                    <button
+                      type="button"
+                      aria-label="Remove"
+                      onClick={() => removeGalleryFile(item.id)}
+                      className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-buddy-red"
+                    >
+                      <X size={12} />
+                    </button>
+                    {item.kind === 'video' && (
+                      <span className="absolute bottom-1 left-1 text-[9px] bg-black/70 text-white px-1.5 py-0.5 rounded">VIDEO</span>
+                    )}
+                  </div>
+                ))}
+                <label htmlFor="gallery-picker" className="w-24 h-24 rounded-xl border border-dashed border-buddy-surface-raised flex flex-col items-center justify-center gap-1 text-buddy-text-secondary hover:text-buddy-green hover:border-buddy-green transition-colors cursor-pointer">
+                  <Upload size={18} />
+                  <span className="text-[10px]">Add media</span>
+                </label>
+                <input id="gallery-picker" ref={galleryInputRef} type="file" accept="image/*,video/*" multiple className="hidden"
+                  onChange={(e) => { addGalleryFiles(e.target.files); e.target.value = ''; }} />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setStep(3)} className="flex-1">Back</Button>
+              <Button className="flex-1" size="lg" onClick={() => setStep(5)}>Next</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="space-y-5">
             <div className="rounded-3xl border border-buddy-surface p-4 bg-buddy-surface-raised space-y-3">
               <p className="text-sm font-semibold">Review your gym</p>
               <div className="grid gap-3 text-sm text-buddy-text-secondary">
@@ -634,7 +779,7 @@ export default function CreateGymPage() {
             </div>
 
             <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => setStep(3)} className="flex-1">Back</Button>
+              <Button variant="ghost" onClick={() => setStep(4)} className="flex-1">Back</Button>
               <Button className="flex-1" size="lg" onClick={handleCreate} isLoading={isSubmitting}>Create Gym</Button>
             </div>
           </div>

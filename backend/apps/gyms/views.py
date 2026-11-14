@@ -2082,6 +2082,18 @@ class GymMediaView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
+    @staticmethod
+    def _storage_for(kind):
+        """Cloudinary uploads video bytes as images unless told otherwise —
+        video files must use the video storage or Cloudinary rejects them with
+        an opaque 500."""
+        from django.conf import settings
+
+        if getattr(settings, 'CLOUDINARY_CLOUD_NAME', '') and getattr(settings, 'CLOUDINARY_API_KEY', '') and kind == 'video':
+            from cloudinary_storage.storage import VideoMediaCloudinaryStorage
+            return VideoMediaCloudinaryStorage()
+        return default_storage
+
     def get(self, request, gym_slug):
         gym = get_object_or_404(Gym, handle__iexact=gym_slug)
         kind = request.query_params.get('kind', '')
@@ -2102,6 +2114,8 @@ class GymMediaView(views.APIView):
             kind = 'photo'
         caption = (request.data.get('caption') or '').strip()[:240]
 
+        storage = self._storage_for(kind)
+
         created = []
         for upload in uploads:
             if upload.size > 60 * 1024 * 1024:
@@ -2110,14 +2124,14 @@ class GymMediaView(views.APIView):
                     'message': f'{upload.name} is larger than 60 MB.',
                 }, status=400)
             ext = os.path.splitext(upload.name)[1].lower()
-            saved_name = default_storage.save(
+            saved_name = storage.save(
                 f'gyms/{gym.id}/media/{uuid.uuid4().hex}{ext}',
                 ContentFile(upload.read()),
             )
             created.append(GymMedia.objects.create(
                 gym=gym,
                 kind=kind,
-                file_url=default_storage.url(saved_name),
+                file_url=storage.url(saved_name),
                 caption=caption,
                 uploaded_by=request.user.profile,
             ))

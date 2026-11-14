@@ -60,7 +60,11 @@ describe('Gym creation wizard', () => {
     await user.type(screen.getByPlaceholderText('Location name'), 'Downtown');
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
-    // Step 4: review, then create.
+    // Step 4: branding — logo, cover, preview gallery (all optional).
+    expect(screen.getByText('Branding', { selector: 'h2' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    // Step 5: review, then create.
     expect(screen.getByText('Review your gym')).toBeInTheDocument();
     expect(screen.getByText('Downtown')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Create Gym' }));

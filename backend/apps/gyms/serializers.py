@@ -347,6 +347,8 @@ class CreateGymSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        from django.db import transaction
+
         category_ids = validated_data.pop('category_ids', [])
         pricing_data = validated_data.pop('category_pricing', [])
         category = validated_data.pop('category', '')
@@ -354,15 +356,20 @@ class CreateGymSerializer(serializers.ModelSerializer):
             GymCategory.objects.filter(id__in=category_ids).values_list('name', flat=True)
         ) or category or 'other'
         validated_data['category'] = derived
-        gym = Gym.objects.create(**validated_data)
-        if category_ids:
-            valid_ids = GymCategory.objects.filter(id__in=category_ids, is_active=True).values_list('id', flat=True)
-            gym.categories.set(valid_ids)
-        valid_category_ids = set(GymCategory.objects.values_list('id', flat=True))
-        for entry in pricing_data:
-            cat_id = entry.get('category')
-            if cat_id in valid_category_ids:
-                GymCategoryPricing.objects.create(gym=gym, **entry)
+        # The gym row, its category links and the pricing rows are one unit.
+        # If pricing fails the whole create rolls back — the frontend shows a
+        # clean error instead of the gym existing with no pricing rows.
+        with transaction.atomic():
+            gym = Gym.objects.create(**validated_data)
+            valid_ids = set(GymCategory.objects.filter(id__in=category_ids, is_active=True).values_list('id', flat=True))
+            if category_ids:
+                gym.categories.set(valid_ids)
+            valid_category_ids = set(GymCategory.objects.values_list('id', flat=True))
+            for entry in pricing_data:
+                entry = dict(entry)
+                cat_id = entry.pop('category', None)
+                if cat_id in valid_category_ids:
+                    GymCategoryPricing.objects.create(gym=gym, category_id=cat_id, **entry)
         return gym
 
 
