@@ -137,7 +137,7 @@ class CommunityActivitiesScreen extends ConsumerWidget {
         firstDate: now,
         lastDate: now.add(const Duration(days: 365 * 2)),
       );
-      if (date == null) return;
+      if (!ctx.mounted || date == null) return;
       final time = await showTimePicker(
         context: ctx,
         initialTime: const TimeOfDay(hour: 9, minute: 0),
@@ -330,7 +330,7 @@ class CommunityActivitiesScreen extends ConsumerWidget {
               firstDate: now,
               lastDate: now.add(const Duration(days: 365)),
             );
-            if (date == null) return;
+            if (!ctx.mounted || date == null) return;
             final time = await showTimePicker(
               context: ctx,
               initialTime: const TimeOfDay(hour: 10, minute: 0),
@@ -467,7 +467,7 @@ class CommunityActivitiesScreen extends ConsumerWidget {
         firstDate: now,
         lastDate: now.add(const Duration(days: 365)),
       );
-      if (date == null) return;
+      if (!ctx.mounted || date == null) return;
       final time = await showTimePicker(
         context: ctx,
         initialTime: const TimeOfDay(hour: 9, minute: 0),

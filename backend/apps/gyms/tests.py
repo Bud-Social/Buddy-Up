@@ -990,7 +990,7 @@ class GymMediaUploadTests(TestCase):
     def _upload(self, kind, filename, content, content_type):
         from django.core.files.uploadedfile import SimpleUploadedFile
         payload = {'kind': kind, 'file': SimpleUploadedFile(filename, content, content_type=content_type)}
-        return self.client.post(f'/api/v1/gyms/mediagym/media/', payload, format='multipart')
+        return self.client.post('/api/v1/gyms/mediagym/media/', payload, format='multipart')
 
     def test_photo_uploads_with_default_storage(self):
         response = self._upload('photo', 'shot.jpg', b'\xff\xd8\xff\xe0fake', 'image/jpeg')
