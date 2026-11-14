@@ -90,6 +90,9 @@ class VerificationSubmissionSerializer(serializers.ModelSerializer):
     )
     gym_handle = serializers.CharField(write_only=True, required=False, allow_blank=True)
     gym_name = serializers.CharField(source='gym.name', read_only=True)
+    endorsed_by_gym_name = serializers.CharField(
+        source='endorsed_by_gym.name', read_only=True,
+    )
 
     # Is a second approver already on this submission? Surfaces on the review
     # queue so a reviewer does not start work on an application that already has
@@ -102,6 +105,7 @@ class VerificationSubmissionSerializer(serializers.ModelSerializer):
         model = VerificationSubmission
         fields = ['id', 'profile', 'verification_type', 'status', 'documents',
                    'document_ids', 'notes', 'gym', 'gym_handle', 'gym_name',
+                   'fast_track', 'endorsed_by_gym', 'endorsed_by_gym_name',
                    'reviewed_by', 'reviewed_at',
                    'submitted_at', 'created_at',
                    'current_step', 'completed_steps', 'face_match_status',
@@ -110,6 +114,7 @@ class VerificationSubmissionSerializer(serializers.ModelSerializer):
                     'issued_date', 'scope_of_practice',
                     'approval_state', 'pending_approval']
         read_only_fields = ['id', 'profile', 'status', 'documents',
+                            'fast_track', 'endorsed_by_gym',
                             'reviewed_by', 'reviewed_at', 'created_at',
                             'current_step', 'completed_steps', 'face_match_status',
                             'face_match_score']

@@ -7,11 +7,18 @@ import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';
+import { VenuesTab } from '@/components/gym/manage/VenuesTab';
+import { OnlineCoachingTab } from '@/components/gym/manage/OnlineCoachingTab';
+import { AnnouncementsTab } from '@/components/gym/manage/AnnouncementsTab';
+import { BusinessSetupTab } from '@/components/gym/manage/BusinessSetupTab';
 import { gymsApi } from '@/api/gyms';
 import type { Gym, GymMembership, GymRoutinePost, GymReview, JoinRequest, GymPartnerMetrics } from '@/types';
 import { RoleDashboardShell, RoleSectionTitle } from './roles/RoleShell';
 
-type Tab = 'overview' | 'members' | 'requests' | 'schedule' | 'reviews';
+type Tab =
+  | 'overview' | 'members' | 'requests' | 'schedule' | 'reviews'
+  | 'venues' | 'coaching' | 'announce' | 'setup';
 
 // Labels are kept short on purpose: the console wraps these into a tab strip,
 // and "Join requests" next to "Analytics" used to push the strip to two rows.
@@ -21,6 +28,10 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'requests', label: 'Requests' },
   { key: 'schedule', label: 'Schedule' },
   { key: 'reviews', label: 'Reviews' },
+  { key: 'venues', label: 'Locations' },
+  { key: 'coaching', label: 'Online' },
+  { key: 'announce', label: 'Announce' },
+  { key: 'setup', label: 'Setup' },
 ];
 
 const toISO = (val: string) => {
@@ -291,6 +302,24 @@ export default function GymManage() {
       {tab === 'overview' && (
         <section className="space-y-3">
           <RoleSectionTitle>Overview</RoleSectionTitle>
+          <Card className="p-4 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium truncate">{gym.name}</p>
+                <VerifiedGymBadge verified={gym.is_verified} />
+              </div>
+              <p className="text-xs text-buddy-text-secondary mt-0.5">
+                @{gym.handle} · {gym.member_count} members
+              </p>
+            </div>
+            <Badge
+              variant={metrics?.registration_status === 'verified' ? 'green' : metrics?.registration_status === 'pending' ? 'gold' : 'silver'}
+              label={
+                metrics?.registration_status === 'verified' ? 'Registered' :
+                metrics?.registration_status === 'pending' ? 'In review' : 'Unregistered'
+              }
+            />
+          </Card>
           {!isAdmin ? (
             <Card className="p-8 text-center text-buddy-text-secondary text-sm">
               Gym analytics are available to owners, co-owners and moderators.
@@ -303,21 +332,59 @@ export default function GymManage() {
             <>
               <div className="grid grid-cols-2 gap-3">
                 <MetricTile label="Active members" value={metrics.active_members} />
+                <MetricTile label="New (30d)" value={metrics.new_members_30d ?? 0} />
                 <MetricTile label="Check-ins (30d)" value={metrics.check_ins_30d} />
                 <MetricTile label="Unique attendees (30d)" value={metrics.unique_attendees_30d} />
                 <MetricTile label="Activities (30d)" value={metrics.scheduled_activities_30d} />
+                <MetricTile label="Churned (30d)" value={metrics.churned_30d ?? 0} />
               </div>
-              <Card className="p-4">
-                <p className="text-xs text-buddy-text-secondary">
-                  Activation rate, last 30 days
-                </p>
-                <p className="text-2xl font-extrabold font-display">
-                  {Math.round((metrics.activation_rate_30d ?? 0) * 100)}%
-                </p>
-                <p className="text-xs text-buddy-text-secondary mt-1">
-                  Members with at least one check-in in the window.
-                </p>
-              </Card>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Card className="p-4">
+                  <p className="text-xs text-buddy-text-secondary">Activation rate, last 30 days</p>
+                  <p className="text-2xl font-extrabold font-display">
+                    {Math.round(metrics.activation_rate_30d ?? 0)}%
+                  </p>
+                  <p className="text-xs text-buddy-text-secondary mt-1">
+                    Members with at least one check-in.
+                  </p>
+                </Card>
+                <Card className="p-4">
+                  <p className="text-xs text-buddy-text-secondary">Retention (30d)</p>
+                  <p className="text-2xl font-extrabold font-display">
+                    {Math.round(metrics.retention_rate_30d ?? 0)}%
+                  </p>
+                  <p className="text-xs text-buddy-text-secondary mt-1">
+                    Active members kept against those lost.
+                  </p>
+                </Card>
+                <Card className="p-4">
+                  <p className="text-xs text-buddy-text-secondary">Capacity used (30d)</p>
+                  <p className="text-2xl font-extrabold font-display">
+                    {Math.round(metrics.capacity_utilization_30d ?? 0)}%
+                  </p>
+                  <p className="text-xs text-buddy-text-secondary mt-1">
+                    Booked slots across scheduled activities.
+                  </p>
+                </Card>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Card className="p-4">
+                  <p className="text-xs text-buddy-text-secondary">Online coaches</p>
+                  <p className="text-xl font-bold font-heading">{metrics.online_coaches ?? 0}</p>
+                  <p className="text-[11px] text-buddy-text-secondary mt-1">
+                    {metrics.offers_online_coaching ? 'Online coaching is on' : 'Online coaching is off'}
+                  </p>
+                </Card>
+                <Card className="p-4">
+                  <p className="text-xs text-buddy-text-secondary">Subscription revenue</p>
+                  <p className="text-xl font-bold font-heading">
+                    {metrics.subscription_revenue ?? 0}
+                  </p>
+                  <p className="text-[11px] text-buddy-text-secondary mt-1">
+                    From membership fees on the gym wallet.
+                  </p>
+                </Card>
+              </div>
             </>
           )}
         </section>
@@ -512,6 +579,35 @@ export default function GymManage() {
             </div>
           )}
         </section>
+      )}
+
+      {/* Locations */}
+      {tab === 'venues' && (
+        <VenuesTab slug={slug || gym.handle} canManage={isAdmin} />
+      )}
+
+      {/* Online coaching */}
+      {tab === 'coaching' && (
+        <OnlineCoachingTab slug={slug || gym.handle} canManage={isAdmin} members={members} />
+      )}
+
+      {/* Announcements */}
+      {tab === 'announce' && (
+        <AnnouncementsTab
+          slug={slug || gym.handle}
+          canManage={isAdmin}
+          memberCount={metrics?.active_members ?? gym.member_count}
+        />
+      )}
+
+      {/* Business setup */}
+      {tab === 'setup' && (
+        <BusinessSetupTab
+          slug={slug || gym.handle}
+          canManage={isAdmin}
+          members={members}
+          onDeleted={() => navigate('/gyms')}
+        />
       )}
 
       {/* Invite modal */}

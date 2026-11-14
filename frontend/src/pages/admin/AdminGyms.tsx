@@ -22,21 +22,20 @@ import { useDebounced, usePortalAction, usePortalList } from './usePortalList';
 
 const ACCESS_OPTIONS = [
   { value: 'all', label: 'Any access' },
-  { value: 'free', label: 'Free' },
-  { value: 'subscription', label: 'Subscription' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'public', label: 'Public' },
+  { value: 'private', label: 'Private' },
+  { value: 'secret', label: 'Secret' },
 ];
 
 const CATEGORY_OPTIONS = [
   { value: 'all', label: 'Any category' },
-  { value: 'gym', label: 'Gym' },
-  { value: 'studio', label: 'Studio' },
-  { value: 'crossfit', label: 'CrossFit' },
-  { value: 'yoga', label: 'Yoga' },
-  { value: 'pilates', label: 'Pilates' },
-  { value: 'martial_arts', label: 'Martial arts' },
-  { value: 'climbing', label: 'Climbing' },
+  { value: 'fitness', label: 'Fitness' },
+  { value: 'strength', label: 'Strength' },
+  { value: 'yoga_wellness', label: 'Yoga & wellness' },
+  { value: 'cardio_running', label: 'Cardio & running' },
+  { value: 'sport_specific', label: 'Sport specific' },
+  { value: 'mixed', label: 'Mixed' },
+  { value: 'other', label: 'Other' },
 ];
 
 const VERIFIED_OPTIONS = [
@@ -73,10 +72,10 @@ export default function AdminGyms() {
     async (gym: PortalGym) => {
       const id = gym.id;
       if (!id) return;
-      const next = gym.is_active === false;
+      const next = gym.is_deleted === true;
       const ok = await action.run(
         id,
-        () => adminPortalApi.updateGym(id, { is_active: next }),
+        () => adminPortalApi.updateGym(id, { is_deleted: !next } as Partial<PortalGym>),
         { success: `${text(gym.name, 'Gym')} is now ${next ? 'active' : 'inactive'}.`, failure: 'Failed to update gym.' },
       );
       if (ok) reload(true);
@@ -116,7 +115,7 @@ export default function AdminGyms() {
         <AdminStatCard label="Matching gyms" value={count.toLocaleString()} />
         <AdminStatCard label="Members on this page" value={totalMembers.toLocaleString()} sub="count only" />
         <AdminStatCard label="Unverified" value={items.filter((g) => g.is_verified !== true).length} />
-        <AdminStatCard label="Inactive" value={items.filter((g) => g.is_active === false).length} />
+        <AdminStatCard label="Inactive" value={items.filter((g) => g.is_deleted === true).length} />
       </div>
 
       <Card className="p-4 flex flex-wrap items-center gap-2">
@@ -153,7 +152,9 @@ export default function AdminGyms() {
                       <StatusBadge status={gym.category} />
                       <StatusBadge status={gym.access_type} />
                       <BooleanBadge value={gym.is_verified} trueLabel="Verified" falseLabel="Unverified" />
-                      <BooleanBadge value={gym.is_active} trueLabel="Active" falseLabel="Inactive" />
+                      <BooleanBadge value={gym.is_deleted !== true} trueLabel="Active" falseLabel="Inactive" />
+                      <StatusBadge status={gym.registration_status} />
+                      {gym.offers_online_coaching && <StatusBadge status="online coaching" />}
                     </div>
                     <p className="text-xs text-buddy-text-secondary mt-1">
                       @{text(gym.handle)} · {text(gym.location_city)}{gym.location_country ? `, ${gym.location_country}` : ''}
@@ -176,12 +177,12 @@ export default function AdminGyms() {
                           {gym.is_verified === true ? 'Unverify' : 'Verify'}
                         </Button>
                         <Button
-                          variant={gym.is_active === false ? 'outline' : 'destructive'}
+                          variant={gym.is_deleted === true ? 'outline' : 'destructive'}
                           size="sm"
                           disabled={busy}
                           onClick={() => toggle(gym)}
                         >
-                          {gym.is_active === false ? 'Activate' : 'Deactivate'}
+                          {gym.is_deleted === true ? 'Activate' : 'Deactivate'}
                         </Button>
                       </>
                     )}
@@ -192,9 +193,18 @@ export default function AdminGyms() {
                     <DataRow label="Gym ID">{text(gym.id)}</DataRow>
                     <DataRow label="Handle">{text(gym.handle)}</DataRow>
                     <DataRow label="Subscription">{text(gym.subscription_type)}</DataRow>
-                    <DataRow label="Verification status">{text(gym.verification_status)}</DataRow>
-                    <DataRow label="Owner">{text(gym.owner)}</DataRow>
+                    <DataRow label="Registration status">{text(gym.registration_status)}</DataRow>
+                    <DataRow label="Legal name">{text(gym.registration?.legal_name)}</DataRow>
+                    <DataRow label="Registration number">{text(gym.registration?.registration_number)}</DataRow>
+                    <DataRow label="Contact email">{text(gym.registration?.contact_email)}</DataRow>
+                    <DataRow label="Country">{text(gym.registration?.country)}</DataRow>
+                    <DataRow label="Online coaching">{gym.offers_online_coaching ? 'Yes' : 'No'}</DataRow>
                     <DataRow label="Members (count only)">{typeof gym.member_count === 'number' ? gym.member_count : '—'}</DataRow>
+                    <DataRow label="Verification submission">{text(gym.verification_submission_id)}</DataRow>
+                    <DataRow label="Deleted at">{gym.deleted_at ? formatDate(gym.deleted_at) : '—'}</DataRow>
+                    {gym.registration?.rejection_reason && (
+                      <DataRow label="Rejection reason">{gym.registration.rejection_reason}</DataRow>
+                    )}
                   </div>
                 )}
               </Card>

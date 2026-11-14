@@ -56,6 +56,10 @@ class Gym(TimestampedModel, SoftDeleteModel):
     member_count = models.IntegerField(default=0)
     location_city = models.CharField(max_length=100, blank=True)
     location_country = models.CharField(max_length=100, blank=True)
+    # Online delivery: a gym can sell remote coaching/workout sessions and
+    # list which of its roster is available for them.
+    offers_online_coaching = models.BooleanField(default=False)
+    coaching_types = models.JSONField(default=list)
 
     class Meta:
         db_table = 'gyms_gym'
@@ -330,3 +334,139 @@ class GymMembershipException(TimestampedModel):
 
     def __str__(self):
         return f'{self.member.username} exception on {self.gym.name} ({self.discount_pct}%)'
+
+
+class RegisteredGymProfile(TimestampedModel):
+    """Business-registration record for a gym with a physical business.
+
+    The authoritative verification decision still lives in
+    ``apps.verification`` (a ``VerificationSubmission`` of type ``gym``);
+    this row carries the business metadata and mirrors the decision status so
+    the partner dashboard can render it without a join. ``status`` is written
+    by ``apps.verification.decisions`` when a decision is applied.
+    """
+
+    STATUS_CHOICES = [
+        ('unverified', 'Not registered'),
+        ('pending', 'Pending review'),
+        ('verified', 'Verified'),
+        ('rejected', 'Rejected'),
+        ('suspended', 'Suspended'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    gym = models.OneToOneField(Gym, on_delete=models.CASCADE, related_name='registered_profile')
+    legal_name = models.CharField(max_length=200, blank=True)
+    registration_number = models.CharField(max_length=80, blank=True, default='')
+    country = models.CharField(max_length=100, blank=True)
+    tax_id = models.CharField(max_length=60, blank=True)
+    website = models.URLField(blank=True)
+    contact_email = models.EmailField(blank=True)
+    contact_phone = models.CharField(max_length=40, blank=True)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='unverified')
+    rejection_reason = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='reviewed_registered_gyms',
+    )
+
+    class Meta:
+        db_table = 'gyms_registered_profile'
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['registration_number']),
+        ]
+
+    def __str__(self):
+        return f'{self.gym.name} ({self.status})'
+
+
+class GymMedia(TimestampedModel):
+    """Public gallery photo or video for a gym.
+
+    Verification paperwork deliberately does not live here: it goes through
+    ``apps.verification`` so it keeps its retention, purge and access-audit
+    path. Only member-facing gallery items are stored on this model.
+    """
+
+    KIND_CHOICES = [
+        ('photo', 'Photo'),
+        ('video', 'Video'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='media')
+    kind = models.CharField(max_length=8, choices=KIND_CHOICES, default='photo')
+    file_url = models.URLField(max_length=1000)
+    thumbnail_url = models.URLField(max_length=1000, blank=True)
+    caption = models.CharField(max_length=240, blank=True)
+    uploaded_by = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='uploaded_gym_media',
+    )
+
+    class Meta:
+        db_table = 'gyms_media'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['gym', 'kind']),
+        ]
+
+    def __str__(self):
+        return f'{self.kind} for {self.gym.name}'
+
+
+class GymOnlineCoach(TimestampedModel):
+    """A roster trainer/coach the gym offers for online coaching."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='online_coaches')
+    coach = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='gym_online_coach_roles',
+    )
+    specialties = models.JSONField(default=list)
+    is_available = models.BooleanField(default=True)
+    note = models.CharField(max_length=240, blank=True)
+    added_by = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='added_gym_online_coaches',
+    )
+
+    class Meta:
+        db_table = 'gyms_online_coach'
+        unique_together = ('gym', 'coach')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.coach.username} online coaching at {self.gym.name}'
+
+
+class GymTrainerEndorsement(TimestampedModel):
+    """A verified registered gym vouching for a trainer/practitioner.
+
+    Endorsement does not verify anybody by itself. It upgrades the person's
+    pending verification submission to the fast-track queue and records which
+    gym vouched, so a reviewer can weigh the reference. A human still decides.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='endorsements')
+    trainer = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='gym_endorsements',
+    )
+    endorsed_by = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='issued_gym_endorsements',
+    )
+    note = models.CharField(max_length=240, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'gyms_trainer_endorsement'
+        unique_together = ('gym', 'trainer')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.gym.name} endorses {self.trainer.username}'

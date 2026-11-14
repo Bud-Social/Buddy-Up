@@ -58,6 +58,15 @@ export interface Gym {
   location_country: string;
   delivery_modes?: string[];
   distance_km?: number | null;
+  offers_online_coaching?: boolean;
+  coaching_types?: string[];
+  online_coaches_count?: number;
+  online_coaches?: GymOnlineCoach[];
+  followed_members?: GymFollowedMember[];
+  followed_members_count?: number;
+  location_summary?: GymLocationSummary;
+  registration_status?: GymRegistrationStatus;
+  gallery?: GymMediaItem[];
   owner_data: OwnerData[];
   membership_role: GymRole | null;
   is_member: boolean;
@@ -71,6 +80,103 @@ export interface MemberData {
   display_name: string;
   avatar_url: string;
   verification_status?: string;
+}
+
+export type GymRegistrationStatus =
+  | 'unverified'
+  | 'pending'
+  | 'verified'
+  | 'rejected'
+  | 'suspended';
+
+export interface GymFollowedMember {
+  user_id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string;
+}
+
+export interface GymLocationSummary {
+  has_physical: boolean;
+  venue_count: number;
+  cities: string[];
+  nearest_km: number | null;
+}
+
+export interface VenueLocation {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  country: string;
+  latitude: number | string | null;
+  longitude: number | string | null;
+  instructions: string;
+  is_primary: boolean;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface GymMediaItem {
+  id: string;
+  kind: 'photo' | 'video';
+  file_url: string;
+  thumbnail_url: string;
+  caption: string;
+  created_at?: string;
+}
+
+export interface GymOnlineCoach {
+  id: string;
+  gym_id?: string;
+  coach?: string;
+  user_id?: string;
+  username?: string;
+  display_name?: string;
+  avatar_url?: string;
+  verification_status?: string;
+  coach_data?: MemberData;
+  specialties: string[];
+  is_available: boolean;
+  note: string;
+  created_at?: string;
+}
+
+export interface GymEndorsement {
+  id: string;
+  gym_id: string;
+  trainer: string;
+  trainer_data: MemberData;
+  note: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface GymRegistration {
+  id: string;
+  gym_id: string;
+  legal_name: string;
+  registration_number: string;
+  country: string;
+  tax_id: string;
+  website: string;
+  contact_email: string;
+  contact_phone: string;
+  status: GymRegistrationStatus;
+  rejection_reason: string;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  registration_documents?: Array<{
+    id: string;
+    document_type: string;
+    status: string;
+    rejection_reason: string;
+    created_at: string;
+  }>;
+  is_verified?: boolean;
+  can_submit?: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface GymMembership {
@@ -93,10 +199,19 @@ export interface GymMembership {
  */
 export interface GymPartnerMetrics {
   active_members: number;
+  new_members_30d?: number;
+  churned_30d?: number;
+  retention_rate_30d?: number;
   check_ins_30d: number;
+  avg_check_ins_per_day_30d?: number;
   unique_attendees_30d: number;
   activation_rate_30d: number;
   scheduled_activities_30d: number;
+  capacity_utilization_30d?: number;
+  online_coaches?: number;
+  offers_online_coaching?: boolean;
+  registration_status?: GymRegistrationStatus;
+  subscription_revenue?: number;
 }
 
 export interface JoinRequest {

@@ -9,6 +9,7 @@ export default {
         'buddy-green': '#00C896',
         'buddy-green-deep': '#009E78',
         'buddy-electric': '#7B61FF',
+        'buddy-blue': '#3B82F6',
         'buddy-orange': '#FF6B35',
         'buddy-black': '#0A0A0A',
         'buddy-surface': '#141414',

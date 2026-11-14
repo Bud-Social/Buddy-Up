@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Users, Star, Lock, Globe, EyeOff, MapPin, Dumbbell, LocateFixed, Loader2 } from 'lucide-react';
+import { Search, Plus, Users, LocateFixed, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { NearbyNotice } from '@/components/ui/NearbyNotice';
+import { GymCard } from '@/components/gym/GymCard';
 import { gymsApi } from '@/api/gyms';
-import { requestLocation, formatDistance, type GeoMeta } from '@/lib/geo';
+import { requestLocation, type GeoMeta } from '@/lib/geo';
 import type { Gym } from '@/types';
 
 type FormatTab = 'all' | 'virtual' | 'hybrid' | 'physical';
@@ -83,12 +83,6 @@ export default function Gyms() {
   };
 
   const showDistance = format !== 'virtual';
-
-  const accessIcon = (type: string) => {
-    if (type === 'public') return <Globe size={12} />;
-    if (type === 'private') return <Lock size={12} />;
-    return <EyeOff size={12} />;
-  };
 
   return (
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
@@ -208,41 +202,12 @@ export default function Gyms() {
           {error && <ErrorBanner message={error} onRetry={fetchGyms} className="mb-3" />}
           <div className="space-y-3">
           {gyms.map((gym) => (
-            <Card key={gym.id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer"
-              onClick={() => navigate(`/gyms/${gym.handle}`)}>
-              <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-xl bg-buddy-green/10 flex items-center justify-center flex-shrink-0 text-buddy-green">
-                  {gym.logo_url ? <img src={gym.logo_url} alt="" className="w-full h-full rounded-xl object-cover" /> : <Dumbbell size={26} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-heading font-semibold text-sm truncate">{gym.name}</h3>
-                    {gym.is_verified && <Badge variant="green" label="Verified" size="sm" />}
-                    {gym.subscription_type === 'paid' && <Badge variant="gold" label="Paid" size="sm" />}
-                  </div>
-                  <p className="text-xs text-buddy-text-secondary mt-0.5">@{gym.handle} · {gym.category.replace('_', ' ')}</p>
-                  <div className="flex items-center gap-3 mt-1.5 text-xs text-buddy-text-secondary">
-                    <span className="flex items-center gap-1"><Users size={12} /> {gym.member_count}</span>
-                    {gym.is_reviews_enabled && gym.average_rating !== undefined && (
-                      <span className="flex items-center gap-1 text-yellow-500">
-                        <Star size={12} className="fill-current" /> {gym.average_rating.toFixed(1)} ({gym.review_count})
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1">{accessIcon(gym.access_type)} {gym.access_type}</span>
-                    {gym.delivery_modes?.includes('virtual') && <Badge variant="gold" label="Virtual" size="sm" />}
-                    {gym.delivery_modes?.includes('hybrid') && <Badge variant="green" label="Hybrid" size="sm" />}
-                    {showDistance && gym.distance_km !== undefined && gym.distance_km !== null && (
-                      <span className="flex items-center gap-1 text-buddy-green font-medium">
-                        <MapPin size={12} /> {formatDistance(gym.distance_km)}
-                      </span>
-                    )}
-                    {gym.location_city && (gym.distance_km === undefined || gym.distance_km === null) && (
-                      <span className="flex items-center gap-1"><MapPin size={12} /> {gym.location_city}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Card>
+            <GymCard
+              key={gym.id}
+              gym={gym}
+              showDistance={showDistance}
+              onClick={() => navigate(`/gyms/${gym.handle}`)}
+            />
           ))}
           </div>
         </>

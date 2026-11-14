@@ -365,13 +365,58 @@ class PortalGymSerializer(serializers.ModelSerializer):
     endpoints for that.
     """
 
+    registration_status = serializers.SerializerMethodField()
+    registration = serializers.SerializerMethodField()
+    verification_submission_id = serializers.SerializerMethodField()
+
     class Meta:
         model = Gym
         fields = [
             'id', 'name', 'handle', 'category', 'access_type',
             'subscription_type', 'is_verified', 'is_deleted', 'deleted_at',
             'member_count', 'location_city', 'location_country', 'created_at',
+            'offers_online_coaching', 'registration_status', 'registration',
+            'verification_submission_id',
         ]
+
+    def _registration(self, obj):
+        try:
+            return obj.registered_profile
+        except Exception:  # noqa: BLE001 - no registration row yet
+            return None
+
+    def get_registration_status(self, obj):
+        profile = self._registration(obj)
+        return profile.status if profile else 'unverified'
+
+    def get_registration(self, obj):
+        profile = self._registration(obj)
+        if profile is None:
+            return None
+        return {
+            'legal_name': profile.legal_name,
+            'registration_number': profile.registration_number,
+            'country': profile.country,
+            'tax_id': profile.tax_id,
+            'website': profile.website,
+            'contact_email': profile.contact_email,
+            'contact_phone': profile.contact_phone,
+            'status': profile.status,
+            'rejection_reason': profile.rejection_reason,
+            'submitted_at': profile.submitted_at,
+            'reviewed_at': profile.reviewed_at,
+        }
+
+    def get_verification_submission_id(self, obj):
+        from apps.verification.models import VerificationSubmission
+        submission = (
+            VerificationSubmission.objects
+            .filter(gym=obj, verification_type='gym')
+            .exclude(status='rejected')
+            .order_by('-created_at')
+            .first()
+        )
+        return str(submission.id) if submission else None
 
 
 class GymAdminUpdateSerializer(serializers.Serializer):

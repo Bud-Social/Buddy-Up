@@ -241,6 +241,30 @@ class VerificationSubmissionViewSet(
             )
             submission.documents.add(*docs)
 
+        # A verified registered gym that already endorsed this person puts the
+        # new submission straight into the priority queue. The decision is
+        # still a human one — see apps.verification.decisions.
+        if verification_type in ('trainer', 'practitioner'):
+            try:
+                from apps.gyms.models import GymTrainerEndorsement
+                endorsement = (
+                    GymTrainerEndorsement.objects
+                    .filter(
+                        trainer=profile,
+                        is_active=True,
+                        gym__registered_profile__status='verified',
+                    )
+                    .select_related('gym')
+                    .order_by('-created_at')
+                    .first()
+                )
+            except Exception:  # pragma: no cover - gyms app unavailable
+                endorsement = None
+            if endorsement is not None:
+                submission.fast_track = True
+                submission.endorsed_by_gym = endorsement.gym
+                submission.save(update_fields=['fast_track', 'endorsed_by_gym', 'updated_at'])
+
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
         """(Re)start the multistep ID flow for this draft submission."""

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Globe, Lock, EyeOff, X, ArrowUp, ArrowDown, Check, AlertCircle, Search } from 'lucide-react';
+import { Globe, Lock, EyeOff, X, ArrowUp, ArrowDown, Check, AlertCircle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { VenueDraftEditor } from '@/components/gym/VenueDraftEditor';
+import { emptyVenueDraft, type VenueDraft } from '@/components/gym/venueDraft';
 import { gymsApi } from '@/api/gyms';
-import type { GymCategory, CityResult, GymCategoryPricing } from '@/types';
+import type { GymCategory, GymCategoryPricing } from '@/types';
 
 const RULE_TEMPLATES = [
   'No harassment or hate speech',
@@ -32,23 +34,16 @@ export default function CreateGymPage() {
   const [accessType, setAccessType] = useState('public');
   const [subscriptionType, setSubscriptionType] = useState('free');
   const [contentRating] = useState<'general' | 'mature'>('general');
-  const [locationCity, setLocationCity] = useState('');
-  const [locationCountry, setLocationCountry] = useState('');
-  const [cityQuery, setCityQuery] = useState('');
-  const [cityResults, setCityResults] = useState<CityResult[]>([]);
-  const [citySearching, setCitySearching] = useState(false);
-  const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [rules, setRules] = useState<string[]>(['']);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [categoryPricing, setCategoryPricing] = useState<GymCategoryPricing[]>([]);
+  const [venues, setVenues] = useState<VenueDraft[]>([emptyVenueDraft(true)]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const cityDebounceRef = useRef<ReturnType<typeof setTimeout>>();
   const handleDebounceRef = useRef<ReturnType<typeof setTimeout>>();
-  const cityInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     gymsApi.getCategories().then((res) => {
@@ -103,37 +98,6 @@ export default function CreateGymPage() {
     setHandle(sanitized);
     clearTimeout(handleDebounceRef.current);
     handleDebounceRef.current = setTimeout(() => checkHandle(sanitized), 500);
-  };
-
-  const searchCities = useCallback(async (q: string) => {
-    if (q.length < 2) {
-      setCityResults([]);
-      setCitySearching(false);
-      return;
-    }
-    setCitySearching(true);
-    try {
-      const res = await gymsApi.searchCities(q);
-      if (res.success) setCityResults(res.data);
-    } catch {
-      setCityResults([]);
-    } finally {
-      setCitySearching(false);
-    }
-  }, []);
-
-  const onCityInputChange = (value: string) => {
-    setCityQuery(value);
-    setShowCityDropdown(true);
-    clearTimeout(cityDebounceRef.current);
-    cityDebounceRef.current = setTimeout(() => searchCities(value), 300);
-  };
-
-  const selectCity = (result: CityResult) => {
-    setLocationCity(result.city);
-    setLocationCountry(result.country);
-    setCityQuery(result.description);
-    setShowCityDropdown(false);
   };
 
   const toggleCategory = (catId: string | number) => {
@@ -232,6 +196,7 @@ export default function CreateGymPage() {
     setIsSubmitting(true);
     setError('');
     try {
+      const primaryVenue = venues.find((v) => v.is_primary) ?? venues[0];
       const payload: Record<string, unknown> = {
         name: name.trim(),
         handle: handle.trim().toLowerCase(),
@@ -241,8 +206,8 @@ export default function CreateGymPage() {
         access_type: accessType,
         subscription_type: subscriptionType,
         content_rating: contentRating,
-        location_city: locationCity || undefined,
-        location_country: locationCountry || undefined,
+        location_city: primaryVenue?.city || undefined,
+        location_country: primaryVenue?.country || undefined,
         logo_url: logoUrl || undefined,
         cover_url: coverUrl || undefined,
         rules: rules.filter(Boolean),
@@ -260,8 +225,30 @@ export default function CreateGymPage() {
         }));
       }
 
-      await gymsApi.create(payload as never);
-      navigate(`/gyms/${handle.trim().toLowerCase()}`);
+      const created = await gymsApi.create(payload as never);
+      const createdHandle = created.data?.handle || handle.trim().toLowerCase();
+
+      // Venues need the gym to exist, so they are created right after it.
+      // A venue failure must not pretend the gym failed — the gym is real and
+      // the owner can add the location from the dashboard.
+      for (const venue of venues.filter((v) => v.name.trim())) {
+        try {
+          await gymsApi.createVenue(createdHandle, {
+            name: venue.name.trim(),
+            address: venue.address,
+            city: venue.city,
+            country: venue.country,
+            latitude: venue.latitude,
+            longitude: venue.longitude,
+            instructions: venue.instructions,
+            is_primary: venue.is_primary,
+          });
+        } catch {
+          // Non-fatal: reported on the manage page.
+        }
+      }
+
+      navigate(`/gyms/${createdHandle}`);
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
       setError(data?.message || 'Failed to create gym.');
@@ -290,7 +277,7 @@ export default function CreateGymPage() {
         </div>
 
         <div className="flex gap-1 mb-6">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div key={s} className={`flex-1 h-1 rounded-full ${s <= step ? 'bg-buddy-green' : 'bg-buddy-surface-raised'}`} />
           ))}
         </div>
@@ -335,18 +322,14 @@ export default function CreateGymPage() {
                   >{c.display_name}</button>
                 ))}
               </div>
-              {selectedCategoryIds.some((id) => {
-                const cat = categories.find((c) => c.id === id);
-                return cat && cat.name === 'other';
-              }) && (
-                <div className="flex gap-2 mt-2">
-                  <Input value={customCategory} onChange={(e) => setCustomCategory(e.target.value)}
-                    placeholder="Enter custom category name..." />
-                  <Button variant="outline" size="sm" onClick={addCustomCategory} disabled={!customCategory.trim()}>
-                    Add
-                  </Button>
-                </div>
-              )}
+              <div className="flex gap-2 mt-2">
+                <Input value={customCategory} onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="Add your own category (e.g. calisthenics)…"
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomCategory())} />
+                <Button variant="outline" size="sm" onClick={addCustomCategory} disabled={!customCategory.trim()}>
+                  Add
+                </Button>
+              </div>
               {selectedCategoryIds.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
                   {selectedCategoryIds.map((id) => {
@@ -370,30 +353,6 @@ export default function CreateGymPage() {
           <div className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-buddy-text-secondary mb-2">Access Type</label>
-              <div className="space-y-2">
-                {[
-                  { value: 'public', icon: Globe, label: 'Public', desc: 'Anyone can find and join this gym' },
-                  { value: 'private', icon: Lock, label: 'Private', desc: 'Users must request to join. You approve.' },
-                  { value: 'secret', icon: EyeOff, label: 'Secret', desc: 'Invite-only. Not discoverable.' },
-                ].map(({ value, icon: Icon, label, desc }) => (
-                  <button key={value} onClick={() => setAccessType(value)}
-                    className={`w-full p-4 rounded-xl border-2 text-left transition-colors ${
-                      accessType === value ? 'border-buddy-green bg-buddy-green/5' : 'border-buddy-surface hover:border-buddy-text-secondary/30'
-                    }`}>
-                    <div className="flex items-center gap-3">
-                      <Icon size={20} className="text-buddy-green" />
-                      <div>
-                        <p className="font-medium text-sm">{label}</p>
-                        <p className="text-xs text-buddy-text-secondary">{desc}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-buddy-text-secondary mb-2">Subscription Model</label>
               <div className="space-y-2">
                 {[
                   { value: 'public', icon: Globe, label: 'Public', desc: 'Anyone can find and join this gym' },
@@ -478,36 +437,6 @@ export default function CreateGymPage() {
                 </div>
               </div>
             )}
-
-            <div className="relative">
-              <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5">Location (optional)</label>
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-buddy-text-secondary" />
-                <Input
-                  ref={cityInputRef}
-                  value={cityQuery}
-                  onChange={(e) => onCityInputChange(e.target.value)}
-                  onFocus={() => cityResults.length > 0 && setShowCityDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
-                  placeholder="Search for a city..."
-                  className="pl-9"
-                />
-              </div>
-              {showCityDropdown && (cityResults.length > 0 || citySearching) && (
-                <div className="absolute z-10 mt-1 w-full bg-buddy-surface-raised border border-buddy-surface rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                  {citySearching ? (
-                    <div className="p-3 text-xs text-buddy-text-secondary text-center">Searching...</div>
-                  ) : (
-                    cityResults.map((r) => (
-                      <button key={r.place_id} onMouseDown={() => selectCity(r)}
-                        className="w-full text-left px-3 py-2 text-sm text-buddy-text-primary hover:bg-buddy-surface transition-colors">
-                        {r.description}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
 
             <div>
               <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5">
@@ -609,6 +538,24 @@ export default function CreateGymPage() {
 
         {step === 3 && (
           <div className="space-y-5">
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Locations</h2>
+              <p className="text-xs text-buddy-text-secondary mb-3">
+                Add every physical branch. Drop a pin so members see how far the
+                nearest one is. Virtual-only gyms can skip this step.
+              </p>
+              <VenueDraftEditor venues={venues} onChange={setVenues} />
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setStep(2)} className="flex-1">Back</Button>
+              <Button className="flex-1" size="lg" onClick={() => setStep(4)}>Next</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-5">
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5">Gym Logo URL</label>
@@ -656,10 +603,25 @@ export default function CreateGymPage() {
                   <p className="font-medium text-buddy-text-primary">Subscription</p>
                   <p>{subscriptionType === 'paid' ? 'Paid membership' : 'Free'}</p>
                 </div>
-                {locationCity && (
+                {venues.filter((v) => v.name.trim()).length > 0 && (
                   <div>
-                    <p className="font-medium text-buddy-text-primary">Location</p>
-                    <p>{locationCity}{locationCountry ? `, ${locationCountry}` : ''}</p>
+                    <p className="font-medium text-buddy-text-primary">
+                      Locations ({venues.filter((v) => v.name.trim()).length})
+                    </p>
+                    <ul className="space-y-0.5">
+                      {venues.filter((v) => v.name.trim()).map((v) => (
+                        <li key={v.key} className="flex items-center gap-1">
+                          {v.is_primary && <span className="text-buddy-gold text-[10px]">Primary</span>}
+                          <span>{v.name}</span>
+                          {(v.city || v.country) && (
+                            <span className="text-buddy-text-secondary/70">
+                              — {[v.city, v.country].filter(Boolean).join(', ')}
+                            </span>
+                          )}
+                          {v.latitude !== null && <MapPin size={11} className="text-buddy-green" />}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
                 {tags.length > 0 && (
@@ -672,7 +634,7 @@ export default function CreateGymPage() {
             </div>
 
             <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => setStep(2)} className="flex-1">Back</Button>
+              <Button variant="ghost" onClick={() => setStep(3)} className="flex-1">Back</Button>
               <Button className="flex-1" size="lg" onClick={handleCreate} isLoading={isSubmitting}>Create Gym</Button>
             </div>
           </div>

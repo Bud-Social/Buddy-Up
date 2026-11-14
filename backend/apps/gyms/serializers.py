@@ -3,6 +3,7 @@ from .models import (
     AttendanceRecord, Gym, GymMembership, GymCategory, GymCategoryPricing,
     GymOnboardingChecklist, JoinRequest, GymInvite, GymRoutinePost, GymReview,
     GymDonation, GymMembershipException, RoutineSlotEnrollment, VenueLocation,
+    GymMedia, GymOnlineCoach, GymTrainerEndorsement, RegisteredGymProfile,
 )
 
 
@@ -35,6 +36,11 @@ class GymSerializer(serializers.ModelSerializer):
     categories = GymCategorySerializer(many=True, read_only=True)
     category_pricing = GymCategoryPricingSerializer(many=True, read_only=True)
     delivery_modes = serializers.SerializerMethodField()
+    followed_members = serializers.SerializerMethodField()
+    followed_members_count = serializers.SerializerMethodField()
+    location_summary = serializers.SerializerMethodField()
+    registration_status = serializers.SerializerMethodField()
+    online_coaches_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Gym
@@ -47,10 +53,110 @@ class GymSerializer(serializers.ModelSerializer):
             'average_rating', 'review_count', 'recent_reviewers',
             'rules', 'tags', 'member_count', 'active_today',
             'location_city', 'location_country', 'delivery_modes',
+            'offers_online_coaching', 'coaching_types', 'online_coaches_count',
+            'followed_members', 'followed_members_count', 'location_summary',
+            'registration_status',
             'owner_data', 'membership_role', 'is_member',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'member_count', 'is_verified', 'created_at', 'updated_at']
+
+    # ── Followed members ─────────────────────────────────────────────────
+    def _followed_ids(self):
+        """Profile ids the viewer follows, cached for the whole list.
+
+        One query per response rather than one per gym card.
+        """
+        cache = self.context.setdefault('_followed_ids', None)
+        if cache is not None:
+            return cache
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            cache = []
+        else:
+            cache = list(
+                request.user.profile.following.values_list('followee_id', flat=True)
+            )
+        self.context['_followed_ids'] = cache
+        return cache
+
+    def _followed_member_rows(self, obj):
+        cache = self.context.setdefault('_followed_cache', {})
+        key = obj.pk
+        if key in cache:
+            return cache[key]
+        followed = self._followed_ids()
+        if not followed:
+            cache[key] = []
+            return []
+        memberships = (
+            GymMembership.objects
+            .filter(gym=obj, subscription_active=True, member_id__in=followed)
+            .select_related('member')
+            .order_by('-created_at')
+        )
+        rows = [{
+            'user_id': str(m.member.user_id),
+            'username': m.member.username,
+            'display_name': m.member.display_name,
+            'avatar_url': m.member.avatar_url,
+        } for m in memberships]
+        cache[key] = rows
+        return rows
+
+    def get_followed_members(self, obj):
+        return self._followed_member_rows(obj)[:5]
+
+    def get_followed_members_count(self, obj):
+        return len(self._followed_member_rows(obj))
+
+    # ── Location summary ─────────────────────────────────────────────────
+    def _active_venues(self, obj):
+        cache = self.context.setdefault('_venue_cache', {})
+        key = obj.pk
+        if key not in cache:
+            cache[key] = [v for v in obj.venues.all() if v.is_active]
+        return cache[key]
+
+    def get_location_summary(self, obj):
+        venues = self._active_venues(obj)
+        cities = []
+        for venue in venues:
+            city = (venue.city or '').strip()
+            if city and city not in cities:
+                cities.append(city)
+        nearest = self.context.get('distance_km_by_gym', {}).get(str(obj.pk))
+        if nearest is None and venues:
+            lat = self.context.get('viewer_lat')
+            lng = self.context.get('viewer_lng')
+            if lat is not None and lng is not None:
+                from common.geo import haversine_km
+                distances = []
+                for venue in venues:
+                    if venue.latitude is None or venue.longitude is None:
+                        continue
+                    try:
+                        distances.append(haversine_km(
+                            lat, lng, float(venue.latitude), float(venue.longitude),
+                        ))
+                    except (TypeError, ValueError):
+                        continue
+                nearest = min(distances) if distances else None
+        return {
+            'has_physical': bool(venues),
+            'venue_count': len(venues),
+            'cities': cities[:3],
+            'nearest_km': round(nearest, 1) if nearest is not None else None,
+        }
+
+    def get_registration_status(self, obj):
+        try:
+            return obj.registered_profile.status
+        except RegisteredGymProfile.DoesNotExist:
+            return 'unverified'
+
+    def get_online_coaches_count(self, obj):
+        return obj.online_coaches.filter(is_available=True).count()
 
     def get_delivery_modes(self, obj):
         has_physical = getattr(obj, 'has_physical', None)
@@ -148,6 +254,40 @@ class GymSerializer(serializers.ModelSerializer):
         } for r in recent]
 
 
+class GymDetailSerializer(GymSerializer):
+    """Gym payload with the heavier detail-only collections."""
+
+    gallery = serializers.SerializerMethodField()
+    online_coaches = serializers.SerializerMethodField()
+
+    class Meta(GymSerializer.Meta):
+        fields = GymSerializer.Meta.fields + ['gallery', 'online_coaches']
+
+    def get_gallery(self, obj):
+        rows = obj.media.all()[:12]
+        return [{
+            'id': str(item.id),
+            'kind': item.kind,
+            'file_url': item.file_url,
+            'thumbnail_url': item.thumbnail_url,
+            'caption': item.caption,
+        } for item in rows]
+
+    def get_online_coaches(self, obj):
+        rows = obj.online_coaches.select_related('coach').all()[:20]
+        return [{
+            'id': str(row.id),
+            'user_id': str(row.coach.user_id),
+            'username': row.coach.username,
+            'display_name': row.coach.display_name,
+            'avatar_url': row.coach.avatar_url,
+            'verification_status': row.coach.verification_status,
+            'specialties': row.specialties or [],
+            'is_available': row.is_available,
+            'note': row.note,
+        } for row in rows]
+
+
 class CategoryPricingInputSerializer(serializers.Serializer):
     category = serializers.IntegerField()
     fee_per_day = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
@@ -167,10 +307,11 @@ class CreateGymSerializer(serializers.ModelSerializer):
         model = Gym
         fields = [
             'name', 'handle', 'description', 'category', 'content_rating',
-            'category_ids',
+            'category_ids', 'logo_url', 'cover_url',
             'access_type', 'subscription_type',
             'monthly_fee_artifacts', 'join_fee_artifacts',
             'rules', 'tags', 'location_city', 'location_country',
+            'offers_online_coaching', 'coaching_types',
             'category_pricing',
         ]
 
@@ -505,3 +646,175 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
         fields = ['id', 'member', 'member_username', 'routine_post', 'venue', 'status',
                   'checked_in_at', 'checked_out_at', 'source', 'notes', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+# ---------------------------------------------------------------------------
+# Phase A: registration, gallery, online coaching, endorsements
+# ---------------------------------------------------------------------------
+
+class GymMediaSerializer(serializers.ModelSerializer):
+    uploaded_by_data = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GymMedia
+        fields = ['id', 'gym_id', 'kind', 'file_url', 'thumbnail_url', 'caption',
+                  'uploaded_by_data', 'created_at']
+        read_only_fields = ['id', 'gym_id', 'uploaded_by_data', 'created_at']
+
+    def get_uploaded_by_data(self, obj):
+        if not obj.uploaded_by:
+            return None
+        return {
+            'user_id': str(obj.uploaded_by.user_id),
+            'username': obj.uploaded_by.username,
+            'display_name': obj.uploaded_by.display_name,
+            'avatar_url': obj.uploaded_by.avatar_url,
+        }
+
+
+class RegisteredGymProfileSerializer(serializers.ModelSerializer):
+    gym_id = serializers.UUIDField(read_only=True)
+    registration_documents = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RegisteredGymProfile
+        fields = [
+            'id', 'gym_id', 'legal_name', 'registration_number', 'country',
+            'tax_id', 'website', 'contact_email', 'contact_phone',
+            'status', 'rejection_reason', 'submitted_at', 'reviewed_at',
+            'registration_documents', 'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'gym_id', 'status', 'rejection_reason', 'submitted_at',
+            'reviewed_at', 'registration_documents', 'created_at', 'updated_at',
+        ]
+
+    def get_registration_documents(self, obj):
+        from apps.verification.models import VerificationSubmission
+        submission = (
+            VerificationSubmission.objects
+            .filter(gym=obj.gym, verification_type='gym')
+            .prefetch_related('documents')
+            .order_by('-created_at')
+            .first()
+        )
+        if submission is None:
+            return []
+        return [{
+            'id': str(doc.id),
+            'document_type': doc.document_type,
+            'status': doc.status,
+            'rejection_reason': doc.rejection_reason,
+            'created_at': doc.created_at,
+        } for doc in submission.documents.all()]
+
+
+class SubmitRegistrationSerializer(serializers.ModelSerializer):
+    """Business metadata written by the gym's owner before review."""
+
+    class Meta:
+        model = RegisteredGymProfile
+        fields = ['legal_name', 'registration_number', 'country', 'tax_id',
+                  'website', 'contact_email', 'contact_phone']
+
+    def validate_legal_name(self, value):
+        if not value.strip():
+            raise serializers.ValidationError('Legal business name is required.')
+        return value.strip()
+
+    def validate_registration_number(self, value):
+        value = (value or '').strip()
+        if not value:
+            raise serializers.ValidationError('Registration number is required.')
+        return value
+
+
+class GymOnlineCoachSerializer(serializers.ModelSerializer):
+    coach_data = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GymOnlineCoach
+        fields = ['id', 'gym_id', 'coach', 'coach_data', 'specialties',
+                  'is_available', 'note', 'created_at']
+        read_only_fields = ['id', 'gym_id', 'coach', 'coach_data', 'created_at']
+
+    def get_coach_data(self, obj):
+        return {
+            'user_id': str(obj.coach.user_id),
+            'username': obj.coach.username,
+            'display_name': obj.coach.display_name,
+            'avatar_url': obj.coach.avatar_url,
+            'verification_status': obj.coach.verification_status,
+        }
+
+
+class OnlineCoachingUpdateSerializer(serializers.Serializer):
+    offers_online_coaching = serializers.BooleanField(required=False)
+    coaching_types = serializers.ListField(
+        child=serializers.CharField(max_length=40), required=False, default=list,
+    )
+
+    def validate_coaching_types(self, value):
+        cleaned = []
+        for item in value:
+            item = (item or '').strip()
+            if item and item not in cleaned:
+                cleaned.append(item)
+        if len(cleaned) > 20:
+            raise serializers.ValidationError('At most 20 coaching types.')
+        return cleaned
+
+
+class AddOnlineCoachSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    user_id = serializers.UUIDField(required=False)
+    specialties = serializers.ListField(
+        child=serializers.CharField(max_length=40), required=False, default=list,
+    )
+    is_available = serializers.BooleanField(default=True)
+    note = serializers.CharField(max_length=240, required=False, allow_blank=True, default='')
+
+    def validate(self, data):
+        if not data.get('username') and not data.get('user_id'):
+            raise serializers.ValidationError('Either username or user_id is required.')
+        return data
+
+
+class GymTrainerEndorsementSerializer(serializers.ModelSerializer):
+    trainer_data = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GymTrainerEndorsement
+        fields = ['id', 'gym_id', 'trainer', 'trainer_data', 'note',
+                  'is_active', 'created_at']
+        read_only_fields = ['id', 'gym_id', 'trainer', 'trainer_data', 'created_at']
+
+    def get_trainer_data(self, obj):
+        return {
+            'user_id': str(obj.trainer.user_id),
+            'username': obj.trainer.username,
+            'display_name': obj.trainer.display_name,
+            'avatar_url': obj.trainer.avatar_url,
+            'verification_status': obj.trainer.verification_status,
+        }
+
+
+class CreateEndorsementSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    user_id = serializers.UUIDField(required=False)
+    verification_type = serializers.ChoiceField(
+        choices=['trainer', 'practitioner'], default='trainer',
+    )
+    note = serializers.CharField(max_length=240, required=False, allow_blank=True, default='')
+
+    def validate(self, data):
+        if not data.get('username') and not data.get('user_id'):
+            raise serializers.ValidationError('Either username or user_id is required.')
+        return data
+
+
+class GymAnnouncementSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=150)
+    body = serializers.CharField(max_length=2000)
+    notify_members = serializers.BooleanField(default=True)
+

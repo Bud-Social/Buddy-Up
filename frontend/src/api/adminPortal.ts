@@ -210,24 +210,40 @@ export interface UpdateOrderStatusPayload {
 /* Gyms                                                                */
 /* ------------------------------------------------------------------ */
 
+export interface PortalGymRegistration {
+  legal_name?: string | null;
+  registration_number?: string | null;
+  country?: string | null;
+  tax_id?: string | null;
+  website?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  status?: string | null;
+  rejection_reason?: string | null;
+  submitted_at?: string | null;
+  reviewed_at?: string | null;
+}
+
 export interface PortalGym {
   id?: string;
   handle?: string;
   name?: string;
-  description?: string | null;
   category?: string | null;
   access_type?: string | null;
   subscription_type?: string | null;
-  is_active?: boolean;
+  /** Liveness is SoftDeleteModel's `is_deleted` — Gym has no is_active column. */
+  is_deleted?: boolean;
+  deleted_at?: string | null;
   is_verified?: boolean;
   /** Count only — the portal deliberately never exposes a member roster. */
   member_count?: number;
-  logo_url?: string | null;
   location_city?: string | null;
   location_country?: string | null;
-  owner?: string | null;
-  verification_status?: string | null;
   created_at?: string | null;
+  offers_online_coaching?: boolean;
+  registration_status?: string;
+  registration?: PortalGymRegistration | null;
+  verification_submission_id?: string | null;
 }
 
 export interface PortalGymFilters extends PortalPaginationParams {

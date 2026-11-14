@@ -3,7 +3,8 @@ import type {
   ApiResponse, Gym, GymMembership, GymCategory,
   JoinRequest, GymInvite, CityResult, GymCategoryPricing,
   GymRoutinePost, GymReview, GymDonation, GymMembershipException, MembershipCheckoutResult,
-  GymPartnerMetrics,
+  GymPartnerMetrics, GymMediaItem, GymOnlineCoach, GymEndorsement, GymRegistration,
+  VenueLocation,
 } from '@/types';
 
 export interface CreateGymPayload {
@@ -16,10 +17,25 @@ export interface CreateGymPayload {
   subscription_type: string;
   location_city?: string;
   location_country?: string;
+  logo_url?: string;
+  cover_url?: string;
+  offers_online_coaching?: boolean;
+  coaching_types?: string[];
   rules?: string[];
   tags?: string[];
   content_rating?: 'general' | 'mature';
   category_pricing?: Omit<GymCategoryPricing, 'id' | 'category_name'>[];
+}
+
+export interface VenueLocationPayload {
+  name: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  instructions?: string;
+  is_primary?: boolean;
 }
 
 export interface GymListParams {
@@ -162,4 +178,80 @@ export const gymsApi = {
 
   getEvents: (slug: string, upcoming: boolean = true) =>
     apiClient.get<ApiResponse<any[]>>(`/gyms/${slug}/events/`, { params: { upcoming } }).then((r) => r.data),
+
+  // ── Locations ────────────────────────────────────────────────────────
+  getVenues: (slug: string) =>
+    apiClient.get<ApiResponse<VenueLocation[]>>(`/gyms/${slug}/venues/`).then((r) => r.data),
+
+  createVenue: (slug: string, data: VenueLocationPayload) =>
+    apiClient.post<ApiResponse<VenueLocation>>(`/gyms/${slug}/venues/`, data).then((r) => r.data),
+
+  updateVenue: (slug: string, venueId: string, data: Partial<VenueLocationPayload>) =>
+    apiClient.patch<ApiResponse<VenueLocation>>(`/gyms/${slug}/venues/${venueId}/`, data).then((r) => r.data),
+
+  deleteVenue: (slug: string, venueId: string) =>
+    apiClient.delete<ApiResponse<null>>(`/gyms/${slug}/venues/${venueId}/`).then((r) => r.data),
+
+  // ── Business registration & verification ─────────────────────────────
+  getRegistration: (slug: string) =>
+    apiClient.get<ApiResponse<GymRegistration>>(`/gyms/${slug}/registration/`).then((r) => r.data),
+
+  saveRegistration: (slug: string, data: Partial<GymRegistration>) =>
+    apiClient.patch<ApiResponse<GymRegistration>>(`/gyms/${slug}/registration/`, data).then((r) => r.data),
+
+  submitRegistration: (slug: string, data: Partial<GymRegistration> & { document_ids?: string[] }) =>
+    apiClient.post<ApiResponse<GymRegistration>>(`/gyms/${slug}/registration/`, data).then((r) => r.data),
+
+  getVerificationStatus: (slug: string) =>
+    apiClient.get<ApiResponse<GymRegistration>>(`/gyms/${slug}/verification-status/`).then((r) => r.data),
+
+  // ── Gallery ──────────────────────────────────────────────────────────
+  getMedia: (slug: string, kind?: 'photo' | 'video') =>
+    apiClient.get<ApiResponse<GymMediaItem[]>>(`/gyms/${slug}/media/`, { params: { kind } }).then((r) => r.data),
+
+  uploadMedia: (slug: string, files: File[], kind: 'photo' | 'video' = 'photo', caption = '') => {
+    const form = new FormData();
+    files.forEach((file) => form.append('file', file));
+    form.append('kind', kind);
+    if (caption) form.append('caption', caption);
+    return apiClient.post<ApiResponse<GymMediaItem[]>>(`/gyms/${slug}/media/`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data);
+  },
+
+  deleteMedia: (slug: string, mediaId: string) =>
+    apiClient.delete(`/gyms/${slug}/media/${mediaId}/`).then((r) => r.data),
+
+  // ── Online coaching ──────────────────────────────────────────────────
+  getOnlineCoaching: (slug: string) =>
+    apiClient.get<ApiResponse<{ offers_online_coaching: boolean; coaching_types: string[]; coaches: GymOnlineCoach[] }>>(
+      `/gyms/${slug}/online-coaching/`,
+    ).then((r) => r.data),
+
+  updateOnlineCoaching: (slug: string, data: { offers_online_coaching?: boolean; coaching_types?: string[] }) =>
+    apiClient.patch<ApiResponse<{ offers_online_coaching: boolean; coaching_types: string[] }>>(
+      `/gyms/${slug}/online-coaching/`, data,
+    ).then((r) => r.data),
+
+  addOnlineCoach: (slug: string, data: { username?: string; user_id?: string; specialties?: string[]; is_available?: boolean; note?: string }) =>
+    apiClient.post<ApiResponse<GymOnlineCoach>>(`/gyms/${slug}/online-coaches/`, data).then((r) => r.data),
+
+  removeOnlineCoach: (slug: string, coachId: string) =>
+    apiClient.delete(`/gyms/${slug}/online-coaches/${coachId}/`).then((r) => r.data),
+
+  // ── Endorsements ─────────────────────────────────────────────────────
+  getEndorsements: (slug: string) =>
+    apiClient.get<ApiResponse<{ can_endorse: boolean; endorsements: GymEndorsement[] }>>(
+      `/gyms/${slug}/endorsements/`,
+    ).then((r) => r.data),
+
+  endorseTrainer: (slug: string, data: { username?: string; user_id?: string; verification_type?: 'trainer' | 'practitioner'; note?: string }) =>
+    apiClient.post<ApiResponse<GymEndorsement>>(`/gyms/${slug}/endorsements/`, data).then((r) => r.data),
+
+  withdrawEndorsement: (slug: string, endorsementId: string) =>
+    apiClient.delete(`/gyms/${slug}/endorsements/${endorsementId}/`).then((r) => r.data),
+
+  // ── Announcements ────────────────────────────────────────────────────
+  announce: (slug: string, data: { title: string; body: string; notify_members?: boolean }) =>
+    apiClient.post<ApiResponse<{ post_id: string; notified: number }>>(`/gyms/${slug}/announce/`, data).then((r) => r.data),
 };

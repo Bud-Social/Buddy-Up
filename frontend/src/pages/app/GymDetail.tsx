@@ -12,6 +12,7 @@ import type { BuddyLive } from '@/types/live';
 import type { GymRoutinePost, GymReview } from '@/types/gym';
 import { GymDiscoursePost } from '@/components/features/gyms/GymDiscoursePost';
 import { GymCheckIn } from '@/components/features/gym/GymCheckIn';
+import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 
@@ -278,8 +279,23 @@ export default function GymDetail() {
             {gym.logo_url ? <img src={gym.logo_url} alt="" className="w-full h-full rounded-xl object-cover" /> : '🏋️'}
           </div>
           <div>
-            <h1 className="font-heading text-xl font-semibold">{gym.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-heading text-xl font-semibold">{gym.name}</h1>
+              <VerifiedGymBadge verified={gym.is_verified} size="md" />
+            </div>
             <p className="text-xs text-buddy-text-secondary">@{gym.handle} · {memberCount} members</p>
+            {(gym.location_summary?.venue_count ?? 0) > 0 && (
+              <p className="flex items-center gap-1 text-xs text-buddy-text-secondary mt-0.5">
+                <MapPin size={12} />
+                {(gym.location_summary?.venue_count ?? 0) > 1
+                  ? `${gym.location_summary?.venue_count} locations${
+                      gym.location_summary?.cities?.length
+                        ? ` · ${gym.location_summary.cities.slice(0, 2).join(' · ')}`
+                        : ''
+                    }`
+                  : gym.location_summary?.cities?.[0] || gym.location_city}
+              </p>
+            )}
             {gym.is_reviews_enabled && gym.average_rating !== undefined && gym.average_rating > 0 && (
               <div className="flex items-center gap-2 mt-1">
                 <span className="flex items-center gap-1 text-sm text-yellow-500 font-medium">

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
 import { InterestChips } from '@/components/profile/InterestChips';
+import { GymCard } from '@/components/gym/GymCard';
 import { profilesApi } from '@/api';
 import { gymsApi } from '@/api';
 import { livesApi } from '@/api';
@@ -732,25 +733,7 @@ export default function Discover() {
       {!isSearching && (activeTab === 'gyms' || (activeTab === 'all' && query.length >= 2)) && rankedGyms.length > 0 && (
         <div className="space-y-3">
           {rankedGyms.map((g) => (
-            <Card key={g.id} className="p-4 flex items-center gap-4 cursor-pointer hover:bg-buddy-surface-raised transition-colors" onClick={() => navigate(`/gyms/${g.handle}`)}>
-              <Avatar src={g.logo_url} alt={g.name} size="lg" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-heading font-semibold truncate">{g.name}</p>
-                  {g.is_verified && <Badge variant="green" label="Verified" />}
-                </div>
-                <p className="text-sm text-buddy-text-secondary">@{g.handle}</p>
-                {g.description && <p className="text-sm text-buddy-text-secondary truncate mt-1">{g.description}</p>}
-                <div className="flex gap-4 mt-2 text-xs text-buddy-text-secondary">
-                  <span>{g.member_count} members</span>
-                  <span>{g.active_today} active today</span>
-                  {g.location_city && <span>{g.location_city}</span>}
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/gyms/${g.handle}`); }}>
-                View
-              </Button>
-            </Card>
+            <GymCard key={g.id} gym={g} onClick={() => navigate(`/gyms/${g.handle}`)} />
           ))}
         </div>
       )}

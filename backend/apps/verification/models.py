@@ -167,6 +167,17 @@ class VerificationSubmission(TimestampedModel):
         ('clinical', 'Clinical Practice'),
     ])
 
+    # ── Gym-endorsed fast track ───────────────────────────────────────────
+    # A verified registered gym can endorse a trainer/practitioner it works
+    # with. That puts the submission in the priority queue and lets the
+    # reviewer accept the gym reference in place of part of the credential
+    # pack. It never auto-approves: a human still decides.
+    fast_track = models.BooleanField(default=False)
+    endorsed_by_gym = models.ForeignKey(
+        'gyms.Gym', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='endorsed_submissions',
+    )
+
     class Meta:
         db_table = 'verification_submission'
         indexes = [

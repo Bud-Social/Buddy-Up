@@ -1,8 +1,12 @@
 import csv
 import io
 import logging
+import os
+import uuid
 from datetime import timedelta
 
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models
 from django.utils import timezone
@@ -11,6 +15,7 @@ from django.http import HttpResponse
 
 
 from rest_framework import views, permissions, status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 import requests
@@ -20,16 +25,20 @@ from common.age_gating import gate_mature_queryset, can_view_content
 from .models import (
     Gym, GymMembership, GymCategory, GymOnboardingChecklist,
     JoinRequest, GymInvite, GymMembershipException, VenueLocation,
-    AttendanceRecord,
+    AttendanceRecord, GymMedia, GymOnlineCoach, GymTrainerEndorsement,
+    RegisteredGymProfile,
 )
 from .serializers import (
-    GymSerializer, CreateGymSerializer, GymMembershipSerializer,
+    GymSerializer, GymDetailSerializer, CreateGymSerializer, GymMembershipSerializer,
     GymCategorySerializer, JoinRequestSerializer, CreateJoinRequestSerializer,
     ApproveRejectSerializer, GymInviteSerializer, CreateInviteSerializer,
     DonationInputSerializer, ReviewReplyInputSerializer, ManageMemberRoleSerializer,
     HandleCheckSerializer, GymRoutinePostSerializer, GymReviewSerializer, GymDonationSerializer,
     GymMembershipExceptionSerializer, CreateMembershipExceptionSerializer, MembershipCheckoutSerializer,
     AttendanceRecordSerializer, GymOnboardingChecklistSerializer, VenueLocationSerializer,
+    GymMediaSerializer, RegisteredGymProfileSerializer, SubmitRegistrationSerializer,
+    GymOnlineCoachSerializer, OnlineCoachingUpdateSerializer, AddOnlineCoachSerializer,
+    GymTrainerEndorsementSerializer, CreateEndorsementSerializer, GymAnnouncementSerializer,
 )
 from .models import GymRoutinePost, GymReview, GymDonation
 from apps.wallet.utils import deduct_artifacts
@@ -85,6 +94,35 @@ class VenueLocationListView(views.APIView):
             gym.venues.update(is_primary=False)
         venue = serializer.save(gym=gym)
         return Response({'success': True, 'data': VenueLocationSerializer(venue).data}, status=status.HTTP_201_CREATED)
+
+
+class VenueLocationDetailView(views.APIView):
+    """Edit or retire a single venue (add/remove locations after creation)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, gym_slug, venue_id):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        venue = get_object_or_404(VenueLocation, id=venue_id, gym=gym)
+        serializer = VenueLocationSerializer(venue, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        if serializer.validated_data.get('is_primary'):
+            gym.venues.exclude(id=venue.id).update(is_primary=False)
+        venue = serializer.save()
+        return Response({'success': True, 'data': VenueLocationSerializer(venue).data})
+
+    def delete(self, request, gym_slug, venue_id):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        venue = get_object_or_404(VenueLocation, id=venue_id, gym=gym)
+        venue.is_active = False
+        venue.save(update_fields=['is_active'])
+        if not gym.venues.filter(is_active=True).exists():
+            gym.location_city = ''
+            gym.location_country = ''
+            gym.save(update_fields=['location_city', 'location_country'])
+        return Response({'success': True, 'data': None, 'message': 'Location removed.'})
 
 
 class AttendanceListView(views.APIView):
@@ -218,13 +256,47 @@ class PartnerMetricsView(views.APIView):
         active_members = gym.memberships.filter(subscription_active=True).count()
         checked_in = gym.attendance_records.filter(checked_in_at__gte=since)
         unique_attendees = checked_in.values('member').distinct().count()
+        check_ins = checked_in.count()
+        new_members = gym.memberships.filter(created_at__gte=since).count()
+        churned = gym.memberships.filter(
+            subscription_active=False, updated_at__gte=since,
+        ).count()
+        posts = gym.routine_posts.filter(start_time__gte=since)
+        posts_with_capacity = posts.filter(max_slots__gt=0)
+        capacity_total = posts_with_capacity.aggregate(
+            total=db_models.Sum('max_slots'),
+        )['total'] or 0
+        capacity_taken = posts_with_capacity.aggregate(
+            total=db_models.Sum('slots_taken'),
+        )['total'] or 0
         return Response({'success': True, 'data': {
             'active_members': active_members,
-            'check_ins_30d': checked_in.count(),
+            'new_members_30d': new_members,
+            'churned_30d': churned,
+            'retention_rate_30d': round(
+                active_members / (active_members + churned) * 100, 1
+            ) if (active_members + churned) else 0,
+            'check_ins_30d': check_ins,
+            'avg_check_ins_per_day_30d': round(check_ins / 30, 1),
             'unique_attendees_30d': unique_attendees,
             'activation_rate_30d': round(unique_attendees / active_members * 100, 1) if active_members else 0,
-            'scheduled_activities_30d': gym.routine_posts.filter(start_time__gte=since).count(),
+            'scheduled_activities_30d': posts.count(),
+            'capacity_utilization_30d': round(capacity_taken / capacity_total * 100, 1) if capacity_total else 0,
+            'online_coaches': gym.online_coaches.filter(is_available=True).count(),
+            'offers_online_coaching': gym.offers_online_coaching,
+            'registration_status': _registration_status(gym),
+            'subscription_revenue': sum(
+                int(v or 0) for k, v in (gym.wallet_balance or {}).items()
+                if k.startswith('monthly_fee_')
+            ),
         }})
+
+
+def _registration_status(gym):
+    try:
+        return gym.registered_profile.status
+    except RegisteredGymProfile.DoesNotExist:
+        return 'unverified'
 
 
 class GymMemberCSVView(views.APIView):
@@ -398,6 +470,9 @@ class GymListView(views.APIView):
 
         queryset = queryset.distinct()
         queryset = gate_mature_queryset(request, queryset)
+        queryset = queryset.select_related('registered_profile').prefetch_related(
+            'venues', 'categories', 'category_pricing',
+        )
 
         if ordering == 'rating':
             queryset = queryset.order_by('-avg_rating', '-member_count')
@@ -408,31 +483,39 @@ class GymListView(views.APIView):
 
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(queryset, request)
-        serializer = GymSerializer(page, many=True, context={'request': request})
-        data = list(serializer.data)
 
         # Distance annotation (no PostGIS): min haversine over active venues.
-        if lat is not None and lng is not None and data:
+        # Computed before serialization so the location summary can use it.
+        distance_by_gym = {}
+        if lat is not None and lng is not None and page:
             from common.geo import adaptive_message, haversine_km
 
-            gym_ids = [g.get('id') for g in data]
             venue_rows = (
-                VenueLocation.objects.filter(gym_id__in=gym_ids, is_active=True)
+                VenueLocation.objects.filter(gym_id__in=[g.pk for g in page], is_active=True)
                 .exclude(latitude__isnull=True)
                 .exclude(longitude__isnull=True)
                 .values('gym_id', 'latitude', 'longitude')
             )
-            nearest: dict = {}
             for row in venue_rows:
                 try:
                     d = haversine_km(lat, lng, float(row['latitude']), float(row['longitude']))
                 except (TypeError, ValueError):
                     continue
-                gid = row['gym_id']
-                if gid not in nearest or d < nearest[gid]:
-                    nearest[gid] = d
+                gid = str(row['gym_id'])
+                if gid not in distance_by_gym or d < distance_by_gym[gid]:
+                    distance_by_gym[gid] = d
+
+        serializer = GymSerializer(page, many=True, context={
+            'request': request,
+            'distance_km_by_gym': {k: round(v, 1) for k, v in distance_by_gym.items()},
+            'viewer_lat': lat,
+            'viewer_lng': lng,
+        })
+        data = list(serializer.data)
+
+        if lat is not None and lng is not None and data:
             for g in data:
-                d = nearest.get(g.get('id'))
+                d = distance_by_gym.get(str(g.get('id')))
                 g['distance_km'] = round(d, 1) if d is not None else None
             if ordering == 'nearest':
                 data.sort(key=lambda g: (g['distance_km'] is None, g['distance_km'] or 0))
@@ -600,7 +683,7 @@ class CreateGymView(views.APIView):
         gym.member_count = 1
         gym.save(update_fields=['member_count'])
 
-        output = GymSerializer(gym, context={'request': request})
+        output = GymDetailSerializer(gym, context={'request': request})
         return Response({
             'success': True,
             'data': output.data,
@@ -633,7 +716,20 @@ class GymDetailView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = GymSerializer(gym, context={'request': request})
+        viewer_lat = viewer_lng = None
+        try:
+            if request.query_params.get('lat') not in (None, ''):
+                viewer_lat = float(request.query_params.get('lat'))
+            if request.query_params.get('lng') not in (None, ''):
+                viewer_lng = float(request.query_params.get('lng'))
+        except (TypeError, ValueError):
+            viewer_lat = viewer_lng = None
+
+        serializer = GymDetailSerializer(gym, context={
+            'request': request,
+            'viewer_lat': viewer_lat,
+            'viewer_lng': viewer_lng,
+        })
         return Response({
             'success': True,
             'data': serializer.data,
@@ -1851,3 +1947,416 @@ class GymEventsView(views.APIView):
         if upcoming_only:
             qs = qs.filter(start_datetime__gte=tz.now())
         return Response({'success': True, 'data': MarketplaceEventSerializer(qs, many=True, context={'request': request}).data})
+
+
+# ---------------------------------------------------------------------------
+# Phase A: business registration, gallery, online coaching, endorsements
+# ---------------------------------------------------------------------------
+
+REGISTRATION_DOCUMENT_TYPES = frozenset({
+    'certification', 'proof_of_address', 'other',
+})
+
+
+def _require_verified_registration(gym):
+    """Return the registered profile when the gym is a verified business."""
+    try:
+        profile = gym.registered_profile
+    except RegisteredGymProfile.DoesNotExist:
+        return None
+    if profile.status != 'verified':
+        return None
+    return profile
+
+
+class GymRegistrationView(views.APIView):
+    """Read or edit the gym's business-registration metadata."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        profile, _ = RegisteredGymProfile.objects.get_or_create(gym=gym)
+        return Response({'success': True, 'data': RegisteredGymProfileSerializer(profile).data})
+
+    def patch(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        profile, _ = RegisteredGymProfile.objects.get_or_create(gym=gym)
+        serializer = SubmitRegistrationSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        if profile.status in ('verified', 'pending'):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Registration details cannot change while under review or verified.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+        profile = serializer.save()
+        return Response({'success': True, 'data': RegisteredGymProfileSerializer(profile).data,
+                         'message': 'Registration details saved.'})
+
+    def post(self, request, gym_slug):
+        """Submit (or resubmit) the gym for business verification."""
+        from apps.verification.models import VerificationSubmission, VerificationDocument
+
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        profile, _ = RegisteredGymProfile.objects.get_or_create(gym=gym)
+
+        serializer = SubmitRegistrationSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        profile = serializer.save()
+
+        if not profile.legal_name.strip() or not profile.registration_number.strip():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Legal name and registration number are required to submit.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        document_ids = request.data.get('document_ids') or []
+        if isinstance(document_ids, str):
+            document_ids = [document_ids]
+        documents = VerificationDocument.objects.filter(
+            id__in=document_ids, profile=request.user.profile,
+        ).distinct()
+        if not documents.exists():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Attach at least one registration document before submitting.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        submission = (
+            VerificationSubmission.objects
+            .filter(gym=gym, verification_type='gym')
+            .exclude(status__in=['approved', 'rejected'])
+            .order_by('-created_at')
+            .first()
+        )
+        if submission is None:
+            submission = VerificationSubmission.objects.create(
+                profile=request.user.profile,
+                gym=gym,
+                verification_type='gym',
+                status='submitted',
+                submitted_at=timezone.now(),
+            )
+        else:
+            submission.profile = request.user.profile
+            submission.status = 'submitted'
+            submission.submitted_at = timezone.now()
+            submission.save(update_fields=['profile', 'status', 'submitted_at', 'updated_at'])
+        submission.documents.set(documents)
+
+        profile.status = 'pending'
+        profile.submitted_at = timezone.now()
+        profile.rejection_reason = ''
+        profile.save(update_fields=['status', 'submitted_at', 'rejection_reason', 'updated_at'])
+
+        return Response({
+            'success': True,
+            'data': RegisteredGymProfileSerializer(profile).data,
+            'message': 'Submitted for verification. Review usually takes a few days.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class GymVerificationStatusView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        profile, _ = RegisteredGymProfile.objects.get_or_create(gym=gym)
+        data = RegisteredGymProfileSerializer(profile).data
+        data['is_verified'] = gym.is_verified
+        data['can_submit'] = profile.status in ('unverified', 'rejected')
+        return Response({'success': True, 'data': data})
+
+
+class GymMediaView(views.APIView):
+    """Public gym gallery: photos and videos."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        kind = request.query_params.get('kind', '')
+        qs = gym.media.all()
+        if kind in ('photo', 'video'):
+            qs = qs.filter(kind=kind)
+        return Response({'success': True, 'data': GymMediaSerializer(qs[:60], many=True).data})
+
+    def post(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        uploads = request.FILES.getlist('file') or request.FILES.getlist('media')
+        if not uploads:
+            return Response({'success': False, 'message': 'No file provided.'}, status=400)
+
+        kind = request.data.get('kind', 'photo')
+        if kind not in ('photo', 'video'):
+            kind = 'photo'
+        caption = (request.data.get('caption') or '').strip()[:240]
+
+        created = []
+        for upload in uploads:
+            if upload.size > 60 * 1024 * 1024:
+                return Response({
+                    'success': False,
+                    'message': f'{upload.name} is larger than 60 MB.',
+                }, status=400)
+            ext = os.path.splitext(upload.name)[1].lower()
+            saved_name = default_storage.save(
+                f'gyms/{gym.id}/media/{uuid.uuid4().hex}{ext}',
+                ContentFile(upload.read()),
+            )
+            created.append(GymMedia.objects.create(
+                gym=gym,
+                kind=kind,
+                file_url=default_storage.url(saved_name),
+                caption=caption,
+                uploaded_by=request.user.profile,
+            ))
+        return Response({
+            'success': True,
+            'data': GymMediaSerializer(created, many=True).data,
+            'message': 'Media uploaded.',
+        }, status=status.HTTP_201_CREATED)
+
+
+class GymMediaDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, gym_slug, media_id):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        item = get_object_or_404(GymMedia, id=media_id, gym=gym)
+        item.delete()
+        return Response({'success': True, 'data': None, 'message': 'Media removed.'})
+
+
+class GymOnlineCoachingView(views.APIView):
+    """Whether the gym sells online coaching, and which types it offers."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        coaches = gym.online_coaches.select_related('coach')
+        return Response({'success': True, 'data': {
+            'offers_online_coaching': gym.offers_online_coaching,
+            'coaching_types': gym.coaching_types or [],
+            'coaches': GymOnlineCoachSerializer(coaches, many=True).data,
+        }})
+
+    def patch(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        serializer = OnlineCoachingUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        for field in ('offers_online_coaching', 'coaching_types'):
+            if field in serializer.validated_data:
+                setattr(gym, field, serializer.validated_data[field])
+        gym.save(update_fields=['offers_online_coaching', 'coaching_types', 'updated_at'])
+        return Response({'success': True, 'data': {
+            'offers_online_coaching': gym.offers_online_coaching,
+            'coaching_types': gym.coaching_types or [],
+        }, 'message': 'Online coaching updated.'})
+
+
+class GymOnlineCoachListView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, gym_slug):
+        from apps.profiles.models import Profile
+
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        serializer = AddOnlineCoachSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        target = None
+        if serializer.validated_data.get('user_id'):
+            target = Profile.objects.filter(user_id=serializer.validated_data['user_id']).first()
+        elif serializer.validated_data.get('username'):
+            target = Profile.objects.filter(
+                username__iexact=serializer.validated_data['username'].strip(),
+            ).first()
+        if target is None:
+            return Response({'success': False, 'message': 'Member not found.'}, status=404)
+
+        if not GymMembership.objects.filter(
+            gym=gym, member=target, subscription_active=True,
+        ).exists():
+            return Response({
+                'success': False,
+                'message': 'Only an active member can be listed as an online coach.',
+            }, status=400)
+
+        row, created = GymOnlineCoach.objects.update_or_create(
+            gym=gym, coach=target,
+            defaults={
+                'specialties': serializer.validated_data.get('specialties', []),
+                'is_available': serializer.validated_data.get('is_available', True),
+                'note': serializer.validated_data.get('note', ''),
+                'added_by': request.user.profile,
+            },
+        )
+        return Response({
+            'success': True,
+            'data': GymOnlineCoachSerializer(row).data,
+            'message': 'Coach added.' if created else 'Coach updated.',
+        }, status=201 if created else 200)
+
+    def delete(self, request, gym_slug, coach_id):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        row = get_object_or_404(GymOnlineCoach, id=coach_id, gym=gym)
+        row.delete()
+        return Response({'success': True, 'data': None, 'message': 'Coach removed.'})
+
+
+class GymEndorsementListView(views.APIView):
+    """Endorse an existing member trainer/practitioner for fast-track review."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        rows = gym.endorsements.select_related('trainer').filter(is_active=True)
+        return Response({'success': True, 'data': {
+            'can_endorse': _require_verified_registration(gym) is not None,
+            'endorsements': GymTrainerEndorsementSerializer(rows, many=True).data,
+        }})
+
+    def post(self, request, gym_slug):
+        from apps.profiles.models import Profile
+        from apps.verification.models import VerificationSubmission
+
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        if _require_verified_registration(gym) is None:
+            return Response({
+                'success': False,
+                'message': 'Only a verified registered gym can endorse trainers.',
+            }, status=403)
+
+        serializer = CreateEndorsementSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        target = None
+        if serializer.validated_data.get('user_id'):
+            target = Profile.objects.filter(user_id=serializer.validated_data['user_id']).first()
+        elif serializer.validated_data.get('username'):
+            target = Profile.objects.filter(
+                username__iexact=serializer.validated_data['username'].strip(),
+            ).first()
+        if target is None:
+            return Response({'success': False, 'message': 'Trainer not found.'}, status=404)
+
+        if not GymMembership.objects.filter(
+            gym=gym, member=target, subscription_active=True,
+        ).exists():
+            return Response({
+                'success': False,
+                'message': 'Only an active member of this gym can be endorsed.',
+            }, status=400)
+
+        row, created = GymTrainerEndorsement.objects.update_or_create(
+            gym=gym, trainer=target,
+            defaults={
+                'endorsed_by': request.user.profile,
+                'note': serializer.validated_data.get('note', ''),
+                'is_active': True,
+            },
+        )
+
+        # Fast-track any reviewable submission the trainer already has. A
+        # later submission picks this up from ``perform_create`` instead.
+        submission = VerificationSubmission.objects.filter(
+            profile=target,
+            verification_type__in=['trainer', 'practitioner'],
+            status__in=['submitted', 'under_review'],
+        ).order_by('-created_at').first()
+        if submission is not None:
+            submission.fast_track = True
+            submission.endorsed_by_gym = gym
+            submission.save(update_fields=['fast_track', 'endorsed_by_gym', 'updated_at'])
+
+        return Response({
+            'success': True,
+            'data': GymTrainerEndorsementSerializer(row).data,
+            'message': 'Endorsed. Their verification is now fast-tracked.',
+        }, status=201 if created else 200)
+
+    def delete(self, request, gym_slug, endorsement_id):
+        from apps.verification.models import VerificationSubmission
+
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        row = get_object_or_404(GymTrainerEndorsement, id=endorsement_id, gym=gym)
+        VerificationSubmission.objects.filter(
+            endorsed_by_gym=gym, profile=row.trainer,
+            status__in=['submitted', 'under_review'],
+        ).update(fast_track=False, endorsed_by_gym=None)
+        row.is_active = False
+        row.save(update_fields=['is_active'])
+        return Response({'success': True, 'data': None, 'message': 'Endorsement withdrawn.'})
+
+
+class GymAnnounceView(views.APIView):
+    """Post an announcement to the gym feed and notify members."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, gym_slug):
+        from apps.feed.models import Post
+        from apps.notifications.tasks import create_notification
+
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        serializer = GymAnnouncementSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        post = Post.objects.create(
+            author=request.user.profile,
+            post_type='text',
+            body=serializer.validated_data['body'],
+            gym_tag=gym,
+            visibility='gym_members',
+            is_pinned=True,
+        )
+
+        notified = 0
+        if serializer.validated_data.get('notify_members', True):
+            members = GymMembership.objects.filter(
+                gym=gym, subscription_active=True,
+            ).exclude(member=request.user.profile).select_related('member')
+            for membership in members:
+                try:
+                    create_notification.delay(
+                        recipient_id=str(membership.member.user_id),
+                        notification_type='gym_announcement',
+                        title=serializer.validated_data['title'],
+                        body=serializer.validated_data['body'][:280],
+                        metadata={
+                            'gym_handle': gym.handle,
+                            'gym_name': gym.name,
+                            'post_id': str(post.id),
+                        },
+                        dedupe_key=f'gym-announcement-{post.id}-{membership.member.user_id}',
+                    )
+                    notified += 1
+                except Exception:  # noqa: BLE001 — notification must not drop the post
+                    logger.warning('gym announcement notification failed', exc_info=True)
+
+        return Response({
+            'success': True,
+            'data': {'post_id': str(post.id), 'notified': notified},
+            'message': 'Announcement posted.',
+        }, status=status.HTTP_201_CREATED)

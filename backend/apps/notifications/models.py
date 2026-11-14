@@ -26,6 +26,7 @@ class Notification(TimestampedModel):
         ('gym_role_changed', 'Gym Role Changed'),
         ('gym_removed', 'Gym Membership Removed'),
         ('gym_joined', 'Gym Membership Approved'),
+        ('gym_announcement', 'Gym Announcement'),
         ('staff_role_granted', 'Staff Role Granted'),
         ('staff_role_revoked', 'Staff Role Revoked'),
         ('session_booked', 'Session Booked'),
@@ -137,6 +138,7 @@ class NotificationPreference(TimestampedModel):
     meal_reminder_push = models.BooleanField(default=True)
     shop_cert_push = models.BooleanField(default=True)
     new_purchase_push = models.BooleanField(default=True)
+    gym_announcement_push = models.BooleanField(default=True)
     # Order status changes now reach sellers as well as the buyer, and that push
     # is no longer incidental. Without this column the lookup in
     # ``create_notification`` (``getattr(prefs, f'{type}_push', None)``) returns

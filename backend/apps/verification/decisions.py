@@ -416,13 +416,37 @@ def _apply_effect(request_row, actor, decision):
         if submission.verification_type == 'gym' and submission.gym_id:
             from apps.gyms.models import Gym
             Gym.objects.filter(id=submission.gym_id).update(is_verified=True)
+            _sync_registered_gym_status(submission.gym_id, 'verified', actor, now, '')
 
         _settle_documents(submission, 'approved', actor, now, payload)
         return f'The {submission.verification_type} application was approved.'
 
     submission.status = 'rejected'
     _settle_documents(submission, 'rejected', actor, now, payload, applicant_reason)
+    if submission.verification_type == 'gym' and submission.gym_id:
+        _sync_registered_gym_status(submission.gym_id, 'rejected', actor, now, applicant_reason)
     return 'The application was rejected.'
+
+
+def _sync_registered_gym_status(gym_id, status, actor, now, reason):
+    """Mirror a gym verification decision onto the gym's registration record.
+
+    ``apps.verification`` owns the decision; the partner dashboard reads the
+    mirrored status so it does not have to reconstruct the queue state.
+    """
+    from apps.gyms.models import RegisteredGymProfile
+    from apps.profiles.models import Profile
+
+    reviewer = None
+    if actor is not None:
+        reviewer = Profile.objects.filter(user=actor).first()
+
+    RegisteredGymProfile.objects.filter(gym_id=gym_id).update(
+        status=status,
+        rejection_reason=reason or '',
+        reviewed_at=now,
+        reviewed_by=reviewer,
+    )
 
 
 def _settle_documents(submission, status, actor, now, payload, reason=''):
