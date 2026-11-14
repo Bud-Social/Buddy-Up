@@ -60,6 +60,23 @@ export interface GymCheckInStatus {
   next_check_in_at: string | null;
 }
 
+/**
+ * The pin picker yields full-precision floats but the backend stores
+ * `DecimalField(max_digits=9, decimal_places=6)` — sending more precision
+ * makes the API reject the venue. Round defensively here.
+ */
+function normalizeVenuePayload<T extends { latitude?: number | null; longitude?: number | null }>(data: T): T {
+  const round = (value: number | null | undefined) =>
+    typeof value === 'number' && Number.isFinite(value)
+      ? Number(value.toFixed(6))
+      : value;
+  return {
+    ...data,
+    latitude: round(data.latitude),
+    longitude: round(data.longitude),
+  };
+}
+
 export const gymsApi = {
   list: (params: GymListParams = {}) =>
     apiClient.get<ApiResponse<Gym[]>>('/gyms/', { params }).then((r) => r.data),
@@ -184,10 +201,10 @@ export const gymsApi = {
     apiClient.get<ApiResponse<VenueLocation[]>>(`/gyms/${slug}/venues/`).then((r) => r.data),
 
   createVenue: (slug: string, data: VenueLocationPayload) =>
-    apiClient.post<ApiResponse<VenueLocation>>(`/gyms/${slug}/venues/`, data).then((r) => r.data),
+    apiClient.post<ApiResponse<VenueLocation>>(`/gyms/${slug}/venues/`, normalizeVenuePayload(data)).then((r) => r.data),
 
   updateVenue: (slug: string, venueId: string, data: Partial<VenueLocationPayload>) =>
-    apiClient.patch<ApiResponse<VenueLocation>>(`/gyms/${slug}/venues/${venueId}/`, data).then((r) => r.data),
+    apiClient.patch<ApiResponse<VenueLocation>>(`/gyms/${slug}/venues/${venueId}/`, normalizeVenuePayload(data)).then((r) => r.data),
 
   deleteVenue: (slug: string, venueId: string) =>
     apiClient.delete<ApiResponse<null>>(`/gyms/${slug}/venues/${venueId}/`).then((r) => r.data),

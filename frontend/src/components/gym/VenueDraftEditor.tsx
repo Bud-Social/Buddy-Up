@@ -40,8 +40,8 @@ export function VenueDraftEditor({ venues, onChange }: VenueDraftEditorProps) {
     const city = parts.length > 2 ? parts[parts.length - 2] : '';
     update(key, {
       address: loc.label,
-      latitude: loc.lat,
-      longitude: loc.lng,
+      latitude: Number(loc.lat.toFixed(6)),
+      longitude: Number(loc.lng.toFixed(6)),
       city: venues.find((v) => v.key === key)?.city || city,
       country: venues.find((v) => v.key === key)?.country || country,
     });

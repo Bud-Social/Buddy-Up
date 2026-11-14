@@ -650,6 +650,20 @@ class VenueLocationSerializer(serializers.ModelSerializer):
                   'instructions', 'is_primary', 'is_active', 'created_at']
         read_only_fields = ['id', 'created_at']
 
+    @staticmethod
+    def _quantize(value):
+        # The model stores 6 decimal places; reject-with-rounding instead of
+        # 400ing on values with full float precision from map pickers.
+        from decimal import Decimal, ROUND_HALF_UP
+
+        return value.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)
+
+    def validate_latitude(self, value):
+        return self._quantize(value) if value is not None else value
+
+    def validate_longitude(self, value):
+        return self._quantize(value) if value is not None else value
+
 
 class AttendanceRecordSerializer(serializers.ModelSerializer):
     member_username = serializers.CharField(source='member.username', read_only=True)
