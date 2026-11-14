@@ -246,7 +246,10 @@ export interface CityResult {
 
 export interface GymRoutinePost {
   id: string;
-  gym_id: string;
+  gym_id: string | null;
+  gym_name?: string;
+  community_id?: string | null;
+  community_name?: string;
   author: string;
   author_data: MemberData;
   title: string;

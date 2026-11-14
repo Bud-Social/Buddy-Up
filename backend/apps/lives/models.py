@@ -42,6 +42,12 @@ class BuddyLive(TimestampedModel):
     access = models.CharField(max_length=15, choices=ACCESS_CHOICES, default='public')
     artifact_fee = models.JSONField(null=True, blank=True)
     gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='lives')
+    # A live can belong to a community instead of a gym. The two owner FKs are
+    # mutually exclusive; see the constraint below.
+    community = models.ForeignKey(
+        'messaging.Conversation', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='lives',
+    )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='scheduled')
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
@@ -107,6 +113,15 @@ class BuddyLive(TimestampedModel):
             models.Index(fields=['live_type']),
             models.Index(fields=['host', '-created_at']),
             models.Index(fields=['gym', 'status']),
+            models.Index(fields=['community', 'status']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=~(
+                    models.Q(gym__isnull=False) & models.Q(community__isnull=False)
+                ),
+                name='lives_live_not_both_gym_and_community',
+            ),
         ]
 
 

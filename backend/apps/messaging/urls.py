@@ -50,4 +50,11 @@ urlpatterns = [
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/media/', views.CommunityPostMediaView.as_view(), name='community_post_media'),
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/video-card/', views.CommunityPostVideoCardView.as_view(), name='community_post_video_card'),
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/video-card/<str:job_id>/', views.CommunityPostVideoCardStatusView.as_view(), name='community_post_video_card_status'),
+    # Community activities: events, lives and schedule slots
+    path('communities/<uuid:community_id>/events/', views.CommunityEventListView.as_view(), name='community_events'),
+    path('communities/<uuid:community_id>/events/<uuid:event_id>/', views.CommunityEventDetailView.as_view(), name='community_event_detail'),
+    path('communities/<uuid:community_id>/lives/', views.CommunityLiveListView.as_view(), name='community_lives'),
+    path('communities/<uuid:community_id>/lives/<uuid:live_id>/', views.CommunityLiveDetailView.as_view(), name='community_live_detail'),
+    path('communities/<uuid:community_id>/schedules/', views.CommunityScheduleListView.as_view(), name='community_schedules'),
+    path('communities/<uuid:community_id>/schedules/<uuid:schedule_id>/', views.CommunityScheduleDetailView.as_view(), name='community_schedule_detail'),
 ]

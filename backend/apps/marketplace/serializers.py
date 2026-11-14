@@ -606,6 +606,7 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
     creator_data = serializers.SerializerMethodField()
     gym_data = serializers.SerializerMethodField()
     shop_data = serializers.SerializerMethodField()
+    community_name = serializers.SerializerMethodField()
     is_registered = serializers.SerializerMethodField()
     spots_remaining = serializers.SerializerMethodField()
     cover_image_url = serializers.SerializerMethodField()
@@ -614,7 +615,8 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = MarketplaceEvent
         fields = [
-            'id', 'creator_data', 'gym_data', 'shop_data', 'shop_id', 'gym_id', 'title', 'description',
+            'id', 'creator_data', 'gym_data', 'shop_data', 'shop_id', 'gym_id',
+            'community_id', 'community_name', 'title', 'description',
             'cover_image_url', 'promo_video_url', 'gallery_urls',
             'event_type', 'location', 'location_lat', 'location_lng', 'online_url',
             'start_datetime', 'end_datetime', 'timezone', 'recurrence',
@@ -627,6 +629,11 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
             'is_registered', 'spots_remaining',
             'media', 'created_at',
         ]
+
+    def get_community_name(self, obj):
+        if not obj.community_id:
+            return ''
+        return obj.community.group_name or ''
 
     def get_creator_data(self, obj):
         return {

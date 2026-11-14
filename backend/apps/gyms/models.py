@@ -226,7 +226,16 @@ class GymRoutinePost(TimestampedModel):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='routine_posts')
+    gym = models.ForeignKey(
+        Gym, null=True, blank=True, on_delete=models.CASCADE, related_name='routine_posts',
+    )
+    # Schedule posts live either inside a gym or inside a community, never
+    # both. `community` keeps the same shape as the gym-owned rows so the
+    # existing routine serializers/analytics work unchanged.
+    community = models.ForeignKey(
+        'messaging.Conversation', null=True, blank=True,
+        on_delete=models.CASCADE, related_name='routine_posts',
+    )
     author = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='gym_routine_posts')
     title = models.CharField(max_length=150, blank=True)
     content = models.TextField(max_length=2000, blank=True)
@@ -249,9 +258,21 @@ class GymRoutinePost(TimestampedModel):
     class Meta:
         db_table = 'gyms_routine_post'
         ordering = ['-created_at']
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(gym__isnull=False, community__isnull=True)
+                    | models.Q(gym__isnull=True, community__isnull=False)
+                ),
+                name='gyms_routinepost_exactly_one_owner',
+            ),
+        ]
 
     def __str__(self):
-        return f'Routine Post in {self.gym.name} by {self.author.username}'
+        owner = self.gym.name if self.gym_id else (
+            self.community.group_name if self.community_id else 'no owner'
+        )
+        return f'Routine Post in {owner} by {self.author.username}'
 
 
 class RoutineSlotEnrollment(TimestampedModel):

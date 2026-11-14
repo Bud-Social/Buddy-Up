@@ -2237,6 +2237,308 @@ class CommunityPostVideoCardStatusView(views.APIView):
 
 
 
+def _community_activity_gate(request, community_id):
+    """Resolve a community plus the viewer's membership for activity routes.
+
+    Returns ``(conv, membership, error_response)``. Members see everything;
+    non-members may read a public community's calendar but never write to it.
+    """
+    conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+    membership = _get_membership(conv, request.user.profile)
+    if membership is None and not conv.is_public:
+        return conv, membership, Response({
+            'success': False, 'data': None,
+            'message': 'You are not a member of this community.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_403_FORBIDDEN)
+    return conv, membership, None
+
+
+def _community_manager_required(membership):
+    return Response({
+        'success': False, 'data': None,
+        'message': 'Only community admins can manage activities.',
+        'errors': None, 'pagination': None,
+    }, status=status.HTTP_403_FORBIDDEN) if not _is_community_manager(membership) else None
+
+
+class CommunityEventListView(views.APIView):
+    """Community calendar events. Read by members (and public visitors), written by admins."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, community_id):
+        conv, _membership, error = _community_activity_gate(request, community_id)
+        if error:
+            return error
+        from apps.marketplace.models import MarketplaceEvent
+        from apps.marketplace.serializers import MarketplaceEventSerializer
+
+        qs = MarketplaceEvent.objects.filter(
+            community=conv, is_cancelled=False,
+        ).select_related('creator', 'gym', 'community').order_by('start_datetime')
+        if request.query_params.get('scope') != 'all':
+            qs = qs.filter(start_datetime__gte=timezone.now())
+        return Response({
+            'success': True,
+            'data': MarketplaceEventSerializer(
+                qs[:100], many=True, context={'request': request},
+            ).data,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+    def post(self, request, community_id):
+        conv, membership, error = _community_activity_gate(request, community_id)
+        if error:
+            return error
+        denied = _community_manager_required(membership)
+        if denied:
+            return denied
+
+        from .serializers import CommunityEventInputSerializer
+        from apps.marketplace.models import MarketplaceEvent
+        from apps.marketplace.serializers import MarketplaceEventSerializer
+
+        ser = CommunityEventInputSerializer(data=request.data)
+        if not ser.is_valid():
+            return Response({
+                'success': False, 'data': None, 'message': 'Invalid event.',
+                'errors': ser.errors, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        event = MarketplaceEvent.objects.create(
+            creator=request.user.profile, community=conv, **ser.validated_data,
+        )
+        _notify_community_members(conv, {
+            'type': 'community_event',
+            'community_id': str(conv.id),
+            'event_id': str(event.id),
+            'title': event.title,
+        })
+        return Response({
+            'success': True,
+            'data': MarketplaceEventSerializer(event, context={'request': request}).data,
+            'message': 'Event added to the community.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class CommunityEventDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, community_id, event_id):
+        conv, membership, error = _community_activity_gate(request, community_id)
+        if error:
+            return error
+        from apps.marketplace.models import MarketplaceEvent
+
+        event = get_object_or_404(MarketplaceEvent, id=event_id, community=conv)
+        if not _is_community_manager(membership) and event.creator_id != request.user.profile.pk:
+            return Response({
+                'success': False, 'data': None, 'message': 'Only admins can remove activities.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        # Soft-cancel: tickets and history stay intact.
+        event.is_cancelled = True
+        event.is_published = False
+        event.save(update_fields=['is_cancelled', 'is_published'])
+        return Response({
+            'success': True, 'data': None, 'message': 'Event removed.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class CommunityLiveListView(views.APIView):
+    """Community lives, both upcoming/scheduled and the ones currently live."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, community_id):
+        conv, _membership, error = _community_activity_gate(request, community_id)
+        if error:
+            return error
+        from apps.lives.models import BuddyLive
+        from apps.lives.serializers import BuddyLiveSerializer
+
+        qs = BuddyLive.objects.filter(
+            community=conv,
+        ).select_related('host', 'community').order_by('-scheduled_for', '-created_at')
+        if request.query_params.get('scope') != 'all':
+            qs = qs.exclude(status='ended')
+        return Response({
+            'success': True,
+            'data': BuddyLiveSerializer(qs[:100], many=True, context={'request': request}).data,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+    def post(self, request, community_id):
+        conv, membership, error = _community_activity_gate(request, community_id)
+        if error:
+            return error
+        denied = _community_manager_required(membership)
+        if denied:
+            return denied
+
+        from .serializers import CommunityLiveInputSerializer
+        from apps.lives.models import BuddyLive
+        from apps.lives.serializers import BuddyLiveSerializer
+
+        ser = CommunityLiveInputSerializer(data=request.data)
+        if not ser.is_valid():
+            return Response({
+                'success': False, 'data': None, 'message': 'Invalid live.',
+                'errors': ser.errors, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        data = ser.validated_data
+        live = BuddyLive.objects.create(
+            host=request.user.profile,
+            community=conv,
+            title=data['title'],
+            live_type=data['live_type'],
+            category=data['category'],
+            access=data['access'],
+            scheduled_for=data.get('scheduled_for'),
+            status='scheduled',
+        )
+        _notify_community_members(conv, {
+            'type': 'community_live',
+            'community_id': str(conv.id),
+            'live_id': str(live.id),
+            'title': live.title,
+        })
+        return Response({
+            'success': True,
+            'data': BuddyLiveSerializer(live, context={'request': request}).data,
+            'message': 'Live scheduled for the community.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class CommunityLiveDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, community_id, live_id):
+        conv, membership, error = _community_activity_gate(request, community_id)
+        if error:
+            return error
+        from apps.lives.models import BuddyLive
+
+        live = get_object_or_404(BuddyLive, id=live_id, community=conv)
+        if not _is_community_manager(membership) and live.host_id != request.user.profile.pk:
+            return Response({
+                'success': False, 'data': None, 'message': 'Only admins can remove activities.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        if live.status == 'live':
+            return Response({
+                'success': False, 'data': None,
+                'message': 'End the live before removing it.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+        live.status = 'ended'
+        live.save(update_fields=['status'])
+        return Response({
+            'success': True, 'data': None, 'message': 'Live removed.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class CommunityScheduleListView(views.APIView):
+    """Community schedule slots (the routines vocabulary, community-scoped)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, community_id):
+        conv, _membership, error = _community_activity_gate(request, community_id)
+        if error:
+            return error
+        from apps.gyms.models import GymRoutinePost
+        from apps.gyms.serializers import GymRoutinePostSerializer
+
+        qs = GymRoutinePost.objects.filter(
+            community=conv,
+        ).select_related('author', 'community').order_by('start_time', '-created_at')
+        if request.query_params.get('scope') != 'all':
+            qs = qs.filter(start_time__gte=timezone.now())
+        return Response({
+            'success': True,
+            'data': GymRoutinePostSerializer(
+                qs[:100], many=True, context={'request': request},
+            ).data,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+    def post(self, request, community_id):
+        conv, membership, error = _community_activity_gate(request, community_id)
+        if error:
+            return error
+        denied = _community_manager_required(membership)
+        if denied:
+            return denied
+
+        from .serializers import CommunityScheduleInputSerializer
+        from apps.gyms.models import GymRoutinePost
+        from apps.gyms.serializers import GymRoutinePostSerializer
+
+        ser = CommunityScheduleInputSerializer(data=request.data)
+        if not ser.is_valid():
+            return Response({
+                'success': False, 'data': None, 'message': 'Invalid schedule.',
+                'errors': ser.errors, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        post = GymRoutinePost.objects.create(
+            community=conv, author=request.user.profile, **ser.validated_data,
+        )
+        # Attaching a live stream slot creates the matching BuddyLive, just as
+        # the gym schedule does, so a community slot is tappable end to end.
+        if post.activity_type == 'live_stream':
+            from apps.lives.models import BuddyLive
+            live = BuddyLive.objects.create(
+                host=request.user.profile,
+                community=conv,
+                title=post.title or f'{conv.group_name} Live',
+                live_type='buddy_circle',
+                category='fitness',
+                scheduled_for=post.start_time,
+                status='scheduled',
+            )
+            post.linked_live = live
+            post.save(update_fields=['linked_live'])
+        _notify_community_members(conv, {
+            'type': 'community_schedule',
+            'community_id': str(conv.id),
+            'schedule_id': str(post.id),
+            'title': post.title or 'New session',
+        })
+        return Response({
+            'success': True,
+            'data': GymRoutinePostSerializer(post, context={'request': request}).data,
+            'message': 'Session added to the community schedule.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class CommunityScheduleDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, community_id, schedule_id):
+        conv, membership, error = _community_activity_gate(request, community_id)
+        if error:
+            return error
+        from apps.gyms.models import GymRoutinePost
+
+        post = get_object_or_404(GymRoutinePost, id=schedule_id, community=conv)
+        if not _is_community_manager(membership) and post.author_id != request.user.profile.pk:
+            return Response({
+                'success': False, 'data': None, 'message': 'Only admins can remove activities.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        post.delete()
+        return Response({
+            'success': True, 'data': None, 'message': 'Session removed.',
+            'errors': None, 'pagination': None,
+        })
+
+
 def _write_call_log_message(conv, session, was_answered):
     """Record the call in the chat as one event message on the caller's side.
 

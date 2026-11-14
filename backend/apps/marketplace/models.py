@@ -499,6 +499,12 @@ class MarketplaceEvent(TimestampedModel):
     creator = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='created_events')
     shop = models.ForeignKey(Shop, null=True, blank=True, on_delete=models.SET_NULL, related_name='events')
     gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='events')
+    # Community-owned events. A community event is never simultaneously a gym
+    # event; see the constraint below. Events with neither owner keep working.
+    community = models.ForeignKey(
+        'messaging.Conversation', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='events',
+    )
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     cover_image = CloudinaryField('image', folder='marketplace/events', blank=True, null=True)
@@ -540,7 +546,16 @@ class MarketplaceEvent(TimestampedModel):
             models.Index(fields=['creator']),
             models.Index(fields=['shop']),
             models.Index(fields=['gym']),
+            models.Index(fields=['community']),
             models.Index(fields=['start_datetime', 'is_published']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=~(
+                    models.Q(gym__isnull=False) & models.Q(community__isnull=False)
+                ),
+                name='mkt_event_not_both_gym_and_community',
+            ),
         ]
 
     def __str__(self):

@@ -34,6 +34,9 @@ export interface BuddyLive {
   access: string;
   artifact_fee: Record<string, number> | null;
   gym_id: string | null;
+  /** Set when the live belongs to a community rather than a gym. */
+  community_id?: string | null;
+  community_name?: string;
   status: LiveStatus;
   started_at: string | null;
   ended_at: string | null;

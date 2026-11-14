@@ -464,15 +464,28 @@ class GymRoutinePostSerializer(serializers.ModelSerializer):
 
     is_enrolled = serializers.SerializerMethodField()
     enrollment_count = serializers.IntegerField(source='slots_taken', read_only=True)
+    community_name = serializers.SerializerMethodField()
+    gym_name = serializers.SerializerMethodField()
 
     class Meta:
         model = GymRoutinePost
-        fields = ['id', 'gym_id', 'author', 'author_data', 'title', 'content', 
+        fields = ['id', 'gym_id', 'gym_name', 'community_id', 'community_name',
+                  'author', 'author_data', 'title', 'content',
                   'activity_type', 'custom_activity_type', 'location_mode', 
                   'start_time', 'end_time', 'recurrence', 'recurrence_end_date',
                   'recurrence_days', 'max_slots', 'enrollment_count', 'is_enrolled', 'timezone',
                   'linked_live_id', 'created_at']
-        read_only_fields = ['id', 'gym_id', 'author', 'created_at']
+        read_only_fields = ['id', 'gym_id', 'community_id', 'author', 'created_at']
+
+    def get_community_name(self, obj):
+        if not obj.community_id:
+            return ''
+        return obj.community.group_name or ''
+
+    def get_gym_name(self, obj):
+        if not obj.gym_id:
+            return ''
+        return obj.gym.name or ''
 
     def get_is_enrolled(self, obj):
         request = self.context.get('request')

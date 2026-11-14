@@ -23,13 +23,15 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
     rsvp_count = serializers.SerializerMethodField()
     unique_viewers = serializers.SerializerMethodField()
     replay_views = serializers.SerializerMethodField()
+    community_name = serializers.SerializerMethodField()
 
     class Meta:
         model = BuddyLive
         fields = [
             'id', 'title', 'live_type', 'category', 'content_rating', 'access',
             'artifact_fee',
-            'gym_id', 'status', 'started_at', 'ended_at', 'viewer_peak',
+            'gym_id', 'community_id', 'community_name', 'status', 'started_at',
+            'ended_at', 'viewer_peak',
             'unique_viewers', 'replay_views',
             'replay_url', 'replay_saved', 'co_hosts', 'scheduled_for',
             'is_recurring', 'recurrence_rule', 'equipment_list',
@@ -39,6 +41,11 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'status', 'started_at', 'ended_at', 'viewer_peak', 'created_at', 'updated_at']
+
+    def get_community_name(self, obj):
+        if not obj.community_id:
+            return ''
+        return obj.community.group_name or ''
 
     def get_host(self, obj):
         return {

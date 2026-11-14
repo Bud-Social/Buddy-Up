@@ -421,3 +421,85 @@ class CommunityPostSerializer(serializers.ModelSerializer):
             return None
         qs = obj.comments.select_related('author').prefetch_related('replies')[:20]
         return CommunityPostCommentSerializer(qs, many=True).data
+
+
+# ---------------------------------------------------------------------------
+# Community activities (events / lives / schedules)
+# ---------------------------------------------------------------------------
+#
+# These are community-scoped rows in the marketplace, lives and gyms apps. The
+# input serializers here stay minimal on purpose: the community page offers one
+# form per activity type, and the owning app's own detail screens remain the
+# place to edit advanced fields (ticket tiers, co-hosts, recurrences).
+
+class CommunityEventInputSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=200)
+    description = serializers.CharField(required=False, allow_blank=True, default='')
+    event_type = serializers.ChoiceField(
+        choices=['in_person', 'online', 'hybrid'], default='in_person',
+    )
+    location = serializers.CharField(required=False, allow_blank=True, max_length=300, default='')
+    online_url = serializers.URLField(required=False, allow_blank=True, default='')
+    start_datetime = serializers.DateTimeField()
+    end_datetime = serializers.DateTimeField()
+    timezone = serializers.CharField(required=False, max_length=60, default='UTC')
+    capacity = serializers.IntegerField(required=False, default=0, min_value=0)
+    is_free = serializers.BooleanField(required=False, default=True)
+    cover_image_url = serializers.URLField(required=False, allow_blank=True, default='')
+    tags = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+    category = serializers.CharField(required=False, allow_blank=True, max_length=50, default='')
+
+    def validate(self, attrs):
+        if attrs['end_datetime'] <= attrs['start_datetime']:
+            raise serializers.ValidationError({'end_datetime': 'The event must end after it starts.'})
+        return attrs
+
+
+class CommunityLiveInputSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=80)
+    live_type = serializers.ChoiceField(
+        choices=[
+            'open_sweat', 'buddy_circle', 'gym_live', 'pt_session_live',
+            'random_drop', 'practitioner_live', 'audio',
+        ],
+        default='buddy_circle',
+    )
+    category = serializers.CharField(required=False, max_length=50, default='fitness')
+    access = serializers.ChoiceField(
+        choices=['public', 'buddies', 'gym_members', 'private'], default='public',
+    )
+    scheduled_for = serializers.DateTimeField(required=False, allow_null=True, default=None)
+
+
+class CommunityScheduleInputSerializer(serializers.Serializer):
+    title = serializers.CharField(required=False, allow_blank=True, max_length=150, default='')
+    content = serializers.CharField(required=False, allow_blank=True, max_length=2000, default='')
+    activity_type = serializers.ChoiceField(
+        choices=[
+            'yoga', 'hiit', 'strength', 'cardio', 'live_stream',
+            'workshop', 'event', 'session', 'other',
+        ],
+        default='other',
+    )
+    custom_activity_type = serializers.CharField(required=False, allow_blank=True, max_length=50, default='')
+    location_mode = serializers.ChoiceField(
+        choices=['in_house', 'online', 'hybrid'], default='in_house',
+    )
+    start_time = serializers.DateTimeField(required=False, allow_null=True, default=None)
+    end_time = serializers.DateTimeField(required=False, allow_null=True, default=None)
+    recurrence = serializers.ChoiceField(
+        choices=['none', 'daily', 'weekly', 'monthly', 'yearly'], default='none',
+    )
+    recurrence_end_date = serializers.DateField(required=False, allow_null=True, default=None)
+    recurrence_days = serializers.ListField(
+        child=serializers.IntegerField(min_value=0, max_value=6),
+        required=False, default=list,
+    )
+    max_slots = serializers.IntegerField(required=False, default=0, min_value=0)
+    timezone = serializers.CharField(required=False, max_length=60, default='UTC')
+
+    def validate(self, attrs):
+        start, end = attrs.get('start_time'), attrs.get('end_time')
+        if start and end and end <= start:
+            raise serializers.ValidationError({'end_time': 'The session must end after it starts.'})
+        return attrs

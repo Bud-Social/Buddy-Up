@@ -1,5 +1,51 @@
 import { apiClient } from './client';
 import type { ApiResponse } from '@/types';
+import type { MarketplaceEvent } from './marketplace';
+import type { BuddyLive } from '@/types/live';
+import type { GymRoutinePost } from '@/types/gym';
+
+export type CommunityEvent = MarketplaceEvent;
+export type CommunityLive = BuddyLive;
+export type CommunitySchedule = GymRoutinePost;
+
+export interface CommunityEventInput {
+  title: string;
+  description?: string;
+  event_type?: 'in_person' | 'online' | 'hybrid';
+  location?: string;
+  online_url?: string;
+  start_datetime: string;
+  end_datetime: string;
+  timezone?: string;
+  capacity?: number;
+  is_free?: boolean;
+  cover_image_url?: string;
+  tags?: string[];
+  category?: string;
+}
+
+export interface CommunityLiveInput {
+  title: string;
+  live_type?: string;
+  category?: string;
+  access?: string;
+  scheduled_for?: string | null;
+}
+
+export interface CommunityScheduleInput {
+  title?: string;
+  content?: string;
+  activity_type?: string;
+  custom_activity_type?: string;
+  location_mode?: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  recurrence?: string;
+  recurrence_end_date?: string | null;
+  recurrence_days?: number[];
+  max_slots?: number;
+  timezone?: string;
+}
 
 export interface ParticipantData {
   user_id: string;
@@ -556,4 +602,53 @@ export const messagingApi = {
         `/messaging/communities/${id}/posts/${postId}/comments/${commentId}/like/`,
       )
       .then((r) => r.data.data),
+
+  // ── Community activities (events / lives / schedules) ─────────────────
+  // Readable by members and by anyone viewing a public community; only admins
+  // may create or remove. The server owns that rule, the page just hides the
+  // controls for people it would refuse.
+  getCommunityEvents: (communityId: string) =>
+    apiClient
+      .get<ApiResponse<CommunityEvent[]>>(`/messaging/communities/${communityId}/events/`)
+      .then((r) => r.data.data),
+
+  createCommunityEvent: (communityId: string, data: CommunityEventInput) =>
+    apiClient
+      .post<ApiResponse<CommunityEvent>>(`/messaging/communities/${communityId}/events/`, data)
+      .then((r) => r.data.data),
+
+  deleteCommunityEvent: (communityId: string, eventId: string) =>
+    apiClient
+      .delete(`/messaging/communities/${communityId}/events/${eventId}/`)
+      .then((r) => r.data),
+
+  getCommunityLives: (communityId: string) =>
+    apiClient
+      .get<ApiResponse<CommunityLive[]>>(`/messaging/communities/${communityId}/lives/`)
+      .then((r) => r.data.data),
+
+  createCommunityLive: (communityId: string, data: CommunityLiveInput) =>
+    apiClient
+      .post<ApiResponse<CommunityLive>>(`/messaging/communities/${communityId}/lives/`, data)
+      .then((r) => r.data.data),
+
+  deleteCommunityLive: (communityId: string, liveId: string) =>
+    apiClient
+      .delete(`/messaging/communities/${communityId}/lives/${liveId}/`)
+      .then((r) => r.data),
+
+  getCommunitySchedules: (communityId: string) =>
+    apiClient
+      .get<ApiResponse<CommunitySchedule[]>>(`/messaging/communities/${communityId}/schedules/`)
+      .then((r) => r.data.data),
+
+  createCommunitySchedule: (communityId: string, data: CommunityScheduleInput) =>
+    apiClient
+      .post<ApiResponse<CommunitySchedule>>(`/messaging/communities/${communityId}/schedules/`, data)
+      .then((r) => r.data.data),
+
+  deleteCommunitySchedule: (communityId: string, scheduleId: string) =>
+    apiClient
+      .delete(`/messaging/communities/${communityId}/schedules/${scheduleId}/`)
+      .then((r) => r.data),
 };

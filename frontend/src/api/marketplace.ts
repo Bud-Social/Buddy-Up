@@ -133,6 +133,9 @@ export interface MarketplaceEvent {
   shop_data: { id: string; name: string; handle: string; verification_status?: string } | null;
   shop_id: string | null;
   gym_id: string | null;
+  /** Set when the event belongs to a community rather than a gym. */
+  community_id?: string | null;
+  community_name?: string;
   title: string;
   description: string;
   cover_image_url: string;
