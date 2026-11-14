@@ -665,3 +665,113 @@ Map<String, dynamic> _$ChatEventCallSignalToJson(
   'callType': instance.callType,
   'runtimeType': instance.$type,
 };
+
+_CommunityEvent _$CommunityEventFromJson(Map<String, dynamic> json) =>
+    _CommunityEvent(
+      id: json['id'] as String,
+      communityId: json['community_id'] as String?,
+      communityName: json['community_name'] as String? ?? '',
+      title: json['title'] as String,
+      description: json['description'] as String? ?? '',
+      gymId: json['gym_id'] as String?,
+      eventType: json['event_type'] as String? ?? 'in_person',
+      location: json['location'] as String? ?? '',
+      onlineUrl: json['online_url'] as String? ?? '',
+      startDatetime: json['start_datetime'] as String,
+      endDatetime: json['end_datetime'] as String,
+      coverImageUrl: json['cover_image_url'] as String? ?? '',
+      isFree: json['is_free'] as bool? ?? true,
+      capacity: (json['capacity'] as num?)?.toInt() ?? 0,
+      spotsRemaining: (json['spots_remaining'] as num?)?.toInt(),
+      isPublished: json['is_published'] as bool? ?? true,
+      isCancelled: json['is_cancelled'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$CommunityEventToJson(_CommunityEvent instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'community_id': instance.communityId,
+      'community_name': instance.communityName,
+      'title': instance.title,
+      'description': instance.description,
+      'gym_id': instance.gymId,
+      'event_type': instance.eventType,
+      'location': instance.location,
+      'online_url': instance.onlineUrl,
+      'start_datetime': instance.startDatetime,
+      'end_datetime': instance.endDatetime,
+      'cover_image_url': instance.coverImageUrl,
+      'is_free': instance.isFree,
+      'capacity': instance.capacity,
+      'spots_remaining': instance.spotsRemaining,
+      'is_published': instance.isPublished,
+      'is_cancelled': instance.isCancelled,
+    };
+
+_CommunityLive _$CommunityLiveFromJson(Map<String, dynamic> json) =>
+    _CommunityLive(
+      id: json['id'] as String,
+      communityId: json['community_id'] as String?,
+      communityName: json['community_name'] as String? ?? '',
+      title: json['title'] as String,
+      liveType: json['live_type'] as String? ?? 'buddy_circle',
+      category: json['category'] as String? ?? '',
+      access: json['access'] as String? ?? 'public',
+      status: json['status'] as String? ?? 'scheduled',
+      scheduledFor: json['scheduled_for'] as String?,
+    );
+
+Map<String, dynamic> _$CommunityLiveToJson(_CommunityLive instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'community_id': instance.communityId,
+      'community_name': instance.communityName,
+      'title': instance.title,
+      'live_type': instance.liveType,
+      'category': instance.category,
+      'access': instance.access,
+      'status': instance.status,
+      'scheduled_for': instance.scheduledFor,
+    };
+
+_CommunitySchedule _$CommunityScheduleFromJson(Map<String, dynamic> json) =>
+    _CommunitySchedule(
+      id: json['id'] as String,
+      communityId: json['community_id'] as String?,
+      communityName: json['community_name'] as String? ?? '',
+      gymId: json['gym_id'] as String?,
+      title: json['title'] as String? ?? '',
+      content: json['content'] as String? ?? '',
+      activityType: json['activity_type'] as String? ?? 'other',
+      customActivityType: json['custom_activity_type'] as String? ?? '',
+      locationMode: json['location_mode'] as String? ?? 'in_house',
+      startTime: json['start_time'] as String?,
+      endTime: json['end_time'] as String?,
+      recurrence: json['recurrence'] as String? ?? 'none',
+      recurrenceDays:
+          (json['recurrence_days'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          const <int>[],
+      maxSlots: (json['max_slots'] as num?)?.toInt() ?? 0,
+      enrollmentCount: (json['enrollment_count'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$CommunityScheduleToJson(_CommunitySchedule instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'community_id': instance.communityId,
+      'community_name': instance.communityName,
+      'gym_id': instance.gymId,
+      'title': instance.title,
+      'content': instance.content,
+      'activity_type': instance.activityType,
+      'custom_activity_type': instance.customActivityType,
+      'location_mode': instance.locationMode,
+      'start_time': instance.startTime,
+      'end_time': instance.endTime,
+      'recurrence': instance.recurrence,
+      'recurrence_days': instance.recurrenceDays,
+      'max_slots': instance.maxSlots,
+      'enrollment_count': instance.enrollmentCount,
+    };

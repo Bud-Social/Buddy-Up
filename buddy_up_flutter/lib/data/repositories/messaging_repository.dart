@@ -261,4 +261,50 @@ abstract class MessagingRepository {
     @Path('id') String communityId,
     @Path('pid') String postId,
   );
+
+  // ── Community activities (events / lives / schedules) ─────────────────
+  @GET('/messaging/communities/{id}/events/')
+  Future<dynamic> getCommunityEvents(@Path('id') String communityId);
+
+  @POST('/messaging/communities/{id}/events/')
+  Future<dynamic> createCommunityEvent(
+    @Path('id') String communityId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('/messaging/communities/{id}/events/{eid}/')
+  Future<dynamic> deleteCommunityEvent(
+    @Path('id') String communityId,
+    @Path('eid') String eventId,
+  );
+
+  @GET('/messaging/communities/{id}/lives/')
+  Future<dynamic> getCommunityLives(@Path('id') String communityId);
+
+  @POST('/messaging/communities/{id}/lives/')
+  Future<dynamic> createCommunityLive(
+    @Path('id') String communityId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('/messaging/communities/{id}/lives/{lid}/')
+  Future<dynamic> deleteCommunityLive(
+    @Path('id') String communityId,
+    @Path('lid') String liveId,
+  );
+
+  @GET('/messaging/communities/{id}/schedules/')
+  Future<dynamic> getCommunitySchedules(@Path('id') String communityId);
+
+  @POST('/messaging/communities/{id}/schedules/')
+  Future<dynamic> createCommunitySchedule(
+    @Path('id') String communityId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('/messaging/communities/{id}/schedules/{sid}/')
+  Future<dynamic> deleteCommunitySchedule(
+    @Path('id') String communityId,
+    @Path('sid') String scheduleId,
+  );
 }

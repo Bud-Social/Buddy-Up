@@ -6968,4 +6968,913 @@ as String,
 
 }
 
+
+/// @nodoc
+mixin _$CommunityEvent {
+
+ String get id;@JsonKey(name: 'community_id') String? get communityId;@JsonKey(name: 'community_name') String get communityName; String get title; String get description;@JsonKey(name: 'gym_id') String? get gymId;@JsonKey(name: 'event_type') String get eventType; String get location;@JsonKey(name: 'online_url') String get onlineUrl;@JsonKey(name: 'start_datetime') String get startDatetime;@JsonKey(name: 'end_datetime') String get endDatetime;@JsonKey(name: 'cover_image_url') String get coverImageUrl;@JsonKey(name: 'is_free') bool get isFree; int get capacity;@JsonKey(name: 'spots_remaining') int? get spotsRemaining;@JsonKey(name: 'is_published') bool get isPublished;@JsonKey(name: 'is_cancelled') bool get isCancelled;
+/// Create a copy of CommunityEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CommunityEventCopyWith<CommunityEvent> get copyWith => _$CommunityEventCopyWithImpl<CommunityEvent>(this as CommunityEvent, _$identity);
+
+  /// Serializes this CommunityEvent to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommunityEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.communityId, communityId) || other.communityId == communityId)&&(identical(other.communityName, communityName) || other.communityName == communityName)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.location, location) || other.location == location)&&(identical(other.onlineUrl, onlineUrl) || other.onlineUrl == onlineUrl)&&(identical(other.startDatetime, startDatetime) || other.startDatetime == startDatetime)&&(identical(other.endDatetime, endDatetime) || other.endDatetime == endDatetime)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.isFree, isFree) || other.isFree == isFree)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.spotsRemaining, spotsRemaining) || other.spotsRemaining == spotsRemaining)&&(identical(other.isPublished, isPublished) || other.isPublished == isPublished)&&(identical(other.isCancelled, isCancelled) || other.isCancelled == isCancelled));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,communityId,communityName,title,description,gymId,eventType,location,onlineUrl,startDatetime,endDatetime,coverImageUrl,isFree,capacity,spotsRemaining,isPublished,isCancelled);
+
+@override
+String toString() {
+  return 'CommunityEvent(id: $id, communityId: $communityId, communityName: $communityName, title: $title, description: $description, gymId: $gymId, eventType: $eventType, location: $location, onlineUrl: $onlineUrl, startDatetime: $startDatetime, endDatetime: $endDatetime, coverImageUrl: $coverImageUrl, isFree: $isFree, capacity: $capacity, spotsRemaining: $spotsRemaining, isPublished: $isPublished, isCancelled: $isCancelled)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CommunityEventCopyWith<$Res>  {
+  factory $CommunityEventCopyWith(CommunityEvent value, $Res Function(CommunityEvent) _then) = _$CommunityEventCopyWithImpl;
+@useResult
+$Res call({
+ String id,@JsonKey(name: 'community_id') String? communityId,@JsonKey(name: 'community_name') String communityName, String title, String description,@JsonKey(name: 'gym_id') String? gymId,@JsonKey(name: 'event_type') String eventType, String location,@JsonKey(name: 'online_url') String onlineUrl,@JsonKey(name: 'start_datetime') String startDatetime,@JsonKey(name: 'end_datetime') String endDatetime,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'is_free') bool isFree, int capacity,@JsonKey(name: 'spots_remaining') int? spotsRemaining,@JsonKey(name: 'is_published') bool isPublished,@JsonKey(name: 'is_cancelled') bool isCancelled
+});
+
+
+
+
+}
+/// @nodoc
+class _$CommunityEventCopyWithImpl<$Res>
+    implements $CommunityEventCopyWith<$Res> {
+  _$CommunityEventCopyWithImpl(this._self, this._then);
+
+  final CommunityEvent _self;
+  final $Res Function(CommunityEvent) _then;
+
+/// Create a copy of CommunityEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? communityId = freezed,Object? communityName = null,Object? title = null,Object? description = null,Object? gymId = freezed,Object? eventType = null,Object? location = null,Object? onlineUrl = null,Object? startDatetime = null,Object? endDatetime = null,Object? coverImageUrl = null,Object? isFree = null,Object? capacity = null,Object? spotsRemaining = freezed,Object? isPublished = null,Object? isCancelled = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,communityId: freezed == communityId ? _self.communityId : communityId // ignore: cast_nullable_to_non_nullable
+as String?,communityName: null == communityName ? _self.communityName : communityName // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,gymId: freezed == gymId ? _self.gymId : gymId // ignore: cast_nullable_to_non_nullable
+as String?,eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
+as String,location: null == location ? _self.location : location // ignore: cast_nullable_to_non_nullable
+as String,onlineUrl: null == onlineUrl ? _self.onlineUrl : onlineUrl // ignore: cast_nullable_to_non_nullable
+as String,startDatetime: null == startDatetime ? _self.startDatetime : startDatetime // ignore: cast_nullable_to_non_nullable
+as String,endDatetime: null == endDatetime ? _self.endDatetime : endDatetime // ignore: cast_nullable_to_non_nullable
+as String,coverImageUrl: null == coverImageUrl ? _self.coverImageUrl : coverImageUrl // ignore: cast_nullable_to_non_nullable
+as String,isFree: null == isFree ? _self.isFree : isFree // ignore: cast_nullable_to_non_nullable
+as bool,capacity: null == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
+as int,spotsRemaining: freezed == spotsRemaining ? _self.spotsRemaining : spotsRemaining // ignore: cast_nullable_to_non_nullable
+as int?,isPublished: null == isPublished ? _self.isPublished : isPublished // ignore: cast_nullable_to_non_nullable
+as bool,isCancelled: null == isCancelled ? _self.isCancelled : isCancelled // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CommunityEvent].
+extension CommunityEventPatterns on CommunityEvent {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CommunityEvent value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CommunityEvent() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CommunityEvent value)  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityEvent():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CommunityEvent value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityEvent() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'community_id')  String? communityId, @JsonKey(name: 'community_name')  String communityName,  String title,  String description, @JsonKey(name: 'gym_id')  String? gymId, @JsonKey(name: 'event_type')  String eventType,  String location, @JsonKey(name: 'online_url')  String onlineUrl, @JsonKey(name: 'start_datetime')  String startDatetime, @JsonKey(name: 'end_datetime')  String endDatetime, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'is_free')  bool isFree,  int capacity, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'is_cancelled')  bool isCancelled)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CommunityEvent() when $default != null:
+return $default(_that.id,_that.communityId,_that.communityName,_that.title,_that.description,_that.gymId,_that.eventType,_that.location,_that.onlineUrl,_that.startDatetime,_that.endDatetime,_that.coverImageUrl,_that.isFree,_that.capacity,_that.spotsRemaining,_that.isPublished,_that.isCancelled);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'community_id')  String? communityId, @JsonKey(name: 'community_name')  String communityName,  String title,  String description, @JsonKey(name: 'gym_id')  String? gymId, @JsonKey(name: 'event_type')  String eventType,  String location, @JsonKey(name: 'online_url')  String onlineUrl, @JsonKey(name: 'start_datetime')  String startDatetime, @JsonKey(name: 'end_datetime')  String endDatetime, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'is_free')  bool isFree,  int capacity, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'is_cancelled')  bool isCancelled)  $default,) {final _that = this;
+switch (_that) {
+case _CommunityEvent():
+return $default(_that.id,_that.communityId,_that.communityName,_that.title,_that.description,_that.gymId,_that.eventType,_that.location,_that.onlineUrl,_that.startDatetime,_that.endDatetime,_that.coverImageUrl,_that.isFree,_that.capacity,_that.spotsRemaining,_that.isPublished,_that.isCancelled);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'community_id')  String? communityId, @JsonKey(name: 'community_name')  String communityName,  String title,  String description, @JsonKey(name: 'gym_id')  String? gymId, @JsonKey(name: 'event_type')  String eventType,  String location, @JsonKey(name: 'online_url')  String onlineUrl, @JsonKey(name: 'start_datetime')  String startDatetime, @JsonKey(name: 'end_datetime')  String endDatetime, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'is_free')  bool isFree,  int capacity, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'is_cancelled')  bool isCancelled)?  $default,) {final _that = this;
+switch (_that) {
+case _CommunityEvent() when $default != null:
+return $default(_that.id,_that.communityId,_that.communityName,_that.title,_that.description,_that.gymId,_that.eventType,_that.location,_that.onlineUrl,_that.startDatetime,_that.endDatetime,_that.coverImageUrl,_that.isFree,_that.capacity,_that.spotsRemaining,_that.isPublished,_that.isCancelled);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CommunityEvent implements CommunityEvent {
+  const _CommunityEvent({required this.id, @JsonKey(name: 'community_id') this.communityId, @JsonKey(name: 'community_name') this.communityName = '', required this.title, this.description = '', @JsonKey(name: 'gym_id') this.gymId, @JsonKey(name: 'event_type') this.eventType = 'in_person', this.location = '', @JsonKey(name: 'online_url') this.onlineUrl = '', @JsonKey(name: 'start_datetime') required this.startDatetime, @JsonKey(name: 'end_datetime') required this.endDatetime, @JsonKey(name: 'cover_image_url') this.coverImageUrl = '', @JsonKey(name: 'is_free') this.isFree = true, this.capacity = 0, @JsonKey(name: 'spots_remaining') this.spotsRemaining, @JsonKey(name: 'is_published') this.isPublished = true, @JsonKey(name: 'is_cancelled') this.isCancelled = false});
+  factory _CommunityEvent.fromJson(Map<String, dynamic> json) => _$CommunityEventFromJson(json);
+
+@override final  String id;
+@override@JsonKey(name: 'community_id') final  String? communityId;
+@override@JsonKey(name: 'community_name') final  String communityName;
+@override final  String title;
+@override@JsonKey() final  String description;
+@override@JsonKey(name: 'gym_id') final  String? gymId;
+@override@JsonKey(name: 'event_type') final  String eventType;
+@override@JsonKey() final  String location;
+@override@JsonKey(name: 'online_url') final  String onlineUrl;
+@override@JsonKey(name: 'start_datetime') final  String startDatetime;
+@override@JsonKey(name: 'end_datetime') final  String endDatetime;
+@override@JsonKey(name: 'cover_image_url') final  String coverImageUrl;
+@override@JsonKey(name: 'is_free') final  bool isFree;
+@override@JsonKey() final  int capacity;
+@override@JsonKey(name: 'spots_remaining') final  int? spotsRemaining;
+@override@JsonKey(name: 'is_published') final  bool isPublished;
+@override@JsonKey(name: 'is_cancelled') final  bool isCancelled;
+
+/// Create a copy of CommunityEvent
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CommunityEventCopyWith<_CommunityEvent> get copyWith => __$CommunityEventCopyWithImpl<_CommunityEvent>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CommunityEventToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommunityEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.communityId, communityId) || other.communityId == communityId)&&(identical(other.communityName, communityName) || other.communityName == communityName)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.location, location) || other.location == location)&&(identical(other.onlineUrl, onlineUrl) || other.onlineUrl == onlineUrl)&&(identical(other.startDatetime, startDatetime) || other.startDatetime == startDatetime)&&(identical(other.endDatetime, endDatetime) || other.endDatetime == endDatetime)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.isFree, isFree) || other.isFree == isFree)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.spotsRemaining, spotsRemaining) || other.spotsRemaining == spotsRemaining)&&(identical(other.isPublished, isPublished) || other.isPublished == isPublished)&&(identical(other.isCancelled, isCancelled) || other.isCancelled == isCancelled));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,communityId,communityName,title,description,gymId,eventType,location,onlineUrl,startDatetime,endDatetime,coverImageUrl,isFree,capacity,spotsRemaining,isPublished,isCancelled);
+
+@override
+String toString() {
+  return 'CommunityEvent(id: $id, communityId: $communityId, communityName: $communityName, title: $title, description: $description, gymId: $gymId, eventType: $eventType, location: $location, onlineUrl: $onlineUrl, startDatetime: $startDatetime, endDatetime: $endDatetime, coverImageUrl: $coverImageUrl, isFree: $isFree, capacity: $capacity, spotsRemaining: $spotsRemaining, isPublished: $isPublished, isCancelled: $isCancelled)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CommunityEventCopyWith<$Res> implements $CommunityEventCopyWith<$Res> {
+  factory _$CommunityEventCopyWith(_CommunityEvent value, $Res Function(_CommunityEvent) _then) = __$CommunityEventCopyWithImpl;
+@override @useResult
+$Res call({
+ String id,@JsonKey(name: 'community_id') String? communityId,@JsonKey(name: 'community_name') String communityName, String title, String description,@JsonKey(name: 'gym_id') String? gymId,@JsonKey(name: 'event_type') String eventType, String location,@JsonKey(name: 'online_url') String onlineUrl,@JsonKey(name: 'start_datetime') String startDatetime,@JsonKey(name: 'end_datetime') String endDatetime,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'is_free') bool isFree, int capacity,@JsonKey(name: 'spots_remaining') int? spotsRemaining,@JsonKey(name: 'is_published') bool isPublished,@JsonKey(name: 'is_cancelled') bool isCancelled
+});
+
+
+
+
+}
+/// @nodoc
+class __$CommunityEventCopyWithImpl<$Res>
+    implements _$CommunityEventCopyWith<$Res> {
+  __$CommunityEventCopyWithImpl(this._self, this._then);
+
+  final _CommunityEvent _self;
+  final $Res Function(_CommunityEvent) _then;
+
+/// Create a copy of CommunityEvent
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? communityId = freezed,Object? communityName = null,Object? title = null,Object? description = null,Object? gymId = freezed,Object? eventType = null,Object? location = null,Object? onlineUrl = null,Object? startDatetime = null,Object? endDatetime = null,Object? coverImageUrl = null,Object? isFree = null,Object? capacity = null,Object? spotsRemaining = freezed,Object? isPublished = null,Object? isCancelled = null,}) {
+  return _then(_CommunityEvent(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,communityId: freezed == communityId ? _self.communityId : communityId // ignore: cast_nullable_to_non_nullable
+as String?,communityName: null == communityName ? _self.communityName : communityName // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,gymId: freezed == gymId ? _self.gymId : gymId // ignore: cast_nullable_to_non_nullable
+as String?,eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
+as String,location: null == location ? _self.location : location // ignore: cast_nullable_to_non_nullable
+as String,onlineUrl: null == onlineUrl ? _self.onlineUrl : onlineUrl // ignore: cast_nullable_to_non_nullable
+as String,startDatetime: null == startDatetime ? _self.startDatetime : startDatetime // ignore: cast_nullable_to_non_nullable
+as String,endDatetime: null == endDatetime ? _self.endDatetime : endDatetime // ignore: cast_nullable_to_non_nullable
+as String,coverImageUrl: null == coverImageUrl ? _self.coverImageUrl : coverImageUrl // ignore: cast_nullable_to_non_nullable
+as String,isFree: null == isFree ? _self.isFree : isFree // ignore: cast_nullable_to_non_nullable
+as bool,capacity: null == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
+as int,spotsRemaining: freezed == spotsRemaining ? _self.spotsRemaining : spotsRemaining // ignore: cast_nullable_to_non_nullable
+as int?,isPublished: null == isPublished ? _self.isPublished : isPublished // ignore: cast_nullable_to_non_nullable
+as bool,isCancelled: null == isCancelled ? _self.isCancelled : isCancelled // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$CommunityLive {
+
+ String get id;@JsonKey(name: 'community_id') String? get communityId;@JsonKey(name: 'community_name') String get communityName; String get title;@JsonKey(name: 'live_type') String get liveType; String get category; String get access; String get status;@JsonKey(name: 'scheduled_for') String? get scheduledFor;
+/// Create a copy of CommunityLive
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CommunityLiveCopyWith<CommunityLive> get copyWith => _$CommunityLiveCopyWithImpl<CommunityLive>(this as CommunityLive, _$identity);
+
+  /// Serializes this CommunityLive to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommunityLive&&(identical(other.id, id) || other.id == id)&&(identical(other.communityId, communityId) || other.communityId == communityId)&&(identical(other.communityName, communityName) || other.communityName == communityName)&&(identical(other.title, title) || other.title == title)&&(identical(other.liveType, liveType) || other.liveType == liveType)&&(identical(other.category, category) || other.category == category)&&(identical(other.access, access) || other.access == access)&&(identical(other.status, status) || other.status == status)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,communityId,communityName,title,liveType,category,access,status,scheduledFor);
+
+@override
+String toString() {
+  return 'CommunityLive(id: $id, communityId: $communityId, communityName: $communityName, title: $title, liveType: $liveType, category: $category, access: $access, status: $status, scheduledFor: $scheduledFor)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CommunityLiveCopyWith<$Res>  {
+  factory $CommunityLiveCopyWith(CommunityLive value, $Res Function(CommunityLive) _then) = _$CommunityLiveCopyWithImpl;
+@useResult
+$Res call({
+ String id,@JsonKey(name: 'community_id') String? communityId,@JsonKey(name: 'community_name') String communityName, String title,@JsonKey(name: 'live_type') String liveType, String category, String access, String status,@JsonKey(name: 'scheduled_for') String? scheduledFor
+});
+
+
+
+
+}
+/// @nodoc
+class _$CommunityLiveCopyWithImpl<$Res>
+    implements $CommunityLiveCopyWith<$Res> {
+  _$CommunityLiveCopyWithImpl(this._self, this._then);
+
+  final CommunityLive _self;
+  final $Res Function(CommunityLive) _then;
+
+/// Create a copy of CommunityLive
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? communityId = freezed,Object? communityName = null,Object? title = null,Object? liveType = null,Object? category = null,Object? access = null,Object? status = null,Object? scheduledFor = freezed,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,communityId: freezed == communityId ? _self.communityId : communityId // ignore: cast_nullable_to_non_nullable
+as String?,communityName: null == communityName ? _self.communityName : communityName // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,liveType: null == liveType ? _self.liveType : liveType // ignore: cast_nullable_to_non_nullable
+as String,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,access: null == access ? _self.access : access // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,scheduledFor: freezed == scheduledFor ? _self.scheduledFor : scheduledFor // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CommunityLive].
+extension CommunityLivePatterns on CommunityLive {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CommunityLive value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CommunityLive() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CommunityLive value)  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityLive():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CommunityLive value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityLive() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'community_id')  String? communityId, @JsonKey(name: 'community_name')  String communityName,  String title, @JsonKey(name: 'live_type')  String liveType,  String category,  String access,  String status, @JsonKey(name: 'scheduled_for')  String? scheduledFor)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CommunityLive() when $default != null:
+return $default(_that.id,_that.communityId,_that.communityName,_that.title,_that.liveType,_that.category,_that.access,_that.status,_that.scheduledFor);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'community_id')  String? communityId, @JsonKey(name: 'community_name')  String communityName,  String title, @JsonKey(name: 'live_type')  String liveType,  String category,  String access,  String status, @JsonKey(name: 'scheduled_for')  String? scheduledFor)  $default,) {final _that = this;
+switch (_that) {
+case _CommunityLive():
+return $default(_that.id,_that.communityId,_that.communityName,_that.title,_that.liveType,_that.category,_that.access,_that.status,_that.scheduledFor);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'community_id')  String? communityId, @JsonKey(name: 'community_name')  String communityName,  String title, @JsonKey(name: 'live_type')  String liveType,  String category,  String access,  String status, @JsonKey(name: 'scheduled_for')  String? scheduledFor)?  $default,) {final _that = this;
+switch (_that) {
+case _CommunityLive() when $default != null:
+return $default(_that.id,_that.communityId,_that.communityName,_that.title,_that.liveType,_that.category,_that.access,_that.status,_that.scheduledFor);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CommunityLive implements CommunityLive {
+  const _CommunityLive({required this.id, @JsonKey(name: 'community_id') this.communityId, @JsonKey(name: 'community_name') this.communityName = '', required this.title, @JsonKey(name: 'live_type') this.liveType = 'buddy_circle', this.category = '', this.access = 'public', this.status = 'scheduled', @JsonKey(name: 'scheduled_for') this.scheduledFor});
+  factory _CommunityLive.fromJson(Map<String, dynamic> json) => _$CommunityLiveFromJson(json);
+
+@override final  String id;
+@override@JsonKey(name: 'community_id') final  String? communityId;
+@override@JsonKey(name: 'community_name') final  String communityName;
+@override final  String title;
+@override@JsonKey(name: 'live_type') final  String liveType;
+@override@JsonKey() final  String category;
+@override@JsonKey() final  String access;
+@override@JsonKey() final  String status;
+@override@JsonKey(name: 'scheduled_for') final  String? scheduledFor;
+
+/// Create a copy of CommunityLive
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CommunityLiveCopyWith<_CommunityLive> get copyWith => __$CommunityLiveCopyWithImpl<_CommunityLive>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CommunityLiveToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommunityLive&&(identical(other.id, id) || other.id == id)&&(identical(other.communityId, communityId) || other.communityId == communityId)&&(identical(other.communityName, communityName) || other.communityName == communityName)&&(identical(other.title, title) || other.title == title)&&(identical(other.liveType, liveType) || other.liveType == liveType)&&(identical(other.category, category) || other.category == category)&&(identical(other.access, access) || other.access == access)&&(identical(other.status, status) || other.status == status)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,communityId,communityName,title,liveType,category,access,status,scheduledFor);
+
+@override
+String toString() {
+  return 'CommunityLive(id: $id, communityId: $communityId, communityName: $communityName, title: $title, liveType: $liveType, category: $category, access: $access, status: $status, scheduledFor: $scheduledFor)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CommunityLiveCopyWith<$Res> implements $CommunityLiveCopyWith<$Res> {
+  factory _$CommunityLiveCopyWith(_CommunityLive value, $Res Function(_CommunityLive) _then) = __$CommunityLiveCopyWithImpl;
+@override @useResult
+$Res call({
+ String id,@JsonKey(name: 'community_id') String? communityId,@JsonKey(name: 'community_name') String communityName, String title,@JsonKey(name: 'live_type') String liveType, String category, String access, String status,@JsonKey(name: 'scheduled_for') String? scheduledFor
+});
+
+
+
+
+}
+/// @nodoc
+class __$CommunityLiveCopyWithImpl<$Res>
+    implements _$CommunityLiveCopyWith<$Res> {
+  __$CommunityLiveCopyWithImpl(this._self, this._then);
+
+  final _CommunityLive _self;
+  final $Res Function(_CommunityLive) _then;
+
+/// Create a copy of CommunityLive
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? communityId = freezed,Object? communityName = null,Object? title = null,Object? liveType = null,Object? category = null,Object? access = null,Object? status = null,Object? scheduledFor = freezed,}) {
+  return _then(_CommunityLive(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,communityId: freezed == communityId ? _self.communityId : communityId // ignore: cast_nullable_to_non_nullable
+as String?,communityName: null == communityName ? _self.communityName : communityName // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,liveType: null == liveType ? _self.liveType : liveType // ignore: cast_nullable_to_non_nullable
+as String,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,access: null == access ? _self.access : access // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,scheduledFor: freezed == scheduledFor ? _self.scheduledFor : scheduledFor // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$CommunitySchedule {
+
+ String get id;@JsonKey(name: 'community_id') String? get communityId;@JsonKey(name: 'community_name') String get communityName;@JsonKey(name: 'gym_id') String? get gymId; String get title; String get content;@JsonKey(name: 'activity_type') String get activityType;@JsonKey(name: 'custom_activity_type') String get customActivityType;@JsonKey(name: 'location_mode') String get locationMode;@JsonKey(name: 'start_time') String? get startTime;@JsonKey(name: 'end_time') String? get endTime; String get recurrence;@JsonKey(name: 'recurrence_days') List<int> get recurrenceDays;@JsonKey(name: 'max_slots') int get maxSlots;@JsonKey(name: 'enrollment_count') int get enrollmentCount;
+/// Create a copy of CommunitySchedule
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CommunityScheduleCopyWith<CommunitySchedule> get copyWith => _$CommunityScheduleCopyWithImpl<CommunitySchedule>(this as CommunitySchedule, _$identity);
+
+  /// Serializes this CommunitySchedule to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommunitySchedule&&(identical(other.id, id) || other.id == id)&&(identical(other.communityId, communityId) || other.communityId == communityId)&&(identical(other.communityName, communityName) || other.communityName == communityName)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.title, title) || other.title == title)&&(identical(other.content, content) || other.content == content)&&(identical(other.activityType, activityType) || other.activityType == activityType)&&(identical(other.customActivityType, customActivityType) || other.customActivityType == customActivityType)&&(identical(other.locationMode, locationMode) || other.locationMode == locationMode)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.recurrence, recurrence) || other.recurrence == recurrence)&&const DeepCollectionEquality().equals(other.recurrenceDays, recurrenceDays)&&(identical(other.maxSlots, maxSlots) || other.maxSlots == maxSlots)&&(identical(other.enrollmentCount, enrollmentCount) || other.enrollmentCount == enrollmentCount));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,communityId,communityName,gymId,title,content,activityType,customActivityType,locationMode,startTime,endTime,recurrence,const DeepCollectionEquality().hash(recurrenceDays),maxSlots,enrollmentCount);
+
+@override
+String toString() {
+  return 'CommunitySchedule(id: $id, communityId: $communityId, communityName: $communityName, gymId: $gymId, title: $title, content: $content, activityType: $activityType, customActivityType: $customActivityType, locationMode: $locationMode, startTime: $startTime, endTime: $endTime, recurrence: $recurrence, recurrenceDays: $recurrenceDays, maxSlots: $maxSlots, enrollmentCount: $enrollmentCount)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CommunityScheduleCopyWith<$Res>  {
+  factory $CommunityScheduleCopyWith(CommunitySchedule value, $Res Function(CommunitySchedule) _then) = _$CommunityScheduleCopyWithImpl;
+@useResult
+$Res call({
+ String id,@JsonKey(name: 'community_id') String? communityId,@JsonKey(name: 'community_name') String communityName,@JsonKey(name: 'gym_id') String? gymId, String title, String content,@JsonKey(name: 'activity_type') String activityType,@JsonKey(name: 'custom_activity_type') String customActivityType,@JsonKey(name: 'location_mode') String locationMode,@JsonKey(name: 'start_time') String? startTime,@JsonKey(name: 'end_time') String? endTime, String recurrence,@JsonKey(name: 'recurrence_days') List<int> recurrenceDays,@JsonKey(name: 'max_slots') int maxSlots,@JsonKey(name: 'enrollment_count') int enrollmentCount
+});
+
+
+
+
+}
+/// @nodoc
+class _$CommunityScheduleCopyWithImpl<$Res>
+    implements $CommunityScheduleCopyWith<$Res> {
+  _$CommunityScheduleCopyWithImpl(this._self, this._then);
+
+  final CommunitySchedule _self;
+  final $Res Function(CommunitySchedule) _then;
+
+/// Create a copy of CommunitySchedule
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? communityId = freezed,Object? communityName = null,Object? gymId = freezed,Object? title = null,Object? content = null,Object? activityType = null,Object? customActivityType = null,Object? locationMode = null,Object? startTime = freezed,Object? endTime = freezed,Object? recurrence = null,Object? recurrenceDays = null,Object? maxSlots = null,Object? enrollmentCount = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,communityId: freezed == communityId ? _self.communityId : communityId // ignore: cast_nullable_to_non_nullable
+as String?,communityName: null == communityName ? _self.communityName : communityName // ignore: cast_nullable_to_non_nullable
+as String,gymId: freezed == gymId ? _self.gymId : gymId // ignore: cast_nullable_to_non_nullable
+as String?,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,content: null == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
+as String,activityType: null == activityType ? _self.activityType : activityType // ignore: cast_nullable_to_non_nullable
+as String,customActivityType: null == customActivityType ? _self.customActivityType : customActivityType // ignore: cast_nullable_to_non_nullable
+as String,locationMode: null == locationMode ? _self.locationMode : locationMode // ignore: cast_nullable_to_non_nullable
+as String,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
+as String?,endTime: freezed == endTime ? _self.endTime : endTime // ignore: cast_nullable_to_non_nullable
+as String?,recurrence: null == recurrence ? _self.recurrence : recurrence // ignore: cast_nullable_to_non_nullable
+as String,recurrenceDays: null == recurrenceDays ? _self.recurrenceDays : recurrenceDays // ignore: cast_nullable_to_non_nullable
+as List<int>,maxSlots: null == maxSlots ? _self.maxSlots : maxSlots // ignore: cast_nullable_to_non_nullable
+as int,enrollmentCount: null == enrollmentCount ? _self.enrollmentCount : enrollmentCount // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CommunitySchedule].
+extension CommunitySchedulePatterns on CommunitySchedule {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CommunitySchedule value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CommunitySchedule() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CommunitySchedule value)  $default,){
+final _that = this;
+switch (_that) {
+case _CommunitySchedule():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CommunitySchedule value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CommunitySchedule() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'community_id')  String? communityId, @JsonKey(name: 'community_name')  String communityName, @JsonKey(name: 'gym_id')  String? gymId,  String title,  String content, @JsonKey(name: 'activity_type')  String activityType, @JsonKey(name: 'custom_activity_type')  String customActivityType, @JsonKey(name: 'location_mode')  String locationMode, @JsonKey(name: 'start_time')  String? startTime, @JsonKey(name: 'end_time')  String? endTime,  String recurrence, @JsonKey(name: 'recurrence_days')  List<int> recurrenceDays, @JsonKey(name: 'max_slots')  int maxSlots, @JsonKey(name: 'enrollment_count')  int enrollmentCount)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CommunitySchedule() when $default != null:
+return $default(_that.id,_that.communityId,_that.communityName,_that.gymId,_that.title,_that.content,_that.activityType,_that.customActivityType,_that.locationMode,_that.startTime,_that.endTime,_that.recurrence,_that.recurrenceDays,_that.maxSlots,_that.enrollmentCount);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'community_id')  String? communityId, @JsonKey(name: 'community_name')  String communityName, @JsonKey(name: 'gym_id')  String? gymId,  String title,  String content, @JsonKey(name: 'activity_type')  String activityType, @JsonKey(name: 'custom_activity_type')  String customActivityType, @JsonKey(name: 'location_mode')  String locationMode, @JsonKey(name: 'start_time')  String? startTime, @JsonKey(name: 'end_time')  String? endTime,  String recurrence, @JsonKey(name: 'recurrence_days')  List<int> recurrenceDays, @JsonKey(name: 'max_slots')  int maxSlots, @JsonKey(name: 'enrollment_count')  int enrollmentCount)  $default,) {final _that = this;
+switch (_that) {
+case _CommunitySchedule():
+return $default(_that.id,_that.communityId,_that.communityName,_that.gymId,_that.title,_that.content,_that.activityType,_that.customActivityType,_that.locationMode,_that.startTime,_that.endTime,_that.recurrence,_that.recurrenceDays,_that.maxSlots,_that.enrollmentCount);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'community_id')  String? communityId, @JsonKey(name: 'community_name')  String communityName, @JsonKey(name: 'gym_id')  String? gymId,  String title,  String content, @JsonKey(name: 'activity_type')  String activityType, @JsonKey(name: 'custom_activity_type')  String customActivityType, @JsonKey(name: 'location_mode')  String locationMode, @JsonKey(name: 'start_time')  String? startTime, @JsonKey(name: 'end_time')  String? endTime,  String recurrence, @JsonKey(name: 'recurrence_days')  List<int> recurrenceDays, @JsonKey(name: 'max_slots')  int maxSlots, @JsonKey(name: 'enrollment_count')  int enrollmentCount)?  $default,) {final _that = this;
+switch (_that) {
+case _CommunitySchedule() when $default != null:
+return $default(_that.id,_that.communityId,_that.communityName,_that.gymId,_that.title,_that.content,_that.activityType,_that.customActivityType,_that.locationMode,_that.startTime,_that.endTime,_that.recurrence,_that.recurrenceDays,_that.maxSlots,_that.enrollmentCount);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CommunitySchedule implements CommunitySchedule {
+  const _CommunitySchedule({required this.id, @JsonKey(name: 'community_id') this.communityId, @JsonKey(name: 'community_name') this.communityName = '', @JsonKey(name: 'gym_id') this.gymId, this.title = '', this.content = '', @JsonKey(name: 'activity_type') this.activityType = 'other', @JsonKey(name: 'custom_activity_type') this.customActivityType = '', @JsonKey(name: 'location_mode') this.locationMode = 'in_house', @JsonKey(name: 'start_time') this.startTime, @JsonKey(name: 'end_time') this.endTime, this.recurrence = 'none', @JsonKey(name: 'recurrence_days') final  List<int> recurrenceDays = const <int>[], @JsonKey(name: 'max_slots') this.maxSlots = 0, @JsonKey(name: 'enrollment_count') this.enrollmentCount = 0}): _recurrenceDays = recurrenceDays;
+  factory _CommunitySchedule.fromJson(Map<String, dynamic> json) => _$CommunityScheduleFromJson(json);
+
+@override final  String id;
+@override@JsonKey(name: 'community_id') final  String? communityId;
+@override@JsonKey(name: 'community_name') final  String communityName;
+@override@JsonKey(name: 'gym_id') final  String? gymId;
+@override@JsonKey() final  String title;
+@override@JsonKey() final  String content;
+@override@JsonKey(name: 'activity_type') final  String activityType;
+@override@JsonKey(name: 'custom_activity_type') final  String customActivityType;
+@override@JsonKey(name: 'location_mode') final  String locationMode;
+@override@JsonKey(name: 'start_time') final  String? startTime;
+@override@JsonKey(name: 'end_time') final  String? endTime;
+@override@JsonKey() final  String recurrence;
+ final  List<int> _recurrenceDays;
+@override@JsonKey(name: 'recurrence_days') List<int> get recurrenceDays {
+  if (_recurrenceDays is EqualUnmodifiableListView) return _recurrenceDays;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_recurrenceDays);
+}
+
+@override@JsonKey(name: 'max_slots') final  int maxSlots;
+@override@JsonKey(name: 'enrollment_count') final  int enrollmentCount;
+
+/// Create a copy of CommunitySchedule
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CommunityScheduleCopyWith<_CommunitySchedule> get copyWith => __$CommunityScheduleCopyWithImpl<_CommunitySchedule>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CommunityScheduleToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommunitySchedule&&(identical(other.id, id) || other.id == id)&&(identical(other.communityId, communityId) || other.communityId == communityId)&&(identical(other.communityName, communityName) || other.communityName == communityName)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.title, title) || other.title == title)&&(identical(other.content, content) || other.content == content)&&(identical(other.activityType, activityType) || other.activityType == activityType)&&(identical(other.customActivityType, customActivityType) || other.customActivityType == customActivityType)&&(identical(other.locationMode, locationMode) || other.locationMode == locationMode)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.recurrence, recurrence) || other.recurrence == recurrence)&&const DeepCollectionEquality().equals(other._recurrenceDays, _recurrenceDays)&&(identical(other.maxSlots, maxSlots) || other.maxSlots == maxSlots)&&(identical(other.enrollmentCount, enrollmentCount) || other.enrollmentCount == enrollmentCount));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,communityId,communityName,gymId,title,content,activityType,customActivityType,locationMode,startTime,endTime,recurrence,const DeepCollectionEquality().hash(_recurrenceDays),maxSlots,enrollmentCount);
+
+@override
+String toString() {
+  return 'CommunitySchedule(id: $id, communityId: $communityId, communityName: $communityName, gymId: $gymId, title: $title, content: $content, activityType: $activityType, customActivityType: $customActivityType, locationMode: $locationMode, startTime: $startTime, endTime: $endTime, recurrence: $recurrence, recurrenceDays: $recurrenceDays, maxSlots: $maxSlots, enrollmentCount: $enrollmentCount)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CommunityScheduleCopyWith<$Res> implements $CommunityScheduleCopyWith<$Res> {
+  factory _$CommunityScheduleCopyWith(_CommunitySchedule value, $Res Function(_CommunitySchedule) _then) = __$CommunityScheduleCopyWithImpl;
+@override @useResult
+$Res call({
+ String id,@JsonKey(name: 'community_id') String? communityId,@JsonKey(name: 'community_name') String communityName,@JsonKey(name: 'gym_id') String? gymId, String title, String content,@JsonKey(name: 'activity_type') String activityType,@JsonKey(name: 'custom_activity_type') String customActivityType,@JsonKey(name: 'location_mode') String locationMode,@JsonKey(name: 'start_time') String? startTime,@JsonKey(name: 'end_time') String? endTime, String recurrence,@JsonKey(name: 'recurrence_days') List<int> recurrenceDays,@JsonKey(name: 'max_slots') int maxSlots,@JsonKey(name: 'enrollment_count') int enrollmentCount
+});
+
+
+
+
+}
+/// @nodoc
+class __$CommunityScheduleCopyWithImpl<$Res>
+    implements _$CommunityScheduleCopyWith<$Res> {
+  __$CommunityScheduleCopyWithImpl(this._self, this._then);
+
+  final _CommunitySchedule _self;
+  final $Res Function(_CommunitySchedule) _then;
+
+/// Create a copy of CommunitySchedule
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? communityId = freezed,Object? communityName = null,Object? gymId = freezed,Object? title = null,Object? content = null,Object? activityType = null,Object? customActivityType = null,Object? locationMode = null,Object? startTime = freezed,Object? endTime = freezed,Object? recurrence = null,Object? recurrenceDays = null,Object? maxSlots = null,Object? enrollmentCount = null,}) {
+  return _then(_CommunitySchedule(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,communityId: freezed == communityId ? _self.communityId : communityId // ignore: cast_nullable_to_non_nullable
+as String?,communityName: null == communityName ? _self.communityName : communityName // ignore: cast_nullable_to_non_nullable
+as String,gymId: freezed == gymId ? _self.gymId : gymId // ignore: cast_nullable_to_non_nullable
+as String?,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,content: null == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
+as String,activityType: null == activityType ? _self.activityType : activityType // ignore: cast_nullable_to_non_nullable
+as String,customActivityType: null == customActivityType ? _self.customActivityType : customActivityType // ignore: cast_nullable_to_non_nullable
+as String,locationMode: null == locationMode ? _self.locationMode : locationMode // ignore: cast_nullable_to_non_nullable
+as String,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
+as String?,endTime: freezed == endTime ? _self.endTime : endTime // ignore: cast_nullable_to_non_nullable
+as String?,recurrence: null == recurrence ? _self.recurrence : recurrence // ignore: cast_nullable_to_non_nullable
+as String,recurrenceDays: null == recurrenceDays ? _self._recurrenceDays : recurrenceDays // ignore: cast_nullable_to_non_nullable
+as List<int>,maxSlots: null == maxSlots ? _self.maxSlots : maxSlots // ignore: cast_nullable_to_non_nullable
+as int,enrollmentCount: null == enrollmentCount ? _self.enrollmentCount : enrollmentCount // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
 // dart format on

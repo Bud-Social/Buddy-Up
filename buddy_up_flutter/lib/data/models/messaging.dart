@@ -454,3 +454,75 @@ sealed class ChatEvent with _$ChatEvent {
   factory ChatEvent.fromJson(Map<String, dynamic> json) =>
       _$ChatEventFromJson(json);
 }
+
+// ── Community activities (events / lives / schedules) ───────────────────────
+// Mirrors the community-scoped records the backend serialises at
+// /messaging/communities/<id>/{events,lives,schedules}/.
+
+@freezed
+abstract class CommunityEvent with _$CommunityEvent {
+  const factory CommunityEvent({
+    required String id,
+    @JsonKey(name: 'community_id') String? communityId,
+    @JsonKey(name: 'community_name') @Default('') String communityName,
+    required String title,
+    @Default('') String description,
+    @JsonKey(name: 'gym_id') String? gymId,
+    @JsonKey(name: 'event_type') @Default('in_person') String eventType,
+    @Default('') String location,
+    @JsonKey(name: 'online_url') @Default('') String onlineUrl,
+    @JsonKey(name: 'start_datetime') required String startDatetime,
+    @JsonKey(name: 'end_datetime') required String endDatetime,
+    @JsonKey(name: 'cover_image_url') @Default('') String coverImageUrl,
+    @JsonKey(name: 'is_free') @Default(true) bool isFree,
+    @Default(0) int capacity,
+    @JsonKey(name: 'spots_remaining') int? spotsRemaining,
+    @JsonKey(name: 'is_published') @Default(true) bool isPublished,
+    @JsonKey(name: 'is_cancelled') @Default(false) bool isCancelled,
+  }) = _CommunityEvent;
+
+  factory CommunityEvent.fromJson(Map<String, dynamic> json) =>
+      _$CommunityEventFromJson(json);
+}
+
+@freezed
+abstract class CommunityLive with _$CommunityLive {
+  const factory CommunityLive({
+    required String id,
+    @JsonKey(name: 'community_id') String? communityId,
+    @JsonKey(name: 'community_name') @Default('') String communityName,
+    required String title,
+    @JsonKey(name: 'live_type') @Default('buddy_circle') String liveType,
+    @Default('') String category,
+    @Default('public') String access,
+    @Default('scheduled') String status,
+    @JsonKey(name: 'scheduled_for') String? scheduledFor,
+  }) = _CommunityLive;
+
+  factory CommunityLive.fromJson(Map<String, dynamic> json) =>
+      _$CommunityLiveFromJson(json);
+}
+
+@freezed
+abstract class CommunitySchedule with _$CommunitySchedule {
+  const factory CommunitySchedule({
+    required String id,
+    @JsonKey(name: 'community_id') String? communityId,
+    @JsonKey(name: 'community_name') @Default('') String communityName,
+    @JsonKey(name: 'gym_id') String? gymId,
+    @Default('') String title,
+    @Default('') String content,
+    @JsonKey(name: 'activity_type') @Default('other') String activityType,
+    @JsonKey(name: 'custom_activity_type') @Default('') String customActivityType,
+    @JsonKey(name: 'location_mode') @Default('in_house') String locationMode,
+    @JsonKey(name: 'start_time') String? startTime,
+    @JsonKey(name: 'end_time') String? endTime,
+    @Default('none') String recurrence,
+    @JsonKey(name: 'recurrence_days') @Default(<int>[]) List<int> recurrenceDays,
+    @JsonKey(name: 'max_slots') @Default(0) int maxSlots,
+    @JsonKey(name: 'enrollment_count') @Default(0) int enrollmentCount,
+  }) = _CommunitySchedule;
+
+  factory CommunitySchedule.fromJson(Map<String, dynamic> json) =>
+      _$CommunityScheduleFromJson(json);
+}

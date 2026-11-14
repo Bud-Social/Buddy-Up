@@ -9,6 +9,7 @@ import '../../feed/screens/post_composer_screen.dart';
 import '../providers/community_provider.dart';
 import 'community_settings_screen.dart';
 import 'community_members_screen.dart';
+import 'community_activities_screen.dart';
 
 /// Tab kind for community navigation.
 enum _CommunityTabKind { all, single }
@@ -571,6 +572,33 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                               ),
                             ),
                           ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        ActionChip(
+                          avatar: const Icon(Icons.event_note, size: 16, color: BuddyColors.green),
+                          label: const Text(
+                            'Activities',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: BuddyColors.green,
+                            ),
+                          ),
+                          backgroundColor: BuddyColors.green.withValues(alpha: 0.15),
+                          side: BorderSide(color: BuddyColors.green.withValues(alpha: 0.4)),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => CommunityActivitiesScreen(
+                                communityId: widget.communityId,
+                                communityName: detail.groupName,
+                                canManage: canManage,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     if (!isMember) ...[
