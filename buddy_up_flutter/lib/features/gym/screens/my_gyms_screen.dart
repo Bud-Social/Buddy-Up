@@ -144,7 +144,14 @@ class _MyGymsScreenState extends ConsumerState<MyGymsScreen> {
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
-                                            VerifiedGymBadge(verified: gym.isVerified, tier: gym.tier),
+                                            VerifiedGymBadge(
+                                              verified: gym.isVerified,
+                                              tier: gym.tier,
+                                              capacity: GymTierCapacity(
+                                                cap: gym.tier == 'regular' ? 50 : gym.tier == 'midlevel' ? 500 : null,
+                                                current: gym.memberCount,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                         const SizedBox(height: 2),
