@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Store, Loader2, Unplug, ExternalLink, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { Store, Unplug, ExternalLink, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';

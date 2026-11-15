@@ -60,8 +60,7 @@ def sweep_tier_grace_periods():
     from datetime import timedelta
     from django.utils import timezone
 
-    from .models import GymMembership, GymTierSubscription
-    from apps.notifications.tasks import _deliver_notification
+    from .models import GymTierSubscription
 
     now = timezone.now()
     grace_delta = timedelta(days=7)
@@ -93,8 +92,12 @@ def sweep_tier_grace_periods():
 
 
 def _notify_owners(sub, notification_type, title, body):
+    from .models import GymMembership
     from apps.notifications.tasks import _deliver_notification
 
     for membership in GymMembership.objects.filter(gym=sub.gym, role='owner'):
-        _deliver_notification(str(membership.member.user_id), notification_type,
-                              title, body, {'gym_handle': sub.gym.handle})
+        _deliver_notification(
+            str(membership.member.user_id), notification_type, title, body,
+            {'gym_handle': sub.gym.handle},
+        )
+

@@ -21,13 +21,15 @@ import json
 import logging
 from uuid import uuid4
 
+from django.conf import settings
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
 
 from . import capacity, tier_pricing
-from .models import Gym, GymMembership, GymTierSubscription, GymTierPlan
+from .models import Gym, GymMembership, GymTierSubscription
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +129,7 @@ class TierCheckoutView(views.APIView):
             'currency': currency,
             'tier': tier,
             'country': (gym.location_country or '').strip().upper()[:2],
-            'public_key': __import__('django.conf', fromlist=['settings']).settings.FLUTTERWAVE_PUBLIC_KEY,
+            'public_key': settings.FLUTTERWAVE_PUBLIC_KEY,
             'customer_email': request.user.email,
             'customer_name': request.user.profile.display_name,
         }
@@ -375,7 +377,7 @@ class TierWalletView(views.APIView):
             return Response({'success': False, 'message': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         from .models import GymWallet
-        from django.db.models import Sum, Count, Q
+        from django.db.models import Sum, Count
 
         wallet, _ = GymWallet.objects.get_or_create(gym=gym, defaults={'balance': {}})
         window_days = int(request.query_params.get('days') or 30)
@@ -390,8 +392,6 @@ class TierWalletView(views.APIView):
                 'quantity': row['total'] or 0,
                 'count': row['n'],
             }
-
-        kind_totals_credits = entries.filter(direction='credit').values('kind').annotate(total=Sum('quantity'))
 
         return Response({
             'success': True,

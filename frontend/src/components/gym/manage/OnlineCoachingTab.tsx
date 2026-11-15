@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Check, Plus, Trash2, Wifi, UserCheck, Search, X } from 'lucide-react';
+import { Check, Plus, Trash2, Wifi, Search, X } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -33,7 +33,7 @@ interface OnlineCoachingTabProps {
  * offers members rather than a free-text name and never lets an owner list
  * somebody who is not actually part of the gym.
  */
-export function OnlineCoachingTab({ slug, canManage, members }: OnlineCoachingTabProps) {
+export function OnlineCoachingTab({ slug, canManage }: OnlineCoachingTabProps) {
   const [offers, setOffers] = useState(false);
   const [types, setTypes] = useState<string[]>([]);
   const [coaches, setCoaches] = useState<GymOnlineCoach[]>([]);

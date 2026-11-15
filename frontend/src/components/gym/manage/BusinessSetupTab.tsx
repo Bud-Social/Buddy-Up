@@ -213,7 +213,7 @@ export function BusinessSetupTab({ slug, canManage, members, onDeleted }: Busine
     });
     setMediaUploads((prev) => ({ ...prev, ...trackers }));
     try {
-      const res = await gymsApi.uploadMedia(slug, fileList, mediaKind, '', (index, ratio, file) => {
+      const res = await gymsApi.uploadMedia(slug, fileList, mediaKind, '', (index, ratio) => {
         setMediaUploads((prev) => {
           const keys = Object.keys(prev).filter((k) => k.startsWith(`${index}-`));
           if (keys.length === 0) return prev;

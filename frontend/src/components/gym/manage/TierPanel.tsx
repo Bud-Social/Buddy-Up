@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Loader2, Check, Ban } from 'lucide-react';
+import { Check, Ban } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';

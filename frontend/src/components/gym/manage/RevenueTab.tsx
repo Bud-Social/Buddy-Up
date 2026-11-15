@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Wallet, TrendingUp, Gift } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 import { tierApi, type GymWalletSummary } from '@/api/gyms';
 import { TierPanel } from './TierPanel';

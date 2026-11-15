@@ -14,7 +14,6 @@ from rest_framework.test import APIClient
 from apps.accounts.models import User
 from apps.gyms.models import Gym, GymMembership, GymWallet
 from apps.profiles.models import Profile
-from apps.wallet.serializers import ARTIFACT_VALUES
 
 from .models import BuddyLive, LiveRSVP
 

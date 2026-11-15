@@ -13,7 +13,7 @@ on each OrderItem.
 
 import datetime
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Sum
 from django.utils import timezone
 from rest_framework import views, status, permissions
 from rest_framework.response import Response

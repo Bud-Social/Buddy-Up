@@ -26,9 +26,9 @@ from .models import (
     Gym, GymMembership, GymCategory, GymOnboardingChecklist,
     JoinRequest, GymInvite, GymMembershipException, VenueLocation,
     AttendanceRecord, GymMedia, GymOnlineCoach, GymTrainerEndorsement,
-    RegisteredGymProfile, GymWallet, GymTierSubscription, GymWalletEntry,
+    RegisteredGymProfile, GymWallet, GymTierSubscription,
 )
-from . import capacity, tier_pricing
+from . import capacity
 from .serializers import (
     GymSerializer, GymDetailSerializer, CreateGymSerializer, GymMembershipSerializer,
     GymCategorySerializer, JoinRequestSerializer, CreateJoinRequestSerializer,
@@ -2299,7 +2299,7 @@ class GymOnlineCoachListView(views.APIView):
                 'is_available': serializer.validated_data.get('is_available', True),
                 'note': serializer.validated_data.get('note', ''),
                 'added_by': request.user.profile,
-                'approval_status': 'pending' if created else 'pending',
+                'approval_status': 'pending',
             },
         )
 
