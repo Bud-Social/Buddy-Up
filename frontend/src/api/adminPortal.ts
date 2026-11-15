@@ -210,6 +210,13 @@ export interface UpdateOrderStatusPayload {
 /* Gyms                                                                */
 /* ------------------------------------------------------------------ */
 
+export interface PortalGymWalletSummary {
+  balance: Record<string, number>;
+  entry_count: number;
+  credit_count: number;
+  usd_estimate: number | null;
+}
+
 export interface PortalGymRegistration {
   legal_name?: string | null;
   registration_number?: string | null;
@@ -248,6 +255,7 @@ export interface PortalGym {
   registration_status?: string;
   registration?: PortalGymRegistration | null;
   verification_submission_id?: string | null;
+  wallet_summary?: PortalGymWalletSummary | null;
 }
 
 export interface PortalGymFilters extends PortalPaginationParams {

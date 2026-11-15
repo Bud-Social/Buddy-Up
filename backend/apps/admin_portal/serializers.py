@@ -368,6 +368,7 @@ class PortalGymSerializer(serializers.ModelSerializer):
     registration_status = serializers.SerializerMethodField()
     registration = serializers.SerializerMethodField()
     verification_submission_id = serializers.SerializerMethodField()
+    wallet_summary = serializers.SerializerMethodField()
 
     class Meta:
         model = Gym
@@ -379,6 +380,7 @@ class PortalGymSerializer(serializers.ModelSerializer):
             'physical_capacity', 'currently_serving',
             'registration_status', 'registration',
             'verification_submission_id',
+            'wallet_summary',
         ]
 
     def _registration(self, obj):
@@ -418,6 +420,28 @@ class PortalGymSerializer(serializers.ModelSerializer):
             .order_by('-created_at')
             .first()
         )
+        return str(submission.id) if submission else None
+
+    def get_wallet_summary(self, obj):
+        from apps.gyms.models import GymWallet, GymWalletEntry
+        from apps.gyms.capacity import usd_estimate
+        try:
+            wallet = GymWallet.objects.get(gym=obj)
+            ledger = GymWalletEntry.objects.filter(wallet=wallet)
+            credits = ledger.filter(direction='credit').count()
+            return {
+                'balance': wallet.balance or {},
+                'entry_count': ledger.count(),
+                'credit_count': credits,
+                'usd_estimate': usd_estimate(wallet.balance or {}),
+            }
+        except GymWallet.DoesNotExist:
+            return {
+                'balance': {},
+                'entry_count': 0,
+                'credit_count': 0,
+                'usd_estimate': None,
+            }
         return str(submission.id) if submission else None
 
 

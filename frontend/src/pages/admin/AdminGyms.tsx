@@ -209,6 +209,11 @@ export default function AdminGyms() {
                     <DataRow label="Physical capacity">{typeof gym.physical_capacity === 'number' ? gym.physical_capacity.toString() : '—'}</DataRow>
                     <DataRow label="Already serving">{typeof gym.currently_serving === 'number' ? gym.currently_serving.toString() : '—'}</DataRow>
                     <DataRow label="Registration status">{text(gym.registration_status)}</DataRow>
+                    <DataRow label="Wallet balance">{gym.wallet_summary && Object.keys(gym.wallet_summary.balance).length > 0
+                      ? Object.entries(gym.wallet_summary.balance).map(([k, v]) => `${v} ${k}`).join(', ')
+                      : '—'}</DataRow>
+                    <DataRow label="Wallet ops">{gym.wallet_summary ? `${gym.wallet_summary.entry_count} total · ${gym.wallet_summary.credit_count} credits` : '—'}</DataRow>
+                    <DataRow label="Wallet value (USD est.)">{typeof gym.wallet_summary?.usd_estimate === 'number' ? `≈ $${gym.wallet_summary.usd_estimate.toFixed(2)}` : '—'}</DataRow>
                     <DataRow label="Legal name">{text(gym.registration?.legal_name)}</DataRow>
                     <DataRow label="Registration number">{text(gym.registration?.registration_number)}</DataRow>
                     <DataRow label="Contact email">{text(gym.registration?.contact_email)}</DataRow>
