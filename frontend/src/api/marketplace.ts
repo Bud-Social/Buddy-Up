@@ -171,6 +171,28 @@ export interface MarketplaceEvent {
   created_at: string;
 }
 
+/** Event feedback own-row shape from `/marketplace/events/<id>/feedback/`. */
+export interface EventFeedbackOwn {
+  rating: number;
+  tags: string[];
+  note: string;
+  submitted_at: string;
+}
+
+/** Aggregate returned to an organiser asking for feedback on their event. */
+export interface EventFeedbackAggregate {
+  count: number;
+  average: number | null;
+  recent: Array<{
+    rating: number;
+    tags: string[];
+    note: string;
+    created_at: string;
+    display_name: string;
+    avatar_url: string;
+  }>;
+}
+
 export interface EventMediaItem {
   id: string;
   media_type: 'image' | 'video';
@@ -994,6 +1016,12 @@ export const marketplaceApi = {
 
   getEventStats: (eventId: string) =>
     apiClient.get<ApiResponse<EventStats>>(`/marketplace/events/${eventId}/stats/`).then((r) => r.data),
+
+  submitEventFeedback: (eventId: string, data: { rating: number; tags?: string[]; note?: string }) =>
+    apiClient.post<ApiResponse<EventFeedbackOwn>>(`/marketplace/events/${eventId}/feedback/`, data).then((r) => r.data),
+
+  getEventFeedback: (eventId: string) =>
+    apiClient.get<ApiResponse<EventFeedbackOwn | EventFeedbackAggregate | null>>(`/marketplace/events/${eventId}/feedback/`).then((r) => r.data),
 
   /* ---------------------------------------------------------------- */
   /* Pickup stations                                                   */

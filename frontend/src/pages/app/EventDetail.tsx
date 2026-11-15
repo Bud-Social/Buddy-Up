@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, MapPin, Tag, Users, Video, ShoppingCart, Clock, Store, ShieldCheck, CheckCircle2, ChevronLeft, ChevronRight, Minus, Plus } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Tag, Users, Video, ShoppingCart, Clock, Store, ShieldCheck, CheckCircle2, ChevronLeft, ChevronRight, Minus, Plus, Star } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import { marketplaceApi } from '@/api/marketplace';
+import type { EventFeedbackAggregate, EventFeedbackOwn } from '@/api/marketplace';
 import { EVENT_CATEGORIES } from '@/config/eventCategories';
 
 export default function EventDetail() {
@@ -18,6 +19,13 @@ export default function EventDetail() {
   const [qty, setQty] = useState(1);
   const [mediaIndex, setMediaIndex] = useState(0);
   const [tier, setTier] = useState('');
+  const [feedback, setFeedback] = useState<EventFeedbackOwn | EventFeedbackAggregate | null | undefined>(undefined);
+  const [fbRating, setFbRating] = useState(5);
+  const [fbTags, setFbTags] = useState<string[]>([]);
+  const [fbNote, setFbNote] = useState('');
+  const [fbSubmitting, setFbSubmitting] = useState(false);
+  const [fbError, setFbError] = useState('');
+  const fbTagOptions = ['vibes', 'coaching', 'audio', 'equipment', 'instructor', 'value'];
 
   useEffect(() => {
     if (!eventId) return;
@@ -26,6 +34,37 @@ export default function EventDetail() {
       .catch(() => navigate('/marketplace'))
       .finally(() => setIsLoading(false));
   }, [eventId, navigate]);
+
+  // Event feedback — loaded only for past events, to avoid hammering the
+  // endpoint while the event is live.
+  useEffect(() => {
+    if (!event) return;
+    if (new Date(event.start_datetime) >= new Date()) return;
+    setFeedback(undefined);
+    marketplaceApi.getEventFeedback(event.id)
+      .then((res) => setFeedback(res.data as EventFeedbackOwn | EventFeedbackAggregate | null))
+      .catch(() => setFeedback(null));
+  }, [event]);
+
+  const submitFeedback = useCallback(async () => {
+    if (!event || fbSubmitting) return;
+    setFbSubmitting(true);
+    setFbError('');
+    try {
+      await marketplaceApi.submitEventFeedback(event.id, {
+        rating: fbRating,
+        tags: fbTags,
+        note: fbNote.trim(),
+      });
+      setFeedback({ rating: fbRating, tags: fbTags, note: fbNote.trim(), submitted_at: new Date().toISOString() });
+      toast('success', 'Thanks — feedback sent.');
+    } catch {
+      setFbError('Could not submit feedback. Your ticket gates eligibility.');
+    } finally {
+      setFbSubmitting(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event, fbRating, fbTags, fbNote, fbSubmitting]);
 
   const handleAddToCart = async () => {
     if (!event || !eventId) return;
@@ -315,6 +354,87 @@ export default function EventDetail() {
           )}
         </div>
       </Card>
+
+      {isPast && event.is_registered && (
+        <Card className="p-4 mb-4 border-buddy-green/20">
+          <div className="flex items-center gap-2 mb-2">
+            <Star size={16} className="text-buddy-gold fill-buddy-gold" />
+            <h3 className="font-heading font-semibold text-sm">How did this event land?</h3>
+          </div>
+          {feedback && typeof (feedback as EventFeedbackOwn).rating === 'number' && (
+            <p className="text-xs text-buddy-text-secondary mb-2">
+              Your rating: <span className="text-buddy-gold">{'★'.repeat((feedback as EventFeedbackOwn).rating)}</span> · {(feedback as EventFeedbackOwn).note || '—'}
+            </p>
+          )}
+          {feedback && (feedback as EventFeedbackAggregate).count !== undefined ? (
+            <p className="text-xs text-buddy-text-secondary">
+              {(feedback as EventFeedbackAggregate).count} attendee{(feedback as EventFeedbackAggregate).count === 1 ? '' : 's'} rated this event{(feedback as EventFeedbackAggregate).average != null ? ` — avg ${String((feedback as EventFeedbackAggregate).average)}★` : ''}.
+            </p>
+          ) : !feedback || typeof (feedback as EventFeedbackOwn).rating !== 'number' ? (
+            <>
+              <div className="flex items-center gap-1 mb-2" role="radiogroup" aria-label="Rate this event">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    role="radio"
+                    aria-checked={fbRating === star}
+                    aria-label={`${star} star${star === 1 ? '' : 's'}`}
+                    onClick={() => setFbRating(star)}
+                    className="p-1 rounded-md hover:bg-buddy-surface-raised transition-colors"
+                  >
+                    <Star size={22} className={fbRating >= star ? 'text-buddy-gold fill-buddy-gold' : 'text-buddy-text-secondary/40'} />
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {fbTagOptions.map((tag) => {
+                  const active = fbTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setFbTags((prev) => active ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                      className={`px-2.5 py-1 rounded-full text-[10px] border transition-colors ${active ? 'border-buddy-green bg-buddy-green/10 text-buddy-green' : 'border-buddy-surface-raised text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+              <textarea
+                value={fbNote}
+                onChange={(e) => setFbNote(e.target.value)}
+                rows={2}
+                maxLength={500}
+                placeholder="Coach energy, venue, sound — what worked?"
+                className="w-full bg-buddy-surface rounded-xl px-3 py-2 text-xs placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30 resize-none"
+              />
+              {fbError && <p className="text-[10px] text-buddy-red mt-1" role="alert">{fbError}</p>}
+              <div className="flex justify-end mt-2">
+                <Button size="sm" isLoading={fbSubmitting} onClick={submitFeedback}>Send feedback</Button>
+              </div>
+            </>
+          ) : null}
+        </Card>
+      )}
+
+      {isPast && event.is_registered && typeof (feedback as EventFeedbackAggregate | undefined) !== 'undefined' && (typeof (feedback as EventFeedbackAggregate).count !== 'undefined') && (feedback as EventFeedbackAggregate).count > 0 && (
+        <Card className="p-4 mb-4">
+          <h3 className="font-heading font-semibold text-sm mb-2">Recent attendees</h3>
+          <ul className="space-y-2">
+            {(feedback as EventFeedbackAggregate).recent.slice(0, 5).map((r, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs border-b border-buddy-surface-raised/60 pb-2 last:border-0 last:pb-0">
+                <span className="text-buddy-gold shrink-0">{'★'.repeat(r.rating)}</span>
+                <div className="min-w-0">
+                  <p className="text-buddy-text-primary">{r.note || '—'}</p>
+                  <p className="text-[10px] text-buddy-text-secondary">{r.tags.length > 0 ? r.tags.join(', ') : ''}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-buddy-black/95 backdrop-blur-xl border-t border-buddy-surface flex justify-center z-50">
         <div className="w-full max-w-xl flex items-center justify-between px-2">

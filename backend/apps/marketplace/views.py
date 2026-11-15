@@ -34,7 +34,7 @@ from .models import (
     PickupStation, StationApplication,
     DeliveryPersonnel, DeliveryPersonnelApplication,
     PaymentIntent,
-    COURIER_TRANSITIONS, SOLD_TICKET_STATUSES,
+    COURIER_TRANSITIONS, SOLD_TICKET_STATUSES, EventFeedback,
 )
 from .serializers import (
     ShopSerializer, ShopDetailSerializer, ShopCreateSerializer,
@@ -2725,6 +2725,119 @@ class OrganiserEventStatsView(views.APIView):
             'sold_by_tier': sorted(sold_by_tier.values(), key=lambda row: row['tier']),
             'is_cancelled': event.is_cancelled,
         }, 'OK'))
+
+
+class EventFeedbackView(views.APIView):
+    """Post-event feedback.
+
+    Anyone who attended (has a ticket or was checked in) can submit a 1-5
+    star rating with optional tags/note. Upsert semantics (one row per
+    (event, user)). The organiser reads the aggregate + recent comments; a
+    plain attendee reads only their own submission.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _is_attendee(self, profile, event):
+        if EventTicket.objects.filter(
+            event=event, holder=profile, status__in=SOLD_TICKET_STATUSES,
+        ).exists():
+            return True
+        return event.creator == profile
+
+    def _aggregate(self, event):
+        from django.db.models import Avg, Count
+        rows = EventFeedback.objects.filter(event=event)
+        count = rows.count()
+        if count == 0:
+            return {
+                'count': 0, 'average': None,
+                'recent': [],
+            }
+        agg = rows.aggregate(avg=Avg('rating'), count=Count('id'))
+        recent = [
+            {
+                'rating': r.rating,
+                'tags': r.tags,
+                'note': r.note,
+                'created_at': r.created_at.isoformat(),
+                'display_name': r.user.display_name,
+                'avatar_url': r.user.avatar_url,
+            }
+            for r in rows.select_related('user').order_by('-created_at')[:20]
+        ]
+        return {
+            'count': agg['count'],
+            'average': round(float(agg['avg']), 2),
+            'recent': recent,
+        }
+
+    def get(self, request, event_id):
+        try:
+            event = MarketplaceEvent.objects.select_related('creator', 'shop').get(id=event_id)
+        except (MarketplaceEvent.DoesNotExist, ValueError, TypeError):
+            return Response({'success': False, 'message': 'Event not found.'}, status=404)
+
+        prof = request.user.profile
+        is_organiser = (
+            event.creator == prof
+            or (_event_organiser_qs(prof).filter(pk=event.pk).exists())
+        )
+        if is_organiser:
+            return Response({'success': True, 'data': self._aggregate(event)})
+
+        own = EventFeedback.objects.filter(event=event, user=prof).first()
+        return Response({
+            'success': True,
+            'data': (
+                {
+                    'rating': own.rating,
+                    'tags': own.tags,
+                    'note': own.note,
+                    'submitted_at': own.created_at.isoformat(),
+                } if own else None
+            ),
+        })
+
+    def post(self, request, event_id):
+        try:
+            event = MarketplaceEvent.objects.select_related('creator').get(id=event_id)
+        except (MarketplaceEvent.DoesNotExist, ValueError, TypeError):
+            return Response({'success': False, 'message': 'Event not found.'}, status=404)
+
+        prof = request.user.profile
+        if not self._is_attendee(prof, event):
+            return Response({
+                'success': False,
+                'message': 'Only attendees can leave feedback.',
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            rating = int(request.data.get('rating'))
+        except (TypeError, ValueError):
+            rating = 0
+        if rating not in (1, 2, 3, 4, 5):
+            return Response({
+                'success': False, 'message': 'rating must be 1..5.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        tags = request.data.get('tags') or []
+        if not isinstance(tags, list):
+            tags = []
+        tags = [str(t).strip().lower() for t in tags if isinstance(t, (str, int))]
+        tags = [t for t in tags if t][:5]
+        note = (request.data.get('note') or '').strip()[:500]
+
+        obj, _ = EventFeedback.objects.update_or_create(
+            event=event, user=prof,
+            defaults={'rating': rating, 'tags': tags, 'note': note},
+        )
+        return Response({
+            'success': True,
+            'data': {'rating': obj.rating, 'tags': obj.tags, 'note': obj.note},
+            'message': 'Thanks — your feedback was recorded.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
 
 
 class FoodRecognizeView(views.APIView):
