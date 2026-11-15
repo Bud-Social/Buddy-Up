@@ -163,7 +163,7 @@ class StartLiveView(views.APIView):
             artifact_fee=data.get('artifact_fee'),
             member_fee_artifacts=data.get('member_fee_artifacts'),
             non_member_fee_artifacts=data.get('non_member_fee_artifacts'),
-            gym_id=data.get('gym_id') if data.get('gym_id') else None,
+            gym=data.get('gym') if data.get('gym') else None,
             scheduled_for=data.get('scheduled_for'),
             is_recurring=data.get('is_recurring', False),
             recurrence_rule=data.get('recurrence_rule', ''),

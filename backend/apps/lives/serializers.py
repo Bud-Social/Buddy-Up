@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.gyms.models import Gym
 from .models import BuddyLive, LiveAttendee
 from .access import replay_admitted as _replay_admitted
 
@@ -114,6 +115,13 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
 
 class CreateLiveSerializer(serializers.ModelSerializer):
     title = serializers.CharField(required=False, allow_blank=True, max_length=80)
+    # Write the gym FK via an explicit field named gym_id (the serializer knows
+    # it as ReadOnlyField via the model attname, which is why no serializer
+    # code sets it).
+    gym_id = serializers.PrimaryKeyRelatedField(
+        source='gym', queryset=Gym.objects.all(),
+        required=False, allow_null=True,
+    )
 
     class Meta:
         model = BuddyLive
