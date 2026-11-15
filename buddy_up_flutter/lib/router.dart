@@ -29,6 +29,7 @@ import 'features/gym/screens/gym_list_screen.dart';
 import 'features/gym/screens/gym_detail_screen.dart';
 import 'features/gym/screens/create_gym_screen.dart';
 import 'features/gym/screens/gym_manage_screen.dart';
+import 'features/gym/screens/coach_invite_respond_screen.dart';
 import 'features/gym/screens/my_gyms_screen.dart';
 import 'features/live/screens/live_browser_screen.dart';
 import 'features/live/screens/live_room_screen.dart';
@@ -299,6 +300,15 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
       // Declared BEFORE `/gyms/:slug` so `manage` is never read as a slug.
       // Without a real route here, the "Manage" button on a gym detail page sent
       // owners into their own profile — the same dead link the web had.
+      GoRoute(
+        path: '/gyms/:slug/coaches/:coachId/respond',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) {
+          final slug = state.pathParameters['slug'] ?? '';
+          final coachId = state.pathParameters['coachId'] ?? '';
+          return CoachInviteRespondScreen(slug: slug, coachId: coachId);
+        },
+      ),
       GoRoute(
         path: '/gyms/:slug/manage',
         parentNavigatorKey: _rootNavigatorKey,

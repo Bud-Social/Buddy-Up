@@ -201,6 +201,26 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
       }
     }
 
+    if (type == 'gym_coach_request') {
+      final slug = meta['gym_handle']?.toString() ?? '';
+      final coachId = meta['coach_id']?.toString() ?? '';
+      if (slug.isNotEmpty && coachId.isNotEmpty) {
+        context.push('/gyms/$slug/coaches/$coachId/respond');
+        return;
+      }
+    }
+
+    if (type == 'gym_coach_accepted' ||
+        type == 'gym_coach_declined' ||
+        type == 'gym_tier_cancelled' ||
+        type == 'payment_overdue') {
+      final slug = meta['gym_handle']?.toString() ?? '';
+      if (slug.isNotEmpty) {
+        context.push('/gyms/$slug/manage');
+        return;
+      }
+    }
+
     if (type == 'event_ticket_purchased') {
       final eventId = meta['event_id']?.toString() ?? '';
       if (eventId.isNotEmpty) {

@@ -25,6 +25,18 @@ abstract class GymRepository {
   @GET('/gyms/{slug}/')
   Future<dynamic> getGym(@Path('slug') String slug);
 
+  /// Respond to a pending "would you like to be listed as a coach?" invite.
+  /// The gym sends this notification when they add you as an online coach;
+  /// accepting makes your membership a `trainer` role and flips the coach
+  /// row to `active`, which is what surfaces the coach badge on the member
+  /// list and the Online Coaching tab.
+  @POST('/gyms/{slug}/online-coaches/{coach_id}/respond/')
+  Future<dynamic> respondCoachInvite(
+    @Path('slug') String slug,
+    @Path('coach_id') String coachId,
+    @Body() Map<String, dynamic> body,
+  );
+
   @POST('/gyms/create/')
   Future<dynamic> createGym(@Body() CreateGymPayload payload);
 
