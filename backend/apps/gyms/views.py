@@ -26,8 +26,9 @@ from .models import (
     Gym, GymMembership, GymCategory, GymOnboardingChecklist,
     JoinRequest, GymInvite, GymMembershipException, VenueLocation,
     AttendanceRecord, GymMedia, GymOnlineCoach, GymTrainerEndorsement,
-    RegisteredGymProfile,
+    RegisteredGymProfile, GymWallet, GymTierSubscription, GymWalletEntry,
 )
+from . import capacity, tier_pricing
 from .serializers import (
     GymSerializer, GymDetailSerializer, CreateGymSerializer, GymMembershipSerializer,
     GymCategorySerializer, JoinRequestSerializer, CreateJoinRequestSerializer,
@@ -75,6 +76,30 @@ class GymOnboardingChecklistView(views.APIView):
         checklist.completed_at = timezone.now() if required.issubset(set(checklist.completed_steps)) else None
         checklist.save(update_fields=['completed_at'])
         return Response({'success': True, 'data': GymOnboardingChecklistSerializer(checklist).data})
+
+
+class GymVenuePublicListView(views.APIView):
+    """Public venues list for anonymous/visitor display on gym pages.
+
+    Deliberately no auth gate (unlike the member-only GET above): these are
+    visitable addresses gym owners publish to get foot traffic. Coordinates,
+    buildings, floors and instructions are included; nothing else is.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        venues = gym.venues.filter(is_active=True).order_by('-is_primary', 'created_at')
+
+        class PublicVenueSerializer(VenueLocationSerializer):
+            class Meta(VenueLocationSerializer.Meta):
+                fields = ['id', 'name', 'address', 'city', 'country',
+                          'latitude', 'longitude', 'is_primary',
+                          'building_name', 'floor', 'instructions']
+
+        return Response({'success': True,
+                         'data': PublicVenueSerializer(venues, many=True).data})
 
 
 class VenueLocationListView(views.APIView):
@@ -680,6 +705,15 @@ class CreateGymView(views.APIView):
             role='owner',
         )
 
+        # Every gym gets its artifact purse on creation. Existing gyms were
+        # backfilled in migration gyms.0016; this covers new ones.
+        GymWallet.objects.get_or_create(gym=gym, defaults={'balance': {}})
+        GymTierSubscription.objects.get_or_create(
+            gym=gym,
+            defaults={'tier': 'regular', 'status': GymTierSubscription.ACTIVE,
+                      'currency': 'USD', 'amount_minor': 0},
+        )
+
         gym.member_count = 1
         gym.save(update_fields=['member_count'])
 
@@ -793,6 +827,21 @@ class GymDetailView(views.APIView):
         })
 
 
+# ── Capacity guard ───────────────────────────────────────────────────────
+def member_capacity_response(gym):
+    """Return 403 payload if the gym is at its tier's member cap, else None."""
+    try:
+        capacity.assert_capacity_available(gym)
+        return None
+    except capacity.CapacityExceeded:
+        cap = capacity.member_cap_for_tier(gym.tier)
+        return Response({
+            'success': False, 'data': None,
+            'message': f'{gym.name} is at its {gym.tier} tier capacity ({cap} members). Ask the owner to upgrade the tier before joining.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_403_FORBIDDEN)
+
+
 class JoinGymView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -805,6 +854,10 @@ class JoinGymView(views.APIView):
                 'message': 'Not found.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_404_NOT_FOUND)
+
+        capacity_response = member_capacity_response(gym)
+        if capacity_response is not None:
+            return capacity_response
 
         existing = GymMembership.objects.filter(gym=gym, member=request.user.profile).first()
         if existing:
@@ -846,6 +899,8 @@ class JoinGymView(views.APIView):
                         }, status=status.HTTP_402_PAYMENT_REQUIRED)
                     fee_key = f'join_fee_{at}'
                     gym_wallet[fee_key] = gym_wallet.get(fee_key, 0) + qty
+                    capacity.credit_gym_wallet(gym, at, int(qty or 0), kind='join_fee',
+                                             reference_id=f'member:{request.user.profile.id}')
                 Gym.objects.filter(id=gym.id).update(wallet_balance=gym_wallet)
             GymMembership.objects.create(
                 gym=gym,
@@ -1054,6 +1109,13 @@ class GymMembershipCheckoutView(views.APIView):
                         savings_artifacts[k] = base_artifacts[k] - discounted
                         discounted_artifacts[k] = discounted
 
+        # ---- Phase 3.5: capacity guard ----
+        # Refuse before charging: a full gym must not take money for a seat
+        # it cannot give.
+        cap_response = member_capacity_response(gym)
+        if cap_response is not None:
+            return cap_response
+
         # ---- Phase 4: charge the member ----
         gym_wallet = dict(gym.wallet_balance) if gym.wallet_balance else {}
         for at, qty in discounted_artifacts.items():
@@ -1067,6 +1129,8 @@ class GymMembershipCheckoutView(views.APIView):
                 }, status=status.HTTP_402_PAYMENT_REQUIRED)
             fee_key = f'monthly_fee_{at}'
             gym_wallet[fee_key] = gym_wallet.get(fee_key, 0) + qty
+            capacity.credit_gym_wallet(gym, at, int(qty or 0), kind='subscription_fee',
+                                         reference_id=f'member:{request.user.profile.id}')
         Gym.objects.filter(id=gym.id).update(wallet_balance=gym_wallet)
 
         if discount and savings_artifacts:
@@ -1385,6 +1449,10 @@ class ManageJoinRequestView(views.APIView):
         serializer.is_valid(raise_exception=True)
 
         new_status = serializer.validated_data['status']
+        if new_status == 'approved':
+            cap_response = member_capacity_response(gym)
+            if cap_response is not None:
+                return cap_response
         join_request.status = new_status
         join_request.reviewed_by = request.user.profile
         join_request.reviewed_at = timezone.now()
@@ -1512,6 +1580,9 @@ class InviteActionView(views.APIView):
         )
 
         if action == 'accept':
+            cap_response = member_capacity_response(gym)
+            if cap_response is not None:
+                return cap_response
             invite.status = 'accepted'
             invite.save(update_fields=['status'])
             existing = GymMembership.objects.filter(
@@ -1827,10 +1898,11 @@ class GymFeedListView(views.APIView):
         from apps.feed.models import Post
         from apps.feed.serializers import PostSerializer
         
+        from django.db.models import Q
         posts = Post.objects.filter(
-            gym_tag=gym,
+            (Q(gym_tag=gym) | Q(gym=gym)),
             moderation_status='clean'
-        ).select_related('author').prefetch_related('comments', 'reactions').order_by('-is_pinned', '-created_at')
+        ).select_related('author', 'gym').prefetch_related('comments', 'reactions').order_by('-is_pinned', '-created_at')
         
         # If gym is private/secret, enforce membership
         if gym.access_type in ['private', 'secret']:
@@ -2203,6 +2275,15 @@ class GymOnlineCoachListView(views.APIView):
         if target is None:
             return Response({'success': False, 'message': 'Member not found.'}, status=404)
 
+        # Coaches must be trainers. A user can be a gym member without being
+        # a trainer; coaching is a real different thing and untrained users
+        # giving programming is exactly how people get hurt.
+        if target.role != 'trainer':
+            return Response({
+                'success': False,
+                'message': f'@{target.username} is not a registered trainer. Ask them to register as a trainer first — coaches must be trainer-verified before being added.',
+            }, status=400)
+
         if not GymMembership.objects.filter(
             gym=gym, member=target, subscription_active=True,
         ).exists():
@@ -2218,12 +2299,34 @@ class GymOnlineCoachListView(views.APIView):
                 'is_available': serializer.validated_data.get('is_available', True),
                 'note': serializer.validated_data.get('note', ''),
                 'added_by': request.user.profile,
+                'approval_status': 'pending' if created else 'pending',
             },
         )
+
+        if created:
+            # The coach has to accept — silently listing them is how gyms
+            # end up selling access to someone who never agreed to show up.
+            from apps.notifications.tasks import create_notification
+            try:
+                create_notification.delay(
+                    recipient_id=str(target.user_id),
+                    notification_type='gym_coach_request',
+                    title=f'{gym.name} wants you as an online coach',
+                    body=f'{request.user.profile.display_name} asked to list you as a coach at {gym.name}. Accept if you want to be shown in the Online roster.',
+                    metadata={
+                        'gym_handle': gym.handle,
+                        'gym_name': gym.name,
+                        'coach_id': str(row.id),
+                    },
+                    dedupe_key=f'gym-coach-request-{row.id}',
+                )
+            except Exception:
+                logger.warning('coach invite notification failed for %s', target.user_id)
+
         return Response({
             'success': True,
             'data': GymOnlineCoachSerializer(row).data,
-            'message': 'Coach added.' if created else 'Coach updated.',
+            'message': 'Coach invited — they will appear as pending until they accept.' if created else 'Coach updated.',
         }, status=201 if created else 200)
 
     def delete(self, request, gym_slug, coach_id):
@@ -2232,6 +2335,63 @@ class GymOnlineCoachListView(views.APIView):
         row = get_object_or_404(GymOnlineCoach, id=coach_id, gym=gym)
         row.delete()
         return Response({'success': True, 'data': None, 'message': 'Coach removed.'})
+
+
+class GymOnlineCoachRespondView(views.APIView):
+    """The invited coach accepts or declines being listed as a coach."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, gym_slug, coach_id):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        row = get_object_or_404(GymOnlineCoach, id=coach_id, gym=gym)
+        profile = request.user.profile
+        if row.coach_id != profile.id:
+            return Response({'success': False, 'data': None,
+                             'message': 'Only the invited coach can respond.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        action = (request.data.get('action') or '').strip().lower()
+
+        if action == 'accept':
+            row.approval_status = 'active'
+            row.save(update_fields=['approval_status'])
+            GymMembership.objects.filter(gym=gym, member=profile).update(role='trainer')
+            from apps.notifications.tasks import create_notification
+            if row.added_by_id:
+                try:
+                    create_notification.delay(
+                        recipient_id=str(row.added_by.user_id),
+                        notification_type='gym_coach_accepted',
+                        title=f'{profile.display_name} accepted the coach invite',
+                        body=f'@{profile.username} is now listed as a coach at {gym.name}.',
+                        metadata={'gym_handle': gym.handle, 'coach_id': str(row.id)},
+                        dedupe_key=f'gym-coach-accepted-{row.id}',
+                    )
+                except Exception:
+                    pass
+            return Response({'success': True, 'data': GymOnlineCoachSerializer(row).data,
+                             'message': 'You are now listed as a coach.', 'errors': None, 'pagination': None})
+        if action == 'decline':
+            gym_ref = str(gym.handle)
+            row.delete()
+            from apps.notifications.tasks import create_notification
+            try:
+                create_notification.delay(
+                    recipient_id=str(row.added_by.user_id),
+                    notification_type='gym_coach_declined',
+                    title=f'@{profile.username} declined the coach invite',
+                    body=f'They chose not to be listed as a coach at {gym_ref}.',
+                    metadata={'gym_handle': gym_ref},
+                    dedupe_key=f'gym-coach-declined-{row.id if hasattr(row, "id") else "d"}',
+                )
+            except Exception:
+                pass
+            return Response({'success': True, 'data': None,
+                             'message': 'You declined. Coach removed from consideration.',
+                             'errors': None, 'pagination': None})
+        return Response({'success': False, 'data': None,
+                         'message': 'action must be accept or decline.'},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 class GymEndorsementListView(views.APIView):
@@ -2342,6 +2502,8 @@ class GymAnnounceView(views.APIView):
             post_type='text',
             body=serializer.validated_data['body'],
             gym_tag=gym,
+            gym=gym,
+            tags=['announcement'],
             visibility='gym_members',
             is_pinned=True,
         )

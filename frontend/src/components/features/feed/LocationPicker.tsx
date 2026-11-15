@@ -18,6 +18,8 @@ export interface PickedLocation {
   lat: number;
   lng: number;
   label: string;
+  /** Set when the user picked a specific building from the Overpass layer. */
+  building_name?: string;
 }
 
 interface SearchResult {
@@ -71,6 +73,8 @@ export function LocationPicker({ initial, onPick, onClose }: LocationPickerProps
   const [searching, setSearching] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [buildings, setBuildings] = useState<Array<{ name: string; lat: number; lng: number }>>([]);
+  const [fetchingBuildings, setFetchingBuildings] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -83,6 +87,25 @@ export function LocationPicker({ initial, onPick, onClose }: LocationPickerProps
       setGeocoding(false);
       onPick({ lat, lng, label: name || `(${lat.toFixed(5)}, ${lng.toFixed(5)})` });
     });
+    const query = `[out:json][timeout:6];(way["building"](around:140,${lat},${lng});relation["building"](around:140,${lat},${lng}););out tags center 12;`;
+    setFetchingBuildings(true);
+    fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `data=${encodeURIComponent(query)}`,
+    })
+      .then((r) => r.json())
+      .then((j: { elements?: Array<{ tags?: { name?: string }; center?: { lat: number; lon: number } }> }) => {
+        const rows = (j.elements || [])
+          .map((e) => {
+            const bname = e.tags?.name || '';
+            return { name: bname, lat: e.center?.lat, lng: e.center?.lon };
+          })
+          .filter((b) => typeof b.lat === 'number' && typeof b.lng === 'number') as Array<{ name: string; lat: number; lng: number }>;
+        setBuildings(rows.slice(0, 8));
+      })
+      .catch(() => setBuildings([]))
+      .finally(() => setFetchingBuildings(false));
   }, [onPick]);
 
   useEffect(() => {
@@ -179,6 +202,32 @@ export function LocationPicker({ initial, onPick, onClose }: LocationPickerProps
             Use location
           </button>
         </div>
+        {(buildings.length > 0 || fetchingBuildings) && (
+          <div className="mt-2">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-buddy-text-secondary">Nearby buildings (OSM)</p>
+              {fetchingBuildings && <Loader2 size={11} className="animate-spin text-buddy-green" />}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {buildings.map((b, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    setMarker(new LatLng(b.lat, b.lng));
+                    setCenter([b.lat, b.lng]);
+                    setLabel(b.name || `Building ${b.lat.toFixed(4)}, ${b.lng.toFixed(4)}`);
+                    onPick({ lat: b.lat, lng: b.lng, label: b.name || `Building ${b.lat.toFixed(4)}, ${b.lng.toFixed(4)}`, building_name: b.name || undefined });
+                  }}
+                  className="px-2 py-1 rounded-lg border border-buddy-surface-raised text-[10px] text-buddy-text-primary hover:border-buddy-green hover:text-buddy-green transition-colors max-w-[160px] truncate"
+                  title={b.name || 'Unnamed building'}
+                >
+                  {b.name || 'Unnamed building'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -524,6 +524,17 @@ class MarketplaceEvent(TimestampedModel):
     capacity = models.IntegerField(default=0)  # 0 = unlimited
     ticket_tiers = models.JSONField(default=list)  # [{name, price_artifacts, capacity, description}, ...]
     ticket_price_artifacts = models.JSONField(default=dict)
+    # Gym-owned event price split: applied on join when the buyer is (not) a
+    # gym member. Both empty = free. Legacy ticket price still applies to
+    # non-gym events.
+    member_price_artifacts = models.JSONField(null=True, blank=True)
+    non_member_price_artifacts = models.JSONField(null=True, blank=True)
+    # Optional live session attached to the event (e.g. "Gym live @ 6pm during
+    # the open house"). Navigation only — the event remains the source of truth.
+    linked_live = models.ForeignKey(
+        'lives.BuddyLive', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='linked_events',
+    )
     is_free = models.BooleanField(default=True)
     early_bird_enabled = models.BooleanField(default=False)
     early_bird_deadline = models.DateTimeField(null=True, blank=True)
@@ -1337,3 +1348,19 @@ class PaymentIntent(TimestampedModel):
             self.raw_response = raw_response
         if commit:
             self.save(update_fields=['status', 'provider_reference', 'raw_response', 'updated_at'])
+
+
+class EventFeedback(TimestampedModel):
+    """Post-event quality signal. One row per (event, user)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    event = models.ForeignKey(MarketplaceEvent, on_delete=models.CASCADE, related_name='feedback')
+    user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='event_feedback')
+    rating = models.PositiveSmallIntegerField(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5')])
+    tags = models.JSONField(default=list)
+    note = models.TextField(blank=True, default='')
+
+    class Meta:
+        db_table = 'marketplace_event_feedback'
+        unique_together = ('event', 'user')
+        ordering = ['-created_at']

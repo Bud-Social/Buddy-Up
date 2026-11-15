@@ -469,7 +469,10 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
       const formData = new FormData();
       formData.append('body', content.trim());
       formData.append('visibility', visibility);
-      if (gymId) formData.append('gym_tag', gymId);
+      if (gymId) {
+        formData.append('gym', gymId);
+        formData.append('gym_tag', gymId);
+      }
       if (locationLabel) formData.append('location_label', locationLabel);
       if (locationLat != null && locationLng != null) {
         formData.append('location_lat', String(locationLat));

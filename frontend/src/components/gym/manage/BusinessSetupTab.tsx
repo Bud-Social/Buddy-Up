@@ -55,6 +55,9 @@ export function BusinessSetupTab({ slug, canManage, members, onDeleted }: Busine
   });
   const [uploadedDocs, setUploadedDocs] = useState<Array<{ id: string; document_type: string; status: string }>>([]);
   const [docType, setDocType] = useState('certification');
+  const [docUploads, setDocUploads] = useState<Record<string, { name: string; ratio: number }>>({});
+  const [mediaUploads, setMediaUploads] = useState<Record<string, { name: string; ratio: number }>>({});
+  const [showSubmitReview, setShowSubmitReview] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -128,16 +131,39 @@ export function BusinessSetupTab({ slug, canManage, members, onDeleted }: Busine
   }, [slug]);
 
   const uploadDocument = async (file: File) => {
-    setUploadingDoc(true);
-    setRegistrationError(null);
+    const key = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setDocUploads((prev) => ({ ...prev, [key]: { name: file.name, ratio: 0 } }));
     try {
-      const res = await verificationApi.uploadCredential(docType, file);
+      const res = await verificationApi.uploadCredential(docType, file, (ratio) => {
+        setDocUploads((prev) => ({ ...prev, [key]: { ...prev[key], ratio } }));
+      });
       setUploadedDocs((prev) => [
         ...prev,
         { id: res.data.id, document_type: res.data.document_type, status: res.data.status },
       ]);
+      setDocUploads((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
     } catch (e: any) {
-      setRegistrationError(e?.response?.data?.message || 'Could not upload that document.');
+      setRegistrationError(e?.response?.data?.message || `Could not upload ${file.name}.`);
+      setDocUploads((prev) => {
+        const next = { ...prev };
+        next[key] = { ...prev[key], ratio: -1 };
+        return next;
+      });
+    }
+  };
+
+  const uploadDocuments = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploadingDoc(true);
+    setRegistrationError(null);
+    try {
+      for (const file of Array.from(files)) {
+        await uploadDocument(file);
+      }
     } finally {
       setUploadingDoc(false);
     }
@@ -178,15 +204,30 @@ export function BusinessSetupTab({ slug, canManage, members, onDeleted }: Busine
 
   const uploadMedia = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
     setUploadingMedia(true);
     setMediaError(null);
+    const trackers: Record<string, { name: string; ratio: number }> = {};
+    fileList.forEach((file, i) => {
+      trackers[`${i}-${file.name}-${Date.now()}`] = { name: file.name, ratio: 0 };
+    });
+    setMediaUploads((prev) => ({ ...prev, ...trackers }));
     try {
-      const res = await gymsApi.uploadMedia(slug, Array.from(files), mediaKind);
+      const res = await gymsApi.uploadMedia(slug, fileList, mediaKind, '', (index, ratio, file) => {
+        setMediaUploads((prev) => {
+          const keys = Object.keys(prev).filter((k) => k.startsWith(`${index}-`));
+          if (keys.length === 0) return prev;
+          const next = { ...prev };
+          keys.forEach((k) => { next[k] = { ...next[k], ratio }; });
+          return next;
+        });
+      });
       setMedia((prev) => [...(res.data || []), ...prev]);
     } catch (e: any) {
       setMediaError(e?.response?.data?.message || 'Could not upload that media.');
     } finally {
       setUploadingMedia(false);
+      setMediaUploads({});
       if (mediaInput.current) mediaInput.current.value = '';
     }
   };
@@ -365,12 +406,33 @@ export function BusinessSetupTab({ slug, canManage, members, onDeleted }: Busine
                 <input
                   type="file"
                   className="hidden"
+                  multiple
                   disabled={uploadingDoc}
                   accept="image/*,application/pdf"
-                  onChange={(e) => e.target.files?.[0] && uploadDocument(e.target.files[0])}
+                  onChange={(e) => uploadDocuments(e.target.files)}
                 />
               </label>
             </div>
+            {Object.keys(docUploads).length > 0 && (
+              <ul className="space-y-1.5">
+                {Object.entries(docUploads).map(([key, item]) => (
+                  <li key={key} className="flex items-center gap-2 text-xs text-buddy-text-secondary">
+                    <FileText size={12} />
+                    <span className="flex-1 truncate" title={item.name}>{item.name}</span>
+                    {item.ratio < 0 ? (
+                      <span className="text-buddy-red">failed</span>
+                    ) : (
+                      <span className="tabular-nums">{Math.round(item.ratio * 100)}%</span>
+                    )}
+                  </li>
+                ))}
+                <div className="h-1.5 rounded-full bg-buddy-surface-raised overflow-hidden">
+                  {Object.values(docUploads).map((item, i) => (
+                    <div key={i} className="h-full rounded-full bg-buddy-green transition-all" style={{ width: `${Math.max(4, item.ratio * 100)}%` }} />
+                  ))}
+                </div>
+              </ul>
+            )}
             {uploadedDocs.length > 0 && (
               <ul className="space-y-1">
                 {uploadedDocs.map((doc) => (
@@ -389,17 +451,45 @@ export function BusinessSetupTab({ slug, canManage, members, onDeleted }: Busine
               Save details
             </Button>
             <Button
-              onClick={submitRegistration}
+              onClick={() => setShowSubmitReview(true)}
               isLoading={submitting}
               disabled={!form.legal_name.trim() || !form.registration_number.trim() || uploadedDocs.length === 0}
             >
-              <BadgeCheck size={14} className="mr-1" /> Submit for verification
+              <BadgeCheck size={14} className="mr-1" /> Review &amp; submit
             </Button>
           </div>
           {uploadedDocs.length === 0 && (
             <p className="text-[11px] text-buddy-text-secondary">
               Upload at least one document to enable submission.
             </p>
+          )}
+
+          {showSubmitReview && uploadedDocs.length > 0 && (
+            <div className="rounded-2xl border border-buddy-gold/30 bg-buddy-gold/5 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-buddy-gold">
+                <ShieldCheck size={16} /> Review before sending to reviewers
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg bg-buddy-surface p-2"><p className="text-[9px] text-buddy-text-secondary uppercase">Legal name</p><p className="font-medium">{form.legal_name || '—'}</p></div>
+                <div className="rounded-lg bg-buddy-surface p-2"><p className="text-[9px] text-buddy-text-secondary uppercase">Registration #</p><p className="font-medium">{form.registration_number || '—'}</p></div>
+                <div className="rounded-lg bg-buddy-surface p-2"><p className="text-[9px] text-buddy-text-secondary uppercase">Country</p><p className="font-medium">{form.country || '—'}</p></div>
+                <div className="rounded-lg bg-buddy-surface p-2"><p className="text-[9px] text-buddy-text-secondary uppercase">Tax ID</p><p className="font-medium">{form.tax_id || '—'}</p></div>
+                <div className="rounded-lg bg-buddy-surface p-2 col-span-2"><p className="text-[9px] text-buddy-text-secondary uppercase">Contact</p><p className="font-medium">{form.contact_email || '—'}{form.contact_phone ? ` · ${form.contact_phone}` : ''}</p></div>
+              </div>
+              <p className="text-[11px] text-buddy-text-secondary">Documents attached for review ({uploadedDocs.length}):</p>
+              <ul className="space-y-1">
+                {uploadedDocs.map((doc) => (
+                  <li key={doc.id} className="flex items-center gap-2 text-xs"><FileText size={12} /><span className="capitalize">{doc.document_type.replace(/_/g, ' ')}</span><span className="text-buddy-text-secondary">· {doc.status}</span></li>
+                ))}
+              </ul>
+              <p className="text-[10px] text-buddy-text-secondary/70">If anything here is wrong, go back and edit — submissions lock the form while under review.</p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="ghost" onClick={() => setShowSubmitReview(false)}>Back and edit</Button>
+                <Button onClick={async () => { await submitRegistration(); setShowSubmitReview(false); }} isLoading={submitting}>
+                  <BadgeCheck size={14} className="mr-1" /> Confirm &amp; submit
+                </Button>
+              </div>
+            </div>
           )}
         </Card>
       )}
@@ -454,6 +544,22 @@ export function BusinessSetupTab({ slug, canManage, members, onDeleted }: Busine
             </>
           )}
         </div>
+
+        {Object.keys(mediaUploads).length > 0 && (
+          <ul className="space-y-1.5">
+            {Object.entries(mediaUploads).map(([key, item]) => (
+              <li key={key} className="flex items-center gap-2 text-xs text-buddy-text-secondary">
+                <span className="flex-1 truncate" title={item.name}>{item.name}</span>
+                <span className="tabular-nums">{Math.round(item.ratio * 100)}%</span>
+              </li>
+            ))}
+            <div className="h-1.5 rounded-full bg-buddy-surface-raised overflow-hidden">
+              {Object.values(mediaUploads).map((item, i) => (
+                <div key={i} className="h-full rounded-full bg-buddy-green transition-all" style={{ width: `${Math.max(4, item.ratio * 100)}%` }} />
+              ))}
+            </div>
+          </ul>
+        )}
 
         {media.length === 0 ? (
           <p className="text-xs text-buddy-text-secondary py-2">No gallery media yet.</p>

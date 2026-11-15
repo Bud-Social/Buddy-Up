@@ -1,21 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Users, Radio, Info, MessageCircle, Settings, LogOut, Star, Calendar, StarHalf, Heart, Send, MapPin, Tag, Crown, BookOpen, Lock, Zap, AlertCircle, Search, X, Plus } from 'lucide-react';
+import { Users, Radio, Info, MessageCircle, Settings, LogOut, Star, Calendar, StarHalf, Heart, Send, MapPin, Tag, Crown, BookOpen, Lock, Zap, AlertCircle, Search, X, Plus, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { gymsApi, livesApi, profilesApi, marketplaceApi } from '@/api';
-import type { Gym, GymMembership, Profile } from '@/types';
+import type { Gym, GymMembership, Profile, VenueLocation } from '@/types';
 import type { GymMembershipException } from '@/types/gym';
 import type { BuddyLive } from '@/types/live';
 import type { GymRoutinePost, GymReview } from '@/types/gym';
 import { GymDiscoursePost } from '@/components/features/gyms/GymDiscoursePost';
 import { GymCheckIn } from '@/components/features/gym/GymCheckIn';
 import { GymGallery } from '@/components/gym/GymGallery';
+import { GymLiveWizard } from '@/components/gym/GymLiveWizard';
 import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
+import { Modal } from '@/components/ui/Modal';
 
 type GymTab = 'feed' | 'schedule' | 'lives' | 'members' | 'reviews' | 'about' | 'events';
 
@@ -29,8 +31,9 @@ export default function GymDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [memberCount, setMemberCount] = useState(0);
   const [showGoLive, setShowGoLive] = useState(false);
-  const [liveTitle, setLiveTitle] = useState('');
-  const [liveSubmitting, setLiveSubmitting] = useState(false);
+  const [rsvpLiveId, setRsvpLiveId] = useState<string | null>(null);
+  const [rsvpReminder, setRsvpReminder] = useState(30);
+  const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
 
   // New states
   const [routinePosts, setSchedulePosts] = useState<GymRoutinePost[]>([]);
@@ -50,6 +53,8 @@ export default function GymDetail() {
   const [scheduleMaxSlots, setScheduleMaxSlots] = useState('');
   
   const [feedPosts, setFeedPosts] = useState<any[]>([]);
+  const [venues, setVenues] = useState<VenueLocation[]>([]);
+  const [selectedVenue, setSelectedVenue] = useState<VenueLocation | null>(null);
 
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
@@ -108,15 +113,17 @@ export default function GymDetail() {
           gymsApi.getRoutinePosts(slug).catch(() => ({ data: [] })),
           gymsApi.getReviews(slug).catch(() => ({ data: [] })),
           gymsApi.getGymFeed(slug).catch(() => ({ data: [] })),
+          gymsApi.getPublicVenues(slug).catch(() => ({ data: [] })),
           gymsApi.getEvents(slug).catch(() => ({ data: [] })),
         ]);
       })
-      .then(([membersRes, scheduleRes, postsRes, reviewsRes, feedRes, eventsRes]) => {
+      .then(([membersRes, scheduleRes, postsRes, reviewsRes, feedRes, venuesRes, eventsRes]) => {
         setMembers(membersRes.data || []);
         setSchedule(scheduleRes.data || []);
         setSchedulePosts(postsRes.data || []);
         setReviews(reviewsRes.data || []);
         setFeedPosts(feedRes.data || []);
+        setVenues(venuesRes.data || []);
         setEvents(eventsRes.data || []);
       })
       .catch(() => {})
@@ -467,61 +474,122 @@ export default function GymDetail() {
           <div className="space-y-3">
             {isAdmin && (
               <Button className="w-full gap-1.5" size="sm" onClick={() => setShowGoLive(true)}>
-                <Radio size={14} /> Go Live
+                <Radio size={14} /> Schedule a gym live
               </Button>
             )}
             {schedule.length === 0 ? (
               <div className="text-center py-12 text-buddy-text-secondary text-sm">No scheduled lives.</div>
             ) : (
-              schedule.map((live) => (
-                <Card key={live.id} className="p-3 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-buddy-green/10 flex items-center justify-center flex-shrink-0">
-                    <Radio size={16} className="text-buddy-green" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{live.title}</p>
-                    <p className="text-xs text-buddy-text-secondary">{new Date(live.scheduled_for || '').toLocaleDateString()} · {live.category}</p>
-                  </div>
-                  <Button size="sm" variant={live.has_rsvped ? 'primary' : 'outline'}
-                    onClick={() => livesApi.rsvpLive(live.id).then(() => {
-                      livesApi.getGymSchedule(gym.id).then((r) => setSchedule(r.data || []));
-                    })}>
-                    {live.has_rsvped ? 'RSVPed' : 'RSVP'}
-                  </Button>
-                </Card>
-              ))
-            )}
+              <div className="space-y-3">
+                {schedule.map((live) => {
+                  const now = Date.now();
+                  const dueAt = live.scheduled_for ? new Date(live.scheduled_for).getTime() : 0;
+                  const minutesUntil = live.scheduled_for ? Math.round((dueAt - now) / 60000) : 0;
+                  const startsSoon = minutesUntil <= 30;
 
-            {/* Go Live Modal */}
-            {showGoLive && (
-              <div className="fixed inset-0 z-50 bg-buddy-black/80 flex items-center justify-center p-4" onClick={() => setShowGoLive(false)}>
-                <div className="bg-buddy-surface rounded-2xl p-6 max-w-sm w-full space-y-4" onClick={(e) => e.stopPropagation()}>
-                  <h2 className="text-lg font-semibold">Start a Gym Live</h2>
-                  <input type="text" value={liveTitle} onChange={(e) => setLiveTitle(e.target.value)} maxLength={80}
-                    placeholder="Live title..."
-                    className="w-full bg-buddy-black rounded-xl px-4 py-3 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30" />
-                  <div className="flex gap-2">
-                    <Button className="flex-1" disabled={!liveTitle.trim()} isLoading={liveSubmitting}
-                      onClick={async () => {
-                        if (!liveTitle.trim() || !gym) return;
-                        setLiveSubmitting(true);
-                        try {
-                          const res = await livesApi.startLive({
-                            title: liveTitle.trim(),
-                            live_type: 'gym_live',
-                            category: 'other',
-                            gym_id: gym.id,
-                          });
-                          setShowGoLive(false);
-                          setLiveTitle('');
-                          navigate(`/live/${res.data.live.id}`);
-                        } catch {} finally { setLiveSubmitting(false); }
-                      }}>
-                      Go Live
-                    </Button>
-                    <Button variant="ghost" onClick={() => setShowGoLive(false)}>Cancel</Button>
-                  </div>
-                </div>
+                  // Fees visible to the viewer, based on membership.
+                  const isGymMember = !!gym?.is_member;
+                  const applicableFee = isGymMember ? live.member_fee_artifacts : live.non_member_fee_artifacts;
+                  const memberFee = live.member_fee_artifacts;
+                  const nonMemberFee = live.non_member_fee_artifacts;
+                  const hasFees = !!(memberFee && Object.keys(memberFee).length) || !!(nonMemberFee && Object.keys(nonMemberFee).length);
+                  const feeLabel = (fee?: Record<string, number> | null) =>
+                    fee && Object.keys(fee).length
+                      ? Object.entries(fee).map(([t, q]) => `${q} ${t}`).join(' + ')
+                      : 'Free';
+
+                  return (
+                    <Card key={live.id} className="p-3 space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-buddy-green/10 flex items-center justify-center flex-shrink-0">
+                          <Radio size={16} className="text-buddy-green" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{live.title}</p>
+                          <p className="text-xs text-buddy-text-secondary">
+                            {live.scheduled_for ? new Date(live.scheduled_for).toLocaleString() : 'Live now'} · {live.category}
+                          </p>
+                          {hasFees && (
+                            <p className="text-[10px] text-buddy-text-secondary mt-0.5">
+                              Member fee: {feeLabel(memberFee)} · Non-member: {feeLabel(nonMemberFee)}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-buddy-text-secondary">
+                            {minutesUntil > 0 ? `Starts in ${minutesUntil < 60 ? `${minutesUntil}m` : `${Math.floor(minutesUntil / 60)}h ${minutesUntil % 60}m`}` : 'Starting now'}
+                            {' · '}{(live as { rsvp_count?: number }).rsvp_count ?? 0} RSVPed
+                          </p>
+                        </div>
+                        {isAdmin ? (
+                          <Button
+                            size="sm"
+                            variant={startsSoon ? 'primary' : 'outline'}
+                            disabled={!startsSoon}
+                            onClick={async () => {
+                              try {
+                                await livesApi.startScheduled(live.id);
+                                navigate(`/live/${live.id}`);
+                              } catch (err: unknown) {
+                                const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+                                alert(data?.message || 'Could not start the live.');
+                              }
+                            }}
+                          >
+                            {startsSoon ? 'Start live' : 'Not yet'}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant={live.has_rsvped ? 'primary' : 'outline'}
+                            onClick={() => setRsvpLiveId(live.id)}
+                          >
+                            {live.has_rsvped ? 'RSVP ✓' : 'RSVP'}
+                          </Button>
+                        )}
+                      </div>
+                      {!isAdmin && rsvpLiveId === live.id && (
+                        <div className="rounded-xl bg-buddy-surface p-3 space-y-2">
+                          <p className="text-[11px] text-buddy-text-secondary">
+                            {applicableFee ? `Fee to RSVP: ${feeLabel(applicableFee)}` : 'Free for you'} · Reminder before start
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[0, 15, 30, 60, 120].map((m) => (
+                              <button key={m} type="button" onClick={() => setRsvpReminder(m)}
+                                className={`px-2 py-0.5 rounded-full text-[11px] border ${rsvpReminder === m ? 'border-buddy-green text-buddy-green bg-buddy-green/10' : 'border-buddy-surface-raised text-buddy-text-secondary'}`}>
+                                {m === 0 ? 'None' : `${m}m`}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" className="flex-1" isLoading={rsvpSubmitting}
+                              onClick={async () => {
+                                if (live.has_rsvped) {
+                                  await livesApi.rsvpLive(live.id).catch(() => {});
+                                  livesApi.getGymSchedule(gym.id).then((r) => setSchedule(r.data || []));
+                                  setRsvpLiveId(null);
+                                  return;
+                                }
+                                setRsvpSubmitting(true);
+                                try {
+                                  await livesApi.rsvpLive(live.id, rsvpReminder);
+                                  setActiveTab('lives');
+                                  livesApi.getGymSchedule(gym.id).then((r) => setSchedule(r.data || []));
+                                  setRsvpLiveId(null);
+                                } catch (err: unknown) {
+                                  const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+                                  alert(data?.message || 'RSVP failed. Check your artifact balance.');
+                                } finally {
+                                  setRsvpSubmitting(false);
+                                }
+                              }}>
+                              {live.has_rsvped ? 'Cancel RSVP' : 'Confirm RSVP'}
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setRsvpLiveId(null)}>Close</Button>
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -714,6 +782,36 @@ export default function GymDetail() {
         {/* About tab — premium grid layout */}
         {activeTab === 'about' && (
           <div className="space-y-4 pb-4">
+            {/* Locations — clickable, building-aware */}
+            {venues.length > 0 && (
+              <Card className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-lg bg-buddy-green/10 flex items-center justify-center"><MapPin size={14} className="text-buddy-green" /></div>
+                  <h3 className="font-heading font-semibold text-sm">Locations</h3>
+                </div>
+                <div className="space-y-1.5">
+                  {venues.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => setSelectedVenue(v)}
+                      className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-buddy-surface-raised transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium flex items-center gap-1.5">
+                          {v.is_primary && <Star size={10} className="fill-buddy-gold text-buddy-gold" />}
+                          <span className="truncate">{v.name}</span>
+                        </p>
+                        <p className="text-[10px] text-buddy-text-secondary truncate">
+                          {[v.building_name, v.floor != null ? `Floor ${v.floor}` : '', v.city].filter(Boolean).join(' · ') || v.address}
+                        </p>
+                      </div>
+                      <ChevronRight size={14} className="text-buddy-text-secondary" />
+                    </button>
+                  ))}
+                </div>
+              </Card>
+            )}
+
             {/* Description */}
             {gym.description && (
               <Card className="p-5">
@@ -947,6 +1045,40 @@ export default function GymDetail() {
           </div>
         </div>
       )}
+
+      {/* Gym live wizard — schedule with fees, access and reminder */}
+      {showGoLive && gym && (
+        <GymLiveWizard
+          gym={gym}
+          onClose={() => setShowGoLive(false)}
+          onScheduled={() => livesApi.getGymSchedule(gym.id).then((r) => setSchedule(r.data || []))}
+        />
+      )}
+
+      {/* Venue details — the location tap target */}
+      <Modal isOpen={!!selectedVenue} onClose={() => setSelectedVenue(null)} title={selectedVenue?.name} size="sm">
+        {selectedVenue && (
+          <div className="space-y-3 text-sm">
+            {selectedVenue.address && <p>{selectedVenue.address}</p>}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {selectedVenue.building_name && <div className="rounded-lg bg-buddy-surface p-2"><p className="text-buddy-text-secondary text-[10px]">Building</p><p className="font-medium">{selectedVenue.building_name}</p></div>}
+              {selectedVenue.floor != null && <div className="rounded-lg bg-buddy-surface p-2"><p className="text-buddy-text-secondary text-[10px]">Floor</p><p className="font-medium">{selectedVenue.floor}</p></div>}
+              {selectedVenue.city && <div className="rounded-lg bg-buddy-surface p-2"><p className="text-buddy-text-secondary text-[10px]">City</p><p className="font-medium">{selectedVenue.city}</p></div>}
+              {selectedVenue.country && <div className="rounded-lg bg-buddy-surface p-2"><p className="text-buddy-text-secondary text-[10px]">Country</p><p className="font-medium">{selectedVenue.country}</p></div>}
+            </div>
+            {selectedVenue.instructions && <p className="text-xs text-buddy-text-secondary">{selectedVenue.instructions}</p>}
+            {selectedVenue.latitude !== null && selectedVenue.longitude !== null && (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${selectedVenue.latitude},${selectedVenue.longitude}`}
+                target="_blank" rel="noreferrer"
+                className="block w-full text-center rounded-xl bg-buddy-green text-buddy-black text-xs font-bold py-2.5 hover:bg-buddy-green/90"
+              >
+                Get directions
+              </a>
+            )}
+          </div>
+        )}
+      </Modal>
 
       {/* Donate Modal */}
       {showDonateModal && (

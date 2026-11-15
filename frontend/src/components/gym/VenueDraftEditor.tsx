@@ -44,6 +44,7 @@ export function VenueDraftEditor({ venues, onChange }: VenueDraftEditorProps) {
       longitude: Number(loc.lng.toFixed(6)),
       city: venues.find((v) => v.key === key)?.city || city,
       country: venues.find((v) => v.key === key)?.country || country,
+      building_name: loc.building_name || venues.find((v) => v.key === key)?.building_name || '',
     });
     setOpenPicker(null);
   };
@@ -131,6 +132,23 @@ export function VenueDraftEditor({ venues, onChange }: VenueDraftEditorProps) {
               value={venue.country}
               onChange={(e) => update(venue.key, { country: e.target.value })}
               placeholder="Country"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-2">
+              <Input
+                value={venue.building_name}
+                onChange={(e) => update(venue.key, { building_name: e.target.value })}
+                placeholder="Building / tower (optional)"
+              />
+            </div>
+            <Input
+              value={venue.floor}
+              onChange={(e) => update(venue.key, { floor: e.target.value })}
+              placeholder="Floor #"
+              type="number"
+              min={0}
             />
           </div>
           <Input

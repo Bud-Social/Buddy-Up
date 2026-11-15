@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from . import tier_views
+from . import shop_views
 
 app_name = 'gyms'
 urlpatterns = [
@@ -31,6 +33,7 @@ urlpatterns = [
     path('<str:gym_slug>/events/', views.GymEventsView.as_view(), name='gym_events'),
     path('<str:gym_slug>/onboarding-checklist/', views.GymOnboardingChecklistView.as_view(), name='onboarding_checklist'),
     path('<str:gym_slug>/venues/', views.VenueLocationListView.as_view(), name='venues'),
+    path('<str:gym_slug>/venues-public/', views.GymVenuePublicListView.as_view(), name='venues_public'),
     path('<str:gym_slug>/venues/<uuid:venue_id>/', views.VenueLocationDetailView.as_view(), name='venue_detail'),
     path('<str:gym_slug>/registration/', views.GymRegistrationView.as_view(), name='registration'),
     path('<str:gym_slug>/verification-status/', views.GymVerificationStatusView.as_view(), name='verification_status'),
@@ -39,6 +42,7 @@ urlpatterns = [
     path('<str:gym_slug>/online-coaching/', views.GymOnlineCoachingView.as_view(), name='online_coaching'),
     path('<str:gym_slug>/online-coaches/<uuid:coach_id>/', views.GymOnlineCoachListView.as_view(), name='online_coach_detail'),
     path('<str:gym_slug>/online-coaches/', views.GymOnlineCoachListView.as_view(), name='online_coaches'),
+    path('<str:gym_slug>/online-coaches/<uuid:coach_id>/respond/', views.GymOnlineCoachRespondView.as_view(), name='online_coach_respond'),
     path('<str:gym_slug>/endorsements/', views.GymEndorsementListView.as_view(), name='endorsements'),
     path('<str:gym_slug>/endorsements/<uuid:endorsement_id>/', views.GymEndorsementListView.as_view(), name='endorsement_detail'),
     path('<str:gym_slug>/announce/', views.GymAnnounceView.as_view(), name='announce'),
@@ -46,4 +50,11 @@ urlpatterns = [
     path('<str:gym_slug>/check-in/', views.GymCheckInView.as_view(), name='gym_check_in'),
     path('<str:gym_slug>/partner-metrics/', views.PartnerMetricsView.as_view(), name='partner_metrics'),
     path('<str:gym_slug>/members.csv', views.GymMemberCSVView.as_view(), name='member_csv'),
+    path('<str:gym_slug>/tier/', tier_views.TierOverviewView.as_view(), name='tier_overview'),
+    path('<str:gym_slug>/tier/checkout/', tier_views.TierCheckoutView.as_view(), name='tier_checkout'),
+    path('<str:gym_slug>/tier/confirm/', tier_views.TierConfirmView.as_view(), name='tier_confirm'),
+    path('<str:gym_slug>/tier/cancel/', tier_views.TierCancelView.as_view(), name='tier_cancel'),
+    path('tier-webhook/', tier_views.TierWebhookView.as_view(), name='tier_webhook'),
+    path('<str:gym_slug>/wallet/', tier_views.TierWalletView.as_view(), name='wallet'),
+    path('<str:gym_slug>/shops/', shop_views.GymShopsView.as_view(), name='shops'),
 ]

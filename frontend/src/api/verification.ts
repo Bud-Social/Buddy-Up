@@ -168,13 +168,16 @@ export const verificationApi = {
    * SerializerMethodField, so DRF silently discards whatever is posted there.
    * Anything that needs to actually attach a file has to go through this.
    */
-  uploadCredential: (documentType: string, file: File) => {
+  uploadCredential: (documentType: string, file: File, onProgress?: (ratio: number) => void) => {
     const form = new FormData();
     form.append('file', file);
     form.append('document_type', documentType);
     return apiClient
       .post<ApiResponse<VerificationDocument>>('/verification/documents/upload/', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          onProgress?.(e.total ? Math.min(1, e.loaded / e.total) : 0);
+        },
       })
       .then((r) => r.data);
   },

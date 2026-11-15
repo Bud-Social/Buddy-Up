@@ -25,6 +25,8 @@ function toDraft(venue: VenueLocation): VenueDraft {
     latitude: venue.latitude === null || venue.latitude === '' ? null : Number(venue.latitude),
     longitude: venue.longitude === null || venue.longitude === '' ? null : Number(venue.longitude),
     instructions: venue.instructions || '',
+    building_name: venue.building_name || '',
+    floor: venue.floor != null ? String(venue.floor) : '',
     is_primary: venue.is_primary,
   };
 }
@@ -74,6 +76,8 @@ export function VenuesTab({ slug, canManage }: VenuesTabProps) {
       latitude: editing.draft.latitude,
       longitude: editing.draft.longitude,
       instructions: editing.draft.instructions,
+      building_name: editing.draft.building_name || undefined,
+      floor: editing.draft.floor === '' ? null : Number(editing.draft.floor),
       is_primary: editing.draft.is_primary,
     };
     try {
@@ -176,6 +180,11 @@ export function VenuesTab({ slug, canManage }: VenuesTabProps) {
                 <p className="text-xs text-buddy-text-secondary truncate">
                   {[venue.address, venue.city, venue.country].filter(Boolean).join(', ') || 'No address'}
                 </p>
+                {(venue.building_name || venue.floor) && (
+                  <p className="text-[11px] text-buddy-text-secondary/70 mt-0.5">
+                    {[venue.building_name, venue.floor != null ? `Floor ${venue.floor}` : ''].filter(Boolean).join(' · ')}
+                  </p>
+                )}
                 {venue.instructions && (
                   <p className="text-[11px] text-buddy-text-secondary/70 mt-0.5">{venue.instructions}</p>
                 )}

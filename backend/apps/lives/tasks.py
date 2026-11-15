@@ -331,6 +331,14 @@ def send_live_starting_notifications(live_id: str):
 
 @shared_task
 def send_live_reminders():
+    """Per-user RSVP reminders (default 30 min) + the host's broadcast nudge.
+
+    Every RSVP picks its own reminder time (default 30 minutes before start;
+    0 = none). A user who picked 15 gets one 15-minute nudge, and the legacy
+    fixed-band broadcast (buddies/followers at 60/30/15/5) still runs for
+    people who never RSVPed. Each RSVP's sent set lives on the RSVP row so a
+    re-save of the preference can not double-fire.
+    """
     from django.db import models as db_models
     from apps.notifications.tasks import _deliver_notification
     from apps.profiles.models import Profile
@@ -340,29 +348,57 @@ def send_live_reminders():
     upcoming = BuddyLive.objects.filter(
         status='scheduled',
         scheduled_for__gte=now,
-        scheduled_for__lte=now + timezone.timedelta(hours=1),
+        scheduled_for__lte=now + timezone.timedelta(hours=24),
     ).select_related('host')
-
-    thresholds = (60, 30, 15, 5)
 
     for live in upcoming:
         minutes_until = (live.scheduled_for - now).total_seconds() / 60.0
-        sent = set(live.reminders_sent or [])
+        if minutes_until < 0:
+            continue
 
-        for threshold in thresholds:
-            if str(threshold) in sent:
-                continue
-            lower_bound = max(threshold - 6, 0)
-            if lower_bound < minutes_until <= threshold:
-                recipients = set(
+        # ── 1. Per-user RSVP reminders ──────────────────────────────────
+        rsvps = list(LiveRSVP.objects.filter(live=live).select_related('user'))
+        pending = [r for r in rsvps if r.reminder_minutes > 0 and r.reminder_minutes not in (r.reminder_sent or [])]
+        if pending:
+            live_title = (live.title or 'this live').strip() or 'this live'
+            for rsvp in pending:
+                if minutes_until <= rsvp.reminder_minutes:
+                    send_user = rsvp.reminder_minutes
+                    title = f'{live.host.display_name}: "{live_title}" starting soon'
+                    body = f'Don’t miss it — the live you RSVPed to starts in {send_user} minutes.'
+                    metadata = {
+                        'live_id': str(live.id),
+                        'scheduled_for': live.scheduled_for.isoformat() if live.scheduled_for else None,
+                        'countdown_minutes': send_user,
+                        'rsvp_reminder': True,
+                        'host_display_name': live.host.display_name,
+                        'host_username': live.host.username,
+                        'host_avatar_url': live.host.avatar_url,
+                    }
+                    _deliver_notification(str(rsvp.user_id), 'live_reminder', title, body, metadata)
+                    rsvp.reminder_sent = (rsvp.reminder_sent or []) + [send_user]
+                    rsvp.save(update_fields=['reminder_sent'])
+
+        # ── 2. Legacy broadcast to host's buddies/followers/co-hosts ─────
+        # Only within the final hour — the RSVP block above covers the rest.
+        if minutes_until <= 60:
+            sent = set(live.reminders_sent or [])
+            thresholds = (60, 30, 15, 5)
+            for threshold in thresholds:
+                if str(threshold) in sent:
+                    continue
+                lower_bound = max(threshold - 6, 0)
+                if not (lower_bound < minutes_until <= threshold):
+                    continue
+                rsvp_user_ids = set(
                     LiveRSVP.objects.filter(live=live).values_list('user_id', flat=True)
                 )
                 buddy_q = db_models.Q(buddy_sent__to_user=live.host, buddy_sent__status='confirmed') | \
                           db_models.Q(buddy_received__from_user=live.host, buddy_received__status='confirmed')
                 followers = Profile.objects.filter(following__followee=live.host).values_list('user_id', flat=True)
-                recipients.update(Profile.objects.filter(buddy_q).distinct().values_list('user_id', flat=True))
+                recipients = set(Profile.objects.filter(buddy_q).distinct().values_list('user_id', flat=True))
                 recipients.update(followers)
-
+                recipients.difference_update(rsvp_user_ids)
                 co_host_ids = live.co_hosts.values_list('user_id', flat=True)
                 for co_host_id in co_host_ids:
                     recipients.update(

@@ -101,6 +101,17 @@ class BuddyLive(TimestampedModel):
     is_recurring = models.BooleanField(default=False)
     recurrence_rule = models.CharField(max_length=200, blank=True)
     equipment_list = models.JSONField(default=list)
+    # Fee schedule for gym lives: both an empty dict means "free". A charged
+    # gym live fills whichever applies — the join flow and the RSVP endpoint
+    # pick between member/non-member price off the viewer's membership.
+    member_fee_artifacts = models.JSONField(null=True, blank=True)
+    non_member_fee_artifacts = models.JSONField(null=True, blank=True)
+    # Link this live to the marketplace event it belongs to (the event row
+    # also points here this direction is just an easy lookup from the room).
+    linked_event = models.ForeignKey(
+        'marketplace.MarketplaceEvent', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='linked_lives',
+    )
     recording_consent = models.CharField(
         max_length=20, choices=RECORDING_CONSENT_CHOICES, default='auto_record',
     )
@@ -130,6 +141,12 @@ class LiveRSVP(TimestampedModel):
     live = models.ForeignKey(BuddyLive, on_delete=models.CASCADE, related_name='rsvps')
     user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='live_rsvps')
     fee_paid = models.JSONField(default=dict)
+    # Reminder before start, in minutes. Default matches the product promise:
+    # 30 minutes. 0 = no reminder; the viewer picks at RSVP time.
+    reminder_minutes = models.PositiveIntegerField(default=30)
+    # Minutes values already sent to this RSVP, so a re-saved preference does
+    # not double-fire. Reset on cancel+re-RSVP.
+    reminder_sent = models.JSONField(default=list)
 
     class Meta:
         db_table = 'lives_rsvp'
@@ -199,6 +216,8 @@ class LiveFeedback(TimestampedModel):
     user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='live_feedback')
     rating = models.PositiveSmallIntegerField()
     comment = models.CharField(max_length=500, blank=True)
+    # Free-form tags like 'coaching'/'audio'/'equipment' for aggregated reporting.
+    tags = models.JSONField(default=list)
 
     class Meta:
         db_table = 'lives_feedback'

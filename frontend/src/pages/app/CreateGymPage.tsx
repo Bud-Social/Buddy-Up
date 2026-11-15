@@ -8,6 +8,7 @@ import { GymHeroPreview } from '@/components/gym/GymHeroPreview';
 import { uploadToCloudinary } from '@/lib/uploader';
 import { emptyVenueDraft, type VenueDraft } from '@/components/gym/venueDraft';
 import { gymsApi } from '@/api/gyms';
+import { startTierCheckout } from '@/lib/tierCheckout';
 import type { GymCategory, GymCategoryPricing, GymTier } from '@/types';
 
 const RULE_TEMPLATES = [
@@ -257,6 +258,8 @@ export default function CreateGymPage() {
             latitude: venue.latitude,
             longitude: venue.longitude,
             instructions: venue.instructions,
+            building_name: venue.building_name || undefined,
+            floor: venue.floor === '' ? null : Number(venue.floor),
             is_primary: venue.is_primary,
           });
         } catch {
@@ -273,6 +276,17 @@ export default function CreateGymPage() {
         if (videos.length > 0) await gymsApi.uploadMedia(createdHandle, videos, 'video');
       } catch {
         // Non-fatal: the manage console can re-upload.
+      }
+
+      // If the owner picked a paid verification tier, take payment before
+      // dropping them on the gym page. The gym is already created, so a
+      // failed/closed checkout is recoverable from the Setup tab.
+      if (tier !== 'regular') {
+        try {
+          await startTierCheckout(createdHandle, tier);
+        } catch {
+          // Non-fatal: upgrade path lives in Setup too.
+        }
       }
 
       navigate(`/gyms/${createdHandle}`);

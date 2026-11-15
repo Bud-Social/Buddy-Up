@@ -128,6 +128,10 @@ class VenueLocation(TimestampedModel):
     address = models.TextField(blank=True)
     city = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True)
+    # Building-level precision: what the owner picked on the building picker,
+    # so visitors see "Tower B, 3rd floor" instead of just a street address.
+    building_name = models.CharField(max_length=160, blank=True, default='')
+    floor = models.PositiveIntegerField(null=True, blank=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     instructions = models.TextField(blank=True)
@@ -460,6 +464,13 @@ class GymOnlineCoach(TimestampedModel):
         'profiles.Profile', on_delete=models.CASCADE, related_name='gym_online_coach_roles',
     )
     specialties = models.JSONField(default=list)
+    # Approval gates the coach appearing as "coach" on the member list.
+    # 'pending' until the coach accepts the invite; 'active' afterwards.
+    approval_status = models.CharField(
+        max_length=12,
+        choices=[('pending', 'Pending approval'), ('active', 'Active')],
+        default='active',
+    )
     is_available = models.BooleanField(default=True)
     note = models.CharField(max_length=240, blank=True)
     added_by = models.ForeignKey(
@@ -503,3 +514,113 @@ class GymTrainerEndorsement(TimestampedModel):
 
     def __str__(self):
         return f'{self.gym.name} endorses {self.trainer.username}'
+
+
+class GymWallet(TimestampedModel):
+    """Per-gym artifact purse.
+
+    Auto-created with every gym. Fed by join/subscription fees, charged live
+    and event RSVPs and attributed shop sales; every movement also writes a
+    ``GymWalletEntry`` so the Revenue tab can explain where the money went
+    without reconstructing it from live tables. The gym's ``wallet_balance``
+    JSONField on ``Gym`` is the legacy store and is migrated into this at
+    gym creation for new gyms; old gyms keep the column until the backfill
+    migration runs.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    gym = models.OneToOneField(Gym, on_delete=models.CASCADE, related_name='wallet')
+    balance = models.JSONField(default=dict)
+
+    class Meta:
+        db_table = 'gyms_wallet'
+
+
+class GymWalletEntry(TimestampedModel):
+    CREDIT = 'credit'
+    DEBIT = 'debit'
+    DIRECTION_CHOICES = [(CREDIT, 'Credit'), (DEBIT, 'Debit')]
+
+    KIND_JOIN_FEE = 'join_fee'
+    KIND_SUBSCRIPTION_FEE = 'subscription_fee'
+    KIND_LIVE_FEE = 'live_fee'
+    KIND_EVENT_FEE = 'event_fee'
+    KIND_SHOP_SALE = 'shop_sale'
+    KIND_DONATION = 'donation'
+    KIND_ADJUSTMENT = 'adjustment'
+    KIND_CHOICES = [
+        (KIND_JOIN_FEE, 'Join fee'),
+        (KIND_SUBSCRIPTION_FEE, 'Subscription fee'),
+        (KIND_LIVE_FEE, 'Charged live RSVP'),
+        (KIND_EVENT_FEE, 'Charged event ticket'),
+        (KIND_SHOP_SALE, 'Attributed shop sale'),
+        (KIND_DONATION, 'Donation'),
+        (KIND_ADJUSTMENT, 'Manual adjustment'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    wallet = models.ForeignKey(GymWallet, on_delete=models.CASCADE, related_name='entries')
+    artifact_type = models.CharField(max_length=24)
+    quantity = models.PositiveIntegerField(default=0)
+    direction = models.CharField(max_length=6, choices=DIRECTION_CHOICES, default=CREDIT)
+    kind = models.CharField(max_length=32, choices=KIND_CHOICES, default=KIND_ADJUSTMENT)
+    # Loose reference: 'live:<uuid>' / 'event:<uuid>' / 'order:<uuid>' / 'member:<uuid>'.
+    reference_id = models.CharField(max_length=64, blank=True, default='')
+    note = models.TextField(blank=True, default='')
+
+    class Meta:
+        db_table = 'gyms_wallet_entry'
+        indexes = [
+            models.Index(fields=['wallet', '-created_at'], name='gyms_wallet_entries_idx'),
+            models.Index(fields=['kind'], name='gyms_wallet_entry_kind_idx'),
+        ]
+        ordering = ['-created_at']
+
+
+class GymTierPlan(TimestampedModel):
+    """Price point for a verification tier in one currency.
+
+    One row per (tier, currency). Seeded lazily from the default table on
+    first use so deploys never need a data migration, and ops can override
+    amounts in the database without a release. ``flutterwave_plan_id`` is
+    filled in when a payment plan exists for recurring charges; otherwise
+    checkout falls back to one-time inline payments.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    tier = models.CharField(max_length=12, choices=Gym.TIER_CHOICES)
+    currency = models.CharField(max_length=8)
+    amount_minor = models.PositiveIntegerField(default=0)
+    flutterwave_plan_id = models.CharField(max_length=64, blank=True, default='')
+
+    class Meta:
+        db_table = 'gyms_tier_plan'
+        unique_together = ('tier', 'currency')
+
+    def __str__(self):
+        return f'{self.tier} @ {self.currency} {self.amount_minor / 100:.2f}'
+
+
+class GymTierSubscription(TimestampedModel):
+    ACTIVE = 'active'
+    GRACE = 'grace'
+    CANCELLED = 'cancelled'
+    STATUS_CHOICES = [(ACTIVE, 'Active'), (GRACE, 'Grace'), (CANCELLED, 'Cancelled')]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    gym = models.OneToOneField(Gym, on_delete=models.CASCADE, related_name='tier_subscription')
+    tier = models.CharField(max_length=12, choices=Gym.TIER_CHOICES, default='regular')
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=ACTIVE)
+    currency = models.CharField(max_length=8, default='USD')
+    amount_minor = models.PositiveIntegerField(default=0)
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    grace_deadline = models.DateTimeField(null=True, blank=True)
+    auto_renew = models.BooleanField(default=False)
+    flutterwave_tx_ref = models.CharField(max_length=96, blank=True, default='')
+    flutterwave_subscription_id = models.CharField(max_length=64, blank=True, default='')
+
+    class Meta:
+        db_table = 'gyms_tier_subscription'
+
+    def __str__(self):
+        return f'{self.gym.name} → {self.tier} ({self.status})'

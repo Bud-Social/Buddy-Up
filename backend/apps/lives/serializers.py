@@ -20,6 +20,7 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
     viewer_count = serializers.SerializerMethodField()
     is_joined = serializers.SerializerMethodField()
     has_rsvped = serializers.SerializerMethodField()
+    rsvp_reminder_minutes = serializers.SerializerMethodField()
     rsvp_count = serializers.SerializerMethodField()
     unique_viewers = serializers.SerializerMethodField()
     replay_views = serializers.SerializerMethodField()
@@ -29,7 +30,8 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
         model = BuddyLive
         fields = [
             'id', 'title', 'live_type', 'category', 'content_rating', 'access',
-            'artifact_fee',
+            'artifact_fee', 'member_fee_artifacts', 'non_member_fee_artifacts',
+            'linked_event_id',
             'gym_id', 'community_id', 'community_name', 'status', 'started_at',
             'ended_at', 'viewer_peak',
             'unique_viewers', 'replay_views',
@@ -37,7 +39,7 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
             'is_recurring', 'recurrence_rule', 'equipment_list',
             'recording_consent',
             'recording_status', 'mux_status',
-            'host', 'viewer_count', 'is_joined', 'has_rsvped', 'rsvp_count',
+            'host', 'viewer_count', 'is_joined', 'has_rsvped', 'rsvp_reminder_minutes', 'rsvp_count',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'status', 'started_at', 'ended_at', 'viewer_peak', 'created_at', 'updated_at']
@@ -87,6 +89,13 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
             return False
         return obj.rsvps.filter(user=request.user.profile).exists()
 
+    def get_rsvp_reminder_minutes(self, obj):
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return None
+        rsvp = obj.rsvps.filter(user=request.user.profile).first()
+        return rsvp.reminder_minutes if rsvp else None
+
     def get_rsvp_count(self, obj):
         return obj.rsvps.count()
 
@@ -110,7 +119,7 @@ class CreateLiveSerializer(serializers.ModelSerializer):
         model = BuddyLive
         fields = [
             'title', 'live_type', 'category', 'content_rating', 'access',
-            'artifact_fee',
+            'artifact_fee', 'member_fee_artifacts', 'non_member_fee_artifacts',
             'gym_id', 'co_hosts', 'scheduled_for', 'is_recurring',
             'recurrence_rule', 'equipment_list', 'recording_consent',
         ]

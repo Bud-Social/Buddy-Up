@@ -35,6 +35,8 @@ export interface VenueLocationPayload {
   latitude?: number | null;
   longitude?: number | null;
   instructions?: string;
+  building_name?: string;
+  floor?: number | null;
   is_primary?: boolean;
 }
 
@@ -200,6 +202,9 @@ export const gymsApi = {
   getVenues: (slug: string) =>
     apiClient.get<ApiResponse<VenueLocation[]>>(`/gyms/${slug}/venues/`).then((r) => r.data),
 
+  getPublicVenues: (slug: string) =>
+    apiClient.get<ApiResponse<VenueLocation[]>>(`/gyms/${slug}/venues-public/`).then((r) => r.data),
+
   createVenue: (slug: string, data: VenueLocationPayload) =>
     apiClient.post<ApiResponse<VenueLocation>>(`/gyms/${slug}/venues/`, normalizeVenuePayload(data)).then((r) => r.data),
 
@@ -226,14 +231,30 @@ export const gymsApi = {
   getMedia: (slug: string, kind?: 'photo' | 'video') =>
     apiClient.get<ApiResponse<GymMediaItem[]>>(`/gyms/${slug}/media/`, { params: { kind } }).then((r) => r.data),
 
-  uploadMedia: (slug: string, files: File[], kind: 'photo' | 'video' = 'photo', caption = '') => {
-    const form = new FormData();
-    files.forEach((file) => form.append('file', file));
-    form.append('kind', kind);
-    if (caption) form.append('caption', caption);
-    return apiClient.post<ApiResponse<GymMediaItem[]>>(`/gyms/${slug}/media/`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }).then((r) => r.data);
+  uploadMedia: (slug: string, files: File[], kind: 'photo' | 'video' = 'photo', caption = '', onProgress?: (index: number, ratio: number, file: File) => void) => {
+    // Sequential per-file requests so each file shows byte-accurate progress.
+    // The backend accepts a single file per request through the same path.
+    const run = async () => {
+      const items: GymMediaItem[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const form = new FormData();
+        form.append('file', file);
+        form.append('kind', kind);
+        if (caption) form.append('caption', caption);
+        const res = await apiClient.post<ApiResponse<GymMediaItem[]>>(`/gyms/${slug}/media/`, form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (e) => {
+            const ratio = e.total ? Math.min(1, e.loaded / e.total) : 0;
+            onProgress?.(i, ratio, file);
+          },
+        });
+        const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+        items.push(...rows);
+      }
+      return { success: true as const, data: items, message: 'Uploaded', errors: null, pagination: null };
+    };
+    return run();
   },
 
   deleteMedia: (slug: string, mediaId: string) =>
@@ -272,3 +293,106 @@ export const gymsApi = {
   announce: (slug: string, data: { title: string; body: string; notify_members?: boolean }) =>
     apiClient.post<ApiResponse<{ post_id: string; notified: number }>>(`/gyms/${slug}/announce/`, data).then((r) => r.data),
 };
+
+// ── Verification tiers & gym wallet (real-money tier subscription) ────────
+export interface TierPlan {
+  tier: 'regular' | 'midlevel' | 'executive';
+  amount_minor: number;
+  currency: string;
+  cap: number | null;
+}
+
+export interface TierOverview {
+  subscription: {
+    tier: 'regular' | 'midlevel' | 'executive';
+    status: 'regular' | 'active' | 'grace' | 'cancelled';
+    current_period_end: string | null;
+    grace_deadline: string | null;
+    auto_renew: boolean;
+    currency: string;
+    amount_minor: number;
+    capacity: { tier: string; cap: number | null; current: number; remaining: number | null; at_cap: boolean };
+  };
+  plans: Record<'regular' | 'midlevel' | 'executive', TierPlan>;
+  country: string;
+  currency: string;
+}
+
+export interface GymWalletSummary {
+  balance: Record<string, number>;
+  usd_estimate: number;
+  entries: Array<{
+    id: string;
+    artifact_type: string;
+    quantity: number;
+    direction: 'credit' | 'debit';
+    kind: string;
+    reference_id: string;
+    note: string;
+    created_at: string;
+  }>;
+  by_kind: Record<string, Record<string, { quantity: number; count: number }>>;
+  window_days: number;
+  donations_received: number;
+  capacity: { tier: string; cap: number | null; current: number; remaining: number | null; at_cap: boolean };
+}
+
+const tierApi = {
+  tier: (slug: string) =>
+    apiClient.get<ApiResponse<TierOverview>>(`/gyms/${slug}/tier/`).then((r) => r.data),
+
+  tierCheckout: (slug: string, tier: 'midlevel' | 'executive', method: 'card' | 'mpesa' = 'card', mpesaPhone?: string) =>
+    apiClient.post(`/gyms/${slug}/tier/checkout/`, { tier, method, mpesa_phone: mpesaPhone }).then((r) => r.data),
+
+  tierConfirm: (slug: string, txRef: string, flutterwaveId: string) =>
+    apiClient.post(`/gyms/${slug}/tier/confirm/`, { tx_ref: txRef, flutterwave_id: flutterwaveId }).then((r) => r.data),
+
+  tierCancel: (slug: string) =>
+    apiClient.post(`/gyms/${slug}/tier/cancel/`, {}).then((r) => r.data),
+
+  wallet: (slug: string, days: 7 | 30 | 90 | 365 = 30) =>
+    apiClient.get<ApiResponse<GymWalletSummary>>(`/gyms/${slug}/wallet/`, { params: { days } }).then((r) => r.data),
+};
+
+export { tierApi };
+
+// ── Connected shops ───────────────────────────────────────────────────────
+export interface GymShopSummary {
+  id: string;
+  shop_id: string;
+  name: string;
+  handle: string;
+  description: string;
+  logo_url: string;
+  accent_color: string;
+  verification_status: string;
+  is_active: boolean;
+  products_count: number;
+  created_at: string;
+  units_sold_90d: number;
+  orders_90d: number;
+}
+
+export interface GymShopsPayload {
+  shops: GymShopSummary[];
+  totals: {
+    shops: number;
+    units_sold_90d: number;
+    orders_90d: number;
+    artifact_splits_90d: Record<string, number>;
+  };
+  window_days: number;
+}
+
+const shopsApi = {
+  list: (slug: string) =>
+    apiClient.get<ApiResponse<GymShopsPayload>>(`/gyms/${slug}/shops/`).then((r) => r.data),
+
+  connect: (slug: string, handle: string) =>
+    apiClient.post<ApiResponse<GymShopSummary>>(`/gyms/${slug}/shops/`, { handle }).then((r) => r.data),
+
+  disconnect: (slug: string, handle: string) =>
+    apiClient.delete(`/gyms/${slug}/shops/`, { data: { handle } }).then((r) => r.data),
+};
+
+export { shopsApi };

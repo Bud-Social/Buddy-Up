@@ -35,6 +35,10 @@ class Post(TimestampedModel, SoftDeleteModel):
     body = models.TextField(blank=True)
     is_anonymous = models.BooleanField(default=False)
     gym_tag = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='tagged_posts')
+    # When set, the post is authored by the gym, not just tagged with it.
+    # The ``author`` is the member who pushed publish; the gym identity is
+    # what the UI renders. Only owners/co-owners may set this.
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='feed_posts')
     visibility = models.CharField(max_length=15, choices=VISIBILITY_CHOICES, default='public')
     location_label = models.CharField(max_length=200, blank=True)
     location_lat = models.FloatField(null=True, blank=True)
@@ -62,6 +66,7 @@ class Post(TimestampedModel, SoftDeleteModel):
             models.Index(fields=['post_type']),
             models.Index(fields=['visibility', 'moderation_status']),
             models.Index(fields=['gym_tag', '-created_at']),
+            models.Index(fields=['gym', '-created_at']),
         ]
         constraints = [
             models.UniqueConstraint(

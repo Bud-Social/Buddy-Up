@@ -659,7 +659,8 @@ class VenueLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = VenueLocation
         fields = ['id', 'name', 'address', 'city', 'country', 'latitude', 'longitude',
-                  'instructions', 'is_primary', 'is_active', 'created_at']
+                  'instructions', 'is_primary', 'is_active', 'created_at',
+                  'building_name', 'floor']
         read_only_fields = ['id', 'created_at']
 
     @staticmethod
@@ -774,8 +775,8 @@ class GymOnlineCoachSerializer(serializers.ModelSerializer):
     class Meta:
         model = GymOnlineCoach
         fields = ['id', 'gym_id', 'coach', 'coach_data', 'specialties',
-                  'is_available', 'note', 'created_at']
-        read_only_fields = ['id', 'gym_id', 'coach', 'coach_data', 'created_at']
+                  'is_available', 'note', 'created_at', 'approval_status']
+        read_only_fields = ['id', 'gym_id', 'coach', 'coach_data', 'created_at', 'approval_status']
 
     def get_coach_data(self, obj):
         return {

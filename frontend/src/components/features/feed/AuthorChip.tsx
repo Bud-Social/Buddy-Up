@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye } from 'lucide-react';
+import { Eye, Dumbbell } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { profilesApi } from '@/api';
 import { track } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
+import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';
 import type { AuthorData } from '@/types';
 
 const VERIFICATION_BADGES: Record<string, { label: string; className: string }> = {
@@ -31,6 +32,17 @@ export function VerificationBadge({ status, dark = false }: { status?: string; d
 
 interface AuthorChipProps {
   author: AuthorData;
+  /** Present when the post was authored by a gym rather than a person — the
+   *  chip renders the gym identity (logo, name, @handle, verified badge) and
+   *  navigates to the gym page. */
+  gymData?: {
+    id: string;
+    name: string;
+    handle: string;
+    logo_url: string;
+    is_verified: boolean;
+    tier: 'regular' | 'midlevel' | 'executive';
+  } | null;
   /** Show follow/unfollow (hidden automatically for your own profile). */
   showFollow?: boolean;
   /** Known follow state; when omitted the button starts as "Follow". */
@@ -48,6 +60,7 @@ interface AuthorChipProps {
  */
 export function AuthorChip({
   author,
+  gymData,
   showFollow = true,
   initialFollowing,
   tone = 'default',
@@ -67,6 +80,11 @@ export function AuthorChip({
 
   const goToProfile = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (gymData?.handle) {
+      track('feed.profile_open', { surface: 'feed', object_type: 'gym', object_id: gymData.handle });
+      navigate(`/gyms/${gymData.handle}`);
+      return;
+    }
     if (author?.username) {
       track('feed.profile_open', { surface: 'feed', object_type: 'profile', object_id: author.username });
       navigate(`/${author.username}`);
@@ -90,6 +108,39 @@ export function AuthorChip({
       setPending(false);
     }
   };
+
+  if (gymData) {
+    return (
+      <div className="flex items-center gap-2.5 min-w-0" data-testid="author-chip">
+        <button onClick={goToProfile} className="flex-shrink-0" aria-label={`View ${gymData.name} gym page`}>
+          <span className="w-9 h-9 rounded-full bg-buddy-green/10 border border-buddy-green/30 flex items-center justify-center overflow-hidden">
+            {gymData.logo_url
+              ? <img src={gymData.logo_url} alt="" className="w-full h-full object-contain" />
+              : <Dumbbell size={16} className="text-buddy-green" />}
+          </span>
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <button
+              onClick={goToProfile}
+              className={`font-semibold text-sm truncate leading-tight transition-colors ${dark ? 'text-white' : `hover:text-buddy-green ${nameCls}`}`}
+            >
+              {gymData.name}
+            </button>
+            <VerifiedGymBadge verified={gymData.is_verified} tier={gymData.tier} size="sm" />
+          </div>
+          {!compact && (
+            <p className={`text-xs leading-tight truncate ${subCls}`}>@{gymData.handle} · Gym</p>
+          )}
+        </div>
+        {viewCount != null && (
+          <span className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-medium tabular-nums ${dark ? 'text-white/70' : 'text-buddy-text-secondary'}`}>
+            <Eye size={13} /> {viewCount >= 1000 ? `${(viewCount / 1000).toFixed(1)}k` : viewCount}
+          </span>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-2.5 min-w-0" data-testid="author-chip">

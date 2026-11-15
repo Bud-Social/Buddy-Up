@@ -41,6 +41,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.wallet.tasks.refresh_exchange_rates',
         'schedule': crontab(day_of_week='1'),
     },
+    'sweep-tier-grace-periods': {
+        'task': 'apps.gyms.tasks.sweep_tier_grace_periods',
+        'schedule': crontab(hour='2', minute='45'),
+    },
     'scan-random-drop-pool': {
         'task': 'apps.lives.tasks.scan_random_drop_pool',
         'schedule': 30.0,

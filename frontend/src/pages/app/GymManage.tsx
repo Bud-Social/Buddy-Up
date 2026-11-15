@@ -10,14 +10,17 @@ import { Modal } from '@/components/ui/Modal';
 import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';
 import { VenuesTab } from '@/components/gym/manage/VenuesTab';
 import { OnlineCoachingTab } from '@/components/gym/manage/OnlineCoachingTab';
-import { AnnouncementsTab } from '@/components/gym/manage/AnnouncementsTab';
+import { GymPostPanel } from '@/components/gym/manage/GymPostPanel';
+import { ShopsTab } from '@/components/gym/manage/ShopsTab';
+import { RevenueTab } from '@/components/gym/manage/RevenueTab';
 import { BusinessSetupTab } from '@/components/gym/manage/BusinessSetupTab';
 import { gymsApi } from '@/api/gyms';
 import type { Gym, GymMembership, GymRoutinePost, GymReview, JoinRequest, GymPartnerMetrics } from '@/types';
 import { RoleDashboardShell, RoleSectionTitle } from './roles/RoleShell';
 
 type Tab =
-  | 'overview' | 'members' | 'requests' | 'schedule' | 'reviews'
+  | 'overview' | 'members' | 'requests' | 'posts' | 'shops' | 'revenue'
+  | 'schedule' | 'reviews'
   | 'venues' | 'coaching' | 'announce' | 'setup';
 
 // Labels are kept short on purpose: the console wraps these into a tab strip,
@@ -26,6 +29,9 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'members', label: 'Members' },
   { key: 'requests', label: 'Requests' },
+  { key: 'posts', label: 'Posts' },
+  { key: 'shops', label: 'Shops' },
+  { key: 'revenue', label: 'Revenue' },
   { key: 'schedule', label: 'Schedule' },
   { key: 'reviews', label: 'Reviews' },
   { key: 'venues', label: 'Locations' },
@@ -591,11 +597,36 @@ export default function GymManage() {
         <OnlineCoachingTab slug={slug || gym.handle} canManage={isAdmin} members={members} />
       )}
 
-      {/* Announcements */}
-      {tab === 'announce' && (
-        <AnnouncementsTab
+      {/* Posts — the gym identity on the home feed */}
+      {tab === 'posts' && gym && (
+        <GymPostPanel
           slug={slug || gym.handle}
+          gymName={gym.name}
+          gymId={gym.id}
           canManage={isAdmin}
+          mode="post"
+          memberCount={metrics?.active_members ?? gym.member_count}
+        />
+      )}
+
+      {/* Shops — connected gyms' shops with attribution */}
+      {tab === 'shops' && (
+        <ShopsTab slug={slug || gym.handle} canManage={isAdmin} />
+      )}
+
+      {/* Revenue — gym wallet + verification tier */}
+      {tab === 'revenue' && (
+        <RevenueTab slug={slug || gym.handle} />
+      )}
+
+      {/* Announcements — pinned discourse, members get notified */}
+      {tab === 'announce' && (
+        <GymPostPanel
+          slug={slug || gym.handle}
+          gymName={gym.name}
+          gymId={gym.id}
+          canManage={isAdmin}
+          mode="announce"
           memberCount={metrics?.active_members ?? gym.member_count}
         />
       )}

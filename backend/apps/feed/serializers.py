@@ -142,6 +142,8 @@ class PostSerializer(serializers.ModelSerializer):
     original_post_data = serializers.SerializerMethodField()
     poll = serializers.SerializerMethodField()
     gym_tag_name = serializers.SerializerMethodField()
+    gym_id = serializers.PrimaryKeyRelatedField(read_only=True)
+    gym_data = serializers.SerializerMethodField()
     reposters = serializers.SerializerMethodField()
     media = PostMediaSerializer(many=True, read_only=True)
 
@@ -149,6 +151,7 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
         fields = [
         'id', 'post_type', 'body', 'is_anonymous', 'gym_tag_id', 'gym_tag_name',
+        'gym_id', 'gym_data',
         'visibility',
         'location_label', 'location_lat', 'location_lng', 'workout_log_data',
         'media_urls', 'media', 'tags', 'view_count', 'share_count', 'moderation_status',
@@ -239,6 +242,19 @@ class PostSerializer(serializers.ModelSerializer):
 
     def get_gym_tag_name(self, obj):
         return obj.gym_tag.name if obj.gym_tag else None
+
+    def get_gym_data(self, obj):
+        if obj.gym_id is None:
+            return None
+        gym = obj.gym
+        return {
+            'id': str(gym.id),
+            'name': gym.name,
+            'handle': gym.handle,
+            'logo_url': gym.logo_url,
+            'is_verified': gym.is_verified,
+            'tier': gym.tier,
+        }
 
     def get_reposters(self, obj):
         """Reposter ribbon, derived from PostRepost log rows on this post.
@@ -337,12 +353,16 @@ class PostCreateSerializer(serializers.ModelSerializer):
     gym_tag = serializers.PrimaryKeyRelatedField(
         queryset=Gym.objects.all(), required=False, allow_null=True
     )
+    # Posting as the gym (not just tagging it). Only owners/co-owners may set.
+    gym = serializers.PrimaryKeyRelatedField(
+        queryset=Gym.objects.all(), required=False, allow_null=True
+    )
     comments_disabled = serializers.BooleanField(default=False, required=False)
 
     class Meta:
         model = Post
         fields = [
-            'post_type', 'body', 'is_anonymous', 'gym_tag', 'visibility',
+            'post_type', 'body', 'is_anonymous', 'gym_tag', 'gym', 'visibility',
             'location_label', 'location_lat', 'location_lng', 'workout_log_data',
             'media_urls', 'tags', 'content_rating', 'comments_disabled',
         ]

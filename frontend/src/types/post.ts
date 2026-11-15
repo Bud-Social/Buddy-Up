@@ -162,6 +162,17 @@ export interface Post {
   is_saved: boolean;
   is_member?: boolean;
   is_pinned?: boolean;
+  /** Present when the post is authored by a gym rather than a person — the
+   *  home feed renders the gym identity instead of the user's. */
+  gym_id?: string | null;
+  gym_data?: {
+    id: string;
+    name: string;
+    handle: string;
+    logo_url: string;
+    is_verified: boolean;
+    tier: 'regular' | 'midlevel' | 'executive';
+  } | null;
   visibility: string;
   moderation_status: string;
   /**

@@ -218,21 +218,41 @@ export function GymDiscoursePost({ post: initialPost, isAdmin, gymName, onPin, o
           </div>
         )}
 
-        {/* Author header */}
+        {/* Author header — gym or person */}
         <div className="flex items-start gap-2.5">
-          <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name || ''} size="sm" />
+          {post.gym_data ? (
+            <span className="w-9 h-9 rounded-full bg-buddy-green/10 border border-buddy-green/30 flex items-center justify-center overflow-hidden flex-shrink-0 mt-0.5">
+              {post.gym_data.logo_url
+                ? <img src={post.gym_data.logo_url} alt="" className="w-full h-full object-contain" />
+                : <Dumbbell size={14} className="text-buddy-green" />}
+            </span>
+          ) : (
+            <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name || ''} size="sm" />
+          )}
           <div className="flex-1 min-w-0 mt-0.5">
-            <p className="text-sm text-buddy-text-secondary">
-              <span className="font-semibold text-buddy-text-primary mr-2">{post.author_data?.display_name}</span>
-              {formatPostDate(post.created_at)}
-            </p>
-            {post.location_label && (
-              <span className="text-[10px] text-buddy-text-secondary flex items-center gap-0.5 mt-0.5">
-                <MapPin size={9} /> {post.location_label}
-              </span>
+            {post.gym_data ? (
+              <>
+                <p className="text-sm font-semibold flex items-center gap-1.5">
+                  {post.gym_data.name}
+                  <Dumbbell size={10} className="text-buddy-green" aria-hidden />
+                </p>
+                <p className="text-[10px] text-buddy-text-secondary">@{post.gym_data.handle} · Posted as {gymName} · {formatPostDate(post.created_at)}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-buddy-text-secondary">
+                  <span className="font-semibold text-buddy-text-primary mr-2">{post.author_data?.display_name}</span>
+                  {formatPostDate(post.created_at)}
+                </p>
+                {post.location_label && (
+                  <span className="text-[10px] text-buddy-text-secondary flex items-center gap-0.5 mt-0.5">
+                    <MapPin size={9} /> {post.location_label}
+                  </span>
+                )}
+              </>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {isAdmin && (
               <button onClick={handlePin}
                 className={`p-1.5 rounded-full transition-colors ${post.is_pinned ? 'text-buddy-gold bg-buddy-gold/10' : 'text-buddy-text-secondary hover:text-buddy-gold hover:bg-buddy-gold/10'}`}

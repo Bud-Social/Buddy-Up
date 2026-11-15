@@ -119,6 +119,8 @@ export interface VenueLocation {
   instructions: string;
   is_primary: boolean;
   is_active: boolean;
+  building_name?: string;
+  floor?: number | null;
   created_at?: string;
 }
 
@@ -144,6 +146,8 @@ export interface GymOnlineCoach {
   specialties: string[];
   is_available: boolean;
   note: string;
+  /** 'pending' until the coach accepts the approval notification; 'active' after. */
+  approval_status?: 'pending' | 'active';
   created_at?: string;
 }
 

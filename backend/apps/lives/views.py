@@ -161,6 +161,8 @@ class StartLiveView(views.APIView):
             category=data.get('category', 'other'),
             access=data.get('access', 'public'),
             artifact_fee=data.get('artifact_fee'),
+            member_fee_artifacts=data.get('member_fee_artifacts'),
+            non_member_fee_artifacts=data.get('non_member_fee_artifacts'),
             gym_id=data.get('gym_id') if data.get('gym_id') else None,
             scheduled_for=data.get('scheduled_for'),
             is_recurring=data.get('is_recurring', False),
@@ -204,6 +206,69 @@ class StartLiveView(views.APIView):
             'errors': None,
             'pagination': None,
         }, status=status.HTTP_201_CREATED)
+
+
+class StartScheduledLiveView(views.APIView):
+    """Flip a scheduled live to 'live' and notify the RSVPed audience.
+
+    The gym UI gates the button to when the scheduled time arrives (or 30
+    minutes before); the backend permits host/co-host to flip at any time.
+    Every RSVP user — not the host's buddies/followers — gets a 'has started'
+    notification with a deep link, matching the product promise.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        user = request.user.profile
+        is_host = user == live.host
+        is_co_host = live.co_hosts.filter(pk=user.pk).exists()
+        if not (is_host or is_co_host):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host or a co-host can start this live.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        if live.status == 'live':
+            return Response({
+                'success': False, 'data': None,
+                'message': 'This live has already started.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+        if live.status != 'scheduled':
+            return Response({
+                'success': False, 'data': None,
+                'message': 'This live has ended.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        live.status = 'live'
+        live.started_at = timezone.now()
+        live.save(update_fields=['status', 'started_at'])
+
+        from apps.notifications.tasks import _deliver_notification
+        from .models import LiveRSVP
+        rsvp_user_ids = LiveRSVP.objects.filter(live=live).exclude(user=user).values_list('user_id', flat=True)
+        for rid in set(rsvp_user_ids):
+            _deliver_notification(
+                str(rid), 'live_starting',
+                f'{live.host.display_name}: "{live.title}" has started',
+                'The live you RSVPed to is live now — tap to join.',
+                {'live_id': str(live.id), 'host_display_name': live.host.display_name,
+                 'host_username': live.host.username, 'host_avatar_url': live.host.avatar_url},
+            )
+
+        credentials = get_live_credentials(
+            live, request, can_publish=True,
+        )
+        output = BuddyLiveSerializer(live, context={'request': request})
+        return Response({
+            'success': True,
+            'data': {'live': output.data, 'credentials': credentials},
+            'message': 'Live started. RSVPed members were notified.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_200_OK)
 
 
 class EndLiveView(views.APIView):
@@ -454,40 +519,91 @@ class GymScheduleView(views.APIView):
 class RSVPLiveView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    def _cancel(self, request, live, rsvp):
+        """Refund the committed fee (if any) and drop the RSVP."""
+        from apps.wallet.utils import credit_artifacts
+        from apps.wallet.models import ArtifactTransaction
+
+        fee_paid = rsvp.fee_paid or {}
+        for artifact_type, quantity in fee_paid.items():
+            if quantity and int(quantity) > 0:
+                credit_artifacts(request.user.profile, artifact_type, int(quantity))
+                if live.gym_id:
+                    from apps.gyms.capacity import debit_gym_wallet
+                    from apps.gyms.models import Gym
+                    live_gym = Gym.objects.filter(id=live.gym_id).first()
+                    if live_gym:
+                        debit_gym_wallet(
+                            live_gym, artifact_type, int(quantity),
+                            kind='live_fee', reference_id=f'refund:live:{live.id}',
+                            note=f'RSVP fee refund for {live.title}',
+                        )
+                ArtifactTransaction.objects.create(
+                    user=request.user.profile, transaction_type='refund',
+                    artifact_type=artifact_type, quantity=int(quantity),
+                    direction='credit', counterparty=live.host,
+                    status='completed', reference_id=f'live_rsvp_refund_{live.id}',
+                    description=f'Refunded {quantity} {artifact_type} from RSVP cancellation for "{live.title}"',
+                )
+        rsvp.delete()
+        return Response({
+            'success': True,
+            'data': None,
+            'message': 'RSVP cancelled and any paid fee was refunded.',
+            'errors': None, 'pagination': None,
+        })
+
+    @transaction.atomic
+    def delete(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id, status__in=['scheduled', 'live'])
+        from .models import LiveRSVP
+        rsvp = LiveRSVP.objects.filter(live=live, user=request.user.profile).first()
+        if rsvp is None:
+            return Response({'success': False, 'data': None,
+                             'message': 'You have no RSVP for this live.'},
+                            status=status.HTTP_404_NOT_FOUND)
+        return self._cancel(request, live, rsvp)
+
     @transaction.atomic
     def post(self, request, live_id):
         live = get_object_or_404(BuddyLive, id=live_id, status='scheduled')
         from .models import LiveRSVP
-        from apps.wallet.utils import deduct_artifacts, credit_artifacts
+        from apps.wallet.utils import deduct_artifacts
 
         rsvp, created = LiveRSVP.objects.get_or_create(
             live=live, user=request.user.profile,
         )
         if not created:
-            # Cancel RSVP — refund any committed fee.
-            fee_paid = rsvp.fee_paid or {}
-            for artifact_type, quantity in fee_paid.items():
-                if quantity and int(quantity) > 0:
-                    credit_artifacts(request.user.profile, artifact_type, int(quantity))
-                    ArtifactTransaction.objects.create(
-                        user=request.user.profile, transaction_type='refund',
-                        artifact_type=artifact_type, quantity=int(quantity),
-                        direction='credit', counterparty=live.host,
-                        status='completed', reference_id=f'live_rsvp_refund_{live_id}',
-                        description=f'Refunded {quantity} {artifact_type} from RSVP cancellation for "{live.title}"',
-                    )
-            rsvp.delete()
-            return Response({
-                'success': True,
-                'data': None,
-                'message': 'RSVP cancelled.',
-                'errors': None, 'pagination': None,
-            })
+            return self._cancel(request, live, rsvp)
 
-        # Paid lives require committing the entry fee before RSVP.
-        fee = live.artifact_fee or {}
-        fee = {k: v for k, v in fee.items() if v}
+        reminder = request.data.get('reminder_minutes', None)
+        if reminder is not None:
+            try:
+                reminder = max(0, min(7 * 24 * 60, int(reminder)))
+                rsvp.reminder_minutes = reminder
+                rsvp.save(update_fields=['reminder_minutes'])
+            except (TypeError, ValueError):
+                pass
+
+        # Paid gym lives charge member vs non-member prices; legacy public
+        # lives keep the single artifact_fee path. Empty dict = free.
+        member_fee = {k: v for k, v in (live.member_fee_artifacts or {}).items() if v}
+        non_member_fee = {k: v for k, v in (live.non_member_fee_artifacts or {}).items() if v}
+        legacy_fee = {k: v for k, v in (live.artifact_fee or {}).items() if v}
+
+        if live.gym_id and (member_fee or non_member_fee):
+            from apps.gyms.models import GymMembership
+            is_member = GymMembership.objects.filter(
+                gym_id=live.gym_id, member=request.user.profile,
+                subscription_active=True,
+            ).exists()
+            fee = member_fee if is_member else non_member_fee
+        else:
+            is_member = False
+            fee = legacy_fee
+
         if fee:
+            from apps.wallet.models import ArtifactTransaction
             for artifact_type, quantity in fee.items():
                 if not deduct_artifacts(request.user.profile, artifact_type, int(quantity)):
                     rsvp.delete()
@@ -506,6 +622,17 @@ class RSVPLiveView(views.APIView):
                     status='completed', reference_id=f'live_rsvp_{live_id}',
                     description=f'Entry fee to join "{live.title}"',
                 )
+            if live.gym_id:
+                from apps.gyms.capacity import credit_gym_wallet
+                from apps.gyms.models import Gym
+                live_gym = Gym.objects.filter(id=live.gym_id).first()
+                if live_gym:
+                    for artifact_type, quantity in fee.items():
+                        credit_gym_wallet(
+                            live_gym, artifact_type, int(quantity),
+                            kind='live_fee', reference_id=f'live:{live.id}',
+                            note=f'Member charged RSVP for {live.title}' if is_member else f'Non-member charged RSVP for {live.title}',
+                        )
 
         return Response({
             'success': True,
@@ -1271,13 +1398,18 @@ class LiveFeedbackView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
         comment = (request.data.get('comment') or '').strip()[:500]
+        tags = request.data.get('tags') or []
+        if not isinstance(tags, list):
+            tags = []
+        tags = [str(t).strip().lower() for t in tags if isinstance(t, (str, int))]
+        tags = [t for t in tags if t][:5]
         obj, _ = LiveFeedback.objects.update_or_create(
             live=live, user=profile,
-            defaults={'rating': rating, 'comment': comment},
+            defaults={'rating': rating, 'comment': comment, 'tags': tags},
         )
         return Response({
             'success': True,
-            'data': {'rating': obj.rating, 'comment': obj.comment},
+            'data': {'rating': obj.rating, 'comment': obj.comment, 'tags': obj.tags},
             'message': 'Feedback saved.',
             'errors': None, 'pagination': None,
         }, status=status.HTTP_201_CREATED)
@@ -1293,6 +1425,7 @@ class LiveFeedbackView(views.APIView):
                 {
                     'rating': r.rating,
                     'comment': r.comment,
+                    'tags': r.tags,
                     'display_name': r.user.display_name,
                     'avatar_url': r.user.avatar_url or '',
                 }

@@ -1028,7 +1028,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
           {/* Header */}
           <div className="flex items-start gap-2">
             <div className="flex-1 min-w-0">
-              <AuthorChip author={displayAuthor} />
+              <AuthorChip author={displayAuthor} gymData={displayPost.gym_data} />
               <div className="flex items-center gap-1.5 mt-1 ml-[52px] flex-wrap">
                 <span className="text-xs text-buddy-text-secondary leading-tight">
                   {formatPostDate(displayPost.created_at)}

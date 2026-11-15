@@ -27,6 +27,8 @@ export interface StartLivePayload {
   category: string;
   access?: string;
   artifact_fee?: Record<string, number>;
+  member_fee_artifacts?: Record<string, number>;
+  non_member_fee_artifacts?: Record<string, number>;
   gym_id?: string;
   scheduled_for?: string;
   is_recurring?: boolean;
@@ -83,8 +85,11 @@ export const livesApi = {
   getLiveCredentials: (liveId: string) =>
     apiClient.get<ApiResponse<LiveRoomData>>(`/lives/${liveId}/credentials/`).then((r) => r.data),
 
-  rsvpLive: (liveId: string) =>
-    apiClient.post<ApiResponse<null>>(`/lives/${liveId}/rsvp/`).then((r) => r.data),
+  rsvpLive: (liveId: string, reminderMinutes?: number) =>
+    apiClient.post<ApiResponse<null>>(`/lives/${liveId}/rsvp/`, reminderMinutes === undefined ? {} : { reminder_minutes: reminderMinutes }).then((r) => r.data),
+
+  startScheduled: (liveId: string) =>
+    apiClient.post<ApiResponse<StartLiveResponse>>(`/lives/${liveId}/start-scheduled/`).then((r) => r.data),
 
   startRandomDrop: (data: RandomDropPayload) =>
     apiClient.post<ApiResponse<{ status: string; timeout_seconds: number }>>('/lives/random-drop/start/', data).then((r) => r.data),

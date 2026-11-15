@@ -33,6 +33,10 @@ export interface BuddyLive {
   category: string;
   access: string;
   artifact_fee: Record<string, number> | null;
+  /** Fee for members — gym lives only. null/absent = free for members. */
+  member_fee_artifacts?: Record<string, number> | null;
+  /** Fee for non-members — gym lives only. */
+  non_member_fee_artifacts?: Record<string, number> | null;
   gym_id: string | null;
   /** Set when the live belongs to a community rather than a gym. */
   community_id?: string | null;
@@ -52,6 +56,7 @@ export interface BuddyLive {
   is_recurring: boolean;
   equipment_list: string[];
   has_rsvped?: boolean;
+  rsvp_reminder_minutes?: number | null;
   rsvp_count?: number;
   recording_consent?: 'auto_record' | 'opt_out';
   content_rating: 'general' | 'mature';

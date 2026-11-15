@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
-import { Check, Plus, Trash2, Wifi } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Check, Plus, Trash2, Wifi, UserCheck, Search, X } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { gymsApi } from '@/api/gyms';
-import type { GymMembership, GymOnlineCoach } from '@/types';
+import { profilesApi } from '@/api/profiles';
+import type { GymMembership, GymOnlineCoach, Profile } from '@/types';
 
 const COMMON_TYPES = [
   '1:1 coaching',
@@ -43,7 +44,34 @@ export function OnlineCoachingTab({ slug, canManage, members }: OnlineCoachingTa
   const [newType, setNewType] = useState('');
   const [coachUsername, setCoachUsername] = useState('');
   const [coachSpecialties, setCoachSpecialties] = useState('');
+  const [selectedCoach, setSelectedCoach] = useState<Profile | null>(null);
+  const [searchResults, setSearchResults] = useState<Profile[]>([]);
+  const [searching, setSearching] = useState(false);
   const [addingCoach, setAddingCoach] = useState(false);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onSearchChange = useCallback((value: string) => {
+    setCoachUsername(value);
+    setSelectedCoach(null);
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    const q = value.trim();
+    if (!q || q.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    searchDebounce.current = setTimeout(async () => {
+      try {
+        const res = await profilesApi.searchProfiles({ q, limit: 6 });
+        setSearchResults(res.data || []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -96,14 +124,14 @@ export function OnlineCoachingTab({ slug, canManage, members }: OnlineCoachingTa
     await persist({ coaching_types: next });
   };
 
-  const addCoach = async (username: string) => {
-    const value = username.trim();
-    if (!value) return;
+  const addCoach = async () => {
+    const identifier = selectedCoach?.user_id || coachUsername.trim();
+    if (!identifier) return;
     setAddingCoach(true);
     setError(null);
     try {
       const res = await gymsApi.addOnlineCoach(slug, {
-        username: value,
+        ...(selectedCoach ? { user_id: selectedCoach.user_id } : { username: identifier }),
         specialties: coachSpecialties.split(',').map((s) => s.trim()).filter(Boolean),
         is_available: true,
       });
@@ -113,6 +141,8 @@ export function OnlineCoachingTab({ slug, canManage, members }: OnlineCoachingTa
       });
       setCoachUsername('');
       setCoachSpecialties('');
+      setSelectedCoach(null);
+      setSearchResults([]);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Could not add that coach.');
     } finally {
@@ -129,12 +159,6 @@ export function OnlineCoachingTab({ slug, canManage, members }: OnlineCoachingTa
       setError(e?.response?.data?.message || 'Could not remove that coach.');
     }
   };
-
-  // Members not already listed, for the "add coach" suggestion row.
-  const available = members
-    .filter((m) => m.member_data?.username)
-    .filter((m) => !coaches.some((c) => c.coach_data?.username === m.member_data?.username))
-    .slice(0, 8);
 
   if (loading) {
     return <Card className="h-24 animate-pulse bg-buddy-surface-raised" />;
@@ -250,8 +274,13 @@ export function OnlineCoachingTab({ slug, canManage, members }: OnlineCoachingTa
                     {coach.specialties?.length ? coach.specialties.join(' · ') : `@${coach.coach_data?.username}`}
                   </p>
                 </div>
-                {coach.coach_data?.verification_status === 'verified' && (
-                  <Badge variant="green" label="Verified" />
+                {coach.approval_status === 'pending' ? (
+                  <Badge variant="silver" label="Pending approval" />
+                ) : (
+                  <Badge variant="green" label="Coach" />
+                )}
+                {coach.coach_data?.verification_status === 'trainer' && (
+                  <Badge variant="blue" label="Verified trainer" />
                 )}
                 {canManage && (
                   <Button size="sm" variant="ghost" aria-label="Remove coach" onClick={() => removeCoach(coach)}>
@@ -265,40 +294,49 @@ export function OnlineCoachingTab({ slug, canManage, members }: OnlineCoachingTa
 
         {canManage && (
           <div className="space-y-2 pt-2 border-t border-buddy-surface">
-            <div className="flex gap-2">
-              <Input
-                value={coachUsername}
-                onChange={(e) => setCoachUsername(e.target.value)}
-                placeholder="Member username"
+            <p className="text-[10px] uppercase text-buddy-text-secondary">Add a trainer</p>
+            <p className="text-[10px] text-buddy-text-secondary/70">Only trainers can be listed — the trainer gets an approval notification and appears as pending until they accept.</p>
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-buddy-text-secondary" />
+              <input
+                value={selectedCoach ? `@${selectedCoach.username}` : coachUsername}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Start typing a name or username…"
+                aria-label="Coach search"
+                className="w-full bg-buddy-surface rounded-xl pl-8 pr-8 py-2 text-xs placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
               />
-              <Button
-                size="sm"
-                onClick={() => addCoach(coachUsername)}
-                disabled={!coachUsername.trim()}
-                isLoading={addingCoach}
-              >
-                <Plus size={12} className="mr-1" /> Add
-              </Button>
+              {selectedCoach && (
+                <button className="absolute right-2 top-1/2 -translate-y-1/2 text-buddy-text-secondary hover:text-buddy-text-primary" onClick={() => setSelectedCoach(null)} aria-label="Clear selection">
+                  <X size={14} />
+                </button>
+              )}
+              {searching && <div className="absolute right-8 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-buddy-green/30 border-t-buddy-green rounded-full animate-spin" />}
+              {searchResults.length > 0 && !selectedCoach && (
+                <div className="absolute z-20 top-full mt-1 w-full bg-buddy-surface-raised rounded-xl border border-buddy-surface overflow-hidden shadow-2xl max-h-48 overflow-y-auto">
+                  {searchResults.map((p) => (
+                    <button
+                      key={p.user_id}
+                      onMouseDown={(e) => { e.preventDefault(); setSelectedCoach(p); setCoachUsername(`@${p.username}`); setSearchResults([]); }}
+                      className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-buddy-surface"
+                    >
+                      <Avatar src={p.avatar_url} alt={p.display_name || p.username} size="xs" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-medium truncate">{p.display_name || p.username}</span>
+                        <span className="block text-[9px] text-buddy-text-secondary truncate">@{p.username}{p.role ? ` · ${p.role}` : ''}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <Input
               value={coachSpecialties}
               onChange={(e) => setCoachSpecialties(e.target.value)}
-              placeholder="Specialties, comma separated (strength, mobility)"
+              placeholder="Coaching categories — e.g. strength, mobility (comma separated)"
             />
-            {available.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {available.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setCoachUsername(m.member_data?.username || '')}
-                    className="text-[10px] bg-buddy-surface hover:bg-buddy-surface-raised text-buddy-text-secondary px-2 py-0.5 rounded-full"
-                  >
-                    {m.member_data?.display_name || m.member_data?.username}
-                  </button>
-                ))}
-              </div>
-            )}
+            <Button size="sm" onClick={addCoach} disabled={(!selectedCoach && !coachUsername.trim()) || addingCoach} isLoading={addingCoach}>
+              <Plus size={12} className="mr-1" /> Add coach
+            </Button>
           </div>
         )}
       </Card>

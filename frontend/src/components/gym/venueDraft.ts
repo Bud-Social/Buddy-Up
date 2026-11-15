@@ -7,6 +7,8 @@ export interface VenueDraft {
   latitude: number | null;
   longitude: number | null;
   instructions: string;
+  building_name: string;
+  floor: string;
   is_primary: boolean;
 }
 
@@ -20,6 +22,8 @@ export function emptyVenueDraft(isPrimary = false): VenueDraft {
     latitude: null,
     longitude: null,
     instructions: '',
+    building_name: '',
+    floor: '',
     is_primary: isPrimary,
   };
 }

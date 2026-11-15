@@ -30,6 +30,8 @@ interface FlutterwaveCheckoutConfig {
   amount: number;
   currency: string;
   payment_options: string;
+  /** Present when the gym bought a recurring monthly plan — Flutterwave bills the card automatically. */
+  payment_plan?: string;
   customer: {
     email: string;
     phone_number?: string;
