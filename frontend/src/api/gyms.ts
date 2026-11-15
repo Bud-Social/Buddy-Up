@@ -266,6 +266,10 @@ export const gymsApi = {
       `/gyms/${slug}/online-coaching/`,
     ).then((r) => r.data),
 
+  // ── Online coaches ───────────────────────────────────────────────────
+  respondCoachInvite: (slug: string, coachId: string, action: 'accept' | 'decline') =>
+    apiClient.post(`/gyms/${slug}/online-coaches/${coachId}/respond/`, { action }).then((r) => r.data),
+
   updateOnlineCoaching: (slug: string, data: { offers_online_coaching?: boolean; coaching_types?: string[] }) =>
     apiClient.patch<ApiResponse<{ offers_online_coaching: boolean; coaching_types: string[] }>>(
       `/gyms/${slug}/online-coaching/`, data,

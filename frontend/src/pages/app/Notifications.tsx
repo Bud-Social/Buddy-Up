@@ -240,6 +240,22 @@ export default function Notifications() {
       return;
     }
 
+    if (type === 'gym_coach_request') {
+      const slug = meta.gym_handle;
+      const coachId = meta.coach_id;
+      if (slug && coachId) { navigate(`/gyms/${slug}/coaches/${coachId}/respond`); return; }
+      return;
+    }
+
+    if (type === 'gym_coach_accepted' ||
+        type === 'gym_coach_declined' ||
+        type === 'gym_tier_cancelled' ||
+        type === 'payment_overdue') {
+      const slug = meta.gym_handle;
+      if (slug) { navigate(`/gyms/${slug}/manage`); return; }
+      return;
+    }
+
     if (type === 'live_starting' || type === 'live_reminder' || type === 'live_start') {
       const liveId = meta.live_id;
       if (liveId) navigate(`/live/${liveId}`);

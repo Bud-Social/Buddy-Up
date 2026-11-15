@@ -84,6 +84,7 @@ const StationManage = lazy(() => import('@/pages/app/StationManage'));
 const CourierDashboard = lazy(() => import('@/pages/app/CourierDashboard'));
 const CourierRegister = lazy(() => import('@/pages/app/CourierRegister'));
 const GymManage = lazy(() => import('@/pages/app/GymManage'));
+const CoachInviteRespond = lazy(() => import('@/pages/app/CoachInviteRespond'));
 const ManagedGymsPage = lazy(() => import('@/pages/app/ManagedGymsPage'));
 const CreatorInsightsPage = lazy(() => import('@/pages/app/CreatorInsightsPage'));
 
@@ -236,6 +237,7 @@ export const router = createBrowserRouter([
           { path: '/gyms', element: <SWrapper><Gyms /></SWrapper> },
           { path: '/gyms/create', element: <SWrapper><CreateGymPage /></SWrapper> },
           { path: '/gyms/:slug/manage', element: <SWrapper><GymManage /></SWrapper> },
+          { path: '/gyms/:slug/coaches/:coachId/respond', element: <SWrapper><CoachInviteRespond /></SWrapper> },
           { path: '/my-gyms', element: <SWrapper><ManagedGymsPage /></SWrapper> },
           { path: '/gyms/:slug', element: <SWrapper><GymDetail /></SWrapper> },
           { path: '/trainers', element: <SWrapper><Trainers /></SWrapper> },
