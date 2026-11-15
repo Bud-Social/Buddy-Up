@@ -442,7 +442,6 @@ class PortalGymSerializer(serializers.ModelSerializer):
                 'credit_count': 0,
                 'usd_estimate': None,
             }
-        return str(submission.id) if submission else None
 
 
 class GymAdminUpdateSerializer(serializers.Serializer):
