@@ -73,6 +73,8 @@ import 'features/settings/screens/notification_prefs_screen.dart';
 import 'features/settings/screens/adult_content_policy_screen.dart';
 import 'features/analytics/screens/analytics_screen.dart';
 import 'features/countdowns/screens/countdowns_screen.dart';
+import 'features/routines/screens/routines_screen.dart';
+import 'features/routines/screens/routine_editor_screen.dart';
 import 'features/feed/screens/creator_insights_screen.dart';
 import 'features/sessions/screens/trainer_list_screen.dart';
 import 'features/sessions/screens/trainer_profile_screen.dart';
@@ -535,6 +537,22 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         path: '/countdowns',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const CountdownsScreen(),
+      ),
+      GoRoute(
+        path: '/routines',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const RoutinesScreen(),
+      ),
+      GoRoute(
+        path: '/routines/create',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const RoutineEditorScreen(),
+      ),
+      GoRoute(
+        path: '/routines/:routineId/edit',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) =>
+            RoutineEditorScreen(routineId: state.pathParameters['routineId']),
       ),
       GoRoute(
         path: '/insights',
@@ -1004,6 +1022,12 @@ class _AppShellState extends State<_AppShell> {
       'Countdowns',
     ),
     _NavDestination(
+      '/routines',
+      Icons.repeat_rounded,
+      Icons.repeat_rounded,
+      'Routines',
+    ),
+    _NavDestination(
       '/settings',
       Icons.settings_outlined,
       Icons.settings,
@@ -1032,6 +1056,12 @@ class _AppShellState extends State<_AppShell> {
       Icons.timer_outlined,
       Icons.timer,
       'Countdowns',
+    ),
+    _NavDestination(
+      '/routines',
+      Icons.repeat_rounded,
+      Icons.repeat_rounded,
+      'Routines',
     ),
   ];
 
@@ -1143,7 +1173,7 @@ class _AppShellState extends State<_AppShell> {
     '/community-guidelines', '/medical-disclaimer', '/sponsorship-policy',
     '/adult-content-policy', '/feed', '/health-insights', '/workout-form',
     '/gyms', '/lives', '/marketplace', '/wallet', '/analytics',
-    '/countdowns',
+    '/countdowns', '/routines',
     '/notifications', '/verification', '/trainers', '/book', '/sessions',
     '/my-enrollments', '/programmes', '/schedule', '/discover', '/messages',
     '/communities', '/profile', '/settings', '/buddies', '/admin',

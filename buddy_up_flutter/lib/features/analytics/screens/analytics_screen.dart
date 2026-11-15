@@ -9,6 +9,7 @@ import 'workouts_tab.dart';
 import 'activity_tab.dart';
 import 'body_tab.dart';
 import 'report_tab.dart';
+import 'countdowns_tab.dart';
 
 const List<({String key, String label})> _periods = [
   (key: 'week', label: 'Week'),
@@ -22,6 +23,7 @@ const List<({String key, String label, IconData icon})> _tabs = [
   (key: 'overview', label: 'Overview', icon: Icons.dashboard_outlined),
   (key: 'workouts', label: 'Workouts', icon: Icons.fitness_center),
   (key: 'activity', label: 'Activity', icon: Icons.directions_run),
+  (key: 'countdowns', label: 'Countdowns', icon: Icons.timer_outlined),
   (key: 'body', label: 'Body', icon: Icons.monitor_weight_outlined),
   (key: 'report', label: 'Report', icon: Icons.bar_chart),
 ];
@@ -132,6 +134,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 OverviewTab(summary: state.summary),
                 WorkoutsTab(summary: state.summary?.workouts),
                 ActivityTab(summary: state.summary?.activity),
+                CountdownsTab(summary: state.summary?.countdowns),
                 BodyTab(summary: state.summary?.body),
                 ReportTab(period: period),
               ],

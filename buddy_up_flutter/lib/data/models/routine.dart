@@ -1,0 +1,74 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'routine.freezed.dart';
+part 'routine.g.dart';
+
+/// Mirror of `RoutineSerializer` in `apps/countdowns/serializers.py`.
+///
+/// Routines live in the countdowns app because they share the streak
+/// engine; the days list is Monday=0…Sunday=6, consistent with the model
+/// and the web contract.
+@freezed
+abstract class Routine with _$Routine {
+  const factory Routine({
+    required String id,
+    @Default('other') String type,
+    @JsonKey(name: 'type_label') @Default('Other') String typeLabel,
+    @JsonKey(name: 'custom_name') @Default('') String customName,
+    @JsonKey(name: 'display_name') @Default('') String displayName,
+    @Default('') String name,
+    @Default(30) int target,
+    @Default('min') String unit,
+    @Default(<int>[]) List<int> days,
+    @JsonKey(name: 'target_day') int? targetDay,
+    @JsonKey(name: 'time_of_day') String? timeOfDay,
+    @JsonKey(name: 'reminder_minutes') @Default(<int>[]) List<int> reminderMinutes,
+    @Default('week') String activation,
+    @Default('app') String tracking,
+    @JsonKey(name: 'sort_order') @Default(0) int sortOrder,
+    @Default(0) int streak,
+    @JsonKey(name: 'completed_today') @Default(false) bool completedToday,
+    @JsonKey(name: 'last_checkin_at') String? lastCheckinAt,
+    @JsonKey(name: 'is_active') @Default(true) bool isActive,
+    @JsonKey(name: 'checkin_count') @Default(0) int checkinCount,
+    @Default(<RoutineHighlight>[]) List<RoutineHighlight> highlights,
+    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'updated_at') String? updatedAt,
+  }) = _Routine;
+
+  factory Routine.fromJson(Map<String, dynamic> json) =>
+      _$RoutineFromJson(json);
+}
+
+@freezed
+abstract class RoutineCheckIn with _$RoutineCheckIn {
+  const factory RoutineCheckIn({
+    required String id,
+    @Default('') String routine,
+    @Default(0) int? value,
+    @Default('') String note,
+    @Default('app') String source,
+    @JsonKey(name: 'occurred_at') @Default('') String occurredAt,
+    @JsonKey(name: 'created_at') String? createdAt,
+  }) = _RoutineCheckIn;
+
+  factory RoutineCheckIn.fromJson(Map<String, dynamic> json) =>
+      _$RoutineCheckInFromJson(json);
+}
+
+@freezed
+abstract class RoutineHighlight with _$RoutineHighlight {
+  const factory RoutineHighlight({
+    required String id,
+    @Default('') String routine,
+    @Default('photo') String kind,
+    @JsonKey(name: 'file_url') @Default('') String fileUrl,
+    @JsonKey(name: 'thumbnail_url') @Default('') String thumbnailUrl,
+    @Default('') String caption,
+    @JsonKey(name: 'duration_ms') int? durationMs,
+    @JsonKey(name: 'created_at') String? createdAt,
+  }) = _RoutineHighlight;
+
+  factory RoutineHighlight.fromJson(Map<String, dynamic> json) =>
+      _$RoutineHighlightFromJson(json);
+}

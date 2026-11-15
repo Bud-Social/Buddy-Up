@@ -3269,6 +3269,2003 @@ $SpendingCategoryCopyWith<$Res> get marketplaceSpend {
 
 
 /// @nodoc
+mixin _$CountdownEntry {
+
+ String get id; String get reason; String get icon; String get unit;@JsonKey(name: 'countdown_type') String get countdownType;@JsonKey(name: 'current_count') int get currentCount;@JsonKey(name: 'target_count') int get targetCount;@JsonKey(name: 'elapsed_units') int get elapsedUnits;@JsonKey(name: 'longest_run_units') double get longestRunUnits; int get checkins; int get resets; bool get completed;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'last_event_at') String? get lastEventAt;
+/// Create a copy of CountdownEntry
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CountdownEntryCopyWith<CountdownEntry> get copyWith => _$CountdownEntryCopyWithImpl<CountdownEntry>(this as CountdownEntry, _$identity);
+
+  /// Serializes this CountdownEntry to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CountdownEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.icon, icon) || other.icon == icon)&&(identical(other.unit, unit) || other.unit == unit)&&(identical(other.countdownType, countdownType) || other.countdownType == countdownType)&&(identical(other.currentCount, currentCount) || other.currentCount == currentCount)&&(identical(other.targetCount, targetCount) || other.targetCount == targetCount)&&(identical(other.elapsedUnits, elapsedUnits) || other.elapsedUnits == elapsedUnits)&&(identical(other.longestRunUnits, longestRunUnits) || other.longestRunUnits == longestRunUnits)&&(identical(other.checkins, checkins) || other.checkins == checkins)&&(identical(other.resets, resets) || other.resets == resets)&&(identical(other.completed, completed) || other.completed == completed)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.lastEventAt, lastEventAt) || other.lastEventAt == lastEventAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,reason,icon,unit,countdownType,currentCount,targetCount,elapsedUnits,longestRunUnits,checkins,resets,completed,isActive,lastEventAt);
+
+@override
+String toString() {
+  return 'CountdownEntry(id: $id, reason: $reason, icon: $icon, unit: $unit, countdownType: $countdownType, currentCount: $currentCount, targetCount: $targetCount, elapsedUnits: $elapsedUnits, longestRunUnits: $longestRunUnits, checkins: $checkins, resets: $resets, completed: $completed, isActive: $isActive, lastEventAt: $lastEventAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CountdownEntryCopyWith<$Res>  {
+  factory $CountdownEntryCopyWith(CountdownEntry value, $Res Function(CountdownEntry) _then) = _$CountdownEntryCopyWithImpl;
+@useResult
+$Res call({
+ String id, String reason, String icon, String unit,@JsonKey(name: 'countdown_type') String countdownType,@JsonKey(name: 'current_count') int currentCount,@JsonKey(name: 'target_count') int targetCount,@JsonKey(name: 'elapsed_units') int elapsedUnits,@JsonKey(name: 'longest_run_units') double longestRunUnits, int checkins, int resets, bool completed,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'last_event_at') String? lastEventAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$CountdownEntryCopyWithImpl<$Res>
+    implements $CountdownEntryCopyWith<$Res> {
+  _$CountdownEntryCopyWithImpl(this._self, this._then);
+
+  final CountdownEntry _self;
+  final $Res Function(CountdownEntry) _then;
+
+/// Create a copy of CountdownEntry
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? reason = null,Object? icon = null,Object? unit = null,Object? countdownType = null,Object? currentCount = null,Object? targetCount = null,Object? elapsedUnits = null,Object? longestRunUnits = null,Object? checkins = null,Object? resets = null,Object? completed = null,Object? isActive = null,Object? lastEventAt = freezed,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,icon: null == icon ? _self.icon : icon // ignore: cast_nullable_to_non_nullable
+as String,unit: null == unit ? _self.unit : unit // ignore: cast_nullable_to_non_nullable
+as String,countdownType: null == countdownType ? _self.countdownType : countdownType // ignore: cast_nullable_to_non_nullable
+as String,currentCount: null == currentCount ? _self.currentCount : currentCount // ignore: cast_nullable_to_non_nullable
+as int,targetCount: null == targetCount ? _self.targetCount : targetCount // ignore: cast_nullable_to_non_nullable
+as int,elapsedUnits: null == elapsedUnits ? _self.elapsedUnits : elapsedUnits // ignore: cast_nullable_to_non_nullable
+as int,longestRunUnits: null == longestRunUnits ? _self.longestRunUnits : longestRunUnits // ignore: cast_nullable_to_non_nullable
+as double,checkins: null == checkins ? _self.checkins : checkins // ignore: cast_nullable_to_non_nullable
+as int,resets: null == resets ? _self.resets : resets // ignore: cast_nullable_to_non_nullable
+as int,completed: null == completed ? _self.completed : completed // ignore: cast_nullable_to_non_nullable
+as bool,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,lastEventAt: freezed == lastEventAt ? _self.lastEventAt : lastEventAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CountdownEntry].
+extension CountdownEntryPatterns on CountdownEntry {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CountdownEntry value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CountdownEntry() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CountdownEntry value)  $default,){
+final _that = this;
+switch (_that) {
+case _CountdownEntry():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CountdownEntry value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CountdownEntry() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String reason,  String icon,  String unit, @JsonKey(name: 'countdown_type')  String countdownType, @JsonKey(name: 'current_count')  int currentCount, @JsonKey(name: 'target_count')  int targetCount, @JsonKey(name: 'elapsed_units')  int elapsedUnits, @JsonKey(name: 'longest_run_units')  double longestRunUnits,  int checkins,  int resets,  bool completed, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'last_event_at')  String? lastEventAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CountdownEntry() when $default != null:
+return $default(_that.id,_that.reason,_that.icon,_that.unit,_that.countdownType,_that.currentCount,_that.targetCount,_that.elapsedUnits,_that.longestRunUnits,_that.checkins,_that.resets,_that.completed,_that.isActive,_that.lastEventAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String reason,  String icon,  String unit, @JsonKey(name: 'countdown_type')  String countdownType, @JsonKey(name: 'current_count')  int currentCount, @JsonKey(name: 'target_count')  int targetCount, @JsonKey(name: 'elapsed_units')  int elapsedUnits, @JsonKey(name: 'longest_run_units')  double longestRunUnits,  int checkins,  int resets,  bool completed, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'last_event_at')  String? lastEventAt)  $default,) {final _that = this;
+switch (_that) {
+case _CountdownEntry():
+return $default(_that.id,_that.reason,_that.icon,_that.unit,_that.countdownType,_that.currentCount,_that.targetCount,_that.elapsedUnits,_that.longestRunUnits,_that.checkins,_that.resets,_that.completed,_that.isActive,_that.lastEventAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String reason,  String icon,  String unit, @JsonKey(name: 'countdown_type')  String countdownType, @JsonKey(name: 'current_count')  int currentCount, @JsonKey(name: 'target_count')  int targetCount, @JsonKey(name: 'elapsed_units')  int elapsedUnits, @JsonKey(name: 'longest_run_units')  double longestRunUnits,  int checkins,  int resets,  bool completed, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'last_event_at')  String? lastEventAt)?  $default,) {final _that = this;
+switch (_that) {
+case _CountdownEntry() when $default != null:
+return $default(_that.id,_that.reason,_that.icon,_that.unit,_that.countdownType,_that.currentCount,_that.targetCount,_that.elapsedUnits,_that.longestRunUnits,_that.checkins,_that.resets,_that.completed,_that.isActive,_that.lastEventAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CountdownEntry implements CountdownEntry {
+  const _CountdownEntry({this.id = '', this.reason = '', this.icon = '', this.unit = 'days', @JsonKey(name: 'countdown_type') this.countdownType = '', @JsonKey(name: 'current_count') this.currentCount = 0, @JsonKey(name: 'target_count') this.targetCount = 0, @JsonKey(name: 'elapsed_units') this.elapsedUnits = 0, @JsonKey(name: 'longest_run_units') this.longestRunUnits = 0, this.checkins = 0, this.resets = 0, this.completed = false, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'last_event_at') this.lastEventAt});
+  factory _CountdownEntry.fromJson(Map<String, dynamic> json) => _$CountdownEntryFromJson(json);
+
+@override@JsonKey() final  String id;
+@override@JsonKey() final  String reason;
+@override@JsonKey() final  String icon;
+@override@JsonKey() final  String unit;
+@override@JsonKey(name: 'countdown_type') final  String countdownType;
+@override@JsonKey(name: 'current_count') final  int currentCount;
+@override@JsonKey(name: 'target_count') final  int targetCount;
+@override@JsonKey(name: 'elapsed_units') final  int elapsedUnits;
+@override@JsonKey(name: 'longest_run_units') final  double longestRunUnits;
+@override@JsonKey() final  int checkins;
+@override@JsonKey() final  int resets;
+@override@JsonKey() final  bool completed;
+@override@JsonKey(name: 'is_active') final  bool isActive;
+@override@JsonKey(name: 'last_event_at') final  String? lastEventAt;
+
+/// Create a copy of CountdownEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CountdownEntryCopyWith<_CountdownEntry> get copyWith => __$CountdownEntryCopyWithImpl<_CountdownEntry>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CountdownEntryToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CountdownEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.icon, icon) || other.icon == icon)&&(identical(other.unit, unit) || other.unit == unit)&&(identical(other.countdownType, countdownType) || other.countdownType == countdownType)&&(identical(other.currentCount, currentCount) || other.currentCount == currentCount)&&(identical(other.targetCount, targetCount) || other.targetCount == targetCount)&&(identical(other.elapsedUnits, elapsedUnits) || other.elapsedUnits == elapsedUnits)&&(identical(other.longestRunUnits, longestRunUnits) || other.longestRunUnits == longestRunUnits)&&(identical(other.checkins, checkins) || other.checkins == checkins)&&(identical(other.resets, resets) || other.resets == resets)&&(identical(other.completed, completed) || other.completed == completed)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.lastEventAt, lastEventAt) || other.lastEventAt == lastEventAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,reason,icon,unit,countdownType,currentCount,targetCount,elapsedUnits,longestRunUnits,checkins,resets,completed,isActive,lastEventAt);
+
+@override
+String toString() {
+  return 'CountdownEntry(id: $id, reason: $reason, icon: $icon, unit: $unit, countdownType: $countdownType, currentCount: $currentCount, targetCount: $targetCount, elapsedUnits: $elapsedUnits, longestRunUnits: $longestRunUnits, checkins: $checkins, resets: $resets, completed: $completed, isActive: $isActive, lastEventAt: $lastEventAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CountdownEntryCopyWith<$Res> implements $CountdownEntryCopyWith<$Res> {
+  factory _$CountdownEntryCopyWith(_CountdownEntry value, $Res Function(_CountdownEntry) _then) = __$CountdownEntryCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String reason, String icon, String unit,@JsonKey(name: 'countdown_type') String countdownType,@JsonKey(name: 'current_count') int currentCount,@JsonKey(name: 'target_count') int targetCount,@JsonKey(name: 'elapsed_units') int elapsedUnits,@JsonKey(name: 'longest_run_units') double longestRunUnits, int checkins, int resets, bool completed,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'last_event_at') String? lastEventAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$CountdownEntryCopyWithImpl<$Res>
+    implements _$CountdownEntryCopyWith<$Res> {
+  __$CountdownEntryCopyWithImpl(this._self, this._then);
+
+  final _CountdownEntry _self;
+  final $Res Function(_CountdownEntry) _then;
+
+/// Create a copy of CountdownEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? reason = null,Object? icon = null,Object? unit = null,Object? countdownType = null,Object? currentCount = null,Object? targetCount = null,Object? elapsedUnits = null,Object? longestRunUnits = null,Object? checkins = null,Object? resets = null,Object? completed = null,Object? isActive = null,Object? lastEventAt = freezed,}) {
+  return _then(_CountdownEntry(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,icon: null == icon ? _self.icon : icon // ignore: cast_nullable_to_non_nullable
+as String,unit: null == unit ? _self.unit : unit // ignore: cast_nullable_to_non_nullable
+as String,countdownType: null == countdownType ? _self.countdownType : countdownType // ignore: cast_nullable_to_non_nullable
+as String,currentCount: null == currentCount ? _self.currentCount : currentCount // ignore: cast_nullable_to_non_nullable
+as int,targetCount: null == targetCount ? _self.targetCount : targetCount // ignore: cast_nullable_to_non_nullable
+as int,elapsedUnits: null == elapsedUnits ? _self.elapsedUnits : elapsedUnits // ignore: cast_nullable_to_non_nullable
+as int,longestRunUnits: null == longestRunUnits ? _self.longestRunUnits : longestRunUnits // ignore: cast_nullable_to_non_nullable
+as double,checkins: null == checkins ? _self.checkins : checkins // ignore: cast_nullable_to_non_nullable
+as int,resets: null == resets ? _self.resets : resets // ignore: cast_nullable_to_non_nullable
+as int,completed: null == completed ? _self.completed : completed // ignore: cast_nullable_to_non_nullable
+as bool,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,lastEventAt: freezed == lastEventAt ? _self.lastEventAt : lastEventAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$CountdownEventEntry {
+
+ String get id;@JsonKey(name: 'countdown_id') String get countdownId;@JsonKey(name: 'event_type') String get eventType;@JsonKey(name: 'count_after') int get countAfter;@JsonKey(name: 'elapsed_seconds') double get elapsedSeconds;@JsonKey(name: 'run_elapsed_seconds') double get runElapsedSeconds; String get unit;@JsonKey(name: 'occurred_at') String get occurredAt;
+/// Create a copy of CountdownEventEntry
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CountdownEventEntryCopyWith<CountdownEventEntry> get copyWith => _$CountdownEventEntryCopyWithImpl<CountdownEventEntry>(this as CountdownEventEntry, _$identity);
+
+  /// Serializes this CountdownEventEntry to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CountdownEventEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.countdownId, countdownId) || other.countdownId == countdownId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.countAfter, countAfter) || other.countAfter == countAfter)&&(identical(other.elapsedSeconds, elapsedSeconds) || other.elapsedSeconds == elapsedSeconds)&&(identical(other.runElapsedSeconds, runElapsedSeconds) || other.runElapsedSeconds == runElapsedSeconds)&&(identical(other.unit, unit) || other.unit == unit)&&(identical(other.occurredAt, occurredAt) || other.occurredAt == occurredAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,countdownId,eventType,countAfter,elapsedSeconds,runElapsedSeconds,unit,occurredAt);
+
+@override
+String toString() {
+  return 'CountdownEventEntry(id: $id, countdownId: $countdownId, eventType: $eventType, countAfter: $countAfter, elapsedSeconds: $elapsedSeconds, runElapsedSeconds: $runElapsedSeconds, unit: $unit, occurredAt: $occurredAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CountdownEventEntryCopyWith<$Res>  {
+  factory $CountdownEventEntryCopyWith(CountdownEventEntry value, $Res Function(CountdownEventEntry) _then) = _$CountdownEventEntryCopyWithImpl;
+@useResult
+$Res call({
+ String id,@JsonKey(name: 'countdown_id') String countdownId,@JsonKey(name: 'event_type') String eventType,@JsonKey(name: 'count_after') int countAfter,@JsonKey(name: 'elapsed_seconds') double elapsedSeconds,@JsonKey(name: 'run_elapsed_seconds') double runElapsedSeconds, String unit,@JsonKey(name: 'occurred_at') String occurredAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$CountdownEventEntryCopyWithImpl<$Res>
+    implements $CountdownEventEntryCopyWith<$Res> {
+  _$CountdownEventEntryCopyWithImpl(this._self, this._then);
+
+  final CountdownEventEntry _self;
+  final $Res Function(CountdownEventEntry) _then;
+
+/// Create a copy of CountdownEventEntry
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? countdownId = null,Object? eventType = null,Object? countAfter = null,Object? elapsedSeconds = null,Object? runElapsedSeconds = null,Object? unit = null,Object? occurredAt = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,countdownId: null == countdownId ? _self.countdownId : countdownId // ignore: cast_nullable_to_non_nullable
+as String,eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
+as String,countAfter: null == countAfter ? _self.countAfter : countAfter // ignore: cast_nullable_to_non_nullable
+as int,elapsedSeconds: null == elapsedSeconds ? _self.elapsedSeconds : elapsedSeconds // ignore: cast_nullable_to_non_nullable
+as double,runElapsedSeconds: null == runElapsedSeconds ? _self.runElapsedSeconds : runElapsedSeconds // ignore: cast_nullable_to_non_nullable
+as double,unit: null == unit ? _self.unit : unit // ignore: cast_nullable_to_non_nullable
+as String,occurredAt: null == occurredAt ? _self.occurredAt : occurredAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CountdownEventEntry].
+extension CountdownEventEntryPatterns on CountdownEventEntry {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CountdownEventEntry value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CountdownEventEntry() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CountdownEventEntry value)  $default,){
+final _that = this;
+switch (_that) {
+case _CountdownEventEntry():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CountdownEventEntry value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CountdownEventEntry() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'countdown_id')  String countdownId, @JsonKey(name: 'event_type')  String eventType, @JsonKey(name: 'count_after')  int countAfter, @JsonKey(name: 'elapsed_seconds')  double elapsedSeconds, @JsonKey(name: 'run_elapsed_seconds')  double runElapsedSeconds,  String unit, @JsonKey(name: 'occurred_at')  String occurredAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CountdownEventEntry() when $default != null:
+return $default(_that.id,_that.countdownId,_that.eventType,_that.countAfter,_that.elapsedSeconds,_that.runElapsedSeconds,_that.unit,_that.occurredAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'countdown_id')  String countdownId, @JsonKey(name: 'event_type')  String eventType, @JsonKey(name: 'count_after')  int countAfter, @JsonKey(name: 'elapsed_seconds')  double elapsedSeconds, @JsonKey(name: 'run_elapsed_seconds')  double runElapsedSeconds,  String unit, @JsonKey(name: 'occurred_at')  String occurredAt)  $default,) {final _that = this;
+switch (_that) {
+case _CountdownEventEntry():
+return $default(_that.id,_that.countdownId,_that.eventType,_that.countAfter,_that.elapsedSeconds,_that.runElapsedSeconds,_that.unit,_that.occurredAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'countdown_id')  String countdownId, @JsonKey(name: 'event_type')  String eventType, @JsonKey(name: 'count_after')  int countAfter, @JsonKey(name: 'elapsed_seconds')  double elapsedSeconds, @JsonKey(name: 'run_elapsed_seconds')  double runElapsedSeconds,  String unit, @JsonKey(name: 'occurred_at')  String occurredAt)?  $default,) {final _that = this;
+switch (_that) {
+case _CountdownEventEntry() when $default != null:
+return $default(_that.id,_that.countdownId,_that.eventType,_that.countAfter,_that.elapsedSeconds,_that.runElapsedSeconds,_that.unit,_that.occurredAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CountdownEventEntry implements CountdownEventEntry {
+  const _CountdownEventEntry({this.id = '', @JsonKey(name: 'countdown_id') this.countdownId = '', @JsonKey(name: 'event_type') this.eventType = '', @JsonKey(name: 'count_after') this.countAfter = 0, @JsonKey(name: 'elapsed_seconds') this.elapsedSeconds = 0, @JsonKey(name: 'run_elapsed_seconds') this.runElapsedSeconds = 0, this.unit = 'days', @JsonKey(name: 'occurred_at') this.occurredAt = ''});
+  factory _CountdownEventEntry.fromJson(Map<String, dynamic> json) => _$CountdownEventEntryFromJson(json);
+
+@override@JsonKey() final  String id;
+@override@JsonKey(name: 'countdown_id') final  String countdownId;
+@override@JsonKey(name: 'event_type') final  String eventType;
+@override@JsonKey(name: 'count_after') final  int countAfter;
+@override@JsonKey(name: 'elapsed_seconds') final  double elapsedSeconds;
+@override@JsonKey(name: 'run_elapsed_seconds') final  double runElapsedSeconds;
+@override@JsonKey() final  String unit;
+@override@JsonKey(name: 'occurred_at') final  String occurredAt;
+
+/// Create a copy of CountdownEventEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CountdownEventEntryCopyWith<_CountdownEventEntry> get copyWith => __$CountdownEventEntryCopyWithImpl<_CountdownEventEntry>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CountdownEventEntryToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CountdownEventEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.countdownId, countdownId) || other.countdownId == countdownId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.countAfter, countAfter) || other.countAfter == countAfter)&&(identical(other.elapsedSeconds, elapsedSeconds) || other.elapsedSeconds == elapsedSeconds)&&(identical(other.runElapsedSeconds, runElapsedSeconds) || other.runElapsedSeconds == runElapsedSeconds)&&(identical(other.unit, unit) || other.unit == unit)&&(identical(other.occurredAt, occurredAt) || other.occurredAt == occurredAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,countdownId,eventType,countAfter,elapsedSeconds,runElapsedSeconds,unit,occurredAt);
+
+@override
+String toString() {
+  return 'CountdownEventEntry(id: $id, countdownId: $countdownId, eventType: $eventType, countAfter: $countAfter, elapsedSeconds: $elapsedSeconds, runElapsedSeconds: $runElapsedSeconds, unit: $unit, occurredAt: $occurredAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CountdownEventEntryCopyWith<$Res> implements $CountdownEventEntryCopyWith<$Res> {
+  factory _$CountdownEventEntryCopyWith(_CountdownEventEntry value, $Res Function(_CountdownEventEntry) _then) = __$CountdownEventEntryCopyWithImpl;
+@override @useResult
+$Res call({
+ String id,@JsonKey(name: 'countdown_id') String countdownId,@JsonKey(name: 'event_type') String eventType,@JsonKey(name: 'count_after') int countAfter,@JsonKey(name: 'elapsed_seconds') double elapsedSeconds,@JsonKey(name: 'run_elapsed_seconds') double runElapsedSeconds, String unit,@JsonKey(name: 'occurred_at') String occurredAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$CountdownEventEntryCopyWithImpl<$Res>
+    implements _$CountdownEventEntryCopyWith<$Res> {
+  __$CountdownEventEntryCopyWithImpl(this._self, this._then);
+
+  final _CountdownEventEntry _self;
+  final $Res Function(_CountdownEventEntry) _then;
+
+/// Create a copy of CountdownEventEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? countdownId = null,Object? eventType = null,Object? countAfter = null,Object? elapsedSeconds = null,Object? runElapsedSeconds = null,Object? unit = null,Object? occurredAt = null,}) {
+  return _then(_CountdownEventEntry(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,countdownId: null == countdownId ? _self.countdownId : countdownId // ignore: cast_nullable_to_non_nullable
+as String,eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
+as String,countAfter: null == countAfter ? _self.countAfter : countAfter // ignore: cast_nullable_to_non_nullable
+as int,elapsedSeconds: null == elapsedSeconds ? _self.elapsedSeconds : elapsedSeconds // ignore: cast_nullable_to_non_nullable
+as double,runElapsedSeconds: null == runElapsedSeconds ? _self.runElapsedSeconds : runElapsedSeconds // ignore: cast_nullable_to_non_nullable
+as double,unit: null == unit ? _self.unit : unit // ignore: cast_nullable_to_non_nullable
+as String,occurredAt: null == occurredAt ? _self.occurredAt : occurredAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$CadenceSummary {
+
+@JsonKey(name: 'median_gap_seconds') double? get medianGapSeconds;@JsonKey(name: 'on_time_checkins') int get onTimeCheckins;@JsonKey(name: 'late_checkins') int get lateCheckins;
+/// Create a copy of CadenceSummary
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CadenceSummaryCopyWith<CadenceSummary> get copyWith => _$CadenceSummaryCopyWithImpl<CadenceSummary>(this as CadenceSummary, _$identity);
+
+  /// Serializes this CadenceSummary to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CadenceSummary&&(identical(other.medianGapSeconds, medianGapSeconds) || other.medianGapSeconds == medianGapSeconds)&&(identical(other.onTimeCheckins, onTimeCheckins) || other.onTimeCheckins == onTimeCheckins)&&(identical(other.lateCheckins, lateCheckins) || other.lateCheckins == lateCheckins));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,medianGapSeconds,onTimeCheckins,lateCheckins);
+
+@override
+String toString() {
+  return 'CadenceSummary(medianGapSeconds: $medianGapSeconds, onTimeCheckins: $onTimeCheckins, lateCheckins: $lateCheckins)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CadenceSummaryCopyWith<$Res>  {
+  factory $CadenceSummaryCopyWith(CadenceSummary value, $Res Function(CadenceSummary) _then) = _$CadenceSummaryCopyWithImpl;
+@useResult
+$Res call({
+@JsonKey(name: 'median_gap_seconds') double? medianGapSeconds,@JsonKey(name: 'on_time_checkins') int onTimeCheckins,@JsonKey(name: 'late_checkins') int lateCheckins
+});
+
+
+
+
+}
+/// @nodoc
+class _$CadenceSummaryCopyWithImpl<$Res>
+    implements $CadenceSummaryCopyWith<$Res> {
+  _$CadenceSummaryCopyWithImpl(this._self, this._then);
+
+  final CadenceSummary _self;
+  final $Res Function(CadenceSummary) _then;
+
+/// Create a copy of CadenceSummary
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? medianGapSeconds = freezed,Object? onTimeCheckins = null,Object? lateCheckins = null,}) {
+  return _then(_self.copyWith(
+medianGapSeconds: freezed == medianGapSeconds ? _self.medianGapSeconds : medianGapSeconds // ignore: cast_nullable_to_non_nullable
+as double?,onTimeCheckins: null == onTimeCheckins ? _self.onTimeCheckins : onTimeCheckins // ignore: cast_nullable_to_non_nullable
+as int,lateCheckins: null == lateCheckins ? _self.lateCheckins : lateCheckins // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CadenceSummary].
+extension CadenceSummaryPatterns on CadenceSummary {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CadenceSummary value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CadenceSummary() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CadenceSummary value)  $default,){
+final _that = this;
+switch (_that) {
+case _CadenceSummary():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CadenceSummary value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CadenceSummary() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'median_gap_seconds')  double? medianGapSeconds, @JsonKey(name: 'on_time_checkins')  int onTimeCheckins, @JsonKey(name: 'late_checkins')  int lateCheckins)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CadenceSummary() when $default != null:
+return $default(_that.medianGapSeconds,_that.onTimeCheckins,_that.lateCheckins);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'median_gap_seconds')  double? medianGapSeconds, @JsonKey(name: 'on_time_checkins')  int onTimeCheckins, @JsonKey(name: 'late_checkins')  int lateCheckins)  $default,) {final _that = this;
+switch (_that) {
+case _CadenceSummary():
+return $default(_that.medianGapSeconds,_that.onTimeCheckins,_that.lateCheckins);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'median_gap_seconds')  double? medianGapSeconds, @JsonKey(name: 'on_time_checkins')  int onTimeCheckins, @JsonKey(name: 'late_checkins')  int lateCheckins)?  $default,) {final _that = this;
+switch (_that) {
+case _CadenceSummary() when $default != null:
+return $default(_that.medianGapSeconds,_that.onTimeCheckins,_that.lateCheckins);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CadenceSummary implements CadenceSummary {
+  const _CadenceSummary({@JsonKey(name: 'median_gap_seconds') this.medianGapSeconds, @JsonKey(name: 'on_time_checkins') this.onTimeCheckins = 0, @JsonKey(name: 'late_checkins') this.lateCheckins = 0});
+  factory _CadenceSummary.fromJson(Map<String, dynamic> json) => _$CadenceSummaryFromJson(json);
+
+@override@JsonKey(name: 'median_gap_seconds') final  double? medianGapSeconds;
+@override@JsonKey(name: 'on_time_checkins') final  int onTimeCheckins;
+@override@JsonKey(name: 'late_checkins') final  int lateCheckins;
+
+/// Create a copy of CadenceSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CadenceSummaryCopyWith<_CadenceSummary> get copyWith => __$CadenceSummaryCopyWithImpl<_CadenceSummary>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CadenceSummaryToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CadenceSummary&&(identical(other.medianGapSeconds, medianGapSeconds) || other.medianGapSeconds == medianGapSeconds)&&(identical(other.onTimeCheckins, onTimeCheckins) || other.onTimeCheckins == onTimeCheckins)&&(identical(other.lateCheckins, lateCheckins) || other.lateCheckins == lateCheckins));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,medianGapSeconds,onTimeCheckins,lateCheckins);
+
+@override
+String toString() {
+  return 'CadenceSummary(medianGapSeconds: $medianGapSeconds, onTimeCheckins: $onTimeCheckins, lateCheckins: $lateCheckins)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CadenceSummaryCopyWith<$Res> implements $CadenceSummaryCopyWith<$Res> {
+  factory _$CadenceSummaryCopyWith(_CadenceSummary value, $Res Function(_CadenceSummary) _then) = __$CadenceSummaryCopyWithImpl;
+@override @useResult
+$Res call({
+@JsonKey(name: 'median_gap_seconds') double? medianGapSeconds,@JsonKey(name: 'on_time_checkins') int onTimeCheckins,@JsonKey(name: 'late_checkins') int lateCheckins
+});
+
+
+
+
+}
+/// @nodoc
+class __$CadenceSummaryCopyWithImpl<$Res>
+    implements _$CadenceSummaryCopyWith<$Res> {
+  __$CadenceSummaryCopyWithImpl(this._self, this._then);
+
+  final _CadenceSummary _self;
+  final $Res Function(_CadenceSummary) _then;
+
+/// Create a copy of CadenceSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? medianGapSeconds = freezed,Object? onTimeCheckins = null,Object? lateCheckins = null,}) {
+  return _then(_CadenceSummary(
+medianGapSeconds: freezed == medianGapSeconds ? _self.medianGapSeconds : medianGapSeconds // ignore: cast_nullable_to_non_nullable
+as double?,onTimeCheckins: null == onTimeCheckins ? _self.onTimeCheckins : onTimeCheckins // ignore: cast_nullable_to_non_nullable
+as int,lateCheckins: null == lateCheckins ? _self.lateCheckins : lateCheckins // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$CountdownSummary {
+
+ int get count;@JsonKey(name: 'active_count') int get activeCount;@JsonKey(name: 'total_checkins') int get totalCheckins;@JsonKey(name: 'total_resets') int get totalResets;@JsonKey(name: 'total_completions') int get totalCompletions;@JsonKey(name: 'current_streak_units') double get currentStreakUnits;@JsonKey(name: 'longest_streak_units') double get longestStreakUnits;@JsonKey(name: 'total_streak_days') double get totalStreakDays;@JsonKey(name: 'by_countdown') List<CountdownEntry> get byCountdown;@JsonKey(name: 'recent_events') List<CountdownEventEntry> get recentEvents;@JsonKey(name: 'cadence') CadenceSummary get cadence;
+/// Create a copy of CountdownSummary
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CountdownSummaryCopyWith<CountdownSummary> get copyWith => _$CountdownSummaryCopyWithImpl<CountdownSummary>(this as CountdownSummary, _$identity);
+
+  /// Serializes this CountdownSummary to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CountdownSummary&&(identical(other.count, count) || other.count == count)&&(identical(other.activeCount, activeCount) || other.activeCount == activeCount)&&(identical(other.totalCheckins, totalCheckins) || other.totalCheckins == totalCheckins)&&(identical(other.totalResets, totalResets) || other.totalResets == totalResets)&&(identical(other.totalCompletions, totalCompletions) || other.totalCompletions == totalCompletions)&&(identical(other.currentStreakUnits, currentStreakUnits) || other.currentStreakUnits == currentStreakUnits)&&(identical(other.longestStreakUnits, longestStreakUnits) || other.longestStreakUnits == longestStreakUnits)&&(identical(other.totalStreakDays, totalStreakDays) || other.totalStreakDays == totalStreakDays)&&const DeepCollectionEquality().equals(other.byCountdown, byCountdown)&&const DeepCollectionEquality().equals(other.recentEvents, recentEvents)&&(identical(other.cadence, cadence) || other.cadence == cadence));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,count,activeCount,totalCheckins,totalResets,totalCompletions,currentStreakUnits,longestStreakUnits,totalStreakDays,const DeepCollectionEquality().hash(byCountdown),const DeepCollectionEquality().hash(recentEvents),cadence);
+
+@override
+String toString() {
+  return 'CountdownSummary(count: $count, activeCount: $activeCount, totalCheckins: $totalCheckins, totalResets: $totalResets, totalCompletions: $totalCompletions, currentStreakUnits: $currentStreakUnits, longestStreakUnits: $longestStreakUnits, totalStreakDays: $totalStreakDays, byCountdown: $byCountdown, recentEvents: $recentEvents, cadence: $cadence)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CountdownSummaryCopyWith<$Res>  {
+  factory $CountdownSummaryCopyWith(CountdownSummary value, $Res Function(CountdownSummary) _then) = _$CountdownSummaryCopyWithImpl;
+@useResult
+$Res call({
+ int count,@JsonKey(name: 'active_count') int activeCount,@JsonKey(name: 'total_checkins') int totalCheckins,@JsonKey(name: 'total_resets') int totalResets,@JsonKey(name: 'total_completions') int totalCompletions,@JsonKey(name: 'current_streak_units') double currentStreakUnits,@JsonKey(name: 'longest_streak_units') double longestStreakUnits,@JsonKey(name: 'total_streak_days') double totalStreakDays,@JsonKey(name: 'by_countdown') List<CountdownEntry> byCountdown,@JsonKey(name: 'recent_events') List<CountdownEventEntry> recentEvents,@JsonKey(name: 'cadence') CadenceSummary cadence
+});
+
+
+$CadenceSummaryCopyWith<$Res> get cadence;
+
+}
+/// @nodoc
+class _$CountdownSummaryCopyWithImpl<$Res>
+    implements $CountdownSummaryCopyWith<$Res> {
+  _$CountdownSummaryCopyWithImpl(this._self, this._then);
+
+  final CountdownSummary _self;
+  final $Res Function(CountdownSummary) _then;
+
+/// Create a copy of CountdownSummary
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? count = null,Object? activeCount = null,Object? totalCheckins = null,Object? totalResets = null,Object? totalCompletions = null,Object? currentStreakUnits = null,Object? longestStreakUnits = null,Object? totalStreakDays = null,Object? byCountdown = null,Object? recentEvents = null,Object? cadence = null,}) {
+  return _then(_self.copyWith(
+count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,activeCount: null == activeCount ? _self.activeCount : activeCount // ignore: cast_nullable_to_non_nullable
+as int,totalCheckins: null == totalCheckins ? _self.totalCheckins : totalCheckins // ignore: cast_nullable_to_non_nullable
+as int,totalResets: null == totalResets ? _self.totalResets : totalResets // ignore: cast_nullable_to_non_nullable
+as int,totalCompletions: null == totalCompletions ? _self.totalCompletions : totalCompletions // ignore: cast_nullable_to_non_nullable
+as int,currentStreakUnits: null == currentStreakUnits ? _self.currentStreakUnits : currentStreakUnits // ignore: cast_nullable_to_non_nullable
+as double,longestStreakUnits: null == longestStreakUnits ? _self.longestStreakUnits : longestStreakUnits // ignore: cast_nullable_to_non_nullable
+as double,totalStreakDays: null == totalStreakDays ? _self.totalStreakDays : totalStreakDays // ignore: cast_nullable_to_non_nullable
+as double,byCountdown: null == byCountdown ? _self.byCountdown : byCountdown // ignore: cast_nullable_to_non_nullable
+as List<CountdownEntry>,recentEvents: null == recentEvents ? _self.recentEvents : recentEvents // ignore: cast_nullable_to_non_nullable
+as List<CountdownEventEntry>,cadence: null == cadence ? _self.cadence : cadence // ignore: cast_nullable_to_non_nullable
+as CadenceSummary,
+  ));
+}
+/// Create a copy of CountdownSummary
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CadenceSummaryCopyWith<$Res> get cadence {
+  
+  return $CadenceSummaryCopyWith<$Res>(_self.cadence, (value) {
+    return _then(_self.copyWith(cadence: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [CountdownSummary].
+extension CountdownSummaryPatterns on CountdownSummary {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CountdownSummary value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CountdownSummary() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CountdownSummary value)  $default,){
+final _that = this;
+switch (_that) {
+case _CountdownSummary():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CountdownSummary value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CountdownSummary() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int count, @JsonKey(name: 'active_count')  int activeCount, @JsonKey(name: 'total_checkins')  int totalCheckins, @JsonKey(name: 'total_resets')  int totalResets, @JsonKey(name: 'total_completions')  int totalCompletions, @JsonKey(name: 'current_streak_units')  double currentStreakUnits, @JsonKey(name: 'longest_streak_units')  double longestStreakUnits, @JsonKey(name: 'total_streak_days')  double totalStreakDays, @JsonKey(name: 'by_countdown')  List<CountdownEntry> byCountdown, @JsonKey(name: 'recent_events')  List<CountdownEventEntry> recentEvents, @JsonKey(name: 'cadence')  CadenceSummary cadence)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CountdownSummary() when $default != null:
+return $default(_that.count,_that.activeCount,_that.totalCheckins,_that.totalResets,_that.totalCompletions,_that.currentStreakUnits,_that.longestStreakUnits,_that.totalStreakDays,_that.byCountdown,_that.recentEvents,_that.cadence);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int count, @JsonKey(name: 'active_count')  int activeCount, @JsonKey(name: 'total_checkins')  int totalCheckins, @JsonKey(name: 'total_resets')  int totalResets, @JsonKey(name: 'total_completions')  int totalCompletions, @JsonKey(name: 'current_streak_units')  double currentStreakUnits, @JsonKey(name: 'longest_streak_units')  double longestStreakUnits, @JsonKey(name: 'total_streak_days')  double totalStreakDays, @JsonKey(name: 'by_countdown')  List<CountdownEntry> byCountdown, @JsonKey(name: 'recent_events')  List<CountdownEventEntry> recentEvents, @JsonKey(name: 'cadence')  CadenceSummary cadence)  $default,) {final _that = this;
+switch (_that) {
+case _CountdownSummary():
+return $default(_that.count,_that.activeCount,_that.totalCheckins,_that.totalResets,_that.totalCompletions,_that.currentStreakUnits,_that.longestStreakUnits,_that.totalStreakDays,_that.byCountdown,_that.recentEvents,_that.cadence);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int count, @JsonKey(name: 'active_count')  int activeCount, @JsonKey(name: 'total_checkins')  int totalCheckins, @JsonKey(name: 'total_resets')  int totalResets, @JsonKey(name: 'total_completions')  int totalCompletions, @JsonKey(name: 'current_streak_units')  double currentStreakUnits, @JsonKey(name: 'longest_streak_units')  double longestStreakUnits, @JsonKey(name: 'total_streak_days')  double totalStreakDays, @JsonKey(name: 'by_countdown')  List<CountdownEntry> byCountdown, @JsonKey(name: 'recent_events')  List<CountdownEventEntry> recentEvents, @JsonKey(name: 'cadence')  CadenceSummary cadence)?  $default,) {final _that = this;
+switch (_that) {
+case _CountdownSummary() when $default != null:
+return $default(_that.count,_that.activeCount,_that.totalCheckins,_that.totalResets,_that.totalCompletions,_that.currentStreakUnits,_that.longestStreakUnits,_that.totalStreakDays,_that.byCountdown,_that.recentEvents,_that.cadence);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CountdownSummary implements CountdownSummary {
+  const _CountdownSummary({this.count = 0, @JsonKey(name: 'active_count') this.activeCount = 0, @JsonKey(name: 'total_checkins') this.totalCheckins = 0, @JsonKey(name: 'total_resets') this.totalResets = 0, @JsonKey(name: 'total_completions') this.totalCompletions = 0, @JsonKey(name: 'current_streak_units') this.currentStreakUnits = 0, @JsonKey(name: 'longest_streak_units') this.longestStreakUnits = 0, @JsonKey(name: 'total_streak_days') this.totalStreakDays = 0, @JsonKey(name: 'by_countdown') final  List<CountdownEntry> byCountdown = const <CountdownEntry>[], @JsonKey(name: 'recent_events') final  List<CountdownEventEntry> recentEvents = const <CountdownEventEntry>[], @JsonKey(name: 'cadence') this.cadence = const CadenceSummary()}): _byCountdown = byCountdown,_recentEvents = recentEvents;
+  factory _CountdownSummary.fromJson(Map<String, dynamic> json) => _$CountdownSummaryFromJson(json);
+
+@override@JsonKey() final  int count;
+@override@JsonKey(name: 'active_count') final  int activeCount;
+@override@JsonKey(name: 'total_checkins') final  int totalCheckins;
+@override@JsonKey(name: 'total_resets') final  int totalResets;
+@override@JsonKey(name: 'total_completions') final  int totalCompletions;
+@override@JsonKey(name: 'current_streak_units') final  double currentStreakUnits;
+@override@JsonKey(name: 'longest_streak_units') final  double longestStreakUnits;
+@override@JsonKey(name: 'total_streak_days') final  double totalStreakDays;
+ final  List<CountdownEntry> _byCountdown;
+@override@JsonKey(name: 'by_countdown') List<CountdownEntry> get byCountdown {
+  if (_byCountdown is EqualUnmodifiableListView) return _byCountdown;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_byCountdown);
+}
+
+ final  List<CountdownEventEntry> _recentEvents;
+@override@JsonKey(name: 'recent_events') List<CountdownEventEntry> get recentEvents {
+  if (_recentEvents is EqualUnmodifiableListView) return _recentEvents;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_recentEvents);
+}
+
+@override@JsonKey(name: 'cadence') final  CadenceSummary cadence;
+
+/// Create a copy of CountdownSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CountdownSummaryCopyWith<_CountdownSummary> get copyWith => __$CountdownSummaryCopyWithImpl<_CountdownSummary>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CountdownSummaryToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CountdownSummary&&(identical(other.count, count) || other.count == count)&&(identical(other.activeCount, activeCount) || other.activeCount == activeCount)&&(identical(other.totalCheckins, totalCheckins) || other.totalCheckins == totalCheckins)&&(identical(other.totalResets, totalResets) || other.totalResets == totalResets)&&(identical(other.totalCompletions, totalCompletions) || other.totalCompletions == totalCompletions)&&(identical(other.currentStreakUnits, currentStreakUnits) || other.currentStreakUnits == currentStreakUnits)&&(identical(other.longestStreakUnits, longestStreakUnits) || other.longestStreakUnits == longestStreakUnits)&&(identical(other.totalStreakDays, totalStreakDays) || other.totalStreakDays == totalStreakDays)&&const DeepCollectionEquality().equals(other._byCountdown, _byCountdown)&&const DeepCollectionEquality().equals(other._recentEvents, _recentEvents)&&(identical(other.cadence, cadence) || other.cadence == cadence));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,count,activeCount,totalCheckins,totalResets,totalCompletions,currentStreakUnits,longestStreakUnits,totalStreakDays,const DeepCollectionEquality().hash(_byCountdown),const DeepCollectionEquality().hash(_recentEvents),cadence);
+
+@override
+String toString() {
+  return 'CountdownSummary(count: $count, activeCount: $activeCount, totalCheckins: $totalCheckins, totalResets: $totalResets, totalCompletions: $totalCompletions, currentStreakUnits: $currentStreakUnits, longestStreakUnits: $longestStreakUnits, totalStreakDays: $totalStreakDays, byCountdown: $byCountdown, recentEvents: $recentEvents, cadence: $cadence)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CountdownSummaryCopyWith<$Res> implements $CountdownSummaryCopyWith<$Res> {
+  factory _$CountdownSummaryCopyWith(_CountdownSummary value, $Res Function(_CountdownSummary) _then) = __$CountdownSummaryCopyWithImpl;
+@override @useResult
+$Res call({
+ int count,@JsonKey(name: 'active_count') int activeCount,@JsonKey(name: 'total_checkins') int totalCheckins,@JsonKey(name: 'total_resets') int totalResets,@JsonKey(name: 'total_completions') int totalCompletions,@JsonKey(name: 'current_streak_units') double currentStreakUnits,@JsonKey(name: 'longest_streak_units') double longestStreakUnits,@JsonKey(name: 'total_streak_days') double totalStreakDays,@JsonKey(name: 'by_countdown') List<CountdownEntry> byCountdown,@JsonKey(name: 'recent_events') List<CountdownEventEntry> recentEvents,@JsonKey(name: 'cadence') CadenceSummary cadence
+});
+
+
+@override $CadenceSummaryCopyWith<$Res> get cadence;
+
+}
+/// @nodoc
+class __$CountdownSummaryCopyWithImpl<$Res>
+    implements _$CountdownSummaryCopyWith<$Res> {
+  __$CountdownSummaryCopyWithImpl(this._self, this._then);
+
+  final _CountdownSummary _self;
+  final $Res Function(_CountdownSummary) _then;
+
+/// Create a copy of CountdownSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? count = null,Object? activeCount = null,Object? totalCheckins = null,Object? totalResets = null,Object? totalCompletions = null,Object? currentStreakUnits = null,Object? longestStreakUnits = null,Object? totalStreakDays = null,Object? byCountdown = null,Object? recentEvents = null,Object? cadence = null,}) {
+  return _then(_CountdownSummary(
+count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,activeCount: null == activeCount ? _self.activeCount : activeCount // ignore: cast_nullable_to_non_nullable
+as int,totalCheckins: null == totalCheckins ? _self.totalCheckins : totalCheckins // ignore: cast_nullable_to_non_nullable
+as int,totalResets: null == totalResets ? _self.totalResets : totalResets // ignore: cast_nullable_to_non_nullable
+as int,totalCompletions: null == totalCompletions ? _self.totalCompletions : totalCompletions // ignore: cast_nullable_to_non_nullable
+as int,currentStreakUnits: null == currentStreakUnits ? _self.currentStreakUnits : currentStreakUnits // ignore: cast_nullable_to_non_nullable
+as double,longestStreakUnits: null == longestStreakUnits ? _self.longestStreakUnits : longestStreakUnits // ignore: cast_nullable_to_non_nullable
+as double,totalStreakDays: null == totalStreakDays ? _self.totalStreakDays : totalStreakDays // ignore: cast_nullable_to_non_nullable
+as double,byCountdown: null == byCountdown ? _self._byCountdown : byCountdown // ignore: cast_nullable_to_non_nullable
+as List<CountdownEntry>,recentEvents: null == recentEvents ? _self._recentEvents : recentEvents // ignore: cast_nullable_to_non_nullable
+as List<CountdownEventEntry>,cadence: null == cadence ? _self.cadence : cadence // ignore: cast_nullable_to_non_nullable
+as CadenceSummary,
+  ));
+}
+
+/// Create a copy of CountdownSummary
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CadenceSummaryCopyWith<$Res> get cadence {
+  
+  return $CadenceSummaryCopyWith<$Res>(_self.cadence, (value) {
+    return _then(_self.copyWith(cadence: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$RoutineCategoryCount {
+
+ String get category; String get label; int get count;
+/// Create a copy of RoutineCategoryCount
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$RoutineCategoryCountCopyWith<RoutineCategoryCount> get copyWith => _$RoutineCategoryCountCopyWithImpl<RoutineCategoryCount>(this as RoutineCategoryCount, _$identity);
+
+  /// Serializes this RoutineCategoryCount to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoutineCategoryCount&&(identical(other.category, category) || other.category == category)&&(identical(other.label, label) || other.label == label)&&(identical(other.count, count) || other.count == count));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,category,label,count);
+
+@override
+String toString() {
+  return 'RoutineCategoryCount(category: $category, label: $label, count: $count)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $RoutineCategoryCountCopyWith<$Res>  {
+  factory $RoutineCategoryCountCopyWith(RoutineCategoryCount value, $Res Function(RoutineCategoryCount) _then) = _$RoutineCategoryCountCopyWithImpl;
+@useResult
+$Res call({
+ String category, String label, int count
+});
+
+
+
+
+}
+/// @nodoc
+class _$RoutineCategoryCountCopyWithImpl<$Res>
+    implements $RoutineCategoryCountCopyWith<$Res> {
+  _$RoutineCategoryCountCopyWithImpl(this._self, this._then);
+
+  final RoutineCategoryCount _self;
+  final $Res Function(RoutineCategoryCount) _then;
+
+/// Create a copy of RoutineCategoryCount
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? category = null,Object? label = null,Object? count = null,}) {
+  return _then(_self.copyWith(
+category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+as String,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [RoutineCategoryCount].
+extension RoutineCategoryCountPatterns on RoutineCategoryCount {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _RoutineCategoryCount value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _RoutineCategoryCount() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _RoutineCategoryCount value)  $default,){
+final _that = this;
+switch (_that) {
+case _RoutineCategoryCount():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _RoutineCategoryCount value)?  $default,){
+final _that = this;
+switch (_that) {
+case _RoutineCategoryCount() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String category,  String label,  int count)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _RoutineCategoryCount() when $default != null:
+return $default(_that.category,_that.label,_that.count);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String category,  String label,  int count)  $default,) {final _that = this;
+switch (_that) {
+case _RoutineCategoryCount():
+return $default(_that.category,_that.label,_that.count);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String category,  String label,  int count)?  $default,) {final _that = this;
+switch (_that) {
+case _RoutineCategoryCount() when $default != null:
+return $default(_that.category,_that.label,_that.count);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _RoutineCategoryCount implements RoutineCategoryCount {
+  const _RoutineCategoryCount({this.category = '', this.label = '', this.count = 0});
+  factory _RoutineCategoryCount.fromJson(Map<String, dynamic> json) => _$RoutineCategoryCountFromJson(json);
+
+@override@JsonKey() final  String category;
+@override@JsonKey() final  String label;
+@override@JsonKey() final  int count;
+
+/// Create a copy of RoutineCategoryCount
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$RoutineCategoryCountCopyWith<_RoutineCategoryCount> get copyWith => __$RoutineCategoryCountCopyWithImpl<_RoutineCategoryCount>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$RoutineCategoryCountToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoutineCategoryCount&&(identical(other.category, category) || other.category == category)&&(identical(other.label, label) || other.label == label)&&(identical(other.count, count) || other.count == count));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,category,label,count);
+
+@override
+String toString() {
+  return 'RoutineCategoryCount(category: $category, label: $label, count: $count)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$RoutineCategoryCountCopyWith<$Res> implements $RoutineCategoryCountCopyWith<$Res> {
+  factory _$RoutineCategoryCountCopyWith(_RoutineCategoryCount value, $Res Function(_RoutineCategoryCount) _then) = __$RoutineCategoryCountCopyWithImpl;
+@override @useResult
+$Res call({
+ String category, String label, int count
+});
+
+
+
+
+}
+/// @nodoc
+class __$RoutineCategoryCountCopyWithImpl<$Res>
+    implements _$RoutineCategoryCountCopyWith<$Res> {
+  __$RoutineCategoryCountCopyWithImpl(this._self, this._then);
+
+  final _RoutineCategoryCount _self;
+  final $Res Function(_RoutineCategoryCount) _then;
+
+/// Create a copy of RoutineCategoryCount
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? category = null,Object? label = null,Object? count = null,}) {
+  return _then(_RoutineCategoryCount(
+category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+as String,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$RoutineTrackingCount {
+
+ String get tracking; int get count;
+/// Create a copy of RoutineTrackingCount
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$RoutineTrackingCountCopyWith<RoutineTrackingCount> get copyWith => _$RoutineTrackingCountCopyWithImpl<RoutineTrackingCount>(this as RoutineTrackingCount, _$identity);
+
+  /// Serializes this RoutineTrackingCount to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoutineTrackingCount&&(identical(other.tracking, tracking) || other.tracking == tracking)&&(identical(other.count, count) || other.count == count));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,tracking,count);
+
+@override
+String toString() {
+  return 'RoutineTrackingCount(tracking: $tracking, count: $count)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $RoutineTrackingCountCopyWith<$Res>  {
+  factory $RoutineTrackingCountCopyWith(RoutineTrackingCount value, $Res Function(RoutineTrackingCount) _then) = _$RoutineTrackingCountCopyWithImpl;
+@useResult
+$Res call({
+ String tracking, int count
+});
+
+
+
+
+}
+/// @nodoc
+class _$RoutineTrackingCountCopyWithImpl<$Res>
+    implements $RoutineTrackingCountCopyWith<$Res> {
+  _$RoutineTrackingCountCopyWithImpl(this._self, this._then);
+
+  final RoutineTrackingCount _self;
+  final $Res Function(RoutineTrackingCount) _then;
+
+/// Create a copy of RoutineTrackingCount
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? tracking = null,Object? count = null,}) {
+  return _then(_self.copyWith(
+tracking: null == tracking ? _self.tracking : tracking // ignore: cast_nullable_to_non_nullable
+as String,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [RoutineTrackingCount].
+extension RoutineTrackingCountPatterns on RoutineTrackingCount {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _RoutineTrackingCount value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _RoutineTrackingCount() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _RoutineTrackingCount value)  $default,){
+final _that = this;
+switch (_that) {
+case _RoutineTrackingCount():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _RoutineTrackingCount value)?  $default,){
+final _that = this;
+switch (_that) {
+case _RoutineTrackingCount() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String tracking,  int count)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _RoutineTrackingCount() when $default != null:
+return $default(_that.tracking,_that.count);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String tracking,  int count)  $default,) {final _that = this;
+switch (_that) {
+case _RoutineTrackingCount():
+return $default(_that.tracking,_that.count);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String tracking,  int count)?  $default,) {final _that = this;
+switch (_that) {
+case _RoutineTrackingCount() when $default != null:
+return $default(_that.tracking,_that.count);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _RoutineTrackingCount implements RoutineTrackingCount {
+  const _RoutineTrackingCount({this.tracking = '', this.count = 0});
+  factory _RoutineTrackingCount.fromJson(Map<String, dynamic> json) => _$RoutineTrackingCountFromJson(json);
+
+@override@JsonKey() final  String tracking;
+@override@JsonKey() final  int count;
+
+/// Create a copy of RoutineTrackingCount
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$RoutineTrackingCountCopyWith<_RoutineTrackingCount> get copyWith => __$RoutineTrackingCountCopyWithImpl<_RoutineTrackingCount>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$RoutineTrackingCountToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoutineTrackingCount&&(identical(other.tracking, tracking) || other.tracking == tracking)&&(identical(other.count, count) || other.count == count));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,tracking,count);
+
+@override
+String toString() {
+  return 'RoutineTrackingCount(tracking: $tracking, count: $count)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$RoutineTrackingCountCopyWith<$Res> implements $RoutineTrackingCountCopyWith<$Res> {
+  factory _$RoutineTrackingCountCopyWith(_RoutineTrackingCount value, $Res Function(_RoutineTrackingCount) _then) = __$RoutineTrackingCountCopyWithImpl;
+@override @useResult
+$Res call({
+ String tracking, int count
+});
+
+
+
+
+}
+/// @nodoc
+class __$RoutineTrackingCountCopyWithImpl<$Res>
+    implements _$RoutineTrackingCountCopyWith<$Res> {
+  __$RoutineTrackingCountCopyWithImpl(this._self, this._then);
+
+  final _RoutineTrackingCount _self;
+  final $Res Function(_RoutineTrackingCount) _then;
+
+/// Create a copy of RoutineTrackingCount
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? tracking = null,Object? count = null,}) {
+  return _then(_RoutineTrackingCount(
+tracking: null == tracking ? _self.tracking : tracking // ignore: cast_nullable_to_non_nullable
+as String,count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$RoutinesSummary {
+
+@JsonKey(name: 'active_routines') int get activeRoutines;@JsonKey(name: 'total_checkins') int get totalCheckins;@JsonKey(name: 'by_category') List<RoutineCategoryCount> get byCategory;@JsonKey(name: 'by_tracking') List<RoutineTrackingCount> get byTracking;
+/// Create a copy of RoutinesSummary
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$RoutinesSummaryCopyWith<RoutinesSummary> get copyWith => _$RoutinesSummaryCopyWithImpl<RoutinesSummary>(this as RoutinesSummary, _$identity);
+
+  /// Serializes this RoutinesSummary to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RoutinesSummary&&(identical(other.activeRoutines, activeRoutines) || other.activeRoutines == activeRoutines)&&(identical(other.totalCheckins, totalCheckins) || other.totalCheckins == totalCheckins)&&const DeepCollectionEquality().equals(other.byCategory, byCategory)&&const DeepCollectionEquality().equals(other.byTracking, byTracking));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,activeRoutines,totalCheckins,const DeepCollectionEquality().hash(byCategory),const DeepCollectionEquality().hash(byTracking));
+
+@override
+String toString() {
+  return 'RoutinesSummary(activeRoutines: $activeRoutines, totalCheckins: $totalCheckins, byCategory: $byCategory, byTracking: $byTracking)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $RoutinesSummaryCopyWith<$Res>  {
+  factory $RoutinesSummaryCopyWith(RoutinesSummary value, $Res Function(RoutinesSummary) _then) = _$RoutinesSummaryCopyWithImpl;
+@useResult
+$Res call({
+@JsonKey(name: 'active_routines') int activeRoutines,@JsonKey(name: 'total_checkins') int totalCheckins,@JsonKey(name: 'by_category') List<RoutineCategoryCount> byCategory,@JsonKey(name: 'by_tracking') List<RoutineTrackingCount> byTracking
+});
+
+
+
+
+}
+/// @nodoc
+class _$RoutinesSummaryCopyWithImpl<$Res>
+    implements $RoutinesSummaryCopyWith<$Res> {
+  _$RoutinesSummaryCopyWithImpl(this._self, this._then);
+
+  final RoutinesSummary _self;
+  final $Res Function(RoutinesSummary) _then;
+
+/// Create a copy of RoutinesSummary
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? activeRoutines = null,Object? totalCheckins = null,Object? byCategory = null,Object? byTracking = null,}) {
+  return _then(_self.copyWith(
+activeRoutines: null == activeRoutines ? _self.activeRoutines : activeRoutines // ignore: cast_nullable_to_non_nullable
+as int,totalCheckins: null == totalCheckins ? _self.totalCheckins : totalCheckins // ignore: cast_nullable_to_non_nullable
+as int,byCategory: null == byCategory ? _self.byCategory : byCategory // ignore: cast_nullable_to_non_nullable
+as List<RoutineCategoryCount>,byTracking: null == byTracking ? _self.byTracking : byTracking // ignore: cast_nullable_to_non_nullable
+as List<RoutineTrackingCount>,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [RoutinesSummary].
+extension RoutinesSummaryPatterns on RoutinesSummary {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _RoutinesSummary value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _RoutinesSummary() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _RoutinesSummary value)  $default,){
+final _that = this;
+switch (_that) {
+case _RoutinesSummary():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _RoutinesSummary value)?  $default,){
+final _that = this;
+switch (_that) {
+case _RoutinesSummary() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'active_routines')  int activeRoutines, @JsonKey(name: 'total_checkins')  int totalCheckins, @JsonKey(name: 'by_category')  List<RoutineCategoryCount> byCategory, @JsonKey(name: 'by_tracking')  List<RoutineTrackingCount> byTracking)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _RoutinesSummary() when $default != null:
+return $default(_that.activeRoutines,_that.totalCheckins,_that.byCategory,_that.byTracking);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'active_routines')  int activeRoutines, @JsonKey(name: 'total_checkins')  int totalCheckins, @JsonKey(name: 'by_category')  List<RoutineCategoryCount> byCategory, @JsonKey(name: 'by_tracking')  List<RoutineTrackingCount> byTracking)  $default,) {final _that = this;
+switch (_that) {
+case _RoutinesSummary():
+return $default(_that.activeRoutines,_that.totalCheckins,_that.byCategory,_that.byTracking);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'active_routines')  int activeRoutines, @JsonKey(name: 'total_checkins')  int totalCheckins, @JsonKey(name: 'by_category')  List<RoutineCategoryCount> byCategory, @JsonKey(name: 'by_tracking')  List<RoutineTrackingCount> byTracking)?  $default,) {final _that = this;
+switch (_that) {
+case _RoutinesSummary() when $default != null:
+return $default(_that.activeRoutines,_that.totalCheckins,_that.byCategory,_that.byTracking);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _RoutinesSummary implements RoutinesSummary {
+  const _RoutinesSummary({@JsonKey(name: 'active_routines') this.activeRoutines = 0, @JsonKey(name: 'total_checkins') this.totalCheckins = 0, @JsonKey(name: 'by_category') final  List<RoutineCategoryCount> byCategory = const <RoutineCategoryCount>[], @JsonKey(name: 'by_tracking') final  List<RoutineTrackingCount> byTracking = const <RoutineTrackingCount>[]}): _byCategory = byCategory,_byTracking = byTracking;
+  factory _RoutinesSummary.fromJson(Map<String, dynamic> json) => _$RoutinesSummaryFromJson(json);
+
+@override@JsonKey(name: 'active_routines') final  int activeRoutines;
+@override@JsonKey(name: 'total_checkins') final  int totalCheckins;
+ final  List<RoutineCategoryCount> _byCategory;
+@override@JsonKey(name: 'by_category') List<RoutineCategoryCount> get byCategory {
+  if (_byCategory is EqualUnmodifiableListView) return _byCategory;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_byCategory);
+}
+
+ final  List<RoutineTrackingCount> _byTracking;
+@override@JsonKey(name: 'by_tracking') List<RoutineTrackingCount> get byTracking {
+  if (_byTracking is EqualUnmodifiableListView) return _byTracking;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_byTracking);
+}
+
+
+/// Create a copy of RoutinesSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$RoutinesSummaryCopyWith<_RoutinesSummary> get copyWith => __$RoutinesSummaryCopyWithImpl<_RoutinesSummary>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$RoutinesSummaryToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RoutinesSummary&&(identical(other.activeRoutines, activeRoutines) || other.activeRoutines == activeRoutines)&&(identical(other.totalCheckins, totalCheckins) || other.totalCheckins == totalCheckins)&&const DeepCollectionEquality().equals(other._byCategory, _byCategory)&&const DeepCollectionEquality().equals(other._byTracking, _byTracking));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,activeRoutines,totalCheckins,const DeepCollectionEquality().hash(_byCategory),const DeepCollectionEquality().hash(_byTracking));
+
+@override
+String toString() {
+  return 'RoutinesSummary(activeRoutines: $activeRoutines, totalCheckins: $totalCheckins, byCategory: $byCategory, byTracking: $byTracking)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$RoutinesSummaryCopyWith<$Res> implements $RoutinesSummaryCopyWith<$Res> {
+  factory _$RoutinesSummaryCopyWith(_RoutinesSummary value, $Res Function(_RoutinesSummary) _then) = __$RoutinesSummaryCopyWithImpl;
+@override @useResult
+$Res call({
+@JsonKey(name: 'active_routines') int activeRoutines,@JsonKey(name: 'total_checkins') int totalCheckins,@JsonKey(name: 'by_category') List<RoutineCategoryCount> byCategory,@JsonKey(name: 'by_tracking') List<RoutineTrackingCount> byTracking
+});
+
+
+
+
+}
+/// @nodoc
+class __$RoutinesSummaryCopyWithImpl<$Res>
+    implements _$RoutinesSummaryCopyWith<$Res> {
+  __$RoutinesSummaryCopyWithImpl(this._self, this._then);
+
+  final _RoutinesSummary _self;
+  final $Res Function(_RoutinesSummary) _then;
+
+/// Create a copy of RoutinesSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? activeRoutines = null,Object? totalCheckins = null,Object? byCategory = null,Object? byTracking = null,}) {
+  return _then(_RoutinesSummary(
+activeRoutines: null == activeRoutines ? _self.activeRoutines : activeRoutines // ignore: cast_nullable_to_non_nullable
+as int,totalCheckins: null == totalCheckins ? _self.totalCheckins : totalCheckins // ignore: cast_nullable_to_non_nullable
+as int,byCategory: null == byCategory ? _self._byCategory : byCategory // ignore: cast_nullable_to_non_nullable
+as List<RoutineCategoryCount>,byTracking: null == byTracking ? _self._byTracking : byTracking // ignore: cast_nullable_to_non_nullable
+as List<RoutineTrackingCount>,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$ProgrammesSummary {
 
 @JsonKey(name: 'programmes_purchased') int get programmesPurchased;@JsonKey(name: 'meal_plans_purchased') int get mealPlansPurchased;@JsonKey(name: 'active_enrolments') int get activeEnrolments;@JsonKey(name: 'completed_enrolments') int get completedEnrolments;@JsonKey(name: 'avg_progress_pct') double? get avgProgressPct;
@@ -3546,7 +5543,7 @@ as double?,
 /// @nodoc
 mixin _$AnalyticsSummaryData {
 
- String get period; AnalyticsUserInfo get user; WorkoutSummary get workouts; ActivitySummary get activity; BodySummary get body; LivesSummary get lives; SpendingSummary get spending; ProgrammesSummary get programmes;
+ String get period; AnalyticsUserInfo get user; WorkoutSummary get workouts; ActivitySummary get activity; BodySummary get body; LivesSummary get lives; SpendingSummary get spending; ProgrammesSummary get programmes; CountdownSummary get countdowns; RoutinesSummary get routines;
 /// Create a copy of AnalyticsSummaryData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3559,16 +5556,16 @@ $AnalyticsSummaryDataCopyWith<AnalyticsSummaryData> get copyWith => _$AnalyticsS
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AnalyticsSummaryData&&(identical(other.period, period) || other.period == period)&&(identical(other.user, user) || other.user == user)&&(identical(other.workouts, workouts) || other.workouts == workouts)&&(identical(other.activity, activity) || other.activity == activity)&&(identical(other.body, body) || other.body == body)&&(identical(other.lives, lives) || other.lives == lives)&&(identical(other.spending, spending) || other.spending == spending)&&(identical(other.programmes, programmes) || other.programmes == programmes));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AnalyticsSummaryData&&(identical(other.period, period) || other.period == period)&&(identical(other.user, user) || other.user == user)&&(identical(other.workouts, workouts) || other.workouts == workouts)&&(identical(other.activity, activity) || other.activity == activity)&&(identical(other.body, body) || other.body == body)&&(identical(other.lives, lives) || other.lives == lives)&&(identical(other.spending, spending) || other.spending == spending)&&(identical(other.programmes, programmes) || other.programmes == programmes)&&(identical(other.countdowns, countdowns) || other.countdowns == countdowns)&&(identical(other.routines, routines) || other.routines == routines));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,period,user,workouts,activity,body,lives,spending,programmes);
+int get hashCode => Object.hash(runtimeType,period,user,workouts,activity,body,lives,spending,programmes,countdowns,routines);
 
 @override
 String toString() {
-  return 'AnalyticsSummaryData(period: $period, user: $user, workouts: $workouts, activity: $activity, body: $body, lives: $lives, spending: $spending, programmes: $programmes)';
+  return 'AnalyticsSummaryData(period: $period, user: $user, workouts: $workouts, activity: $activity, body: $body, lives: $lives, spending: $spending, programmes: $programmes, countdowns: $countdowns, routines: $routines)';
 }
 
 
@@ -3579,11 +5576,11 @@ abstract mixin class $AnalyticsSummaryDataCopyWith<$Res>  {
   factory $AnalyticsSummaryDataCopyWith(AnalyticsSummaryData value, $Res Function(AnalyticsSummaryData) _then) = _$AnalyticsSummaryDataCopyWithImpl;
 @useResult
 $Res call({
- String period, AnalyticsUserInfo user, WorkoutSummary workouts, ActivitySummary activity, BodySummary body, LivesSummary lives, SpendingSummary spending, ProgrammesSummary programmes
+ String period, AnalyticsUserInfo user, WorkoutSummary workouts, ActivitySummary activity, BodySummary body, LivesSummary lives, SpendingSummary spending, ProgrammesSummary programmes, CountdownSummary countdowns, RoutinesSummary routines
 });
 
 
-$AnalyticsUserInfoCopyWith<$Res> get user;$WorkoutSummaryCopyWith<$Res> get workouts;$ActivitySummaryCopyWith<$Res> get activity;$BodySummaryCopyWith<$Res> get body;$LivesSummaryCopyWith<$Res> get lives;$SpendingSummaryCopyWith<$Res> get spending;$ProgrammesSummaryCopyWith<$Res> get programmes;
+$AnalyticsUserInfoCopyWith<$Res> get user;$WorkoutSummaryCopyWith<$Res> get workouts;$ActivitySummaryCopyWith<$Res> get activity;$BodySummaryCopyWith<$Res> get body;$LivesSummaryCopyWith<$Res> get lives;$SpendingSummaryCopyWith<$Res> get spending;$ProgrammesSummaryCopyWith<$Res> get programmes;$CountdownSummaryCopyWith<$Res> get countdowns;$RoutinesSummaryCopyWith<$Res> get routines;
 
 }
 /// @nodoc
@@ -3596,7 +5593,7 @@ class _$AnalyticsSummaryDataCopyWithImpl<$Res>
 
 /// Create a copy of AnalyticsSummaryData
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? user = null,Object? workouts = null,Object? activity = null,Object? body = null,Object? lives = null,Object? spending = null,Object? programmes = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? user = null,Object? workouts = null,Object? activity = null,Object? body = null,Object? lives = null,Object? spending = null,Object? programmes = null,Object? countdowns = null,Object? routines = null,}) {
   return _then(_self.copyWith(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
@@ -3606,7 +5603,9 @@ as ActivitySummary,body: null == body ? _self.body : body // ignore: cast_nullab
 as BodySummary,lives: null == lives ? _self.lives : lives // ignore: cast_nullable_to_non_nullable
 as LivesSummary,spending: null == spending ? _self.spending : spending // ignore: cast_nullable_to_non_nullable
 as SpendingSummary,programmes: null == programmes ? _self.programmes : programmes // ignore: cast_nullable_to_non_nullable
-as ProgrammesSummary,
+as ProgrammesSummary,countdowns: null == countdowns ? _self.countdowns : countdowns // ignore: cast_nullable_to_non_nullable
+as CountdownSummary,routines: null == routines ? _self.routines : routines // ignore: cast_nullable_to_non_nullable
+as RoutinesSummary,
   ));
 }
 /// Create a copy of AnalyticsSummaryData
@@ -3671,6 +5670,24 @@ $ProgrammesSummaryCopyWith<$Res> get programmes {
   
   return $ProgrammesSummaryCopyWith<$Res>(_self.programmes, (value) {
     return _then(_self.copyWith(programmes: value));
+  });
+}/// Create a copy of AnalyticsSummaryData
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CountdownSummaryCopyWith<$Res> get countdowns {
+  
+  return $CountdownSummaryCopyWith<$Res>(_self.countdowns, (value) {
+    return _then(_self.copyWith(countdowns: value));
+  });
+}/// Create a copy of AnalyticsSummaryData
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$RoutinesSummaryCopyWith<$Res> get routines {
+  
+  return $RoutinesSummaryCopyWith<$Res>(_self.routines, (value) {
+    return _then(_self.copyWith(routines: value));
   });
 }
 }
@@ -3754,10 +5771,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes,  CountdownSummary countdowns,  RoutinesSummary routines)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AnalyticsSummaryData() when $default != null:
-return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body,_that.lives,_that.spending,_that.programmes);case _:
+return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body,_that.lives,_that.spending,_that.programmes,_that.countdowns,_that.routines);case _:
   return orElse();
 
 }
@@ -3775,10 +5792,10 @@ return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes,  CountdownSummary countdowns,  RoutinesSummary routines)  $default,) {final _that = this;
 switch (_that) {
 case _AnalyticsSummaryData():
-return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body,_that.lives,_that.spending,_that.programmes);case _:
+return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body,_that.lives,_that.spending,_that.programmes,_that.countdowns,_that.routines);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3795,10 +5812,10 @@ return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes,  CountdownSummary countdowns,  RoutinesSummary routines)?  $default,) {final _that = this;
 switch (_that) {
 case _AnalyticsSummaryData() when $default != null:
-return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body,_that.lives,_that.spending,_that.programmes);case _:
+return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body,_that.lives,_that.spending,_that.programmes,_that.countdowns,_that.routines);case _:
   return null;
 
 }
@@ -3810,7 +5827,7 @@ return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body
 @JsonSerializable()
 
 class _AnalyticsSummaryData implements AnalyticsSummaryData {
-  const _AnalyticsSummaryData({this.period = 'all', this.user = const AnalyticsUserInfo(), this.workouts = const WorkoutSummary(), this.activity = const ActivitySummary(), this.body = const BodySummary(), this.lives = const LivesSummary(), this.spending = const SpendingSummary(), this.programmes = const ProgrammesSummary()});
+  const _AnalyticsSummaryData({this.period = 'all', this.user = const AnalyticsUserInfo(), this.workouts = const WorkoutSummary(), this.activity = const ActivitySummary(), this.body = const BodySummary(), this.lives = const LivesSummary(), this.spending = const SpendingSummary(), this.programmes = const ProgrammesSummary(), this.countdowns = const CountdownSummary(), this.routines = const RoutinesSummary()});
   factory _AnalyticsSummaryData.fromJson(Map<String, dynamic> json) => _$AnalyticsSummaryDataFromJson(json);
 
 @override@JsonKey() final  String period;
@@ -3821,6 +5838,8 @@ class _AnalyticsSummaryData implements AnalyticsSummaryData {
 @override@JsonKey() final  LivesSummary lives;
 @override@JsonKey() final  SpendingSummary spending;
 @override@JsonKey() final  ProgrammesSummary programmes;
+@override@JsonKey() final  CountdownSummary countdowns;
+@override@JsonKey() final  RoutinesSummary routines;
 
 /// Create a copy of AnalyticsSummaryData
 /// with the given fields replaced by the non-null parameter values.
@@ -3835,16 +5854,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AnalyticsSummaryData&&(identical(other.period, period) || other.period == period)&&(identical(other.user, user) || other.user == user)&&(identical(other.workouts, workouts) || other.workouts == workouts)&&(identical(other.activity, activity) || other.activity == activity)&&(identical(other.body, body) || other.body == body)&&(identical(other.lives, lives) || other.lives == lives)&&(identical(other.spending, spending) || other.spending == spending)&&(identical(other.programmes, programmes) || other.programmes == programmes));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AnalyticsSummaryData&&(identical(other.period, period) || other.period == period)&&(identical(other.user, user) || other.user == user)&&(identical(other.workouts, workouts) || other.workouts == workouts)&&(identical(other.activity, activity) || other.activity == activity)&&(identical(other.body, body) || other.body == body)&&(identical(other.lives, lives) || other.lives == lives)&&(identical(other.spending, spending) || other.spending == spending)&&(identical(other.programmes, programmes) || other.programmes == programmes)&&(identical(other.countdowns, countdowns) || other.countdowns == countdowns)&&(identical(other.routines, routines) || other.routines == routines));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,period,user,workouts,activity,body,lives,spending,programmes);
+int get hashCode => Object.hash(runtimeType,period,user,workouts,activity,body,lives,spending,programmes,countdowns,routines);
 
 @override
 String toString() {
-  return 'AnalyticsSummaryData(period: $period, user: $user, workouts: $workouts, activity: $activity, body: $body, lives: $lives, spending: $spending, programmes: $programmes)';
+  return 'AnalyticsSummaryData(period: $period, user: $user, workouts: $workouts, activity: $activity, body: $body, lives: $lives, spending: $spending, programmes: $programmes, countdowns: $countdowns, routines: $routines)';
 }
 
 
@@ -3855,11 +5874,11 @@ abstract mixin class _$AnalyticsSummaryDataCopyWith<$Res> implements $AnalyticsS
   factory _$AnalyticsSummaryDataCopyWith(_AnalyticsSummaryData value, $Res Function(_AnalyticsSummaryData) _then) = __$AnalyticsSummaryDataCopyWithImpl;
 @override @useResult
 $Res call({
- String period, AnalyticsUserInfo user, WorkoutSummary workouts, ActivitySummary activity, BodySummary body, LivesSummary lives, SpendingSummary spending, ProgrammesSummary programmes
+ String period, AnalyticsUserInfo user, WorkoutSummary workouts, ActivitySummary activity, BodySummary body, LivesSummary lives, SpendingSummary spending, ProgrammesSummary programmes, CountdownSummary countdowns, RoutinesSummary routines
 });
 
 
-@override $AnalyticsUserInfoCopyWith<$Res> get user;@override $WorkoutSummaryCopyWith<$Res> get workouts;@override $ActivitySummaryCopyWith<$Res> get activity;@override $BodySummaryCopyWith<$Res> get body;@override $LivesSummaryCopyWith<$Res> get lives;@override $SpendingSummaryCopyWith<$Res> get spending;@override $ProgrammesSummaryCopyWith<$Res> get programmes;
+@override $AnalyticsUserInfoCopyWith<$Res> get user;@override $WorkoutSummaryCopyWith<$Res> get workouts;@override $ActivitySummaryCopyWith<$Res> get activity;@override $BodySummaryCopyWith<$Res> get body;@override $LivesSummaryCopyWith<$Res> get lives;@override $SpendingSummaryCopyWith<$Res> get spending;@override $ProgrammesSummaryCopyWith<$Res> get programmes;@override $CountdownSummaryCopyWith<$Res> get countdowns;@override $RoutinesSummaryCopyWith<$Res> get routines;
 
 }
 /// @nodoc
@@ -3872,7 +5891,7 @@ class __$AnalyticsSummaryDataCopyWithImpl<$Res>
 
 /// Create a copy of AnalyticsSummaryData
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? period = null,Object? user = null,Object? workouts = null,Object? activity = null,Object? body = null,Object? lives = null,Object? spending = null,Object? programmes = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? period = null,Object? user = null,Object? workouts = null,Object? activity = null,Object? body = null,Object? lives = null,Object? spending = null,Object? programmes = null,Object? countdowns = null,Object? routines = null,}) {
   return _then(_AnalyticsSummaryData(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
@@ -3882,7 +5901,9 @@ as ActivitySummary,body: null == body ? _self.body : body // ignore: cast_nullab
 as BodySummary,lives: null == lives ? _self.lives : lives // ignore: cast_nullable_to_non_nullable
 as LivesSummary,spending: null == spending ? _self.spending : spending // ignore: cast_nullable_to_non_nullable
 as SpendingSummary,programmes: null == programmes ? _self.programmes : programmes // ignore: cast_nullable_to_non_nullable
-as ProgrammesSummary,
+as ProgrammesSummary,countdowns: null == countdowns ? _self.countdowns : countdowns // ignore: cast_nullable_to_non_nullable
+as CountdownSummary,routines: null == routines ? _self.routines : routines // ignore: cast_nullable_to_non_nullable
+as RoutinesSummary,
   ));
 }
 
@@ -3948,6 +5969,24 @@ $ProgrammesSummaryCopyWith<$Res> get programmes {
   
   return $ProgrammesSummaryCopyWith<$Res>(_self.programmes, (value) {
     return _then(_self.copyWith(programmes: value));
+  });
+}/// Create a copy of AnalyticsSummaryData
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CountdownSummaryCopyWith<$Res> get countdowns {
+  
+  return $CountdownSummaryCopyWith<$Res>(_self.countdowns, (value) {
+    return _then(_self.copyWith(countdowns: value));
+  });
+}/// Create a copy of AnalyticsSummaryData
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$RoutinesSummaryCopyWith<$Res> get routines {
+  
+  return $RoutinesSummaryCopyWith<$Res>(_self.routines, (value) {
+    return _then(_self.copyWith(routines: value));
   });
 }
 }

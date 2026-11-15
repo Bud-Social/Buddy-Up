@@ -140,6 +140,27 @@ class OverviewTab extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: StatCard(
+                  label: 'Routines',
+                  value: '${s.routines.activeRoutines}',
+                  icon: Icons.repeat_rounded,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: StatCard(
+                  label: 'Routine check-ins',
+                  value: '${s.routines.totalCheckins}',
+                  icon: Icons.done_all_rounded,
+                  accent: BuddyColors.gold,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

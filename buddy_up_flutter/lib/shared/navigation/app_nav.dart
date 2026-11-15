@@ -67,6 +67,12 @@ const List<AppNavDestination> appNavDestinations = [
     'Countdowns',
   ),
   AppNavDestination(
+    '/routines',
+    Icons.repeat_rounded,
+    Icons.repeat_rounded,
+    'Routines',
+  ),
+  AppNavDestination(
     '/settings',
     Icons.settings_outlined,
     Icons.settings,

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_provider.dart';
 import '../../features/gym/providers/gym_provider.dart';
+import '../../features/feed/providers/feed_provider.dart';
 import '../../features/marketplace/providers/marketplace_provider.dart';
 import '../../features/marketplace/utils/stations.dart';
 import 'business_roles.dart';
@@ -38,7 +39,25 @@ List<Map<String, dynamic>> _rows(dynamic body) {
   return const [];
 }
 
-/// The five role signals, derived from real ownership data.
+/// Probe for the creator role — the feed has the creator-insights endpoint
+/// the web probes too. Any authored post makes the user a creator; an
+/// insights payload with at least one item is the honest probe. Empty payload
+/// ⇒ no entry.
+Future<bool> _creatorProbe(dynamic feedRepo) async {
+  try {
+    final raw = await feedRepo.getCreatorInsights();
+    final data = raw is Map ? raw['data'] : raw;
+    if (data is List) return data.isNotEmpty;
+    if (data is Map && data['items'] is List) {
+      return (data['items'] as List).isNotEmpty;
+    }
+    return false;
+  } catch (_) {
+    return false;
+  }
+}
+
+/// The role signals, derived from real ownership data.
 ///
 /// `loading` is true until every probe has settled; the nav renders nothing
 /// meanwhile so the group does not pop in and out as probes land.
@@ -108,8 +127,11 @@ class BusinessRolesNotifier extends AsyncNotifier<BusinessRoleFlags> {
       return true;
     }, false);
 
+    final hasCreator = await _creatorProbe(ref.read(feedRepositoryProvider));
+
     final gym = ownedGyms.isEmpty ? null : ownedGyms.first;
     return BusinessRoleFlags(
+      hasCreator: hasCreator,
       hasShop: hasShop,
       hasEvents: hasEvents,
       gymSlug: gym?.handle,

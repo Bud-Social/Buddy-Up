@@ -108,7 +108,7 @@ class _CreatorInsightsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Content insights')),
+      appBar: AppBar(title: const Text('Creator Insights')),
       body: _loading
           ? const PageLoader()
           : _error != null

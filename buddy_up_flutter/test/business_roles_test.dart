@@ -10,6 +10,7 @@ import 'package:buddy_up_flutter/shared/navigation/business_roles.dart';
 /// something the caller does not hold, and must never break navigation.
 void main() {
   const all = BusinessRoleFlags(
+    hasCreator: true,
     hasShop: true,
     hasEvents: true,
     gymSlug: 'iron-foundry',
@@ -30,6 +31,14 @@ void main() {
   });
 
   group('entries appear only when the signal is true', () {
+    test('a creator sees Creator Insights', () {
+      final entries = businessEntries(
+          const BusinessRoleFlags(hasCreator: true));
+      expect(entries.single.route, '/insights');
+      expect(entries.single.label, 'Creator Insights');
+      expect(entries.single.shortLabel, 'Insights');
+    });
+
     test('a shop owner sees Shop', () {
       final entries = businessEntries(
           const BusinessRoleFlags(hasShop: true));
@@ -78,10 +87,11 @@ void main() {
   });
 
   group('the order is working-priority, and stable', () {
-    test('an operator holding everything gets all five, in order', () {
+    test('an operator holding everything gets all six, in order', () {
       expect(
         businessEntries(all).map((e) => e.key),
         [
+          BusinessRoleKey.creator,
           BusinessRoleKey.shop,
           BusinessRoleKey.events,
           BusinessRoleKey.gym,
@@ -92,8 +102,8 @@ void main() {
     });
 
     test('a courier alone still gets exactly one entry', () {
-      final flags =
-          all.copyWith(hasShop: false, hasEvents: false, gymSlug: null, hasStation: false);
+      final flags = all.copyWith(
+          hasCreator: false, hasShop: false, hasEvents: false, gymSlug: null, hasStation: false);
       expect(businessEntries(flags).map((e) => e.key), [BusinessRoleKey.courier]);
     });
   });

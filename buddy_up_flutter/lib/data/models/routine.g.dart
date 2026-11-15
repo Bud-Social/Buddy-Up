@@ -1,0 +1,117 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'routine.dart';
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_Routine _$RoutineFromJson(Map<String, dynamic> json) => _Routine(
+  id: json['id'] as String,
+  type: json['type'] as String? ?? 'other',
+  typeLabel: json['type_label'] as String? ?? 'Other',
+  customName: json['custom_name'] as String? ?? '',
+  displayName: json['display_name'] as String? ?? '',
+  name: json['name'] as String? ?? '',
+  target: (json['target'] as num?)?.toInt() ?? 30,
+  unit: json['unit'] as String? ?? 'min',
+  days:
+      (json['days'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList() ??
+      const <int>[],
+  targetDay: (json['target_day'] as num?)?.toInt(),
+  timeOfDay: json['time_of_day'] as String?,
+  reminderMinutes:
+      (json['reminder_minutes'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList() ??
+      const <int>[],
+  activation: json['activation'] as String? ?? 'week',
+  tracking: json['tracking'] as String? ?? 'app',
+  sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
+  streak: (json['streak'] as num?)?.toInt() ?? 0,
+  completedToday: json['completed_today'] as bool? ?? false,
+  lastCheckinAt: json['last_checkin_at'] as String?,
+  isActive: json['is_active'] as bool? ?? true,
+  checkinCount: (json['checkin_count'] as num?)?.toInt() ?? 0,
+  highlights:
+      (json['highlights'] as List<dynamic>?)
+          ?.map((e) => RoutineHighlight.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <RoutineHighlight>[],
+  createdAt: json['created_at'] as String?,
+  updatedAt: json['updated_at'] as String?,
+);
+
+Map<String, dynamic> _$RoutineToJson(_Routine instance) => <String, dynamic>{
+  'id': instance.id,
+  'type': instance.type,
+  'type_label': instance.typeLabel,
+  'custom_name': instance.customName,
+  'display_name': instance.displayName,
+  'name': instance.name,
+  'target': instance.target,
+  'unit': instance.unit,
+  'days': instance.days,
+  'target_day': instance.targetDay,
+  'time_of_day': instance.timeOfDay,
+  'reminder_minutes': instance.reminderMinutes,
+  'activation': instance.activation,
+  'tracking': instance.tracking,
+  'sort_order': instance.sortOrder,
+  'streak': instance.streak,
+  'completed_today': instance.completedToday,
+  'last_checkin_at': instance.lastCheckinAt,
+  'is_active': instance.isActive,
+  'checkin_count': instance.checkinCount,
+  'highlights': instance.highlights,
+  'created_at': instance.createdAt,
+  'updated_at': instance.updatedAt,
+};
+
+_RoutineCheckIn _$RoutineCheckInFromJson(Map<String, dynamic> json) =>
+    _RoutineCheckIn(
+      id: json['id'] as String,
+      routine: json['routine'] as String? ?? '',
+      value: (json['value'] as num?)?.toInt() ?? 0,
+      note: json['note'] as String? ?? '',
+      source: json['source'] as String? ?? 'app',
+      occurredAt: json['occurred_at'] as String? ?? '',
+      createdAt: json['created_at'] as String?,
+    );
+
+Map<String, dynamic> _$RoutineCheckInToJson(_RoutineCheckIn instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'routine': instance.routine,
+      'value': instance.value,
+      'note': instance.note,
+      'source': instance.source,
+      'occurred_at': instance.occurredAt,
+      'created_at': instance.createdAt,
+    };
+
+_RoutineHighlight _$RoutineHighlightFromJson(Map<String, dynamic> json) =>
+    _RoutineHighlight(
+      id: json['id'] as String,
+      routine: json['routine'] as String? ?? '',
+      kind: json['kind'] as String? ?? 'photo',
+      fileUrl: json['file_url'] as String? ?? '',
+      thumbnailUrl: json['thumbnail_url'] as String? ?? '',
+      caption: json['caption'] as String? ?? '',
+      durationMs: (json['duration_ms'] as num?)?.toInt(),
+      createdAt: json['created_at'] as String?,
+    );
+
+Map<String, dynamic> _$RoutineHighlightToJson(_RoutineHighlight instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'routine': instance.routine,
+      'kind': instance.kind,
+      'file_url': instance.fileUrl,
+      'thumbnail_url': instance.thumbnailUrl,
+      'caption': instance.caption,
+      'duration_ms': instance.durationMs,
+      'created_at': instance.createdAt,
+    };

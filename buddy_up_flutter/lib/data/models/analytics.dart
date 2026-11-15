@@ -201,6 +201,114 @@ abstract class SpendingSummary with _$SpendingSummary {
 }
 
 @freezed
+abstract class CountdownEntry with _$CountdownEntry {
+  const factory CountdownEntry({
+    @Default('') String id,
+    @Default('') String reason,
+    @Default('') String icon,
+    @Default('days') String unit,
+    @JsonKey(name: 'countdown_type') @Default('') String countdownType,
+    @JsonKey(name: 'current_count') @Default(0) int currentCount,
+    @JsonKey(name: 'target_count') @Default(0) int targetCount,
+    @JsonKey(name: 'elapsed_units') @Default(0) int elapsedUnits,
+    @JsonKey(name: 'longest_run_units') @Default(0) double longestRunUnits,
+    @Default(0) int checkins,
+    @Default(0) int resets,
+    @Default(false) bool completed,
+    @JsonKey(name: 'is_active') @Default(true) bool isActive,
+    @JsonKey(name: 'last_event_at') String? lastEventAt,
+  }) = _CountdownEntry;
+
+  factory CountdownEntry.fromJson(Map<String, dynamic> json) =>
+      _$CountdownEntryFromJson(json);
+}
+
+@freezed
+abstract class CountdownEventEntry with _$CountdownEventEntry {
+  const factory CountdownEventEntry({
+    @Default('') String id,
+    @JsonKey(name: 'countdown_id') @Default('') String countdownId,
+    @JsonKey(name: 'event_type') @Default('') String eventType,
+    @JsonKey(name: 'count_after') @Default(0) int countAfter,
+    @JsonKey(name: 'elapsed_seconds') @Default(0) double elapsedSeconds,
+    @JsonKey(name: 'run_elapsed_seconds') @Default(0) double runElapsedSeconds,
+    @Default('days') String unit,
+    @JsonKey(name: 'occurred_at') @Default('') String occurredAt,
+  }) = _CountdownEventEntry;
+
+  factory CountdownEventEntry.fromJson(Map<String, dynamic> json) =>
+      _$CountdownEventEntryFromJson(json);
+}
+
+@freezed
+abstract class CadenceSummary with _$CadenceSummary {
+  const factory CadenceSummary({
+    @JsonKey(name: 'median_gap_seconds') double? medianGapSeconds,
+    @JsonKey(name: 'on_time_checkins') @Default(0) int onTimeCheckins,
+    @JsonKey(name: 'late_checkins') @Default(0) int lateCheckins,
+  }) = _CadenceSummary;
+
+  factory CadenceSummary.fromJson(Map<String, dynamic> json) =>
+      _$CadenceSummaryFromJson(json);
+}
+
+@freezed
+abstract class CountdownSummary with _$CountdownSummary {
+  const factory CountdownSummary({
+    @Default(0) int count,
+    @JsonKey(name: 'active_count') @Default(0) int activeCount,
+    @JsonKey(name: 'total_checkins') @Default(0) int totalCheckins,
+    @JsonKey(name: 'total_resets') @Default(0) int totalResets,
+    @JsonKey(name: 'total_completions') @Default(0) int totalCompletions,
+    @JsonKey(name: 'current_streak_units') @Default(0) double currentStreakUnits,
+    @JsonKey(name: 'longest_streak_units') @Default(0) double longestStreakUnits,
+    @JsonKey(name: 'total_streak_days') @Default(0) double totalStreakDays,
+    @JsonKey(name: 'by_countdown') @Default(<CountdownEntry>[]) List<CountdownEntry> byCountdown,
+    @JsonKey(name: 'recent_events') @Default(<CountdownEventEntry>[]) List<CountdownEventEntry> recentEvents,
+    @JsonKey(name: 'cadence') @Default(CadenceSummary()) CadenceSummary cadence,
+  }) = _CountdownSummary;
+
+  factory CountdownSummary.fromJson(Map<String, dynamic> json) =>
+      _$CountdownSummaryFromJson(json);
+}
+
+@freezed
+abstract class RoutineCategoryCount with _$RoutineCategoryCount {
+  const factory RoutineCategoryCount({
+    @Default('') String category,
+    @Default('') String label,
+    @Default(0) int count,
+  }) = _RoutineCategoryCount;
+
+  factory RoutineCategoryCount.fromJson(Map<String, dynamic> json) =>
+      _$RoutineCategoryCountFromJson(json);
+}
+
+@freezed
+abstract class RoutineTrackingCount with _$RoutineTrackingCount {
+  const factory RoutineTrackingCount({
+    @Default('') String tracking,
+    @Default(0) int count,
+  }) = _RoutineTrackingCount;
+
+  factory RoutineTrackingCount.fromJson(Map<String, dynamic> json) =>
+      _$RoutineTrackingCountFromJson(json);
+}
+
+@freezed
+abstract class RoutinesSummary with _$RoutinesSummary {
+  const factory RoutinesSummary({
+    @JsonKey(name: 'active_routines') @Default(0) int activeRoutines,
+    @JsonKey(name: 'total_checkins') @Default(0) int totalCheckins,
+    @JsonKey(name: 'by_category') @Default(<RoutineCategoryCount>[]) List<RoutineCategoryCount> byCategory,
+    @JsonKey(name: 'by_tracking') @Default(<RoutineTrackingCount>[]) List<RoutineTrackingCount> byTracking,
+  }) = _RoutinesSummary;
+
+  factory RoutinesSummary.fromJson(Map<String, dynamic> json) =>
+      _$RoutinesSummaryFromJson(json);
+}
+
+@freezed
 abstract class ProgrammesSummary with _$ProgrammesSummary {
   const factory ProgrammesSummary({
     @JsonKey(name: 'programmes_purchased') @Default(0) int programmesPurchased,
@@ -225,6 +333,8 @@ abstract class AnalyticsSummaryData with _$AnalyticsSummaryData {
     @Default(LivesSummary()) LivesSummary lives,
     @Default(SpendingSummary()) SpendingSummary spending,
     @Default(ProgrammesSummary()) ProgrammesSummary programmes,
+    @Default(CountdownSummary()) CountdownSummary countdowns,
+    @Default(RoutinesSummary()) RoutinesSummary routines,
   }) = _AnalyticsSummaryData;
 
   factory AnalyticsSummaryData.fromJson(Map<String, dynamic> json) =>

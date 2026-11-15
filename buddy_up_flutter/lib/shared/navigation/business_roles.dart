@@ -18,9 +18,14 @@
 /// its own and the provider that feeds it stays a thin IO layer.
 library;
 
-enum BusinessRoleKey { shop, events, gym, stations, courier }
+/// The role signals the nav derives from real ownership data.
+///
+/// `hasCreator` asks the feed whether *any* authored post has it on record.
+/// Mirrors the web's `hasCreator` probe: one creator-insights call proves the
+/// user has posts worth measuring, and a 404/empty payload hides the entry.
+enum BusinessRoleKey { creator, shop, events, gym, stations, courier }
 
-/// The five signals derived from real ownership data.
+/// The signals derived from real ownership data.
 class BusinessRoleFlags {
   /// Owns a shop, or has ever sold a marketplace listing.
   final bool hasShop;
@@ -40,6 +45,9 @@ class BusinessRoleFlags {
   /// Has a `DeliveryPersonnel` row.
   final bool isCourier;
 
+  /// Any authored post — the thing creator insights measures.
+  final bool hasCreator;
+
   /// True until every probe has settled. The nav renders nothing meanwhile.
   final bool loading;
 
@@ -50,6 +58,7 @@ class BusinessRoleFlags {
     this.gymName,
     this.hasStation = false,
     this.isCourier = false,
+    this.hasCreator = false,
     this.loading = false,
   });
 
@@ -57,7 +66,7 @@ class BusinessRoleFlags {
 
   /// True while nothing has been decided yet — the nav shows no business group.
   bool get isEmpty =>
-      !hasShop && !hasEvents && gymSlug == null && !hasStation && !isCourier;
+      !hasCreator && !hasShop && !hasEvents && gymSlug == null && !hasStation && !isCourier;
 
   /// Sentinel for "argument not passed".
   ///
@@ -75,6 +84,7 @@ class BusinessRoleFlags {
     Object? gymName = _unset,
     bool? hasStation,
     bool? isCourier,
+    bool? hasCreator,
     bool? loading,
   }) {
     return BusinessRoleFlags(
@@ -84,14 +94,15 @@ class BusinessRoleFlags {
       gymName: identical(gymName, _unset) ? this.gymName : gymName as String?,
       hasStation: hasStation ?? this.hasStation,
       isCourier: isCourier ?? this.isCourier,
+      hasCreator: hasCreator ?? this.hasCreator,
       loading: loading ?? this.loading,
     );
   }
 
   @override
   String toString() =>
-      'BusinessRoleFlags(shop: $hasShop, events: $hasEvents, gym: $gymSlug, '
-      'stations: $hasStation, courier: $isCourier, loading: $loading)';
+      'BusinessRoleFlags(creator: $hasCreator, shop: $hasShop, events: $hasEvents, '
+      'gym: $gymSlug, stations: $hasStation, courier: $isCourier, loading: $loading)';
 }
 
 /// One destination the operator holds, and how the nav labels it.
@@ -117,6 +128,15 @@ class BusinessEntry {
 /// Destinations the operator qualifies for, in working-priority order.
 List<BusinessEntry> businessEntries(BusinessRoleFlags flags) {
   final entries = <BusinessEntry>[];
+  if (flags.hasCreator) {
+    entries.add(const BusinessEntry(
+      key: BusinessRoleKey.creator,
+      route: '/insights',
+      label: 'Creator Insights',
+      shortLabel: 'Insights',
+      subtitle: 'Reach, watch time and engagement per post',
+    ));
+  }
   if (flags.hasShop) {
     entries.add(const BusinessEntry(
       key: BusinessRoleKey.shop,

@@ -295,6 +295,174 @@ Map<String, dynamic> _$SpendingSummaryToJson(_SpendingSummary instance) =>
       'breakdown': instance.breakdown,
     };
 
+_CountdownEntry _$CountdownEntryFromJson(Map<String, dynamic> json) =>
+    _CountdownEntry(
+      id: json['id'] as String? ?? '',
+      reason: json['reason'] as String? ?? '',
+      icon: json['icon'] as String? ?? '',
+      unit: json['unit'] as String? ?? 'days',
+      countdownType: json['countdown_type'] as String? ?? '',
+      currentCount: (json['current_count'] as num?)?.toInt() ?? 0,
+      targetCount: (json['target_count'] as num?)?.toInt() ?? 0,
+      elapsedUnits: (json['elapsed_units'] as num?)?.toInt() ?? 0,
+      longestRunUnits: (json['longest_run_units'] as num?)?.toDouble() ?? 0,
+      checkins: (json['checkins'] as num?)?.toInt() ?? 0,
+      resets: (json['resets'] as num?)?.toInt() ?? 0,
+      completed: json['completed'] as bool? ?? false,
+      isActive: json['is_active'] as bool? ?? true,
+      lastEventAt: json['last_event_at'] as String?,
+    );
+
+Map<String, dynamic> _$CountdownEntryToJson(_CountdownEntry instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'reason': instance.reason,
+      'icon': instance.icon,
+      'unit': instance.unit,
+      'countdown_type': instance.countdownType,
+      'current_count': instance.currentCount,
+      'target_count': instance.targetCount,
+      'elapsed_units': instance.elapsedUnits,
+      'longest_run_units': instance.longestRunUnits,
+      'checkins': instance.checkins,
+      'resets': instance.resets,
+      'completed': instance.completed,
+      'is_active': instance.isActive,
+      'last_event_at': instance.lastEventAt,
+    };
+
+_CountdownEventEntry _$CountdownEventEntryFromJson(Map<String, dynamic> json) =>
+    _CountdownEventEntry(
+      id: json['id'] as String? ?? '',
+      countdownId: json['countdown_id'] as String? ?? '',
+      eventType: json['event_type'] as String? ?? '',
+      countAfter: (json['count_after'] as num?)?.toInt() ?? 0,
+      elapsedSeconds: (json['elapsed_seconds'] as num?)?.toDouble() ?? 0,
+      runElapsedSeconds: (json['run_elapsed_seconds'] as num?)?.toDouble() ?? 0,
+      unit: json['unit'] as String? ?? 'days',
+      occurredAt: json['occurred_at'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$CountdownEventEntryToJson(
+  _CountdownEventEntry instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'countdown_id': instance.countdownId,
+  'event_type': instance.eventType,
+  'count_after': instance.countAfter,
+  'elapsed_seconds': instance.elapsedSeconds,
+  'run_elapsed_seconds': instance.runElapsedSeconds,
+  'unit': instance.unit,
+  'occurred_at': instance.occurredAt,
+};
+
+_CadenceSummary _$CadenceSummaryFromJson(Map<String, dynamic> json) =>
+    _CadenceSummary(
+      medianGapSeconds: (json['median_gap_seconds'] as num?)?.toDouble(),
+      onTimeCheckins: (json['on_time_checkins'] as num?)?.toInt() ?? 0,
+      lateCheckins: (json['late_checkins'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$CadenceSummaryToJson(_CadenceSummary instance) =>
+    <String, dynamic>{
+      'median_gap_seconds': instance.medianGapSeconds,
+      'on_time_checkins': instance.onTimeCheckins,
+      'late_checkins': instance.lateCheckins,
+    };
+
+_CountdownSummary _$CountdownSummaryFromJson(
+  Map<String, dynamic> json,
+) => _CountdownSummary(
+  count: (json['count'] as num?)?.toInt() ?? 0,
+  activeCount: (json['active_count'] as num?)?.toInt() ?? 0,
+  totalCheckins: (json['total_checkins'] as num?)?.toInt() ?? 0,
+  totalResets: (json['total_resets'] as num?)?.toInt() ?? 0,
+  totalCompletions: (json['total_completions'] as num?)?.toInt() ?? 0,
+  currentStreakUnits: (json['current_streak_units'] as num?)?.toDouble() ?? 0,
+  longestStreakUnits: (json['longest_streak_units'] as num?)?.toDouble() ?? 0,
+  totalStreakDays: (json['total_streak_days'] as num?)?.toDouble() ?? 0,
+  byCountdown:
+      (json['by_countdown'] as List<dynamic>?)
+          ?.map((e) => CountdownEntry.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <CountdownEntry>[],
+  recentEvents:
+      (json['recent_events'] as List<dynamic>?)
+          ?.map((e) => CountdownEventEntry.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <CountdownEventEntry>[],
+  cadence: json['cadence'] == null
+      ? const CadenceSummary()
+      : CadenceSummary.fromJson(json['cadence'] as Map<String, dynamic>),
+);
+
+Map<String, dynamic> _$CountdownSummaryToJson(_CountdownSummary instance) =>
+    <String, dynamic>{
+      'count': instance.count,
+      'active_count': instance.activeCount,
+      'total_checkins': instance.totalCheckins,
+      'total_resets': instance.totalResets,
+      'total_completions': instance.totalCompletions,
+      'current_streak_units': instance.currentStreakUnits,
+      'longest_streak_units': instance.longestStreakUnits,
+      'total_streak_days': instance.totalStreakDays,
+      'by_countdown': instance.byCountdown,
+      'recent_events': instance.recentEvents,
+      'cadence': instance.cadence,
+    };
+
+_RoutineCategoryCount _$RoutineCategoryCountFromJson(
+  Map<String, dynamic> json,
+) => _RoutineCategoryCount(
+  category: json['category'] as String? ?? '',
+  label: json['label'] as String? ?? '',
+  count: (json['count'] as num?)?.toInt() ?? 0,
+);
+
+Map<String, dynamic> _$RoutineCategoryCountToJson(
+  _RoutineCategoryCount instance,
+) => <String, dynamic>{
+  'category': instance.category,
+  'label': instance.label,
+  'count': instance.count,
+};
+
+_RoutineTrackingCount _$RoutineTrackingCountFromJson(
+  Map<String, dynamic> json,
+) => _RoutineTrackingCount(
+  tracking: json['tracking'] as String? ?? '',
+  count: (json['count'] as num?)?.toInt() ?? 0,
+);
+
+Map<String, dynamic> _$RoutineTrackingCountToJson(
+  _RoutineTrackingCount instance,
+) => <String, dynamic>{'tracking': instance.tracking, 'count': instance.count};
+
+_RoutinesSummary _$RoutinesSummaryFromJson(
+  Map<String, dynamic> json,
+) => _RoutinesSummary(
+  activeRoutines: (json['active_routines'] as num?)?.toInt() ?? 0,
+  totalCheckins: (json['total_checkins'] as num?)?.toInt() ?? 0,
+  byCategory:
+      (json['by_category'] as List<dynamic>?)
+          ?.map((e) => RoutineCategoryCount.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <RoutineCategoryCount>[],
+  byTracking:
+      (json['by_tracking'] as List<dynamic>?)
+          ?.map((e) => RoutineTrackingCount.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <RoutineTrackingCount>[],
+);
+
+Map<String, dynamic> _$RoutinesSummaryToJson(_RoutinesSummary instance) =>
+    <String, dynamic>{
+      'active_routines': instance.activeRoutines,
+      'total_checkins': instance.totalCheckins,
+      'by_category': instance.byCategory,
+      'by_tracking': instance.byTracking,
+    };
+
 _ProgrammesSummary _$ProgrammesSummaryFromJson(Map<String, dynamic> json) =>
     _ProgrammesSummary(
       programmesPurchased: (json['programmes_purchased'] as num?)?.toInt() ?? 0,
@@ -338,6 +506,12 @@ _AnalyticsSummaryData _$AnalyticsSummaryDataFromJson(
   programmes: json['programmes'] == null
       ? const ProgrammesSummary()
       : ProgrammesSummary.fromJson(json['programmes'] as Map<String, dynamic>),
+  countdowns: json['countdowns'] == null
+      ? const CountdownSummary()
+      : CountdownSummary.fromJson(json['countdowns'] as Map<String, dynamic>),
+  routines: json['routines'] == null
+      ? const RoutinesSummary()
+      : RoutinesSummary.fromJson(json['routines'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$AnalyticsSummaryDataToJson(
@@ -351,6 +525,8 @@ Map<String, dynamic> _$AnalyticsSummaryDataToJson(
   'lives': instance.lives,
   'spending': instance.spending,
   'programmes': instance.programmes,
+  'countdowns': instance.countdowns,
+  'routines': instance.routines,
 };
 
 _AnalyticsReportResult _$AnalyticsReportResultFromJson(

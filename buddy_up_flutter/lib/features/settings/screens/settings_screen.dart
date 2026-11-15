@@ -332,6 +332,8 @@ class SettingsScreen extends ConsumerWidget {
 /// Icon for a business role entry.
 IconData _businessIcon(BusinessRoleKey key) {
   switch (key) {
+    case BusinessRoleKey.creator:
+      return Icons.analytics_outlined;
     case BusinessRoleKey.shop:
       return Icons.storefront_outlined;
     case BusinessRoleKey.events:
