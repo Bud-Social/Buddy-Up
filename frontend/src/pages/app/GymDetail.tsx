@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Users, Radio, Info, MessageCircle, Settings, LogOut, Star, Calendar, StarHalf, Heart, Send, MapPin, Tag, Crown, BookOpen, Lock, Zap, AlertCircle, Search, X, Plus, ChevronRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
@@ -27,7 +27,31 @@ export default function GymDetail() {
   const [gym, setGym] = useState<Gym | null>(null);
   const [members, setMembers] = useState<GymMembership[]>([]);
   const [schedule, setSchedule] = useState<BuddyLive[]>([]);
-  const [activeTab, setActiveTab] = useState<GymTab>('feed');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = (searchParams.get('tab') || '') as GymTab | '';
+  const [activeTab, setActiveTabState] = useState<GymTab>(
+    ['feed', 'schedule', 'lives', 'members', 'reviews', 'about', 'events'].includes(tabFromUrl)
+      ? tabFromUrl as GymTab
+      : 'feed',
+  );
+
+  const setActiveTab = (next: GymTab) => {
+    setActiveTabState(next);
+    if (next === 'feed') {
+      searchParams.delete('tab');
+    } else {
+      searchParams.set('tab', next);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  useEffect(() => {
+    const next = searchParams.get('tab') as GymTab | null;
+    if (next && ['feed', 'schedule', 'lives', 'members', 'reviews', 'about', 'events'].includes(next) && next !== activeTab) {
+      setActiveTabState(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [isLoading, setIsLoading] = useState(true);
   const [memberCount, setMemberCount] = useState(0);
   const [showGoLive, setShowGoLive] = useState(false);
@@ -746,7 +770,7 @@ export default function GymDetail() {
             ) : (
               <div className="space-y-4">
                 {events.map((event) => (
-                  <Card key={event.id} className="p-4 flex flex-col sm:flex-row gap-4 relative overflow-hidden group">
+                  <Card key={event.id} className="p-4 flex flex-col sm:flex-row gap-4 relative overflow-hidden group cursor-pointer" onClick={() => navigate(`/marketplace/events/${event.id}`)}>
                     <div className="w-full sm:w-24 h-32 sm:h-24 flex-shrink-0 bg-buddy-surface-raised rounded-xl overflow-hidden relative">
                       {event.cover_image_url ? (
                         <img src={event.cover_image_url} alt={event.title} className="w-full h-full object-cover" />
@@ -781,7 +805,7 @@ export default function GymDetail() {
                             <div className="flex items-center gap-1.5 text-xs text-buddy-text-secondary">
                               <MapPin size={14} />
                               {event.location_lat != null && event.location_lng != null ? (
-                                <a href={`https://maps.google.com/?q=${event.location_lat},${event.location_lng}`} target="_blank" rel="noreferrer" className="text-buddy-electric hover:underline truncate max-w-[160px]">{event.location}</a>
+                                <a href={`https://maps.google.com/?q=${event.location_lat},${event.location_lng}`} target="_blank" rel="noreferrer" className="text-buddy-electric hover:underline truncate max-w-[160px]" onClick={(e) => e.stopPropagation()}>{event.location}</a>
                               ) : (
                                 <span className="truncate max-w-[120px]">{event.location}</span>
                               )}
@@ -817,13 +841,14 @@ export default function GymDetail() {
                               return event.is_free ? 'Free' : Object.entries(event.ticket_price_artifacts || {}).map(([k, v]) => `${v} ${k}s`).join(', ');
                             })()}
                           </div>
-                          <Button size="sm" variant={event.is_registered ? 'outline' : 'primary'} onClick={async () => {
+                          <Button size="sm" variant={event.is_registered ? 'outline' : 'primary'} onClick={async (e) => {
+                              e.stopPropagation();
                               try {
                                 await marketplaceApi.buyEventTicket(event.id);
                                 const res = await gymsApi.getEvents(slug!);
                                 setEvents(res.data);
-                              } catch (e: any) {
-                                alert(e?.response?.data?.message || 'Failed to register for event.');
+                              } catch (err: any) {
+                                alert(err?.response?.data?.message || 'Failed to register for event.');
                               }
                           }}>
                             {event.is_registered ? 'Registered' : (event.is_free ? 'RSVP' : 'Buy Ticket')}

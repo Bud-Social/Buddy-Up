@@ -4275,7 +4275,7 @@ $MemberDataCopyWith<$Res> get donorData {
 /// @nodoc
 mixin _$GymEvent {
 
- String get id;@JsonKey(name: 'gym_id') String? get gymId; String get title; String get description;@JsonKey(name: 'start_datetime') String? get startTime;@JsonKey(name: 'end_datetime') String? get endTime; String get location;@JsonKey(name: 'created_at') String? get createdAt;
+ String get id;@JsonKey(name: 'gym_id') String? get gymId; String get title; String get description;@JsonKey(name: 'start_datetime') String? get startTime;@JsonKey(name: 'end_datetime') String? get endTime; String get location;@JsonKey(name: 'cover_image_url') String get coverImageUrl;@JsonKey(name: 'location_lat') double? get locationLat;@JsonKey(name: 'location_lng') double? get locationLng;@JsonKey(name: 'event_type') String get eventType; String get category; int get capacity;@JsonKey(name: 'attendee_count') int get attendeeCount;@JsonKey(name: 'is_free') bool get isFree;@JsonKey(name: 'ticket_price_artifacts') Map<String, int> get ticketPriceArtifacts;@JsonKey(name: 'member_price_artifacts') Map<String, int>? get memberPriceArtifacts;@JsonKey(name: 'non_member_price_artifacts') Map<String, int>? get nonMemberPriceArtifacts;@JsonKey(name: 'gym_photo_roll') List<String> get gymPhotoRoll; String get visibility;@JsonKey(name: 'is_registered') bool get isRegistered;@JsonKey(name: 'spots_remaining') int? get spotsRemaining;@JsonKey(name: 'created_at') String? get createdAt;
 /// Create a copy of GymEvent
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4288,16 +4288,16 @@ $GymEventCopyWith<GymEvent> get copyWith => _$GymEventCopyWithImpl<GymEvent>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is GymEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.location, location) || other.location == location)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GymEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.location, location) || other.location == location)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.locationLat, locationLat) || other.locationLat == locationLat)&&(identical(other.locationLng, locationLng) || other.locationLng == locationLng)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.category, category) || other.category == category)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.attendeeCount, attendeeCount) || other.attendeeCount == attendeeCount)&&(identical(other.isFree, isFree) || other.isFree == isFree)&&const DeepCollectionEquality().equals(other.ticketPriceArtifacts, ticketPriceArtifacts)&&const DeepCollectionEquality().equals(other.memberPriceArtifacts, memberPriceArtifacts)&&const DeepCollectionEquality().equals(other.nonMemberPriceArtifacts, nonMemberPriceArtifacts)&&const DeepCollectionEquality().equals(other.gymPhotoRoll, gymPhotoRoll)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.isRegistered, isRegistered) || other.isRegistered == isRegistered)&&(identical(other.spotsRemaining, spotsRemaining) || other.spotsRemaining == spotsRemaining)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,gymId,title,description,startTime,endTime,location,createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,gymId,title,description,startTime,endTime,location,coverImageUrl,locationLat,locationLng,eventType,category,capacity,attendeeCount,isFree,const DeepCollectionEquality().hash(ticketPriceArtifacts),const DeepCollectionEquality().hash(memberPriceArtifacts),const DeepCollectionEquality().hash(nonMemberPriceArtifacts),const DeepCollectionEquality().hash(gymPhotoRoll),visibility,isRegistered,spotsRemaining,createdAt]);
 
 @override
 String toString() {
-  return 'GymEvent(id: $id, gymId: $gymId, title: $title, description: $description, startTime: $startTime, endTime: $endTime, location: $location, createdAt: $createdAt)';
+  return 'GymEvent(id: $id, gymId: $gymId, title: $title, description: $description, startTime: $startTime, endTime: $endTime, location: $location, coverImageUrl: $coverImageUrl, locationLat: $locationLat, locationLng: $locationLng, eventType: $eventType, category: $category, capacity: $capacity, attendeeCount: $attendeeCount, isFree: $isFree, ticketPriceArtifacts: $ticketPriceArtifacts, memberPriceArtifacts: $memberPriceArtifacts, nonMemberPriceArtifacts: $nonMemberPriceArtifacts, gymPhotoRoll: $gymPhotoRoll, visibility: $visibility, isRegistered: $isRegistered, spotsRemaining: $spotsRemaining, createdAt: $createdAt)';
 }
 
 
@@ -4308,7 +4308,7 @@ abstract mixin class $GymEventCopyWith<$Res>  {
   factory $GymEventCopyWith(GymEvent value, $Res Function(GymEvent) _then) = _$GymEventCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'gym_id') String? gymId, String title, String description,@JsonKey(name: 'start_datetime') String? startTime,@JsonKey(name: 'end_datetime') String? endTime, String location,@JsonKey(name: 'created_at') String? createdAt
+ String id,@JsonKey(name: 'gym_id') String? gymId, String title, String description,@JsonKey(name: 'start_datetime') String? startTime,@JsonKey(name: 'end_datetime') String? endTime, String location,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'location_lat') double? locationLat,@JsonKey(name: 'location_lng') double? locationLng,@JsonKey(name: 'event_type') String eventType, String category, int capacity,@JsonKey(name: 'attendee_count') int attendeeCount,@JsonKey(name: 'is_free') bool isFree,@JsonKey(name: 'ticket_price_artifacts') Map<String, int> ticketPriceArtifacts,@JsonKey(name: 'member_price_artifacts') Map<String, int>? memberPriceArtifacts,@JsonKey(name: 'non_member_price_artifacts') Map<String, int>? nonMemberPriceArtifacts,@JsonKey(name: 'gym_photo_roll') List<String> gymPhotoRoll, String visibility,@JsonKey(name: 'is_registered') bool isRegistered,@JsonKey(name: 'spots_remaining') int? spotsRemaining,@JsonKey(name: 'created_at') String? createdAt
 });
 
 
@@ -4325,7 +4325,7 @@ class _$GymEventCopyWithImpl<$Res>
 
 /// Create a copy of GymEvent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? gymId = freezed,Object? title = null,Object? description = null,Object? startTime = freezed,Object? endTime = freezed,Object? location = null,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? gymId = freezed,Object? title = null,Object? description = null,Object? startTime = freezed,Object? endTime = freezed,Object? location = null,Object? coverImageUrl = null,Object? locationLat = freezed,Object? locationLng = freezed,Object? eventType = null,Object? category = null,Object? capacity = null,Object? attendeeCount = null,Object? isFree = null,Object? ticketPriceArtifacts = null,Object? memberPriceArtifacts = freezed,Object? nonMemberPriceArtifacts = freezed,Object? gymPhotoRoll = null,Object? visibility = null,Object? isRegistered = null,Object? spotsRemaining = freezed,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,gymId: freezed == gymId ? _self.gymId : gymId // ignore: cast_nullable_to_non_nullable
@@ -4334,7 +4334,22 @@ as String,description: null == description ? _self.description : description // 
 as String,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
 as String?,endTime: freezed == endTime ? _self.endTime : endTime // ignore: cast_nullable_to_non_nullable
 as String?,location: null == location ? _self.location : location // ignore: cast_nullable_to_non_nullable
-as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,coverImageUrl: null == coverImageUrl ? _self.coverImageUrl : coverImageUrl // ignore: cast_nullable_to_non_nullable
+as String,locationLat: freezed == locationLat ? _self.locationLat : locationLat // ignore: cast_nullable_to_non_nullable
+as double?,locationLng: freezed == locationLng ? _self.locationLng : locationLng // ignore: cast_nullable_to_non_nullable
+as double?,eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
+as String,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,capacity: null == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
+as int,attendeeCount: null == attendeeCount ? _self.attendeeCount : attendeeCount // ignore: cast_nullable_to_non_nullable
+as int,isFree: null == isFree ? _self.isFree : isFree // ignore: cast_nullable_to_non_nullable
+as bool,ticketPriceArtifacts: null == ticketPriceArtifacts ? _self.ticketPriceArtifacts : ticketPriceArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,memberPriceArtifacts: freezed == memberPriceArtifacts ? _self.memberPriceArtifacts : memberPriceArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>?,nonMemberPriceArtifacts: freezed == nonMemberPriceArtifacts ? _self.nonMemberPriceArtifacts : nonMemberPriceArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>?,gymPhotoRoll: null == gymPhotoRoll ? _self.gymPhotoRoll : gymPhotoRoll // ignore: cast_nullable_to_non_nullable
+as List<String>,visibility: null == visibility ? _self.visibility : visibility // ignore: cast_nullable_to_non_nullable
+as String,isRegistered: null == isRegistered ? _self.isRegistered : isRegistered // ignore: cast_nullable_to_non_nullable
+as bool,spotsRemaining: freezed == spotsRemaining ? _self.spotsRemaining : spotsRemaining // ignore: cast_nullable_to_non_nullable
+as int?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -4420,10 +4435,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'gym_id')  String? gymId,  String title,  String description, @JsonKey(name: 'start_datetime')  String? startTime, @JsonKey(name: 'end_datetime')  String? endTime,  String location, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'gym_id')  String? gymId,  String title,  String description, @JsonKey(name: 'start_datetime')  String? startTime, @JsonKey(name: 'end_datetime')  String? endTime,  String location, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'location_lat')  double? locationLat, @JsonKey(name: 'location_lng')  double? locationLng, @JsonKey(name: 'event_type')  String eventType,  String category,  int capacity, @JsonKey(name: 'attendee_count')  int attendeeCount, @JsonKey(name: 'is_free')  bool isFree, @JsonKey(name: 'ticket_price_artifacts')  Map<String, int> ticketPriceArtifacts, @JsonKey(name: 'member_price_artifacts')  Map<String, int>? memberPriceArtifacts, @JsonKey(name: 'non_member_price_artifacts')  Map<String, int>? nonMemberPriceArtifacts, @JsonKey(name: 'gym_photo_roll')  List<String> gymPhotoRoll,  String visibility, @JsonKey(name: 'is_registered')  bool isRegistered, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GymEvent() when $default != null:
-return $default(_that.id,_that.gymId,_that.title,_that.description,_that.startTime,_that.endTime,_that.location,_that.createdAt);case _:
+return $default(_that.id,_that.gymId,_that.title,_that.description,_that.startTime,_that.endTime,_that.location,_that.coverImageUrl,_that.locationLat,_that.locationLng,_that.eventType,_that.category,_that.capacity,_that.attendeeCount,_that.isFree,_that.ticketPriceArtifacts,_that.memberPriceArtifacts,_that.nonMemberPriceArtifacts,_that.gymPhotoRoll,_that.visibility,_that.isRegistered,_that.spotsRemaining,_that.createdAt);case _:
   return orElse();
 
 }
@@ -4441,10 +4456,10 @@ return $default(_that.id,_that.gymId,_that.title,_that.description,_that.startTi
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'gym_id')  String? gymId,  String title,  String description, @JsonKey(name: 'start_datetime')  String? startTime, @JsonKey(name: 'end_datetime')  String? endTime,  String location, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'gym_id')  String? gymId,  String title,  String description, @JsonKey(name: 'start_datetime')  String? startTime, @JsonKey(name: 'end_datetime')  String? endTime,  String location, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'location_lat')  double? locationLat, @JsonKey(name: 'location_lng')  double? locationLng, @JsonKey(name: 'event_type')  String eventType,  String category,  int capacity, @JsonKey(name: 'attendee_count')  int attendeeCount, @JsonKey(name: 'is_free')  bool isFree, @JsonKey(name: 'ticket_price_artifacts')  Map<String, int> ticketPriceArtifacts, @JsonKey(name: 'member_price_artifacts')  Map<String, int>? memberPriceArtifacts, @JsonKey(name: 'non_member_price_artifacts')  Map<String, int>? nonMemberPriceArtifacts, @JsonKey(name: 'gym_photo_roll')  List<String> gymPhotoRoll,  String visibility, @JsonKey(name: 'is_registered')  bool isRegistered, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _GymEvent():
-return $default(_that.id,_that.gymId,_that.title,_that.description,_that.startTime,_that.endTime,_that.location,_that.createdAt);case _:
+return $default(_that.id,_that.gymId,_that.title,_that.description,_that.startTime,_that.endTime,_that.location,_that.coverImageUrl,_that.locationLat,_that.locationLng,_that.eventType,_that.category,_that.capacity,_that.attendeeCount,_that.isFree,_that.ticketPriceArtifacts,_that.memberPriceArtifacts,_that.nonMemberPriceArtifacts,_that.gymPhotoRoll,_that.visibility,_that.isRegistered,_that.spotsRemaining,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -4461,10 +4476,10 @@ return $default(_that.id,_that.gymId,_that.title,_that.description,_that.startTi
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'gym_id')  String? gymId,  String title,  String description, @JsonKey(name: 'start_datetime')  String? startTime, @JsonKey(name: 'end_datetime')  String? endTime,  String location, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'gym_id')  String? gymId,  String title,  String description, @JsonKey(name: 'start_datetime')  String? startTime, @JsonKey(name: 'end_datetime')  String? endTime,  String location, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'location_lat')  double? locationLat, @JsonKey(name: 'location_lng')  double? locationLng, @JsonKey(name: 'event_type')  String eventType,  String category,  int capacity, @JsonKey(name: 'attendee_count')  int attendeeCount, @JsonKey(name: 'is_free')  bool isFree, @JsonKey(name: 'ticket_price_artifacts')  Map<String, int> ticketPriceArtifacts, @JsonKey(name: 'member_price_artifacts')  Map<String, int>? memberPriceArtifacts, @JsonKey(name: 'non_member_price_artifacts')  Map<String, int>? nonMemberPriceArtifacts, @JsonKey(name: 'gym_photo_roll')  List<String> gymPhotoRoll,  String visibility, @JsonKey(name: 'is_registered')  bool isRegistered, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _GymEvent() when $default != null:
-return $default(_that.id,_that.gymId,_that.title,_that.description,_that.startTime,_that.endTime,_that.location,_that.createdAt);case _:
+return $default(_that.id,_that.gymId,_that.title,_that.description,_that.startTime,_that.endTime,_that.location,_that.coverImageUrl,_that.locationLat,_that.locationLng,_that.eventType,_that.category,_that.capacity,_that.attendeeCount,_that.isFree,_that.ticketPriceArtifacts,_that.memberPriceArtifacts,_that.nonMemberPriceArtifacts,_that.gymPhotoRoll,_that.visibility,_that.isRegistered,_that.spotsRemaining,_that.createdAt);case _:
   return null;
 
 }
@@ -4476,7 +4491,7 @@ return $default(_that.id,_that.gymId,_that.title,_that.description,_that.startTi
 @JsonSerializable()
 
 class _GymEvent implements GymEvent {
-  const _GymEvent({required this.id, @JsonKey(name: 'gym_id') this.gymId, required this.title, this.description = '', @JsonKey(name: 'start_datetime') this.startTime, @JsonKey(name: 'end_datetime') this.endTime, this.location = '', @JsonKey(name: 'created_at') this.createdAt});
+  const _GymEvent({required this.id, @JsonKey(name: 'gym_id') this.gymId, required this.title, this.description = '', @JsonKey(name: 'start_datetime') this.startTime, @JsonKey(name: 'end_datetime') this.endTime, this.location = '', @JsonKey(name: 'cover_image_url') this.coverImageUrl = '', @JsonKey(name: 'location_lat') this.locationLat, @JsonKey(name: 'location_lng') this.locationLng, @JsonKey(name: 'event_type') this.eventType = 'in_person', this.category = '', this.capacity = 0, @JsonKey(name: 'attendee_count') this.attendeeCount = 0, @JsonKey(name: 'is_free') this.isFree = true, @JsonKey(name: 'ticket_price_artifacts') final  Map<String, int> ticketPriceArtifacts = const <String, int>{}, @JsonKey(name: 'member_price_artifacts') final  Map<String, int>? memberPriceArtifacts, @JsonKey(name: 'non_member_price_artifacts') final  Map<String, int>? nonMemberPriceArtifacts, @JsonKey(name: 'gym_photo_roll') final  List<String> gymPhotoRoll = const <String>[], this.visibility = 'public', @JsonKey(name: 'is_registered') this.isRegistered = false, @JsonKey(name: 'spots_remaining') this.spotsRemaining, @JsonKey(name: 'created_at') this.createdAt}): _ticketPriceArtifacts = ticketPriceArtifacts,_memberPriceArtifacts = memberPriceArtifacts,_nonMemberPriceArtifacts = nonMemberPriceArtifacts,_gymPhotoRoll = gymPhotoRoll;
   factory _GymEvent.fromJson(Map<String, dynamic> json) => _$GymEventFromJson(json);
 
 @override final  String id;
@@ -4486,6 +4501,49 @@ class _GymEvent implements GymEvent {
 @override@JsonKey(name: 'start_datetime') final  String? startTime;
 @override@JsonKey(name: 'end_datetime') final  String? endTime;
 @override@JsonKey() final  String location;
+@override@JsonKey(name: 'cover_image_url') final  String coverImageUrl;
+@override@JsonKey(name: 'location_lat') final  double? locationLat;
+@override@JsonKey(name: 'location_lng') final  double? locationLng;
+@override@JsonKey(name: 'event_type') final  String eventType;
+@override@JsonKey() final  String category;
+@override@JsonKey() final  int capacity;
+@override@JsonKey(name: 'attendee_count') final  int attendeeCount;
+@override@JsonKey(name: 'is_free') final  bool isFree;
+ final  Map<String, int> _ticketPriceArtifacts;
+@override@JsonKey(name: 'ticket_price_artifacts') Map<String, int> get ticketPriceArtifacts {
+  if (_ticketPriceArtifacts is EqualUnmodifiableMapView) return _ticketPriceArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_ticketPriceArtifacts);
+}
+
+ final  Map<String, int>? _memberPriceArtifacts;
+@override@JsonKey(name: 'member_price_artifacts') Map<String, int>? get memberPriceArtifacts {
+  final value = _memberPriceArtifacts;
+  if (value == null) return null;
+  if (_memberPriceArtifacts is EqualUnmodifiableMapView) return _memberPriceArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
+ final  Map<String, int>? _nonMemberPriceArtifacts;
+@override@JsonKey(name: 'non_member_price_artifacts') Map<String, int>? get nonMemberPriceArtifacts {
+  final value = _nonMemberPriceArtifacts;
+  if (value == null) return null;
+  if (_nonMemberPriceArtifacts is EqualUnmodifiableMapView) return _nonMemberPriceArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
+ final  List<String> _gymPhotoRoll;
+@override@JsonKey(name: 'gym_photo_roll') List<String> get gymPhotoRoll {
+  if (_gymPhotoRoll is EqualUnmodifiableListView) return _gymPhotoRoll;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_gymPhotoRoll);
+}
+
+@override@JsonKey() final  String visibility;
+@override@JsonKey(name: 'is_registered') final  bool isRegistered;
+@override@JsonKey(name: 'spots_remaining') final  int? spotsRemaining;
 @override@JsonKey(name: 'created_at') final  String? createdAt;
 
 /// Create a copy of GymEvent
@@ -4501,16 +4559,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GymEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.location, location) || other.location == location)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GymEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.location, location) || other.location == location)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.locationLat, locationLat) || other.locationLat == locationLat)&&(identical(other.locationLng, locationLng) || other.locationLng == locationLng)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.category, category) || other.category == category)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.attendeeCount, attendeeCount) || other.attendeeCount == attendeeCount)&&(identical(other.isFree, isFree) || other.isFree == isFree)&&const DeepCollectionEquality().equals(other._ticketPriceArtifacts, _ticketPriceArtifacts)&&const DeepCollectionEquality().equals(other._memberPriceArtifacts, _memberPriceArtifacts)&&const DeepCollectionEquality().equals(other._nonMemberPriceArtifacts, _nonMemberPriceArtifacts)&&const DeepCollectionEquality().equals(other._gymPhotoRoll, _gymPhotoRoll)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.isRegistered, isRegistered) || other.isRegistered == isRegistered)&&(identical(other.spotsRemaining, spotsRemaining) || other.spotsRemaining == spotsRemaining)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,gymId,title,description,startTime,endTime,location,createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,gymId,title,description,startTime,endTime,location,coverImageUrl,locationLat,locationLng,eventType,category,capacity,attendeeCount,isFree,const DeepCollectionEquality().hash(_ticketPriceArtifacts),const DeepCollectionEquality().hash(_memberPriceArtifacts),const DeepCollectionEquality().hash(_nonMemberPriceArtifacts),const DeepCollectionEquality().hash(_gymPhotoRoll),visibility,isRegistered,spotsRemaining,createdAt]);
 
 @override
 String toString() {
-  return 'GymEvent(id: $id, gymId: $gymId, title: $title, description: $description, startTime: $startTime, endTime: $endTime, location: $location, createdAt: $createdAt)';
+  return 'GymEvent(id: $id, gymId: $gymId, title: $title, description: $description, startTime: $startTime, endTime: $endTime, location: $location, coverImageUrl: $coverImageUrl, locationLat: $locationLat, locationLng: $locationLng, eventType: $eventType, category: $category, capacity: $capacity, attendeeCount: $attendeeCount, isFree: $isFree, ticketPriceArtifacts: $ticketPriceArtifacts, memberPriceArtifacts: $memberPriceArtifacts, nonMemberPriceArtifacts: $nonMemberPriceArtifacts, gymPhotoRoll: $gymPhotoRoll, visibility: $visibility, isRegistered: $isRegistered, spotsRemaining: $spotsRemaining, createdAt: $createdAt)';
 }
 
 
@@ -4521,7 +4579,7 @@ abstract mixin class _$GymEventCopyWith<$Res> implements $GymEventCopyWith<$Res>
   factory _$GymEventCopyWith(_GymEvent value, $Res Function(_GymEvent) _then) = __$GymEventCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'gym_id') String? gymId, String title, String description,@JsonKey(name: 'start_datetime') String? startTime,@JsonKey(name: 'end_datetime') String? endTime, String location,@JsonKey(name: 'created_at') String? createdAt
+ String id,@JsonKey(name: 'gym_id') String? gymId, String title, String description,@JsonKey(name: 'start_datetime') String? startTime,@JsonKey(name: 'end_datetime') String? endTime, String location,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'location_lat') double? locationLat,@JsonKey(name: 'location_lng') double? locationLng,@JsonKey(name: 'event_type') String eventType, String category, int capacity,@JsonKey(name: 'attendee_count') int attendeeCount,@JsonKey(name: 'is_free') bool isFree,@JsonKey(name: 'ticket_price_artifacts') Map<String, int> ticketPriceArtifacts,@JsonKey(name: 'member_price_artifacts') Map<String, int>? memberPriceArtifacts,@JsonKey(name: 'non_member_price_artifacts') Map<String, int>? nonMemberPriceArtifacts,@JsonKey(name: 'gym_photo_roll') List<String> gymPhotoRoll, String visibility,@JsonKey(name: 'is_registered') bool isRegistered,@JsonKey(name: 'spots_remaining') int? spotsRemaining,@JsonKey(name: 'created_at') String? createdAt
 });
 
 
@@ -4538,7 +4596,7 @@ class __$GymEventCopyWithImpl<$Res>
 
 /// Create a copy of GymEvent
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? gymId = freezed,Object? title = null,Object? description = null,Object? startTime = freezed,Object? endTime = freezed,Object? location = null,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? gymId = freezed,Object? title = null,Object? description = null,Object? startTime = freezed,Object? endTime = freezed,Object? location = null,Object? coverImageUrl = null,Object? locationLat = freezed,Object? locationLng = freezed,Object? eventType = null,Object? category = null,Object? capacity = null,Object? attendeeCount = null,Object? isFree = null,Object? ticketPriceArtifacts = null,Object? memberPriceArtifacts = freezed,Object? nonMemberPriceArtifacts = freezed,Object? gymPhotoRoll = null,Object? visibility = null,Object? isRegistered = null,Object? spotsRemaining = freezed,Object? createdAt = freezed,}) {
   return _then(_GymEvent(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,gymId: freezed == gymId ? _self.gymId : gymId // ignore: cast_nullable_to_non_nullable
@@ -4547,7 +4605,22 @@ as String,description: null == description ? _self.description : description // 
 as String,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
 as String?,endTime: freezed == endTime ? _self.endTime : endTime // ignore: cast_nullable_to_non_nullable
 as String?,location: null == location ? _self.location : location // ignore: cast_nullable_to_non_nullable
-as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,coverImageUrl: null == coverImageUrl ? _self.coverImageUrl : coverImageUrl // ignore: cast_nullable_to_non_nullable
+as String,locationLat: freezed == locationLat ? _self.locationLat : locationLat // ignore: cast_nullable_to_non_nullable
+as double?,locationLng: freezed == locationLng ? _self.locationLng : locationLng // ignore: cast_nullable_to_non_nullable
+as double?,eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
+as String,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,capacity: null == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
+as int,attendeeCount: null == attendeeCount ? _self.attendeeCount : attendeeCount // ignore: cast_nullable_to_non_nullable
+as int,isFree: null == isFree ? _self.isFree : isFree // ignore: cast_nullable_to_non_nullable
+as bool,ticketPriceArtifacts: null == ticketPriceArtifacts ? _self._ticketPriceArtifacts : ticketPriceArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,memberPriceArtifacts: freezed == memberPriceArtifacts ? _self._memberPriceArtifacts : memberPriceArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>?,nonMemberPriceArtifacts: freezed == nonMemberPriceArtifacts ? _self._nonMemberPriceArtifacts : nonMemberPriceArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>?,gymPhotoRoll: null == gymPhotoRoll ? _self._gymPhotoRoll : gymPhotoRoll // ignore: cast_nullable_to_non_nullable
+as List<String>,visibility: null == visibility ? _self.visibility : visibility // ignore: cast_nullable_to_non_nullable
+as String,isRegistered: null == isRegistered ? _self.isRegistered : isRegistered // ignore: cast_nullable_to_non_nullable
+as bool,spotsRemaining: freezed == spotsRemaining ? _self.spotsRemaining : spotsRemaining // ignore: cast_nullable_to_non_nullable
+as int?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

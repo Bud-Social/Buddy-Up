@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/gym_provider.dart';
 import '../widgets/gym_tab_bar.dart';
 import '../widgets/schedule_post_card.dart';
@@ -9,6 +11,7 @@ import '../widgets/verified_gym_badge.dart';
 import '../widgets/member_tile.dart';
 import '../../../core/api/api_error.dart';
 import '../../../shared/widgets/avatar.dart';
+import '../../../shared/widgets/badge.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/input.dart';
@@ -722,17 +725,85 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
     final events = ref.watch(gymEventsProvider(widget.slug));
     return events.when(
       loading: () => const PageLoader(),
-      error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(gymEventsProvider(widget.slug))),
+      error: (e, _) => ErrorView(
+        message: e.toString(),
+        onRetry: () => ref.invalidate(gymEventsProvider(widget.slug)),
+      ),
       data: (list) {
-        if (list.isEmpty) return const Center(child: Text('No events', style: TextStyle(color: BuddyColors.textSecondary)));
-        return ListView.builder(
+        if (list.isEmpty) {
+          return const Center(
+            child: Text('No events', style: TextStyle(color: BuddyColors.textSecondary)),
+          );
+        }
+
+        // Members-only roll: the server only sends media URLs for active members,
+        // so `gymPhotoRoll` being populated is the member gate itself.
+        final roll = list
+            .map((e) => e.gymPhotoRoll)
+            .expand((urls) => urls)
+            .toList();
+        final deduped = {for (final url in roll) if (url.isNotEmpty) url}.toList();
+
+        return ListView(
           padding: const EdgeInsets.only(top: 8),
-          itemCount: list.length,
-          itemBuilder: (_, i) => ListTile(
-            leading: const Icon(Icons.event, color: BuddyColors.green),
-            title: Text(list[i].title, style: const TextStyle(color: BuddyColors.textPrimary)),
-            subtitle: Text(list[i].startTime ?? '', style: const TextStyle(color: BuddyColors.textSecondary)),
-          ),
+          children: [
+            if (deduped.isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: BuddyColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: BuddyColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 110,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: deduped.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) => ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            deduped[i],
+                            width: 150,
+                            height: 110,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              width: 150,
+                              height: 110,
+                              color: BuddyColors.surfaceRaised,
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.landscape_outlined,
+                                  size: 22, color: BuddyColors.textSecondary),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Row(
+                      children: [
+                        Icon(Icons.verified_user_outlined, size: 11, color: BuddyColors.green),
+                        SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Members-only roll — visible because you\'re an active member.',
+                            style: TextStyle(fontSize: 10, color: BuddyColors.textSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            for (final event in list)
+              _GymEventCard(event: event),
+          ],
         );
       },
     );
@@ -763,6 +834,212 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
             child: const Text('Donate'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// One gym event card — mirrors the web's GymDetail events tab card:
+/// cover chip, badges, price split, capacity bar and a direct maps link.
+class _GymEventCard extends StatelessWidget {
+  final GymEvent event;
+
+  const _GymEventCard({required this.event});
+
+  static const _artifactLabel = {
+    'dumbbell': 'dumbbells',
+    'barbell': 'barbells',
+    'burpee': 'burpees',
+    'squat': 'squats',
+    'sprint': 'sprints',
+    'pr': 'PRs',
+    'champion': 'champions',
+  };
+
+  String _fmtSplit(Map<String, int>? m) {
+    if (m == null || m.isEmpty) return 'Free';
+    return m.entries.map((e) => '${e.value} ${_artifactLabel[e.key] ?? e.key}').join(', ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final start = event.startTime == null ? null : DateTime.tryParse(event.startTime!)?.toLocal();
+    final formatter = DateFormat('EEE, MMM d · HH:mm');
+    final capacity = event.capacity;
+    final attending = event.attendeeCount;
+    final pct = capacity > 0 ? (attending / capacity).clamp(0.0, 1.0) : 0.0;
+    final spotsLeft = capacity > 0 ? (capacity - attending).clamp(0, capacity) : null;
+    final memberSplit = event.memberPriceArtifacts;
+    final nonMemberSplit = event.nonMemberPriceArtifacts;
+    final hasSplit = memberSplit != null || nonMemberSplit != null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: BuddyColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: BuddyColors.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.push('/marketplace/events/${event.id}'),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Cover chip — same muted fallback as web when there is no cover.
+              Container(
+                width: 88,
+                height: 88,
+                margin: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: BuddyColors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(12),
+                  image: event.coverImageUrl.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(event.coverImageUrl),
+                          fit: BoxFit.cover,
+                          onError: (_, _) {},
+                        )
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: event.coverImageUrl.isNotEmpty
+                    ? null
+                    : const Icon(Icons.event, size: 28, color: BuddyColors.textSecondary),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 10, 10, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Badge row — members-only goes in blue, type in gold, same
+                      // hierarchy as the web card.
+                      Wrap(
+                        spacing: 4,
+                        runSpacing: 2,
+                        children: [
+                          BuddyBadge(label: event.eventType.replaceAll('_', ' '), color: BuddyColors.gold),
+                          if (event.visibility == 'gym_members')
+                            const BuddyBadge(label: 'Members only', color: BuddyColors.blue),
+                          if (event.category.isNotEmpty)
+                            BuddyBadge(label: event.category, color: BuddyColors.textSecondary),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        event.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      if (event.description.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            event.description,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 10, color: BuddyColors.textSecondary),
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                      if (start != null)
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_today, size: 11, color: BuddyColors.green),
+                            const SizedBox(width: 4),
+                            Text(formatter.format(start), style: const TextStyle(fontSize: 10, color: BuddyColors.textPrimary)),
+                          ],
+                        ),
+                      if (event.location.isNotEmpty)
+                        InkWell(
+                          onTap: event.locationLat != null && event.locationLng != null
+                              ? () => launchUrl(Uri.parse(
+                                  'https://maps.google.com/?q=${event.locationLat},${event.locationLng}'))
+                              : null,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.place_outlined, size: 11, color: BuddyColors.blue),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  event.location,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: event.locationLat != null && event.locationLng != null
+                                        ? BuddyColors.blue
+                                        : BuddyColors.textSecondary,
+                                    decoration: event.locationLat != null && event.locationLng != null
+                                        ? TextDecoration.underline
+                                        : TextDecoration.none,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 6),
+                      // Capacity — the spec asks for the pin-point alongside the count.
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: capacity > 0 ? pct : null,
+                                minHeight: 4,
+                                backgroundColor: BuddyColors.surfaceRaised,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  pct >= 1 ? BuddyColors.red : BuddyColors.green),
+                              ),
+                            ),
+                          ),
+                          if (capacity > 0) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              '$attending/$capacity · $spotsLeft left',
+                              style: const TextStyle(fontSize: 9, color: BuddyColors.textSecondary),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      // Persona prices — member vs everyone else.
+                      if (hasSplit)
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 2,
+                          children: [
+                            Text(
+                              'Member: ${_fmtSplit(memberSplit)}',
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: BuddyColors.green),
+                            ),
+                            Text(
+                              'Others: ${_fmtSplit(nonMemberSplit)}',
+                              style: const TextStyle(fontSize: 10, color: BuddyColors.textSecondary),
+                            ),
+                          ],
+                        )
+                      else if (event.isFree)
+                        const Text('Free',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: BuddyColors.green))
+                      else
+                        const Text(
+                          'Paid',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: BuddyColors.green),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -430,6 +430,35 @@ _GymEvent _$GymEventFromJson(Map<String, dynamic> json) => _GymEvent(
   startTime: json['start_datetime'] as String?,
   endTime: json['end_datetime'] as String?,
   location: json['location'] as String? ?? '',
+  coverImageUrl: json['cover_image_url'] as String? ?? '',
+  locationLat: (json['location_lat'] as num?)?.toDouble(),
+  locationLng: (json['location_lng'] as num?)?.toDouble(),
+  eventType: json['event_type'] as String? ?? 'in_person',
+  category: json['category'] as String? ?? '',
+  capacity: (json['capacity'] as num?)?.toInt() ?? 0,
+  attendeeCount: (json['attendee_count'] as num?)?.toInt() ?? 0,
+  isFree: json['is_free'] as bool? ?? true,
+  ticketPriceArtifacts:
+      (json['ticket_price_artifacts'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toInt()),
+      ) ??
+      const <String, int>{},
+  memberPriceArtifacts:
+      (json['member_price_artifacts'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toInt()),
+      ),
+  nonMemberPriceArtifacts:
+      (json['non_member_price_artifacts'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toInt()),
+      ),
+  gymPhotoRoll:
+      (json['gym_photo_roll'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const <String>[],
+  visibility: json['visibility'] as String? ?? 'public',
+  isRegistered: json['is_registered'] as bool? ?? false,
+  spotsRemaining: (json['spots_remaining'] as num?)?.toInt(),
   createdAt: json['created_at'] as String?,
 );
 
@@ -441,6 +470,21 @@ Map<String, dynamic> _$GymEventToJson(_GymEvent instance) => <String, dynamic>{
   'start_datetime': instance.startTime,
   'end_datetime': instance.endTime,
   'location': instance.location,
+  'cover_image_url': instance.coverImageUrl,
+  'location_lat': instance.locationLat,
+  'location_lng': instance.locationLng,
+  'event_type': instance.eventType,
+  'category': instance.category,
+  'capacity': instance.capacity,
+  'attendee_count': instance.attendeeCount,
+  'is_free': instance.isFree,
+  'ticket_price_artifacts': instance.ticketPriceArtifacts,
+  'member_price_artifacts': instance.memberPriceArtifacts,
+  'non_member_price_artifacts': instance.nonMemberPriceArtifacts,
+  'gym_photo_roll': instance.gymPhotoRoll,
+  'visibility': instance.visibility,
+  'is_registered': instance.isRegistered,
+  'spots_remaining': instance.spotsRemaining,
   'created_at': instance.createdAt,
 };
 
