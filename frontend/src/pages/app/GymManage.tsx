@@ -487,6 +487,8 @@ export default function GymManage() {
           busyId={memberBusyId}
           onChangeRole={changeMemberRole}
           onRemove={(m) => setRemoveTarget(m)}
+          slug={slug || gym?.handle || ''}
+          onReload={load}
         />
       )}
 

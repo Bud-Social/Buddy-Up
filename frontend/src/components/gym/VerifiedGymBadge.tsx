@@ -1,20 +1,6 @@
 import { useState } from 'react';
 import type { GymTier } from '@/types/gym';
-import { X, Zap } from 'lucide-react';
-
-/** Symmetric, horizontally-oriented dumbbell — unlike lucide's tilted glyph,
- * this one centers visually in a circular badge. */
-function GymMark({ size, className }: { size: number; className: string }) {
-  return (
-    <svg viewBox="0 0 20 20" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M5 6.2v7.6" />
-      <path d="M15 6.2v7.6" />
-      <path d="M8.35 8v4" />
-      <path d="M11.65 8v4" />
-      <path d="M2.3 10h15.4" />
-    </svg>
-  );
-}
+import { Dumbbell, X, Zap } from 'lucide-react';
 
 
 interface VerifiedGymBadgeProps {
@@ -63,7 +49,7 @@ export function VerifiedGymBadge({ verified, tier = 'regular', size = 'sm', clas
   const { box, dumbbell } = SIZE[size];
   const copy = TIER_COPY[tier] ?? TIER_COPY.regular;
 
-  const inner = <GymMark size={dumbbell} className={style.icon} />;
+  const inner = <Dumbbell size={dumbbell} strokeWidth={2.25} className={`${style.icon} -rotate-45`} />;
 
   const trigger = capacity ? (
     <button
@@ -101,7 +87,7 @@ export function VerifiedGymBadge({ verified, tier = 'regular', size = 'sm', clas
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-bold flex items-center gap-1.5">
                 <span className={`inline-flex w-4 h-4 rounded-full ${style.box} items-center justify-center`}>
-                  <GymMark size={10} className={style.icon} />
+                  <Dumbbell size={10} className={style.icon} />
                 </span>
                 {copy.label}
               </p>

@@ -2627,3 +2627,85 @@ class GymActionLogListView(views.APIView):
         ]
         return Response({'success': True, 'data': rows, 'message': 'OK',
                          'errors': None, 'pagination': None})
+
+
+class GymTeamAddMemberView(views.APIView):
+    """Add a person to the gym's team — creates/activates membership with role.
+
+    POST body: {username: str, role: 'trainer' | 'moderator'}
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        profile = request.user.profile
+        get_object_or_404(GymMembership, gym=gym, member=profile, role__in=['owner', 'co_owner'])
+
+        username = (request.data.get('username') or '').strip()
+        role = (request.data.get('role') or 'trainer').strip().lower()
+
+        if not username:
+            return Response({'success': False, 'data': None, 'message': 'Username required.',
+                             'errors': None, 'pagination': None}, status=status.HTTP_400_BAD_REQUEST)
+        if role not in ('trainer', 'moderator'):
+            return Response({'success': False, 'data': None, 'message': 'Role must be trainer or moderator.',
+                             'errors': None, 'pagination': None}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.profiles.models import Profile
+        try:
+            target = Profile.objects.get(username__iexact=username)
+        except Profile.DoesNotExist:
+            return Response({'success': False, 'data': None,
+                             'message': 'No user with that username.',
+                             'errors': None, 'pagination': None}, status=status.HTTP_404_NOT_FOUND)
+
+        target_membership = GymMembership.objects.filter(gym=gym, member=target).first()
+        if target_membership and target_membership.subscription_active:
+            if target_membership.role in ('owner', 'co_owner'):
+                return Response({'success': False, 'data': None,
+                                 'message': f'{username} is already on the team as {target_membership.role}.',
+                                 'errors': None, 'pagination': None}, status=status.HTTP_400_BAD_REQUEST)
+            previous_role = target_membership.role
+            if previous_role == role:
+                return Response({'success': True, 'data': None,
+                                 'message': f'{username} is already on the team as {role}.',
+                                 'errors': None, 'pagination': None}, status=status.HTTP_200_OK)
+            target_membership.role = role
+            target_membership.save(update_fields=['role'])
+            from .audit import log_gym_action
+            log_gym_action(gym=gym, actor=profile, action='gym.member.role',
+                           summary=f'{username} promoted/demoted to {role}',
+                           target_type='member', target_id=str(target.user_id),
+                           before={'role': previous_role}, after={'role': role})
+            _notify_gym_role_change(gym, target_membership, previous_role, profile)
+            return Response({'success': True,
+                             'data': {'username': username, 'role': role, 'created': False},
+                             'message': f'{username} → {role}.',
+                             'errors': None, 'pagination': None}, status=status.HTTP_200_OK)
+
+        membership = GymMembership.objects.filter(gym=gym, member=target).first()
+        if membership is None:
+            cap = member_capacity_response(gym)
+            if cap is not None:
+                return cap
+            membership = GymMembership.objects.create(
+                gym=gym, member=target, role=role,
+                subscription_active=True,
+            )
+            gym.member_count = db_models.F('member_count') + 1
+            gym.save(update_fields=['member_count'])
+        else:
+            membership.role = role
+            membership.subscription_active = True
+            membership.save(update_fields=['role', 'subscription_active'])
+
+        from .audit import log_gym_action
+        log_gym_action(gym=gym, actor=profile, action='gym.member.role',
+                       summary=f'Added {username} to the team as {role}',
+                       target_type='member', target_id=str(target.user_id),
+                       before=None, after={'role': role})
+        return Response({'success': True,
+                         'data': {'username': username, 'role': role, 'created': True},
+                         'message': f'{username} added as {role}.',
+                         'errors': None, 'pagination': None}, status=status.HTTP_201_CREATED)

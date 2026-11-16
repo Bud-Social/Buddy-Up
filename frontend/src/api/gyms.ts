@@ -285,6 +285,11 @@ export const gymsApi = {
   removeOnlineCoach: (slug: string, coachId: string) =>
     apiClient.delete(`/gyms/${slug}/online-coaches/${coachId}/`).then((r) => r.data),
 
+  addToTeam: (slug: string, data: { username: string; role: 'trainer' | 'moderator' }) =>
+    apiClient.post<ApiResponse<{ username: string; role: string; created: boolean }>>(
+      `/gyms/${slug}/team/add/`, data,
+    ).then((r) => r.data),
+
   // ── Endorsements ─────────────────────────────────────────────────────
   getEndorsements: (slug: string) =>
     apiClient.get<ApiResponse<{ can_endorse: boolean; endorsements: GymEndorsement[] }>>(
