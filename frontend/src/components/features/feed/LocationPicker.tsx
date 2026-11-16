@@ -164,7 +164,7 @@ export function LocationPicker({ initial, onPick, onClose }: LocationPickerProps
         )}
       </div>
 
-      <div className="h-56 relative z-10">
+      <div className="h-56 relative z-0 isolate overflow-hidden">
         <MapContainer center={center} zoom={initial ? 15 : 6} style={{ height: '100%', width: '100%' }} className="z-0">
           <TileLayer attribution={tileAttribution} url={OSM_TILE} />
           <FlyTo lat={center[0]} lng={center[1]} />

@@ -14,9 +14,9 @@ import { verificationApi } from '@/api/verification';
 import type { GymMembership, GymMediaItem, GymEndorsement, GymRegistration } from '@/types';
 
 const REGISTRATION_DOC_TYPES = [
-  { value: 'certification', label: 'Business registration certificate' },
-  { value: 'proof_of_address', label: 'Proof of address' },
-  { value: 'other', label: 'Other supporting document' },
+  { value: 'gym_business_registration', label: 'Business registration certificate' },
+  { value: 'gym_proof_of_address', label: 'Proof of address' },
+  { value: 'gym_other', label: 'Other supporting document' },
 ];
 
 const STATUS_COPY: Record<string, { label: string; variant: 'blue' | 'green' | 'gold' | 'red' | 'silver' | 'orange' }> = {
@@ -54,8 +54,9 @@ export function BusinessSetupTab({ slug, canManage, members, onDeleted }: Busine
     website: '', contact_email: '', contact_phone: '',
   });
   const [uploadedDocs, setUploadedDocs] = useState<Array<{ id: string; document_type: string; status: string }>>([]);
-  const [docType, setDocType] = useState('certification');
+  const [docType, setDocType] = useState('gym_business_registration');
   const [docUploads, setDocUploads] = useState<Record<string, { name: string; ratio: number }>>({});
+  const [docError, setDocError] = useState<string | null>(null);
   const [mediaUploads, setMediaUploads] = useState<Record<string, { name: string; ratio: number }>>({});
   const [showSubmitReview, setShowSubmitReview] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -133,6 +134,7 @@ export function BusinessSetupTab({ slug, canManage, members, onDeleted }: Busine
   const uploadDocument = async (file: File) => {
     const key = `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     setDocUploads((prev) => ({ ...prev, [key]: { name: file.name, ratio: 0 } }));
+    setDocError(null);
     try {
       const res = await verificationApi.uploadCredential(docType, file, (ratio) => {
         setDocUploads((prev) => ({ ...prev, [key]: { ...prev[key], ratio } }));
@@ -147,7 +149,7 @@ export function BusinessSetupTab({ slug, canManage, members, onDeleted }: Busine
         return next;
       });
     } catch (e: any) {
-      setRegistrationError(e?.response?.data?.message || `Could not upload ${file.name}.`);
+      setDocError(e?.response?.data?.detail || e?.response?.data?.message || `Could not upload ${file.name}.`);
       setDocUploads((prev) => {
         const next = { ...prev };
         next[key] = { ...prev[key], ratio: -1 };
@@ -389,6 +391,9 @@ export function BusinessSetupTab({ slug, canManage, members, onDeleted }: Busine
               Private to reviewers and purged on the standard verification
               retention schedule. Never shown on your public profile.
             </p>
+            {docError && (
+              <p className="text-xs text-buddy-red bg-buddy-red/5 border border-buddy-red/20 rounded-lg px-3 py-2" role="alert">{docError}</p>
+            )}
             <div className="flex flex-col sm:flex-row gap-2">
               <select
                 aria-label="Document type"

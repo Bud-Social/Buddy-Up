@@ -20,8 +20,8 @@ const TIER_STYLE: Record<GymTier, { box: string; icon: string }> = {
 };
 
 const SIZE = {
-  sm: { box: 'w-6 h-6', dumbbell: 12 },
-  md: { box: 'w-8 h-8', dumbbell: 16 },
+  sm: { box: 'w-6 h-6', dumbbell: 11 },
+  md: { box: 'w-7 h-7', dumbbell: 14 },
 };
 
 const TIER_COPY: Record<GymTier, { label: string; fill: string; blurb: string }> = {

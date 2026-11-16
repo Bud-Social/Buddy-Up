@@ -36,6 +36,8 @@ ID_DOC_TYPES = {'id_card', 'passport', 'drivers_license'}
 #: Credential evidence for the professional-badge path (trainer/practitioner),
 #: which has no wizard step to hang a multipart action on.
 CREDENTIAL_DOC_TYPES = {'certificate', 'practitioner_id', 'credential'}
+#: Gym registration/business-verification evidence — same path as credentials.
+GYM_DOC_TYPES = {'gym_business_registration', 'gym_proof_of_address', 'gym_other'}
 
 # Only these extensions are ever copied from a client-supplied upload name;
 # the stored filename itself is always server-generated (uuid-based).
@@ -177,7 +179,7 @@ class VerificationDocumentUploadView(views.APIView):
             return Response({'detail': 'File too large (max 10 MB).'}, status=status.HTTP_400_BAD_REQUEST)
 
         document_type = (request.data.get('document_type') or '').strip()
-        allowed = ID_DOC_TYPES | CREDENTIAL_DOC_TYPES
+        allowed = ID_DOC_TYPES | CREDENTIAL_DOC_TYPES | GYM_DOC_TYPES
         if document_type not in allowed:
             return Response(
                 {'detail': f'Invalid document type. Must be one of: {sorted(allowed)}.'},

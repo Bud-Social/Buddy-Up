@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { gymsApi } from '@/api/gyms';
 import { profilesApi } from '@/api/profiles';
+import { Toggle } from '@/components/ui/Toggle';
 import type { GymMembership, GymOnlineCoach, Profile } from '@/types';
 
 const COMMON_TYPES = [
@@ -184,23 +185,12 @@ export function OnlineCoachingTab({ slug, canManage }: OnlineCoachingTabProps) {
             Members can book remote sessions with your roster and buy workout plans.
           </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={offers}
-          aria-label="Offer online coaching"
-          onClick={toggleOffers}
+        <Toggle
+          checked={offers}
+          onCheckedChange={() => toggleOffers()}
+          label="Offer online coaching"
           disabled={!canManage || saving}
-          className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
-            offers ? 'bg-buddy-green' : 'bg-buddy-surface-raised'
-          } ${!canManage ? 'opacity-40' : ''}`}
-        >
-          <span
-            className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
-              offers ? 'translate-x-5' : ''
-            }`}
-          />
-        </button>
+        />
       </Card>
 
       <Card className="p-4 space-y-3">
@@ -298,25 +288,33 @@ export function OnlineCoachingTab({ slug, canManage }: OnlineCoachingTabProps) {
             <p className="text-[10px] text-buddy-text-secondary/70">Only trainers can be listed — the trainer gets an approval notification and appears as pending until they accept.</p>
             <div className="relative">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-buddy-text-secondary" />
-              <input
-                value={selectedCoach ? `@${selectedCoach.username}` : coachUsername}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Start typing a name or username…"
-                aria-label="Coach search"
-                className="w-full bg-buddy-surface rounded-xl pl-8 pr-8 py-2 text-xs placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
-              />
-              {selectedCoach && (
-                <button className="absolute right-2 top-1/2 -translate-y-1/2 text-buddy-text-secondary hover:text-buddy-text-primary" onClick={() => setSelectedCoach(null)} aria-label="Clear selection">
-                  <X size={14} />
-                </button>
+              {selectedCoach ? (
+                <div className="flex items-center gap-2 bg-buddy-surface rounded-xl pl-8 pr-3 py-2 border border-buddy-green/40">
+                  <Avatar src={selectedCoach.avatar_url} alt={selectedCoach.display_name || selectedCoach.username} size="xs" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{selectedCoach.display_name || selectedCoach.username}</p>
+                    <p className="text-[9px] text-buddy-text-secondary truncate">@{selectedCoach.username}{selectedCoach.role ? ` · ${selectedCoach.role}` : ''}</p>
+                  </div>
+                  <button onClick={() => { setSelectedCoach(null); setCoachUsername(''); }} aria-label="Clear selection" className="text-buddy-text-secondary hover:text-buddy-text-primary p-1">
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <input
+                  value={coachUsername}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder="Start typing a name or username…"
+                  aria-label="Coach search"
+                  className="w-full bg-buddy-surface rounded-xl pl-8 pr-8 py-2 text-xs placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
+                />
               )}
-              {searching && <div className="absolute right-8 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-buddy-green/30 border-t-buddy-green rounded-full animate-spin" />}
-              {searchResults.length > 0 && !selectedCoach && (
+              {!selectedCoach && searching && <div className="absolute right-8 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-buddy-green/30 border-t-buddy-green rounded-full animate-spin" />}
+              {!selectedCoach && searchResults.length > 0 && (
                 <div className="absolute z-20 top-full mt-1 w-full bg-buddy-surface-raised rounded-xl border border-buddy-surface overflow-hidden shadow-2xl max-h-48 overflow-y-auto">
                   {searchResults.map((p) => (
                     <button
                       key={p.user_id}
-                      onMouseDown={(e) => { e.preventDefault(); setSelectedCoach(p); setCoachUsername(`@${p.username}`); setSearchResults([]); }}
+                      onMouseDown={(e) => { e.preventDefault(); setSelectedCoach(p); setCoachUsername(p.username); setSearchResults([]); }}
                       className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-buddy-surface"
                     >
                       <Avatar src={p.avatar_url} alt={p.display_name || p.username} size="xs" />

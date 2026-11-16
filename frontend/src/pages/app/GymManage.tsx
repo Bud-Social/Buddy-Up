@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Check, MessageCircle, Send, Star, Users, X, Plus, UserMinus, UserCog } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -82,7 +82,23 @@ export default function GymManage() {
   const [routinePosts, setSchedulePosts] = useState<GymRoutinePost[]>([]);
   const [reviews, setReviews] = useState<GymReview[]>([]);
 
-  const [tab, setTab] = useState<Tab>('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = (searchParams.get('tab') || '') as Tab | '';
+  const [tab, setTabState] = useState<Tab>(TABS.some((t) => t.key === tabFromUrl) ? (tabFromUrl as Tab) : 'overview');
+
+  const setTab = (next: Tab) => {
+    setTabState(next);
+    // ?tab= is the deep-link; drop the param when the default tab is active
+    if (next === 'overview') {
+      searchParams.delete('tab');
+    } else {
+      searchParams.set('tab', next);
+    }
+    setSearchParams(searchParams, { replace: true });
+    // Bring focus back to the very top of the page so reloading lands
+    // at the tab heading; restoration is not wanted on internal taps.
+    try { window.scrollTo({ top: 0 }); } catch { /* noop */ }
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);

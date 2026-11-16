@@ -139,7 +139,7 @@ export function VenuesTab({ slug, canManage }: VenuesTabProps) {
 
       {focus && (
         <Card className="overflow-hidden">
-          <div className="h-40 bg-buddy-surface">
+          <div className="h-40 bg-buddy-surface relative isolate z-0 overflow-hidden">
             <Suspense fallback={<div className="h-full w-full animate-pulse bg-buddy-surface-raised" />}>
               <MiniLeafletMap
                 lat={Number(focus.latitude)}
