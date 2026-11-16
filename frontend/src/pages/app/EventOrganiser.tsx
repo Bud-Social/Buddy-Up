@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CalendarRange, CheckCircle2, ClipboardCheck, Copy, RotateCcw, Ticket, Users, ExternalLink } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -30,7 +30,36 @@ export default function EventOrganiser() {
   const navigate = useNavigate();
 
   const [events, setEvents] = useState<OrganiserEvent[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const eventFromUrl = searchParams.get('event');
+  const tabFromUrl = (searchParams.get('tab') || '') as '' | 'overview' | 'checkin' | 'attendees';
+  const [selectedId, setSelectedId] = useState<string | null>(eventFromUrl);
+  const [tab, setTabState] = useState<'overview' | 'checkin' | 'attendees'>(
+    tabFromUrl === 'checkin' || tabFromUrl === 'attendees' ? tabFromUrl : 'overview');
+
+  const updateUrl = useCallback((next: { event?: string | null; tab?: string | null }) => {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      if (next.event !== undefined) {
+        if (next.event) params.set('event', next.event); else params.delete('event');
+      }
+      if (next.tab !== undefined) {
+        if (next.tab && next.tab !== 'overview') params.set('tab', next.tab); else params.delete('tab');
+      }
+      return params;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  const setSelected = useCallback((id: string | null) => {
+    setSelectedId(id);
+    updateUrl({ event: id });
+  }, [updateUrl]);
+
+  const setTab = useCallback((next: 'overview' | 'checkin' | 'attendees') => {
+    setTabState(next);
+    updateUrl({ tab: next });
+    try { window.scrollTo({ top: 0 }); } catch { /* noop */ }
+  }, [updateUrl]);
   const [stats, setStats] = useState<EventStats | null>(null);
   const [attendees, setAttendees] = useState<EventAttendee[]>([]);
 
@@ -56,7 +85,10 @@ export default function EventOrganiser() {
       const res = await marketplaceApi.getOrganisedEvents();
       const rows = Array.isArray(res?.data) ? res.data : [];
       setEvents(rows);
-      setSelectedId((current) => current ?? (rows[0]?.id ?? null));
+      setSelectedId((current) => {
+        if (current && rows.some((row) => row.id === current)) return current;
+        return rows[0]?.id ?? null;
+      });
     } catch (e) {
       // 403 = signed in but not an organiser. That is an expected state, so it
       // gets a real message rather than a blank page.
@@ -67,6 +99,12 @@ export default function EventOrganiser() {
   }, []);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
+
+  // React to externally-provided ?event= (deep links, back/forward).
+  useEffect(() => {
+    if (eventFromUrl && eventFromUrl !== selectedId) setSelectedId(eventFromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventFromUrl]);
 
   const loadAttendees = useCallback(async (eventId: string) => {
     setAttendeesError(null);
@@ -165,6 +203,15 @@ export default function EventOrganiser() {
         <div className="bg-buddy-red/5 border border-buddy-red/20 text-buddy-red text-xs rounded-xl px-3 py-2">{eventsError}</div>
       )}
 
+      {/* Notices hoist out of the tabs so an action taken inside one pane
+          (e.g. reversing a check-in from the attendee list) still speaks. */}
+      {checkInError && (
+        <div className="bg-buddy-red/5 border border-buddy-red/20 text-buddy-red text-xs rounded-xl px-3 py-2" role="alert">{checkInError}</div>
+      )}
+      {checkInNotice && (
+        <div className="bg-buddy-green/10 border border-buddy-green/20 text-buddy-green text-xs rounded-xl px-3 py-2" role="status">{checkInNotice}</div>
+      )}
+
       {loading ? (
         <div className="space-y-3" role="status" aria-busy="true" aria-label="Loading">
           <Card className="h-16 animate-pulse bg-buddy-surface-raised" />
@@ -184,7 +231,7 @@ export default function EventOrganiser() {
               {events.map((event) => (
                 <button
                   key={event.id}
-                  onClick={() => setSelectedId(event.id)}
+                  onClick={() => setSelected(event.id)}
                   aria-pressed={selectedId === event.id}
                   className={`flex-shrink-0 text-left px-3 py-2 rounded-xl border transition-colors ${selectedId === event.id ? 'border-buddy-green bg-buddy-green/15' : 'border-buddy-surface-raised bg-buddy-surface hover:bg-buddy-surface-raised'}`}
                 >
@@ -206,7 +253,22 @@ export default function EventOrganiser() {
 
           {selected && (
             <>
+              {/* Workspace views — deep-linkable tabs */}
+              <div className="flex rounded-xl bg-buddy-surface p-1 mb-2" role="tablist" aria-label="Event workspace">
+                {([['overview', 'Overview'], ['checkin', 'Check-in'], ['attendees', 'Attendees']] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    role="tab"
+                    aria-selected={tab === key}
+                    onClick={() => setTab(key)}
+                    className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${tab === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               {/* Stats */}
+              {tab === 'overview' && (
               <section className="space-y-2">
                 <RoleSectionTitle>Attendance</RoleSectionTitle>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -243,8 +305,9 @@ export default function EventOrganiser() {
                   </Card>
                 )}
               </section>
-
+              )}
               {/* Check-in */}
+              {tab === 'checkin' && (
               <section className="space-y-2">
                 <RoleSectionTitle>Check-in</RoleSectionTitle>
                 <Card className="p-4 space-y-3">
@@ -261,16 +324,11 @@ export default function EventOrganiser() {
                       <ClipboardCheck size={14} className="mr-1" /> Check in
                     </Button>
                   </form>
-                  {checkInError && (
-                    <div className="bg-buddy-red/5 border border-buddy-red/20 text-buddy-red text-xs rounded-xl px-3 py-2" role="alert">{checkInError}</div>
-                  )}
-                  {checkInNotice && (
-                    <div className="bg-buddy-green/10 border border-buddy-green/20 text-buddy-green text-xs rounded-xl px-3 py-2" role="status">{checkInNotice}</div>
-                  )}
                 </Card>
               </section>
-
+              )}
               {/* Attendees */}
+              {tab === 'attendees' && (
               <section className="space-y-2">
                 <RoleSectionTitle
                   action={ticketCodes.length > 0 && (
@@ -358,6 +416,7 @@ export default function EventOrganiser() {
                   </div>
                 )}
               </section>
+              )}
             </>
           )}
         </>

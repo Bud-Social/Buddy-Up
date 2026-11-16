@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, MapPin, Tag, Users, Video, ShoppingCart, Clock, Store, ShieldCheck, CheckCircle2, ChevronLeft, ChevronRight, Minus, Plus, Star } from 'lucide-react';
+
+const MiniLeafletMap = lazy(() => import('@/components/features/feed/MiniLeafletMap'));
+import { ArrowLeft, Calendar, MapPin, Tag, Users, Video, ShoppingCart, Clock, Store, ShieldCheck, CheckCircle2, ChevronLeft, ChevronRight, Minus, Plus, Star, Dumbbell } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -197,6 +199,37 @@ export default function EventDetail() {
              </div>
           </div>
           
+          {event.gym_data && (
+            <div className="space-y-2">
+              <button onClick={() => navigate(`/gyms/${event.gym_data?.handle}`)} className="w-full flex items-center gap-3 bg-buddy-surface rounded-xl p-4 border border-buddy-surface-raised cursor-pointer hover:border-buddy-green/40 transition-colors text-left">
+                <div className="w-10 h-10 rounded-full bg-buddy-green/10 flex items-center justify-center text-buddy-green overflow-hidden shrink-0">
+                  {event.gym_data.logo_url ? <img src={event.gym_data.logo_url} alt="" className="w-full h-full object-contain" /> : <Dumbbell size={20} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1">
+                    <p className="font-bold text-sm truncate">{event.gym_data.name}</p>
+                    {event.gym_data.is_verified && <ShieldCheck size={14} className="text-buddy-green shrink-0" />}
+                  </div>
+                  <p className="text-xs text-buddy-text-secondary">Host gym</p>
+                </div>
+                <ArrowLeft size={16} className="text-buddy-text-secondary rotate-180" />
+              </button>
+              {event.gym_photo_roll && event.gym_photo_roll.length > 0 && (
+                <div>
+                  <div className="flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory" aria-label="Gym photo roll">
+                    {event.gym_photo_roll.map((url: string, i: number) => (
+                      <img key={i} src={url} alt={`Gym photo ${i + 1}`} loading="lazy" className="w-24 h-24 object-cover rounded-xl snap-start shrink-0 border border-buddy-surface-raised" />
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-buddy-text-secondary flex items-center gap-1 mt-1"><ShieldCheck size={10} className="text-buddy-green" /> Members-only roll — visible because you&apos;re an active member of {event.gym_data.name}.</p>
+                </div>
+              )}
+              {event.visibility === 'gym_members' && (
+                <p className="text-[10px] text-buddy-blue bg-buddy-blue/10 border border-buddy-blue/20 rounded-lg px-3 py-1.5 flex items-center gap-1"><ShieldCheck size={10} /> Gym members only event</p>
+              )}
+            </div>
+          )}
+
           {event.shop_data && (
             <div className="flex items-center gap-3 bg-buddy-surface rounded-xl p-4 border border-buddy-surface-raised cursor-pointer hover:border-buddy-electric transition-colors" onClick={() => navigate(`/shops/${event.shop_data?.handle}`)}>
               <div className="w-10 h-10 rounded-full bg-buddy-electric/10 flex items-center justify-center text-buddy-electric">
@@ -227,13 +260,20 @@ export default function EventDetail() {
             </div>
 
             {event.location && event.event_type !== 'online' && (
-              <div className="flex items-center gap-3 border-t border-buddy-surface-raised pt-3">
+              <div className="flex items-start gap-3 border-t border-buddy-surface-raised pt-3">
                 <div className="w-10 h-10 rounded-full bg-buddy-electric/10 flex items-center justify-center shrink-0">
                   <MapPin size={18} className="text-buddy-electric" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold">{event.location}</p>
                   <a href={`https://maps.google.com/?q=${encodeURIComponent(event.location)}`} target="_blank" rel="noreferrer" className="text-xs text-buddy-electric hover:underline font-medium">View on Map</a>
+                  {event.location_lat != null && event.location_lng != null && (
+                    <div className="mt-2 h-36 rounded-xl overflow-hidden border border-buddy-surface-raised">
+                      <Suspense fallback={<div className="w-full h-full animate-pulse bg-buddy-surface-raised" />}>
+                        <MiniLeafletMap lat={event.location_lat} lng={event.location_lng} label={event.location} />
+                      </Suspense>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -445,6 +485,11 @@ export default function EventDetail() {
                 const sel = (event.ticket_tiers || []).find((t: any) => t.name === tier);
                 const prices = sel?.price_artifacts || event.ticket_price_artifacts || {};
                 if (event.is_free && !sel?.price_artifacts) return 'Free';
+                if (event.gym_data && (event.member_price_artifacts || event.non_member_price_artifacts)) {
+                  const fmt = (m?: Record<string, number> | null) =>
+                    m && Object.keys(m).length > 0 ? Object.entries(m).map(([k, v]) => `${v} ${k}s`).join(', ') : 'Free';
+                  return `Members ${fmt(event.member_price_artifacts)} · Others ${fmt(event.non_member_price_artifacts)}`;
+                }
                 return Object.entries(prices).map(([k, v]) => `${v} ${k}s`).join(', ') || 'Free';
               })()}
             </span>

@@ -6,6 +6,10 @@ urlpatterns = [
     # --- Shops ---
     path('shops/', views.ShopListView.as_view(), name='shops'),
     path('shops/my/', views.MyShopsView.as_view(), name='my_shops'),
+    # --- Shop ↔ Gym links — declared BEFORE `shops/<slug:handle>/` so the
+    # 'gym-links' literal is not swallowed by the handle pattern.
+    path('shops/gym-links/', views.ShopGymLinkListView.as_view(), name='shop_gym_links'),
+    path('shops/gym-links/<int:link_id>/respond/', views.ShopGymLinkRespondView.as_view(), name='shop_gym_link_respond'),
     path('register-creator/', views.RegisterCreatorView.as_view(), name='register_creator'),
     path('shops/<slug:handle>/', views.ShopDetailView.as_view(), name='shop_detail'),
     path('shops/<slug:handle>/public/', views.UserShopView.as_view(), name='shop_public'),
@@ -59,9 +63,6 @@ urlpatterns = [
     path('events/tickets/<uuid:ticket_id>/', views.EventTicketDetailView.as_view(), name='ticket_detail'),
     path('events/<uuid:event_id>/media/', views.EventMediaManageView.as_view(), name='event_media'),
     path('events/<uuid:event_id>/feedback/', views.EventFeedbackView.as_view(), name='event_feedback'),
-    # --- Shop ↔ Gym links ---
-    path('shops/gym-links/', views.ShopGymLinkListView.as_view(), name='shop_gym_links'),
-    path('shops/gym-links/<uuid:link_id>/respond/', views.ShopGymLinkRespondView.as_view(), name='shop_gym_link_respond'),
     path('events/<uuid:event_id>/media/<uuid:media_id>/', views.EventMediaManageView.as_view(), name='event_media_delete'),
 
     # --- Food Recognition ---

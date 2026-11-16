@@ -156,6 +156,11 @@ class GymShopsView(views.APIView):
             link.save(update_fields=['status', 'requested_by', 'decided_by', 'updated_at'])
         notify_status = link.status  # link.status after possible reset
         _notify_shop_staff(gym, shop, link, notify_status)
+        from .audit import log_gym_action
+        log_gym_action(gym=gym, actor=request.user.profile, action='gym.shops.link',
+                       summary=(f'Requested link to shop “{shop.name}”' if notify_status == 'pending' else f'Linked shop “{shop.name}”'),
+                       target_type='shop', target_id=str(shop.id),
+                       before={'status': 'none'}, after={'status': notify_status})
         message = (
             'Request sent — waiting on the shop to approve.' if link.status == 'pending'
             else 'Linked.'
@@ -171,9 +176,17 @@ class GymShopsView(views.APIView):
         if gym is None or membership is None:
             return Response({'success': False, 'message': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         handle = (request.data.get('handle') or '').strip().lower()
-        deleted, _ = ShopGymLink.objects.filter(gym=gym, shop__handle__iexact=handle).delete()
-        if not deleted:
+        link = ShopGymLink.objects.filter(gym=gym, shop__handle__iexact=handle).select_related('shop').first()
+        if link is None:
             return Response({'success': False, 'message': 'That shop is not connected.'},
                             status=status.HTTP_404_NOT_FOUND)
+        shop_name = link.shop.name
+        shop_id = link.shop_id
+        link.delete()
+        from .audit import log_gym_action
+        log_gym_action(gym=gym, actor=request.user.profile, action='gym.shops.unlink',
+                       summary=f'Disconnected shop “{shop_name}”',
+                       target_type='shop', target_id=str(shop_id),
+                       before={'status': 'active'}, after={'status': 'removed'})
         return Response({'success': True, 'data': None,
                          'message': 'Shop disconnected.', 'errors': None, 'pagination': None})

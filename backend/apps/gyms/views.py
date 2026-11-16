@@ -2042,7 +2042,10 @@ class GymEventsView(views.APIView):
         from apps.marketplace.models import MarketplaceEvent
         from apps.marketplace.serializers import MarketplaceEventSerializer
         from django.utils import timezone as tz
+        from apps.marketplace.event_visibility import event_visibility_q
+
         qs = MarketplaceEvent.objects.filter(gym=gym, is_published=True, is_cancelled=False)
+        qs = qs.filter(event_visibility_q(request))
         upcoming_only = request.query_params.get('upcoming', 'true').lower() == 'true'
         if upcoming_only:
             qs = qs.filter(start_datetime__gte=tz.now())

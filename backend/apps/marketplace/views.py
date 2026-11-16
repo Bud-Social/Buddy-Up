@@ -2057,7 +2057,10 @@ class EventListView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        qs = MarketplaceEvent.objects.filter(is_published=True, is_cancelled=False)
+        from .event_visibility import event_visibility_q
+
+        qs = (MarketplaceEvent.objects.filter(is_published=True, is_cancelled=False)
+              .filter(event_visibility_q(request)))
         qs, _taken = _hide_taken_down(qs, 'marketplace.event', viewer=request.user)
         category = request.query_params.get('category')
         event_type = request.query_params.get('event_type')
@@ -2204,11 +2207,27 @@ class EventListView(views.APIView):
             ).exists():
                 return _api_error('Only a gym owner can attach an event to that gym.', status.HTTP_403_FORBIDDEN)
         
-        shop_id = data.pop('shop_id', None)
-        shop, error = _resolve_commerce_publisher(request.user.profile, shop_id)
-        if error:
-            return Response({'success': False, 'data': None, 'message': error,
-                             'errors': None, 'pagination': None}, status=403)
+        if gym is not None:
+            # Gym event: the owner/co_owner gate already passed. The
+            # marketplace creator-application requirement doesn't apply —
+            # this event belongs to the gym, not a creator's shop.
+            data.pop('shop_id', None)
+            shop = None
+        else:
+            shop_id = data.pop('shop_id', None)
+            shop, error = _resolve_commerce_publisher(request.user.profile, shop_id)
+            if error:
+                return Response({'success': False, 'data': None, 'message': error,
+                                 'errors': None, 'pagination': None}, status=403)
+
+        # Visibility is only meaningful for gym-attached events: a non-gym
+        # event must never hide behind a gym's member gate, and a hidden
+        # gym_members request by a non-manage caller is downgraded to public.
+        visibility = (data.get('visibility') or 'public').strip().lower()
+        if gym is None:
+            data['visibility'] = 'public'
+        elif visibility not in ('gym_members', 'hidden'):
+            data['visibility'] = 'public'
 
         event = MarketplaceEvent.objects.create(
             creator=request.user.profile,
@@ -2229,8 +2248,13 @@ class EventDetailView(views.APIView):
             return None
 
     def get(self, request, event_id):
+        from .event_visibility import event_visibility_q
+
         event = self.get_object(event_id)
         if not event:
+            return Response({'success': False, 'message': 'Event not found.'}, status=404)
+        if not MarketplaceEvent.objects.filter(event_visibility_q(request)).filter(pk=event.pk).exists():
+            # Do not 404-vs-403 leak which private event ids exist.
             return Response({'success': False, 'message': 'Event not found.'}, status=404)
         if event.creator != request.user.profile and not can_view_content(request, event):
             return Response({'success': False, 'data': None, 'message': 'Not found.'},
@@ -2249,9 +2273,18 @@ class EventDetailView(views.APIView):
                      'timezone', 'capacity', 'ticket_price_artifacts', 'is_free', 'is_published',
                      'tags', 'category', 'agenda', 'recurrence', 'ticket_tiers',
                      'early_bird_enabled', 'early_bird_deadline', 'early_bird_price_artifacts',
-                     'cancellation_policy', 'is_draft']
+                     'cancellation_policy', 'is_draft',
+                     'member_price_artifacts', 'non_member_price_artifacts', 'visibility',
+                     'linked_live_id']
         for field in updatable:
             if field in request.data:
+                if field == 'visibility':
+                    v = str(request.data[field]).strip().lower()
+                    # Same rule as create: visibility only sticks on gym-attached events.
+                    if not event.gym_id or v not in ('gym_members', 'hidden', 'public'):
+                        continue
+                    event.visibility = v
+                    continue
                 setattr(event, field, request.data[field])
         event.save()
         return Response({'success': True, 'data': MarketplaceEventSerializer(event, context={'request': request}).data})
@@ -2274,6 +2307,10 @@ class PurchaseEventTicketView(views.APIView):
         try:
             event = MarketplaceEvent.objects.get(id=event_id)
         except MarketplaceEvent.DoesNotExist:
+            return Response({'success': False, 'message': 'Event not found.'}, status=404)
+
+        from .event_visibility import event_visibility_q
+        if not MarketplaceEvent.objects.filter(event_visibility_q(request)).filter(pk=event.pk).exists():
             return Response({'success': False, 'message': 'Event not found.'}, status=404)
 
         if event.is_cancelled:
@@ -2300,9 +2337,26 @@ class PurchaseEventTicketView(views.APIView):
                 return Response({'success': False, 'message': f'Unknown ticket tier: {tier_name}.'}, status=400)
 
         price_artifacts = (tier_entry.get('price_artifacts') if tier_entry else None) or event.ticket_price_artifacts
+        if tier_entry is None and event.gym_id and not event.is_free:
+            # Gym-attached event: the member vs non-member split decides who
+            # pays what. The buyer's debit rules the price; the gym wallet is
+            # credited in fall-through below (mirrors the lives RSVP flow).
+            from apps.gyms.models import GymMembership
+            member_price = event.member_price_artifacts or {}
+            non_member_price = event.non_member_price_artifacts or {}
+            if member_price or non_member_price:
+                is_member = GymMembership.objects.filter(
+                    gym_id=event.gym_id, member=profile, subscription_active=True,
+                ).exists()
+                price_artifacts = (member_price if is_member else non_member_price) if member_price or non_member_price else {}
+                if price_artifacts:
+                    price_artifacts = {k: int(v) for k, v in price_artifacts.items() if int(v or 0) > 0}
+            else:
+                is_member = False
         if price_artifacts and not event.is_free:
             from apps.wallet.utils import credit_artifacts
             platform_cut_rate = PLATFORM_CUTS.get('marketplace', 0.15)
+            gym_credited = False
             with transaction.atomic():
                 for at, qty in price_artifacts.items():
                     if not deduct_artifacts(profile, at, qty):
@@ -2314,25 +2368,37 @@ class PurchaseEventTicketView(views.APIView):
                         fiat_amount=round(qty * ARTIFACT_VALUES.get(at, 0), 2),
                         fiat_currency='USD',
                     )
-                    cut_qty = max(1, int(qty * platform_cut_rate))
-                    creator_qty = qty - cut_qty
-                    if creator_qty > 0:
-                        credit_artifacts(event.creator, at, creator_qty)
-                        ArtifactTransaction.objects.create(
-                            user=event.creator, transaction_type='marketplace', artifact_type=at,
-                            quantity=creator_qty, direction='credit', counterparty=profile,
-                            status='completed', reference_id=f'mp_et_{event.id}',
-                            fiat_amount=round(creator_qty * ARTIFACT_VALUES.get(at, 0), 2),
-                            fiat_currency='USD',
-                        )
-                    if cut_qty > 0:
-                        ArtifactTransaction.objects.create(
-                            user=event.creator, transaction_type='platform_cut', artifact_type=at,
-                            quantity=cut_qty, direction='debit', status='completed',
-                            reference_id=f'mp_et_{event.id}',
-                            fiat_amount=round(cut_qty * ARTIFACT_VALUES.get(at, 0), 2),
-                            fiat_currency='USD',
-                        )
+                    if event.gym_id:
+                        from apps.gyms.capacity import credit_gym_wallet
+                        from apps.gyms.models import Gym
+                        event_gym = Gym.objects.filter(id=event.gym_id).first()
+                        if event_gym:
+                            credit_gym_wallet(
+                                event_gym, at, int(qty), kind='event_fee',
+                                reference_id=f'event:{event.id}',
+                                note='Gym event ticket fee',
+                            )
+                            gym_credited = True
+                    if not gym_credited:
+                        cut_qty = max(1, int(qty * platform_cut_rate))
+                        creator_qty = qty - cut_qty
+                        if creator_qty > 0:
+                            credit_artifacts(event.creator, at, creator_qty)
+                            ArtifactTransaction.objects.create(
+                                user=event.creator, transaction_type='marketplace', artifact_type=at,
+                                quantity=creator_qty, direction='credit', counterparty=profile,
+                                status='completed', reference_id=f'mp_et_{event.id}',
+                                fiat_amount=round(creator_qty * ARTIFACT_VALUES.get(at, 0), 2),
+                                fiat_currency='USD',
+                            )
+                        if cut_qty > 0:
+                            ArtifactTransaction.objects.create(
+                                user=event.creator, transaction_type='platform_cut', artifact_type=at,
+                                quantity=cut_qty, direction='debit', status='completed',
+                                reference_id=f'mp_et_{event.id}',
+                                fiat_amount=round(cut_qty * ARTIFACT_VALUES.get(at, 0), 2),
+                                fiat_currency='USD',
+                            )
 
         ticket, created = EventTicket.objects.get_or_create(
             event=event, holder=profile, defaults={
@@ -2746,6 +2812,9 @@ class ShopGymLinkListView(views.APIView):
         status = (request.query_params.get('status') or '').strip().lower()
         if status:
             links = links.filter(status=status)
+        shop = (request.query_params.get('shop') or '').strip().lower()
+        if shop:
+            links = links.filter(shop__handle__iexact=shop)
         rows = [
             {
                 'id': str(link_obj.id),
@@ -2794,6 +2863,14 @@ class ShopGymLinkRespondView(views.APIView):
             return Response({'success': False, 'message': 'action must be "accept" or "decline".'}, status=400)
         link.decided_by = profile
         link.save(update_fields=['status', 'decided_by', 'updated_at'])
+        from apps.gyms.audit import log_gym_action
+        log_gym_action(
+            gym=link.gym, actor=profile,
+            action='gym.shops.link',
+            summary=f'{link.shop.name} {"approved" if action == "accept" else "declined"} the gym link',
+            target_type='shop', target_id=str(link.shop_id),
+            before={'status': 'pending'}, after={'status': link.status},
+        )
         # Close the contract: the gym asked; the shop must answer — the gym hears back.
         try:
             from apps.gyms.models import GymMembership

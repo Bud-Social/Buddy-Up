@@ -560,6 +560,16 @@ class MarketplaceEvent(TimestampedModel):
         'lives.BuddyLive', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='linked_events',
     )
+    # Visibility ladder for gym-attached events:
+    #   public      — discoverable on the gym's public page and the marketplace roll
+    #   gym_members — only active members of the attached gym (and gym owners) see it
+    #   hidden      — only the gym's owners/co-owners see it (work-in-progress drafts)
+    VISIBILITY_CHOICES = [
+        ('public', 'Public'),
+        ('gym_members', 'Gym members only'),
+        ('hidden', 'Hidden'),
+    ]
+    visibility = models.CharField(max_length=15, choices=VISIBILITY_CHOICES, default='public')
     is_free = models.BooleanField(default=True)
     early_bird_enabled = models.BooleanField(default=False)
     early_bird_deadline = models.DateTimeField(null=True, blank=True)

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Users, Radio, Info, MessageCircle, Settings, LogOut, Star, Calendar, StarHalf, Heart, Send, MapPin, Tag, Crown, BookOpen, Lock, Zap, AlertCircle, Search, X, Plus, ChevronRight } from 'lucide-react';
+import { Users, Radio, Info, MessageCircle, Settings, LogOut, Star, Calendar, StarHalf, Heart, Send, MapPin, Tag, Crown, BookOpen, Lock, Zap, AlertCircle, Search, X, Plus, ChevronRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
@@ -722,6 +722,22 @@ export default function GymDetail() {
               )}
             </div>
 
+            {/* Members-only photo roll — server-gated to active members */}
+            {(() => {
+              const roll = (events as any[]).find((e) => Array.isArray(e.gym_photo_roll) && e.gym_photo_roll.length > 0)?.gym_photo_roll as string[] | undefined;
+              if (!roll) return null;
+              return (
+                <div className="rounded-2xl border border-buddy-surface-raised overflow-hidden bg-buddy-surface">
+                  <div className="flex gap-2 p-2 overflow-x-auto snap-x snap-mandatory">
+                    {roll.map((url, i) => (
+                      <img key={i} src={url} loading="lazy" alt={`Gym photo ${i + 1}`} className="w-36 h-28 object-cover rounded-xl snap-start shrink-0" />
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-buddy-text-secondary px-3 pb-2 flex items-center gap-1"><ShieldCheck size={10} className="text-buddy-green" /> Members-only roll — you&apos;re in because you&apos;re an active member.</p>
+                </div>
+              );
+            })()}
+
             {events.length === 0 ? (
               <div className="text-center py-12 text-buddy-text-secondary bg-buddy-surface rounded-2xl">
                 <Tag size={32} className="mx-auto mb-3 opacity-20" />
@@ -739,8 +755,13 @@ export default function GymDetail() {
                           <Tag size={24} className="text-buddy-text-secondary opacity-50" />
                         </div>
                       )}
-                      <div className="absolute top-2 left-2 px-2 py-0.5 bg-buddy-black/80 backdrop-blur-sm rounded text-[10px] font-bold uppercase tracking-wider text-buddy-gold">
-                        {event.event_type.replace('_', ' ')}
+                      <div className="absolute top-2 left-2 flex flex-col gap-1">
+                        <span className="px-2 py-0.5 bg-buddy-black/80 backdrop-blur-sm rounded text-[10px] font-bold uppercase tracking-wider text-buddy-gold">
+                          {event.event_type.replace('_', ' ')}
+                        </span>
+                        {(event as any).visibility === 'gym_members' && (
+                          <span className="px-2 py-0.5 bg-buddy-blue/90 backdrop-blur-sm rounded text-[9px] font-semibold text-white w-fit">Members only</span>
+                        )}
                       </div>
                     </div>
                     
@@ -758,14 +779,43 @@ export default function GymDetail() {
                           </div>
                           {event.location && (
                             <div className="flex items-center gap-1.5 text-xs text-buddy-text-secondary">
-                              <MapPin size={14} /> <span className="truncate max-w-[120px]">{event.location}</span>
+                              <MapPin size={14} />
+                              {event.location_lat != null && event.location_lng != null ? (
+                                <a href={`https://maps.google.com/?q=${event.location_lat},${event.location_lng}`} target="_blank" rel="noreferrer" className="text-buddy-electric hover:underline truncate max-w-[160px]">{event.location}</a>
+                              ) : (
+                                <span className="truncate max-w-[120px]">{event.location}</span>
+                              )}
+                            </div>
+                          )}
+                          {event.capacity > 0 && (
+                            <div className="pt-1">
+                              <div className="h-1 w-40 rounded-full bg-buddy-surface-raised overflow-hidden">
+                                <div className="h-full rounded-full bg-buddy-green" style={{ width: `${Math.min(100, Math.round(((event.attendee_count ?? 0) / event.capacity) * 100))}%` }} />
+                              </div>
+                              <p className="text-[9px] text-buddy-text-secondary mt-0.5">{event.attendee_count ?? 0}/{event.capacity} · {Math.max(0, event.capacity - (event.attendee_count ?? 0))} left</p>
                             </div>
                           )}
                         </div>
                         
                         <div className="flex flex-col items-end gap-2">
-                          <div className="text-sm font-bold text-buddy-green">
-                            {event.is_free ? 'Free' : Object.entries(event.ticket_price_artifacts || {}).map(([k, v]) => `${v} ${k}s`).join(', ')}
+                          <div className="text-sm font-bold text-buddy-green text-right">
+                            {(() => {
+                              const memberSplit = (event as any).member_price_artifacts as Record<string, number> | null | undefined;
+                              const nonMemberSplit = (event as any).non_member_price_artifacts as Record<string, number> | null | undefined;
+                              const fmt = (m?: Record<string, number> | null) =>
+                                m && Object.keys(m).length > 0
+                                  ? Object.entries(m).map(([k, v]) => `${v} ${k}s`).join(', ')
+                                  : 'Free';
+                              if (memberSplit || nonMemberSplit) {
+                                return (
+                                  <div className="space-y-0.5">
+                                    <span className="block">Member: {fmt(memberSplit)}</span>
+                                    <span className="block text-buddy-text-primary/80 text-[11px]">Others: {fmt(nonMemberSplit)}</span>
+                                  </div>
+                                );
+                              }
+                              return event.is_free ? 'Free' : Object.entries(event.ticket_price_artifacts || {}).map(([k, v]) => `${v} ${k}s`).join(', ');
+                            })()}
                           </div>
                           <Button size="sm" variant={event.is_registered ? 'outline' : 'primary'} onClick={async () => {
                               try {

@@ -130,6 +130,11 @@ export interface MarketplaceEvent {
   id: string;
   creator_data: { username: string; display_name: string; avatar_url: string; verification_status?: string };
   gym_data: { id: string; name: string; handle: string; logo_url: string; is_verified?: boolean } | null;
+  /** Member-only: the attached gym's photo roll, gated server-side. */
+  gym_photo_roll?: string[];
+  visibility?: 'public' | 'gym_members' | 'hidden';
+  member_price_artifacts?: Record<string, number> | null;
+  non_member_price_artifacts?: Record<string, number> | null;
   shop_data: { id: string; name: string; handle: string; verification_status?: string } | null;
   shop_id: string | null;
   gym_id: string | null;
@@ -227,6 +232,24 @@ export interface UserShopResponse {
   programmes: TrainingProgrammeMP[];
   events: MarketplaceEvent[];
   products: ProductMP[];
+}
+
+export interface ShopMember {
+  id: string;
+  role: 'owner' | 'manager' | 'staff';
+  profile_data: { username: string; display_name: string; avatar_url: string; verification_status?: string } | null;
+  created_at: string;
+}
+
+/** Manage-console payload: detail + staff roster + my own role. */
+export interface ShopFull extends ShopDetail {
+  members?: ShopMember[];
+  my_role?: 'owner' | 'manager' | 'staff' | null;
+  gym_links?: Array<{ id: string; shop_id: string; gym_id: string; gym_name: string; gym_avatar?: string; gym_handle?: string; is_primary: boolean; status: 'pending' | 'active' | 'declined'; created_at?: string }>;
+  product_count?: number;
+  programme_count?: number;
+  meal_plan_count?: number;
+  event_count?: number;
 }
 
 export interface FoodItem {
@@ -890,6 +913,15 @@ export const marketplaceApi = {
   getMyShops: () =>
     apiClient.get<ApiResponse<Shop[]>>('/marketplace/shops/my/').then((r) => r.data),
 
+  getShopManage: (handle: string) =>
+    apiClient.get<ApiResponse<ShopFull>>(`/marketplace/shops/${handle}/`).then((r) => r.data),
+
+  addShopMember: (handle: string, username: string, role: 'owner' | 'manager' | 'staff') =>
+    apiClient.post<ApiResponse<ShopMember>>(`/marketplace/shops/${handle}/members/`, { username, role }).then((r) => r.data),
+
+  removeShopMember: (handle: string, username: string) =>
+    apiClient.delete<ApiResponse<null>>(`/marketplace/shops/${handle}/members/`, { data: { username } }).then((r) => r.data),
+
   registerCreator: (data?: Record<string, unknown>) =>
     apiClient.post<ApiResponse<Shop>>('/marketplace/register-creator/', data || {}).then((r) => r.data),
 
@@ -1054,8 +1086,10 @@ export interface GymLinkRequest {
 }
 
 const gymLinksApi = {
-  list: (status?: 'pending' | 'active' | 'declined') =>
-    apiClient.get<ApiResponse<GymLinkRequest[]>>('/marketplace/shops/gym-links/', { params: status ? { status } : undefined }).then((r) => r.data),
+  list: (status?: 'pending' | 'active' | 'declined', shop?: string) =>
+    apiClient.get<ApiResponse<GymLinkRequest[]>>('/marketplace/shops/gym-links/', {
+      params: { ...(status ? { status } : {}), ...(shop ? { shop } : {}) },
+    }).then((r) => r.data),
 
   respond: (linkId: string, action: 'accept' | 'decline') =>
     apiClient.post(`/marketplace/shops/gym-links/${linkId}/respond/`, { action }).then((r) => r.data),

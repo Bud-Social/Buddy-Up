@@ -78,6 +78,7 @@ const OrderDetail = lazy(() => import('@/pages/app/OrderDetail'));
 const CreatorStudio = lazy(() => import('@/pages/app/CreatorStudio'));
 const DiscountCodes = lazy(() => import('@/pages/app/DiscountCodes'));
 const MyShops = lazy(() => import('@/pages/app/MyShops'));
+const ShopManage = lazy(() => import('@/pages/app/ShopManage'));
 const CreateShop = lazy(() => import('@/pages/app/CreateShop'));
 const EventOrganiser = lazy(() => import('@/pages/app/EventOrganiser'));
 const StationManage = lazy(() => import('@/pages/app/StationManage'));
@@ -255,6 +256,7 @@ export const router = createBrowserRouter([
           // `/marketplace/shops/create`, which had no route at all — both of
           // these pages existed but were unreachable.
           { path: '/marketplace/shops', element: <SWrapper><MyShops /></SWrapper> },
+          { path: '/marketplace/shops/:handle/manage', element: <SWrapper><ShopManage /></SWrapper> },
           { path: '/marketplace/shops/create', element: <SWrapper><CreateShop /></SWrapper> },
           // Role dashboards. Declared before the `:eventId` sibling so the
           // organiser hub is never swallowed by the event detail route.

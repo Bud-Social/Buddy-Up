@@ -612,6 +612,7 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
     spots_remaining = serializers.SerializerMethodField()
     cover_image_url = serializers.SerializerMethodField()
     media = EventMediaSerializer(many=True, read_only=True)
+    gym_photo_roll = serializers.SerializerMethodField()
 
     class Meta:
         model = MarketplaceEvent
@@ -631,6 +632,8 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
             'media', 'created_at',
             'member_price_artifacts', 'non_member_price_artifacts',
             'linked_live_id',
+            'visibility',
+            'gym_photo_roll',
         ]
 
     def get_community_name(self, obj):
@@ -676,6 +679,30 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
         if obj.capacity == 0:
             return None  # unlimited
         return max(0, obj.capacity - obj.attendee_count)
+
+    def get_gym_photo_roll(self, obj):
+        """Up to six gym photos — only for active members of the attached gym.
+
+        The roll is a perk: it's the doorway into the vibe of the space, and
+        it stays invisible to everyone who has not earned it by joining.
+        Owners/co-owners always see it (they own the roll).
+        """
+        if not obj.gym_id:
+            return []
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return []
+        from apps.gyms.models import GymMembership, GymMedia
+        is_member = GymMembership.objects.filter(
+            gym_id=obj.gym_id, member=request.user.profile, subscription_active=True,
+        ).exists()
+        if not is_member:
+            return []
+        urls = (
+            GymMedia.objects.filter(gym_id=obj.gym_id, kind='photo')
+            .order_by('-created_at').values_list('file_url', flat=True)[:6]
+        )
+        return [u for u in urls if u]
 
 
 class EventTicketSerializer(serializers.ModelSerializer):
@@ -786,6 +813,8 @@ class CreateEventSerializer(serializers.Serializer):
     member_price_artifacts = serializers.JSONField(required=False, default=dict, allow_null=True)
     non_member_price_artifacts = serializers.JSONField(required=False, default=dict, allow_null=True)
     linked_live_id = serializers.UUIDField(required=False, allow_null=True)
+    VISIBILITY_CHOICES = [('public', 'Public'), ('gym_members', 'Gym members only'), ('hidden', 'Hidden')]
+    visibility = serializers.ChoiceField(choices=VISIBILITY_CHOICES, required=False, default='public')
     agenda = serializers.JSONField(required=False, default=list)
     recurrence = serializers.ChoiceField(choices=['none', 'daily', 'weekly', 'monthly'], required=False, default='none')
     ticket_tiers = serializers.JSONField(required=False, default=list)
@@ -794,9 +823,6 @@ class CreateEventSerializer(serializers.Serializer):
     early_bird_price_artifacts = serializers.JSONField(required=False, default=dict)
     cancellation_policy = serializers.CharField(required=False, allow_blank=True, max_length=2000, default='')
     is_draft = serializers.BooleanField(required=False, default=False)
-    visibility = serializers.ChoiceField(
-        choices=['public', 'buddies', 'private'], required=False, default='public',
-    )
     gallery_urls = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     promo_video_url = serializers.URLField(required=False, allow_blank=True)
 
