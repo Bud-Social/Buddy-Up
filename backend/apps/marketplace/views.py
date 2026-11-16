@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 from uuid import UUID, uuid4
 from django.conf import settings
@@ -63,6 +64,8 @@ from apps.wallet.utils import deduct_artifacts, credit_artifacts, credit_creator
 from apps.wallet.models import ArtifactTransaction
 from apps.wallet.serializers import PLATFORM_CUTS, ARTIFACT_VALUES
 from apps.ai.client import ai_post
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -2743,21 +2746,20 @@ class ShopGymLinkListView(views.APIView):
         status = (request.query_params.get('status') or '').strip().lower()
         if status:
             links = links.filter(status=status)
-        status_label = {'pending': 'pending approval', 'active': 'approved', 'declined': 'declined'}
         rows = [
             {
-                'id': str(l.id),
-                'gym_id': str(l.gym_id),
-                'gym_name': l.gym.name,
-                'gym_handle': l.gym.handle,
-                'gym_avatar': l.gym.logo_url,
-                'shop_id': str(l.shop_id),
-                'is_primary': l.is_primary,
-                'status': l.status,
-                'requested_by': getattr(l.requested_by, 'username', None),
-                'decided_by': getattr(l.decided_by, 'username', None),
-                'created_at': l.created_at.isoformat(),
-            } for l in links.order_by('-created_at')
+                'id': str(link_obj.id),
+                'gym_id': str(link_obj.gym_id),
+                'gym_name': link_obj.gym.name,
+                'gym_handle': link_obj.gym.handle,
+                'gym_avatar': link_obj.gym.logo_url,
+                'shop_id': str(link_obj.shop_id),
+                'is_primary': link_obj.is_primary,
+                'status': link_obj.status,
+                'requested_by': getattr(link_obj.requested_by, 'username', None),
+                'decided_by': getattr(link_obj.decided_by, 'username', None),
+                'created_at': link_obj.created_at.isoformat(),
+            } for link_obj in links.order_by('-created_at')
         ]
         return Response({'success': True, 'data': rows, 'message': 'OK',
                          'errors': None, 'pagination': None})
@@ -2792,6 +2794,26 @@ class ShopGymLinkRespondView(views.APIView):
             return Response({'success': False, 'message': 'action must be "accept" or "decline".'}, status=400)
         link.decided_by = profile
         link.save(update_fields=['status', 'decided_by', 'updated_at'])
+        # Close the contract: the gym asked; the shop must answer — the gym hears back.
+        try:
+            from apps.gyms.models import GymMembership
+            from apps.notifications.tasks import create_notification
+
+            gym_member_ids = list(
+                GymMembership.objects.filter(gym=link.gym, role__in=['owner', 'co_owner'])
+                .values_list('member__user_id', flat=True)
+            )
+            accepted = action == 'accept'
+            for uid in gym_member_ids:
+                create_notification.delay(
+                    str(uid), 'shop_gym_link_decision',
+                    f'{link.shop.name} {"approved" if accepted else "declined"} the link',
+                    f'{link.shop.name} {"is now connected to {link.gym.name} — shop sales will feed the gym\u2019s revenue tab." if accepted else "declined the link request. Attribution stays off until they approve."}',
+                    {'shop_handle': link.shop.handle, 'gym_handle': link.gym.handle, 'status': link.status},
+                    dedupe_key=f'shop-gym-link-decision-{link.id}',
+                )
+        except Exception:
+            logger.warning('gym decision notification failed for link %s', link.id)
         return Response({'success': True,
                          'data': {'id': str(link.id), 'status': link.status},
                          'message': 'Gym link approved.' if action == 'accept' else 'Gym link declined.',

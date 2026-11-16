@@ -4,7 +4,7 @@ import {
   Bell, UserPlus, Users, Zap, Heart, MessageCircle, Radio,
   ShoppingBag, CreditCard, Repeat, AtSign, Ticket, Calendar, Dumbbell,
   CheckCircle2, CheckCheck, FileText, Utensils, Monitor, CalendarX2,
-  ShieldCheck, BadgeCheck, Flame, Pin, PinOff, Trash2, MailOpen,
+  ShieldCheck, BadgeCheck, Flame, Pin, PinOff, Trash2, MailOpen, Link2,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -50,6 +50,8 @@ const iconMap: Record<string, typeof Bell> = {
   programme_reminder: Calendar,
   new_device_login: Monitor,
   session_cancelled: CalendarX2,
+  shop_gym_link_request: Link2,
+  shop_gym_link_decision: Link2,
   shop_created: ShoppingBag,
   shop_invite: ShoppingBag,
   shop_verified: ShieldCheck,
@@ -74,6 +76,7 @@ const COMMERCE_TYPES = new Set([
   'event_ticket_purchased', 'order_status_changed', 'payout_processed',
   'payment_received', 'withdrawal_processed', 'new_purchase',
   'session_booked', 'session_reminder', 'session_cancelled',
+  'shop_gym_link_request', 'shop_gym_link_decision',
 ]);
 
 function LiveCountdown({ scheduledFor }: { scheduledFor?: string | null }) {
@@ -264,6 +267,12 @@ export default function Notifications() {
 
     if (type === 'shop_gym_link_request') {
       navigate('/marketplace/shops?tab=gym-links');
+      return;
+    }
+
+    if (type === 'shop_gym_link_decision') {
+      const slug = meta.gym_handle;
+      if (slug) navigate(`/gyms/${slug}/manage?tab=revenue`);
       return;
     }
 

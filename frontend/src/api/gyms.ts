@@ -379,6 +379,8 @@ export interface GymShopSummary {
   created_at: string;
   units_sold_90d: number;
   orders_90d: number;
+  /** Seller-split artifact totals for this shop's paid orders (last 90d). */
+  artifact_splits_90d?: Record<string, number>;
   status: 'pending' | 'active' | 'declined';
   is_primary: boolean;
   decided_at: string | null;

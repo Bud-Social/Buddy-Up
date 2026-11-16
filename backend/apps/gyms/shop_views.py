@@ -108,10 +108,14 @@ class GymShopsView(views.APIView):
             orders = agg['orders'] or 0
             total_units_90d += units
             total_orders_90d += orders
+            shop_splits = {}
             for row in items.values_list('seller_split_artifacts', flat=True):
                 for artifact, qty in (row or {}).items():
-                    artifact_totals[artifact] = artifact_totals.get(artifact, 0) + int(qty or 0)
-            shops.append({**_link_payload(link), 'units_sold_90d': units, 'orders_90d': orders})
+                    q = int(qty or 0)
+                    artifact_totals[artifact] = artifact_totals.get(artifact, 0) + q
+                    shop_splits[artifact] = shop_splits.get(artifact, 0) + q
+            shops.append({**_link_payload(link), 'units_sold_90d': units, 'orders_90d': orders,
+                          'artifact_splits_90d': shop_splits})
 
         return Response({
             'success': True,
