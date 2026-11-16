@@ -94,7 +94,7 @@ class GymShopsView(views.APIView):
         total_orders_90d = 0
         artifact_totals = {}
 
-        active_links = [l for l in links if getattr(l, 'status', 'active') == 'active']
+        active_links = [link for link in links if getattr(link, 'status', 'active') == 'active']
         for link in active_links:
             shop = link.shop
             items = OrderItem.objects.filter(

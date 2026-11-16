@@ -118,6 +118,10 @@ class VenueLocationListView(views.APIView):
         if serializer.validated_data.get('is_primary'):
             gym.venues.update(is_primary=False)
         venue = serializer.save(gym=gym)
+        from .audit import log_gym_action
+        log_gym_action(gym=gym, actor=request.user.profile, action='gym.venue.add',
+                       summary=f'Added venue “{venue.name}”',
+                       target_type='venue', target_id=str(venue.id))
         return Response({'success': True, 'data': VenueLocationSerializer(venue).data}, status=status.HTTP_201_CREATED)
 
 
@@ -135,6 +139,10 @@ class VenueLocationDetailView(views.APIView):
         if serializer.validated_data.get('is_primary'):
             gym.venues.exclude(id=venue.id).update(is_primary=False)
         venue = serializer.save()
+        from .audit import log_gym_action
+        log_gym_action(gym=gym, actor=request.user.profile, action='gym.venue.edit',
+                       summary=f'Edited venue “{venue.name}”',
+                       target_type='venue', target_id=str(venue.id))
         return Response({'success': True, 'data': VenueLocationSerializer(venue).data})
 
     def delete(self, request, gym_slug, venue_id):
@@ -143,6 +151,10 @@ class VenueLocationDetailView(views.APIView):
         venue = get_object_or_404(VenueLocation, id=venue_id, gym=gym)
         venue.is_active = False
         venue.save(update_fields=['is_active'])
+        from .audit import log_gym_action
+        log_gym_action(gym=gym, actor=request.user.profile, action='gym.venue.delete',
+                       summary=f'Retired venue “{venue.name}”',
+                       target_type='venue', target_id=str(venue.id))
         if not gym.venues.filter(is_active=True).exists():
             gym.location_city = ''
             gym.location_country = ''
@@ -800,9 +812,19 @@ class GymDetailView(views.APIView):
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+        before_values = {k: getattr(gym, k, None) for k in update_data}
         for k, v in update_data.items():
             setattr(gym, k, v)
         gym.save(update_fields=list(update_data.keys()))
+        from .audit import log_gym_action
+        if update_data:
+            def _preview(v):
+                text = str(v)
+                return text if len(text) <= 200 else text[:200] + '…'
+            log_gym_action(gym=gym, actor=request.user.profile, action='gym.update',
+                           summary=f"Updated {', '.join(sorted(update_data))}",
+                           before={k: _preview(v) for k, v in before_values.items()},
+                           after={k: _preview(v) for k, v in update_data.items()})
 
         serializer = GymSerializer(gym, context={'request': request})
         return Response({
@@ -1369,6 +1391,11 @@ class ManageMemberView(views.APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
             target.role = new_role
             target.save(update_fields=['role'])
+            from .audit import log_gym_action
+            log_gym_action(gym=gym, actor=request.user.profile, action='gym.member.role',
+                           summary=f'{target.member.username} → {new_role}',
+                           target_type='member', target_id=str(target.member_id),
+                           before={'role': previous_role}, after={'role': new_role})
             # Silent demotions are the failure mode here: the member keeps
             # showing a moderator badge and quietly loses the permissions.
             _notify_gym_role_change(gym, target, previous_role, request.user.profile)
@@ -2324,6 +2351,10 @@ class GymOnlineCoachListView(views.APIView):
             except Exception:
                 logger.warning('coach invite notification failed for %s', target.user_id)
 
+        from .audit import log_gym_action
+        log_gym_action(gym=gym, actor=request.user.profile, action='gym.coach.add' if created else 'gym.coach.respond',
+                       summary=f"{'Added' if created else 'Updated'} coach {target.username}",
+                       target_type='coach', target_id=str(row.id))
         return Response({
             'success': True,
             'data': GymOnlineCoachSerializer(row).data,
@@ -2334,7 +2365,12 @@ class GymOnlineCoachListView(views.APIView):
         gym = get_object_or_404(Gym, handle__iexact=gym_slug)
         _require_partner_staff(gym, request.user.profile)
         row = get_object_or_404(GymOnlineCoach, id=coach_id, gym=gym)
+        user_id = row.coach_id
         row.delete()
+        from .audit import log_gym_action
+        log_gym_action(gym=gym, actor=request.user.profile, action='gym.coach.remove',
+                       summary=f'Removed coach {row.coach.username}',
+                       target_type='coach', target_id=str(user_id))
         return Response({'success': True, 'data': None, 'message': 'Coach removed.'})
 
 
@@ -2357,6 +2393,10 @@ class GymOnlineCoachRespondView(views.APIView):
             row.approval_status = 'active'
             row.save(update_fields=['approval_status'])
             GymMembership.objects.filter(gym=gym, member=profile).update(role='trainer')
+            from .audit import log_gym_action
+            log_gym_action(gym=gym, actor=profile, action='gym.coach.respond',
+                           summary=f'Coach {profile.username} accepted',
+                           target_type='coach', target_id=str(row.id))
             from apps.notifications.tasks import create_notification
             if row.added_by_id:
                 try:
@@ -2508,6 +2548,10 @@ class GymAnnounceView(views.APIView):
             visibility='gym_members',
             is_pinned=True,
         )
+        from .audit import log_gym_action
+        log_gym_action(gym=gym, actor=request.user.profile, action='gym.announce',
+                       summary=serializer.validated_data.get('title') or 'Announcement posted',
+                       target_type='post', target_id=str(post.id))
 
         notified = 0
         if serializer.validated_data.get('notify_members', True):
@@ -2537,3 +2581,46 @@ class GymAnnounceView(views.APIView):
             'data': {'post_id': str(post.id), 'notified': notified},
             'message': 'Announcement posted.',
         }, status=status.HTTP_201_CREATED)
+
+
+class GymActionLogListView(views.APIView):
+    """Recent privileged actions on the gym. Moderator/owner/co-owner only."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        membership = GymMembership.objects.filter(
+            gym=gym, member=request.user.profile,
+            role__in=['owner', 'co_owner', 'moderator'],
+        ).first()
+        if membership is None:
+            return Response({'success': False, 'message': 'Not found.'}, status=404)
+
+        from .models import GymActionLog
+        logs = (
+            GymActionLog.objects.filter(gym=gym)
+            .select_related('actor')
+            .order_by('-created_at')
+        )
+        action = (request.query_params.get('action') or '').strip()
+        if action:
+            logs = logs.filter(action__startswith=action)
+        limit = min(int(request.query_params.get('limit') or 100), 200)
+        rows = [
+            {
+                'id': str(entry.id),
+                'action': entry.action,
+                'summary': entry.summary,
+                'actor': getattr(entry.actor, 'username', '') if entry.actor else 'system',
+                'actor_user_id': str(entry.actor.user_id) if entry.actor else None,
+                'target_type': entry.target_type,
+                'target_id': entry.target_id,
+                'before': entry.before,
+                'after': entry.after,
+                'created_at': entry.created_at.isoformat(),
+            }
+            for entry in logs[:limit]
+        ]
+        return Response({'success': True, 'data': rows, 'message': 'OK',
+                         'errors': None, 'pagination': None})

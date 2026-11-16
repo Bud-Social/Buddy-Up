@@ -46,6 +46,7 @@ urlpatterns = [
     path('<str:gym_slug>/endorsements/', views.GymEndorsementListView.as_view(), name='endorsements'),
     path('<str:gym_slug>/endorsements/<uuid:endorsement_id>/', views.GymEndorsementListView.as_view(), name='endorsement_detail'),
     path('<str:gym_slug>/announce/', views.GymAnnounceView.as_view(), name='announce'),
+    path('<str:gym_slug>/action-logs/', views.GymActionLogListView.as_view(), name='action_logs'),
     path('<str:gym_slug>/attendance/', views.AttendanceListView.as_view(), name='attendance'),
     path('<str:gym_slug>/check-in/', views.GymCheckInView.as_view(), name='gym_check_in'),
     path('<str:gym_slug>/partner-metrics/', views.PartnerMetricsView.as_view(), name='partner_metrics'),

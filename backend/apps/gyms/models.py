@@ -354,6 +354,64 @@ class GymDonation(TimestampedModel):
         return f'Donation of {self.amount} by {self.donor.username} to {self.gym.name}'
 
 
+class GymActionLog(TimestampedModel):
+    """Append-only audit trail for privileged actions inside a gym.
+
+    Every mutating action touching gyms — owner changes an access type,
+    coach is added/removed, membership role changes, online coaching is
+    switched on/off, venue is added/edited — lands here. Visible to
+    moderators, owners and co-owners only (not members).
+
+    `action` is a dotted verb so rows are filterable by kind
+    (``'gym.member.role'``). ``before`` / ``after`` carry the state delta;
+    they must never carry note/message/coaching_documents content.
+    """
+
+    ACTION_CHOICES = [
+        ('gym.update', 'Gym updated'),
+        ('gym.venue.add', 'Venue added'),
+        ('gym.venue.edit', 'Venue edited'),
+        ('gym.venue.delete', 'Venue removed'),
+        ('gym.member.role', 'Member role changed'),
+        ('gym.coach.add', 'Online coach added'),
+        ('gym.coach.remove', 'Online coach removed'),
+        ('gym.coach.respond', 'Coach invite responded'),
+        ('gym.announce', 'Announcement sent'),
+        ('gym.registration', 'Registration submitted'),
+        ('gym.events.toggle', 'Events organiser toggled'),
+        ('gym.events.create', 'Event created'),
+        ('gym.events.cancel', 'Event cancelled'),
+        ('gym.shops.link', 'Shop linked'),
+        ('gym.shops.unlink', 'Shop unlinked'),
+        ('gym.tier.activate', 'Tier activated'),
+        ('gym.tier.cancel', 'Tier cancelled'),
+    ]
+
+    gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='action_logs')
+    actor = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='gym_action_logs',
+    )
+    actor_username = models.CharField(max_length=48, blank=True, default='')
+    action = models.CharField(max_length=48, choices=ACTION_CHOICES)
+    summary = models.TextField()
+    target_type = models.CharField(max_length=24, blank=True, default='')
+    target_id = models.CharField(max_length=64, blank=True, default='')
+    before = models.JSONField(null=True, blank=True)
+    after = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'gyms_action_log'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['gym', '-created_at']),
+            models.Index(fields=['action']),
+        ]
+
+    def __str__(self):
+        return f'{self.gym.handle}: {self.action} @ {self.created_at:%Y-%m-%d %H:%M}'
+
+
 class GymMembershipException(TimestampedModel):
     """Owner-granted exception overriding subscription fees for a specific member."""
 
