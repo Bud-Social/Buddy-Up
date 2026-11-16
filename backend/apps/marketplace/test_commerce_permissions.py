@@ -451,12 +451,23 @@ class CreateEventEndpointTests(CommercePermissionTestBase):
         # `raise_request_exception=False` because the defect escapes as an
         # unhandled TypeError, not a rendered 500 — a raising test client would
         # re-raise it straight out of this probe.
+
+        # Snapshot what exists so the probe row can be deleted again afterwards,
+        # leaving the suite's `count() == 0` expectations intact.
+        before = set(MarketplaceEvent.objects.values_list('id', flat=True))
         probe = client_for(self.shop_owner, raise_request_exception=False).post(
             EVENTS_URL, event_payload(), format='json')
         # A 2xx means the gate passed and the row was written. A 4xx means the gate
         # refused, which is not what this probe is asking. Anything else is the
         # create blowing up on its way to the database.
-        return 200 <= probe.status_code < 300
+        reached = 200 <= probe.status_code < 300
+        if reached:
+            # Roll the probe back — the suite is a shared test machine for models,
+            # not only this class.
+            probe_ids = set(MarketplaceEvent.objects.values_list('id', flat=True)) - before
+            if probe_ids:
+                MarketplaceEvent.objects.filter(id__in=probe_ids).delete()
+        return reached
 
     def skipUnlessEventsReachDisk(self, reason='event creation is broken upstream of the gate'):
         if not self.events_reach_disk:
