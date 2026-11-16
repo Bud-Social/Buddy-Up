@@ -61,7 +61,7 @@ const MEMBERS = [
  */
 async function renderLoaded() {
   renderManage();
-  return screen.findByRole('button', { name: 'Overview' });
+  return screen.findByRole('tab', { name: 'Overview' });
 }
 
 function renderManage() {
@@ -121,14 +121,14 @@ describe('Gym management console', () => {
     renderManage();
     await waitFor(() => expect(screen.getByText('Active members')).toBeInTheDocument());
     // "Join requests" was renamed "Requests": it wrapped the strip to two rows.
-    expect(screen.getByRole('button', { name: 'Requests' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Join requests' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Requests' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Join requests' })).not.toBeInTheDocument();
   });
 
   it('offers a role change for an ordinary member', async () => {
     const user = userEvent.setup();
     await renderLoaded();
-    await user.click(screen.getByRole('button', { name: 'Members' }));
+    await user.click(screen.getByRole('tab', { name: 'Members' }));
 
     await user.click(await screen.findByRole('button', { name: 'Change role for Ada Lovelace' }));
     await user.click(screen.getByRole('button', { name: 'moderator' }));
@@ -142,7 +142,7 @@ describe('Gym management console', () => {
   it('offers removal for an ordinary member', async () => {
     const user = userEvent.setup();
     await renderLoaded();
-    await user.click(screen.getByRole('button', { name: 'Members' }));
+    await user.click(screen.getByRole('tab', { name: 'Members' }));
 
     await user.click(await screen.findByRole('button', { name: 'Remove Ada Lovelace' }));
     await user.click(screen.getByRole('button', { name: 'Remove', exact: true }));
@@ -153,7 +153,7 @@ describe('Gym management console', () => {
   it('does not offer role or removal controls for owners', async () => {
     const user = userEvent.setup();
     await renderLoaded();
-    await user.click(screen.getByRole('button', { name: 'Members' }));
+    await user.click(screen.getByRole('tab', { name: 'Members' }));
 
     // Ownership changes go through transfer, so these are hidden rather than
     // shown and then refused by the server.
@@ -183,7 +183,7 @@ describe('Gym management console', () => {
   it('exposes locations, online coaching, announcements and business setup', async () => {
     await renderLoaded();
     for (const label of ['Locations', 'Online', 'Announce', 'Setup']) {
-      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: label })).toBeInTheDocument();
     }
   });
 
@@ -202,7 +202,7 @@ describe('Gym management console', () => {
       },
     ]));
     await renderLoaded();
-    await user.click(screen.getByRole('button', { name: 'Locations' }));
+    await user.click(screen.getByRole('tab', { name: 'Locations' }));
 
     expect(await screen.findByText('Westlands')).toBeInTheDocument();
     expect(screen.getByText('Karen')).toBeInTheDocument();
@@ -222,7 +222,7 @@ describe('Gym management console', () => {
       }),
     );
     await renderLoaded();
-    await user.click(screen.getByRole('button', { name: 'Setup' }));
+    await user.click(screen.getByRole('tab', { name: 'Setup' }));
 
     expect(await screen.findByText('Verified business')).toBeInTheDocument();
     expect(screen.getByText(/Members see the blue tick/i)).toBeInTheDocument();

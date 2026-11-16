@@ -313,13 +313,17 @@ export default function GymManage() {
         <div className="bg-buddy-red/5 border border-buddy-red/20 text-buddy-red text-xs rounded-xl px-3 py-2" role="alert">{actionError}</div>
       )}
 
-      <div className="flex gap-1 bg-buddy-surface rounded-xl p-1 overflow-x-auto">
+      {/* Tab navigator — a fixed grid so every tab is visible with equal
+          weight: 15 tabs → 5 columns of 3 rows on every screen; text wraps
+          rather than clipping. */}
+      <div className="grid grid-cols-5 gap-1.5 bg-buddy-surface rounded-xl p-1.5" role="tablist" aria-label="Gym management tabs">
         {TABS.map((t) => (
           <button
             key={t.key}
+            role="tab"
+            aria-selected={tab === t.key}
             onClick={() => setTab(t.key)}
-            aria-pressed={tab === t.key}
-            className={`flex-1 min-w-[80px] py-2 px-1 text-xs font-semibold rounded-lg transition-colors ${tab === t.key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text'}`}
+            className={`whitespace-normal text-[10px] sm:text-[11px] py-2 px-1 font-semibold rounded-lg transition-colors text-center leading-tight ${tab === t.key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
           >
             {t.label}
             {t.key === 'requests' && requests.length > 0 ? ` (${requests.length})` : ''}
