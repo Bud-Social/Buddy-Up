@@ -321,3 +321,16 @@ export interface MembershipCheckoutResult {
   discount_code: string | null;
   subscription_expires_at: string;
 }
+
+export interface GymActionLog {
+  id: string;
+  action: string;
+  summary: string;
+  actor: string;
+  actor_user_id: string | null;
+  target_type: string;
+  target_id: string;
+  before: Record<string, string | number | boolean | null> | null;
+  after: Record<string, string | number | boolean | null> | null;
+  created_at: string;
+}

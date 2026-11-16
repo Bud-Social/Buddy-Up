@@ -14,6 +14,8 @@ import { GymPostPanel } from '@/components/gym/manage/GymPostPanel';
 import { ShopsTab } from '@/components/gym/manage/ShopsTab';
 import { RevenueTab } from '@/components/gym/manage/RevenueTab';
 import { EventsTab } from '@/components/gym/manage/EventsTab';
+import { TeamTab } from '@/components/gym/manage/TeamTab';
+import { LogsTab } from '@/components/gym/manage/LogsTab';
 import { BusinessSetupTab } from '@/components/gym/manage/BusinessSetupTab';
 import { gymsApi } from '@/api/gyms';
 import type { Gym, GymMembership, GymRoutinePost, GymReview, JoinRequest, GymPartnerMetrics } from '@/types';
@@ -23,6 +25,7 @@ type Tab =
   | 'overview' | 'members' | 'requests' | 'posts' | 'shops' | 'revenue'
   | 'events'
   | 'schedule' | 'reviews'
+  | 'team' | 'logs'
   | 'venues' | 'coaching' | 'announce' | 'setup';
 
 // Labels are kept short on purpose: the console wraps these into a tab strip,
@@ -30,6 +33,7 @@ type Tab =
 const TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'members', label: 'Members' },
+  { key: 'team', label: 'Team' },
   { key: 'requests', label: 'Requests' },
   { key: 'posts', label: 'Posts' },
   { key: 'shops', label: 'Shops' },
@@ -41,6 +45,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'coaching', label: 'Online' },
   { key: 'announce', label: 'Announce' },
   { key: 'setup', label: 'Setup' },
+  { key: 'logs', label: 'Logs' },
 ];
 
 const toISO = (val: string) => {
@@ -471,6 +476,17 @@ export default function GymManage() {
         </section>
       )}
 
+      {/* Team — staff roster with promotion controls */}
+      {tab === 'team' && (
+        <TeamTab
+          members={members}
+          currentRole={gym?.membership_role}
+          busyId={memberBusyId}
+          onChangeRole={changeMemberRole}
+          onRemove={(m) => setRemoveTarget(m)}
+        />
+      )}
+
       {/* Join requests */}
       {tab === 'requests' && (
         <section className="space-y-2">
@@ -725,6 +741,9 @@ export default function GymManage() {
       </Modal>
 
       {/* Change role */}
+      {/* Logs — audit trail of privileged actions */}
+      {tab === 'logs' && <LogsTab slug={slug || gym?.handle || ''} />}
+
       <Modal isOpen={!!roleTarget} onClose={() => setRoleTarget(null)} title="Change member role">
         <div className="space-y-3">
           <p className="text-sm text-buddy-text-secondary">

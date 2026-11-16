@@ -4,7 +4,7 @@ import type {
   JoinRequest, GymInvite, CityResult, GymCategoryPricing,
   GymRoutinePost, GymReview, GymDonation, GymMembershipException, MembershipCheckoutResult,
   GymPartnerMetrics, GymMediaItem, GymOnlineCoach, GymEndorsement, GymRegistration,
-  VenueLocation,
+  VenueLocation, GymActionLog,
 } from '@/types';
 
 export interface CreateGymPayload {
@@ -122,6 +122,10 @@ export const gymsApi = {
   /** Check myself in. A gym visit is what a "gym attendance" countdown follows. */
   checkIn: (slug: string) =>
     apiClient.post<ApiResponse<GymCheckInStatus>>(`/gyms/${slug}/check-in/`).then((r) => r.data),
+
+  /** Append-only audit trail. Moderator/owner/co-owner only on the server. */
+  getActionLogs: (slug: string, params?: { action?: string; limit?: number }) =>
+    apiClient.get<ApiResponse<GymActionLog[]>>(`/gyms/${slug}/action-logs/`, { params }).then((r) => r.data),
 
   getMembers: (slug: string, params?: { role?: string; q?: string }) =>
     apiClient.get<ApiResponse<GymMembership[]>>(`/gyms/${slug}/members/`, { params }).then((r) => r.data),
