@@ -21,6 +21,51 @@ Map<String, dynamic> _$CreatorDataToJson(_CreatorData instance) =>
       'verification_status': instance.verificationStatus,
     };
 
+_ShopMember _$ShopMemberFromJson(Map<String, dynamic> json) => _ShopMember(
+  id: json['id'] as String,
+  role: json['role'] as String,
+  profileData: json['profile_data'] as Map<String, dynamic>?,
+  createdAt: json['created_at'] as String? ?? '',
+);
+
+Map<String, dynamic> _$ShopMemberToJson(_ShopMember instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'role': instance.role,
+      'profile_data': instance.profileData,
+      'created_at': instance.createdAt,
+    };
+
+_GymLinkRequest _$GymLinkRequestFromJson(Map<String, dynamic> json) =>
+    _GymLinkRequest(
+      id: (json['id'] as num).toInt(),
+      gymId: json['gym_id'] as String?,
+      gymName: json['gym_name'] as String? ?? '',
+      gymHandle: json['gym_handle'] as String? ?? '',
+      gymAvatar: json['gym_avatar'] as String? ?? '',
+      shopId: json['shop_id'] as String?,
+      requestedBy: json['requested_by'] as String?,
+      decidedBy: json['decided_by'] as String?,
+      status: json['status'] as String? ?? 'pending',
+      isPrimary: json['is_primary'] as bool? ?? false,
+      createdAt: json['created_at'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$GymLinkRequestToJson(_GymLinkRequest instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'gym_id': instance.gymId,
+      'gym_name': instance.gymName,
+      'gym_handle': instance.gymHandle,
+      'gym_avatar': instance.gymAvatar,
+      'shop_id': instance.shopId,
+      'requested_by': instance.requestedBy,
+      'decided_by': instance.decidedBy,
+      'status': instance.status,
+      'is_primary': instance.isPrimary,
+      'created_at': instance.createdAt,
+    };
+
 _Shop _$ShopFromJson(Map<String, dynamic> json) => _Shop(
   id: json['id'] as String,
   handle: json['handle'] as String? ?? '',
@@ -42,6 +87,15 @@ _Shop _$ShopFromJson(Map<String, dynamic> json) => _Shop(
   isActive: json['is_active'] as bool? ?? true,
   createdAt: json['created_at'] as String? ?? '',
   myRole: json['my_role'] as String? ?? '',
+  members:
+      (json['members'] as List<dynamic>?)
+          ?.map((e) => ShopMember.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <ShopMember>[],
+  productCount: (json['product_count'] as num?)?.toInt() ?? 0,
+  programmeCount: (json['programme_count'] as num?)?.toInt() ?? 0,
+  mealPlanCount: (json['meal_plan_count'] as num?)?.toInt() ?? 0,
+  eventCount: (json['event_count'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$ShopToJson(_Shop instance) => <String, dynamic>{
@@ -61,6 +115,11 @@ Map<String, dynamic> _$ShopToJson(_Shop instance) => <String, dynamic>{
   'is_active': instance.isActive,
   'created_at': instance.createdAt,
   'my_role': instance.myRole,
+  'members': instance.members,
+  'product_count': instance.productCount,
+  'programme_count': instance.programmeCount,
+  'meal_plan_count': instance.mealPlanCount,
+  'event_count': instance.eventCount,
 };
 
 _UserShopResponse _$UserShopResponseFromJson(

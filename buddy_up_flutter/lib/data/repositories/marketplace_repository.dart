@@ -363,4 +363,33 @@ abstract class MarketplaceRepository {
 
   @POST('/marketplace/upload-cover/')
   Future<dynamic> uploadImage(@Body() FormData data);
+
+  // --- Shop ↔ Gym links -----------------------------------------------------
+  @GET('/marketplace/shops/gym-links/')
+  Future<dynamic> getGymLinks({
+    @Query('status') String? status,
+    @Query('shop') String? shop,
+  });
+
+  @POST('/marketplace/shops/gym-links/{linkId}/respond/')
+  Future<dynamic> respondToGymLink(
+    @Path('linkId') int linkId,
+    @Body() Map<String, dynamic> action,
+  );
+
+  // --- Shop manage console ---------------------------------------------------
+  @GET('/marketplace/shops/{handle}/')
+  Future<dynamic> getShopManage(@Path('handle') String handle);
+
+  @POST('/marketplace/shops/{handle}/members/')
+  Future<dynamic> addShopMember(
+    @Path('handle') String handle,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('/marketplace/shops/{handle}/members/')
+  Future<void> removeShopMember(
+    @Path('handle') String handle,
+    @Body() Map<String, dynamic> body,
+  );
 }

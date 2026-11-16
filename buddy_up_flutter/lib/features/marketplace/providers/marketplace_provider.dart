@@ -118,6 +118,64 @@ class EventsScopeNotifier extends Notifier<String> {
 final eventsScopeProvider =
     NotifierProvider<EventsScopeNotifier, String>(EventsScopeNotifier.new);
 
+// -- Shop ↔ Gym links -----------------------------------------------------
+/// The signed-in account's gym-link requests, falling back to everyone the
+/// account owns/manages (used by both the My Shops inbox and a single-shop
+/// manage console).
+final shopGymLinksProvider = FutureProvider.family<List<GymLinkRequest>, String?>((ref, shopHandle) async {
+  final raw = await ref
+      .watch(marketplaceRepositoryProvider)
+      .getGymLinks(shop: shopHandle);
+  return _rowsG(raw).map((e) => GymLinkRequest.fromJson(e as Map<String, dynamic>)).toList();
+});
+
+void invalidateGymLinks(Ref ref, {String? shopHandle}) {
+  ref.invalidate(shopGymLinksProvider(shopHandle));
+  ref.invalidate(shopGymLinksProvider(null));
+}
+
+/// Single shop's manage-console payload. Re-invalidated by any write below.
+final shopManageProvider = FutureProvider.family<Shop, String>((ref, handle) async {
+  final raw = await ref.watch(marketplaceRepositoryProvider).getShopManage(handle);
+  return Shop.fromJson(raw['data'] as Map<String, dynamic>);
+});
+
+final shopManageActionsProvider = Provider<ShopManageActions>((ref) => ShopManageActions(ref));
+
+class ShopManageActions {
+  final Ref _ref;
+
+  ShopManageActions(this._ref);
+
+  Future<void> addMember(String handle, String username, String role) async {
+    await _ref.read(marketplaceRepositoryProvider).addShopMember(handle, {
+      'username': username,
+      'role': role,
+    });
+    _ref.invalidate(shopManageProvider(handle));
+  }
+
+  Future<void> removeMember(String handle, String username) async {
+    await _ref.read(marketplaceRepositoryProvider).removeShopMember(handle, {
+      'username': username,
+    });
+    _ref.invalidate(shopManageProvider(handle));
+  }
+}
+
+List<dynamic> _rowsG(dynamic data) {
+  if (data is Map) {
+    final inner = data['data'];
+    if (inner is List) return inner;
+    if (inner is Map) {
+      final results = inner['results'];
+      if (results is List) return results;
+    }
+  }
+  if (data is List) return data;
+  return const [];
+}
+
 class EventsFilter {
   final double? lat;
   final double? lng;

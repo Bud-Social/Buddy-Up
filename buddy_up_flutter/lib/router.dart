@@ -52,6 +52,7 @@ import 'features/marketplace/screens/create_programme_screen.dart';
 import 'features/marketplace/screens/create_event_screen.dart';
 import 'features/marketplace/screens/my_shops_screen.dart';
 import 'features/marketplace/screens/shop_detail_screen.dart';
+import 'features/marketplace/screens/shop_manage_screen.dart';
 import 'features/marketplace/screens/create_shop_screen.dart';
 import 'features/marketplace/screens/programme_activity_focus_screen.dart';
 import 'features/wallet/screens/wallet_screen.dart';
@@ -497,12 +498,24 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
       GoRoute(
         path: '/marketplace/shops',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const MyShopsScreen(),
+        builder: (_, state) => MyShopsScreen(
+          initialTab: state.uri.queryParameters['tab'] ?? 'shops',
+        ),
       ),
       GoRoute(
         path: '/marketplace/shops/create',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const CreateShopScreen(),
+      ),
+      // Shop manage — owner/manager console scoped to one shop; precedes
+      // the public shop detail route so the 4-segment path always wins.
+      GoRoute(
+        path: '/marketplace/shops/:handle/manage',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) => ShopManageScreen(
+          handle: state.pathParameters['handle'] ?? '',
+          initialTab: state.uri.queryParameters['tab'],
+        ),
       ),
       GoRoute(
         path: '/marketplace/shops/:handle',

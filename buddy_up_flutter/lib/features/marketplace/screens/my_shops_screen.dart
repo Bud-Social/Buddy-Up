@@ -4,31 +4,32 @@ import 'package:go_router/go_router.dart';
 import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
+import '../widgets/gym_link_requests_panel.dart';
 
-class MyShopsScreen extends ConsumerWidget {
-  const MyShopsScreen({super.key});
+/// The seller hub: your shops, plus the gym-link approval queue.
+class MyShopsScreen extends ConsumerStatefulWidget {
+  /// `shops` (default) or `gym-links` — a deep link from a notification.
+  final String initialTab;
 
-  Future<void> _registerCreator(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref.read(marketplaceRepositoryProvider).registerCreator({});
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('You are now a creator! 🎉'),
-          backgroundColor: BuddyColors.green,
-        ),
-      );
-      ref.invalidate(myShopsProvider);
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Registration failed: $e'), backgroundColor: Colors.red),
-      );
-    }
+  const MyShopsScreen({super.key, this.initialTab = 'shops'});
+
+  @override
+  ConsumerState<MyShopsScreen> createState() => _MyShopsScreenState();
+}
+
+class _MyShopsScreenState extends ConsumerState<MyShopsScreen> {
+  String _tab = 'shops';
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = widget.initialTab == 'gym-links' ? 'gym-links' : 'shops';
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final shopsAsync = ref.watch(myShopsProvider);
+    final linksAsync = ref.watch(shopGymLinksProvider(null));
 
     return Scaffold(
       backgroundColor: BuddyColors.black,
@@ -48,32 +49,141 @@ class MyShopsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: shopsAsync.when(
-        data: (shops) => shops.isEmpty
-            ? _EmptyShopsState(
-                onCreateTap: () => context.push('/marketplace/shops/create'),
-                onRegisterTap: () => _registerCreator(context, ref),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: shops.length,
-                itemBuilder: (_, i) => _ShopCard(shop: shops[i]),
+      body: Column(
+        children: [
+          const SizedBox(height: 8),
+          // Two-tab console: shops list, or the gym-link inbox.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                _ConsoleTab(
+                  label: 'My shops',
+                  selected: _tab == 'shops',
+                  onTap: () => setState(() => _tab = 'shops'),
+                ),
+                const SizedBox(width: 8),
+                _ConsoleTab(
+                  label: 'Gym requests',
+                  selected: _tab == 'gym-links',
+                  badge: linksAsync.maybeWhen(
+                    data: (links) => links.where((l) => l.status == 'pending').length,
+                    orElse: () => 0,
+                  ),
+                  onTap: () => setState(() => _tab = 'gym-links'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: _tab == 'shops'
+                ? shopsAsync.when(
+                    data: (shops) => shops.isEmpty
+                        ? _EmptyShopsState(
+                            onCreateTap: () => context.push('/marketplace/shops/create'),
+                            onRegisterTap: () => _registerCreator(context),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: shops.length,
+                            itemBuilder: (_, i) => _ShopCard(shop: shops[i]),
+                          ),
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline, size: 48,
+                              color: BuddyColors.textSecondary),
+                          const SizedBox(height: 12),
+                          const Text('Failed to load shops',
+                              style: TextStyle(color: BuddyColors.textSecondary)),
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed: () => ref.invalidate(myShopsProvider),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : const GymLinkRequestsPanel(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _registerCreator(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(marketplaceRepositoryProvider).registerCreator({});
+      messenger.showSnackBar(const SnackBar(
+        content: Text('You are now a creator!'),
+        backgroundColor: BuddyColors.green,
+      ));
+      ref.invalidate(myShopsProvider);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Registration failed: $e'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+}
+
+class _ConsoleTab extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final int badge;
+  final VoidCallback onTap;
+
+  const _ConsoleTab({
+    required this.label,
+    required this.selected,
+    this.badge = 0,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? BuddyColors.green.withValues(alpha: 0.12) : BuddyColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? BuddyColors.green : BuddyColors.border,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 12,
+                color: selected ? BuddyColors.green : BuddyColors.textSecondary,
               ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: BuddyColors.textSecondary),
-              const SizedBox(height: 12),
-              const Text('Failed to load shops', style: TextStyle(color: BuddyColors.textSecondary)),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(myShopsProvider),
-                child: const Text('Retry'),
+            ),
+            if (badge > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: BuddyColors.green,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('$badge',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.black)),
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -155,7 +265,17 @@ class _ShopCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined, size: 18, color: BuddyColors.textSecondary),
+                    tooltip: 'Manage shop',
+                    onPressed: () => context.push('/marketplace/shops/${shop.handle}/manage'),
+                  ),
+                  const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+                ],
+              ),
             ],
           ),
         ),

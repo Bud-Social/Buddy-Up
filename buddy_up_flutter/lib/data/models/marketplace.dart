@@ -74,6 +74,37 @@ abstract class CreatorData with _$CreatorData {
 /// programme, product or event, and a model that demanded the full
 /// `ShopDetailSerializer` shape made every shop-owned cart row unparseable.
 @freezed
+abstract class ShopMember with _$ShopMember {
+  const factory ShopMember({
+    required String id,
+    required String role,
+    @JsonKey(name: 'profile_data') Map<String, dynamic>? profileData,
+    @JsonKey(name: 'created_at') @Default('') String createdAt,
+  }) = _ShopMember;
+
+  factory ShopMember.fromJson(Map<String, dynamic> json) => _$ShopMemberFromJson(json);
+}
+
+@freezed
+abstract class GymLinkRequest with _$GymLinkRequest {
+  const factory GymLinkRequest({
+    required int id,
+    @JsonKey(name: 'gym_id') String? gymId,
+    @JsonKey(name: 'gym_name') @Default('') String gymName,
+    @JsonKey(name: 'gym_handle') @Default('') String gymHandle,
+    @JsonKey(name: 'gym_avatar') @Default('') String gymAvatar,
+    @JsonKey(name: 'shop_id') String? shopId,
+    @JsonKey(name: 'requested_by') String? requestedBy,
+    @JsonKey(name: 'decided_by') String? decidedBy,
+    @Default('pending') String status,
+    @JsonKey(name: 'is_primary') @Default(false) bool isPrimary,
+    @JsonKey(name: 'created_at') @Default('') String createdAt,
+  }) = _GymLinkRequest;
+
+  factory GymLinkRequest.fromJson(Map<String, dynamic> json) => _$GymLinkRequestFromJson(json);
+}
+
+@freezed
 abstract class Shop with _$Shop {
   const factory Shop({
     required String id,
@@ -96,6 +127,12 @@ abstract class Shop with _$Shop {
     // owner/manager as a publisher, so a staff membership is not enough. Absent
     // everywhere else, hence the empty-string default rather than a nullable.
     @JsonKey(name: 'my_role') @Default('') String myRole,
+    // Managed console payload — only delivered by `GET /shops/:handle/`.
+    @JsonKey(name: 'members') @Default(<ShopMember>[]) List<ShopMember> members,
+    @JsonKey(name: 'product_count') @Default(0) int productCount,
+    @JsonKey(name: 'programme_count') @Default(0) int programmeCount,
+    @JsonKey(name: 'meal_plan_count') @Default(0) int mealPlanCount,
+    @JsonKey(name: 'event_count') @Default(0) int eventCount,
   }) = _Shop;
 
   factory Shop.fromJson(Map<String, dynamic> json) => _$ShopFromJson(json);
