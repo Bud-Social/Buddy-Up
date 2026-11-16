@@ -783,6 +783,7 @@ class GymDetailView(views.APIView):
         allowed_fields = [
             'description', 'logo_url', 'cover_url', 'rules', 'tags',
             'location_city', 'location_country', 'content_rating',
+            'is_events_enabled',
         ]
 
         if membership.role == 'owner':

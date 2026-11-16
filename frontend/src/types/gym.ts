@@ -64,6 +64,7 @@ export interface Gym {
   delivery_modes?: string[];
   distance_km?: number | null;
   offers_online_coaching?: boolean;
+  is_events_enabled?: boolean;
   coaching_types?: string[];
   online_coaches_count?: number;
   online_coaches?: GymOnlineCoach[];
@@ -219,6 +220,7 @@ export interface GymPartnerMetrics {
   capacity_utilization_30d?: number;
   online_coaches?: number;
   offers_online_coaching?: boolean;
+  is_events_enabled?: boolean;
   registration_status?: GymRegistrationStatus;
   subscription_revenue?: number;
 }

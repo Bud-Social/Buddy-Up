@@ -72,6 +72,10 @@ class Gym(TimestampedModel, SoftDeleteModel):
     # list which of its roster is available for them.
     offers_online_coaching = models.BooleanField(default=False)
     coaching_types = models.JSONField(default=list)
+    # Events: a gym can run events as an organiser (gym members get a
+    # gym-priced ticket and a members-only RSVP feed). Also surfaces the gym
+    # in the marketplace events roll under "gym events".
+    is_events_enabled = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'gyms_gym'

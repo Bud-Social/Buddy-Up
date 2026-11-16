@@ -54,7 +54,7 @@ class GymSerializer(serializers.ModelSerializer):
             'average_rating', 'review_count', 'recent_reviewers',
             'rules', 'tags', 'member_count', 'active_today',
             'location_city', 'location_country', 'delivery_modes',
-            'offers_online_coaching', 'coaching_types', 'online_coaches_count',
+            'offers_online_coaching', 'coaching_types', 'is_events_enabled', 'online_coaches_count', 'is_events_enabled',
             'followed_members', 'followed_members_count', 'location_summary',
             'registration_status',
             'owner_data', 'membership_role', 'is_member',
@@ -316,7 +316,7 @@ class CreateGymSerializer(serializers.ModelSerializer):
             'online_capacity', 'physical_capacity', 'currently_serving',
             'monthly_fee_artifacts', 'join_fee_artifacts',
             'rules', 'tags', 'location_city', 'location_country',
-            'offers_online_coaching', 'coaching_types',
+            'offers_online_coaching', 'coaching_types', 'is_events_enabled',
             'category_pricing',
         ]
 

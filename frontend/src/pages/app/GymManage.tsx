@@ -13,6 +13,7 @@ import { OnlineCoachingTab } from '@/components/gym/manage/OnlineCoachingTab';
 import { GymPostPanel } from '@/components/gym/manage/GymPostPanel';
 import { ShopsTab } from '@/components/gym/manage/ShopsTab';
 import { RevenueTab } from '@/components/gym/manage/RevenueTab';
+import { EventsTab } from '@/components/gym/manage/EventsTab';
 import { BusinessSetupTab } from '@/components/gym/manage/BusinessSetupTab';
 import { gymsApi } from '@/api/gyms';
 import type { Gym, GymMembership, GymRoutinePost, GymReview, JoinRequest, GymPartnerMetrics } from '@/types';
@@ -20,6 +21,7 @@ import { RoleDashboardShell, RoleSectionTitle } from './roles/RoleShell';
 
 type Tab =
   | 'overview' | 'members' | 'requests' | 'posts' | 'shops' | 'revenue'
+  | 'events'
   | 'schedule' | 'reviews'
   | 'venues' | 'coaching' | 'announce' | 'setup';
 
@@ -32,6 +34,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'posts', label: 'Posts' },
   { key: 'shops', label: 'Shops' },
   { key: 'revenue', label: 'Revenue' },
+  { key: 'events', label: 'Events' },
   { key: 'schedule', label: 'Schedule' },
   { key: 'reviews', label: 'Reviews' },
   { key: 'venues', label: 'Locations' },
@@ -633,6 +636,22 @@ export default function GymManage() {
       {/* Revenue — gym wallet + verification tier */}
       {tab === 'revenue' && (
         <RevenueTab slug={slug || gym.handle} />
+      )}
+
+      {/* Events — gym-run paid/free slots */}
+      {tab === 'events' && gym && (
+        <EventsTab
+          slug={slug || gym.handle}
+          gymId={gym?.id || ''}
+          gymName={gym.name}
+          canManage={isAdmin}
+          canActivate={isAdmin}
+          isEventsEnabled={!!gym.is_events_enabled}
+          onToggleActivate={async (next) => {
+            await gymsApi.update(slug || gym.handle, { is_events_enabled: next });
+            setGym((prev) => prev ? { ...prev, is_events_enabled: next } : prev);
+          }}
+        />
       )}
 
       {/* Announcements — pinned discourse, members get notified */}

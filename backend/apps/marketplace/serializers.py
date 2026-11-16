@@ -628,6 +628,8 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
             'attendee_count', 'tags', 'category', 'content_rating',
             'is_registered', 'spots_remaining',
             'media', 'created_at',
+            'member_price_artifacts', 'non_member_price_artifacts',
+            'linked_live_id',
         ]
 
     def get_community_name(self, obj):
@@ -780,6 +782,9 @@ class CreateEventSerializer(serializers.Serializer):
     content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     gym_id = serializers.UUIDField(required=False, allow_null=True)
     shop_id = serializers.UUIDField(required=False, allow_null=True)
+    member_price_artifacts = serializers.JSONField(required=False, default=dict, allow_null=True)
+    non_member_price_artifacts = serializers.JSONField(required=False, default=dict, allow_null=True)
+    linked_live_id = serializers.UUIDField(required=False, allow_null=True)
     agenda = serializers.JSONField(required=False, default=list)
     recurrence = serializers.ChoiceField(choices=['none', 'daily', 'weekly', 'monthly'], required=False, default='none')
     ticket_tiers = serializers.JSONField(required=False, default=list)
