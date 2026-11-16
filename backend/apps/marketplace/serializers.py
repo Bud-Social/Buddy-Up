@@ -72,10 +72,11 @@ class ShopMembershipSerializer(serializers.ModelSerializer):
 class ShopGymLinkSerializer(serializers.ModelSerializer):
     gym_name = serializers.CharField(source='gym.name', read_only=True)
     gym_avatar = serializers.CharField(source='gym.logo_url', read_only=True)
+    gym_handle = serializers.CharField(source='gym.handle', read_only=True)
 
     class Meta:
         model = ShopGymLink
-        fields = ['id', 'gym_id', 'gym_name', 'gym_avatar', 'is_primary']
+        fields = ['id', 'gym_id', 'gym_name', 'gym_avatar', 'gym_handle', 'is_primary', 'status', 'requested_by', 'decided_by', 'created_at', 'updated_at']
 
 
 class ShopSerializer(serializers.ModelSerializer):

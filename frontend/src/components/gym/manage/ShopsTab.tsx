@@ -138,6 +138,12 @@ export function ShopsTab({ slug, canManage }: ShopsTabProps) {
                   <p className="text-xs font-semibold truncate flex items-center gap-1.5">
                     {shop.name}
                     {shop.verification_status === 'verified' && <ShieldCheck size={12} className="text-buddy-blue" />}
+                    {shop.status === 'pending' && (
+                      <span className="text-[9px] uppercase text-buddy-gold bg-buddy-gold/10 border border-buddy-gold/20 rounded-full px-1.5 py-0.5 font-bold">Pending</span>
+                    )}
+                    {shop.status === 'declined' && (
+                      <span className="text-[9px] uppercase text-buddy-red bg-buddy-red/10 border border-buddy-red/20 rounded-full px-1.5 py-0.5 font-bold">Declined</span>
+                    )}
                   </p>
                   <p className="text-[10px] text-buddy-text-secondary truncate">@{shop.handle} · {shop.products_count} products · {shop.units_sold_90d} sold</p>
                   {shop.description && <p className="text-[9px] text-buddy-text-secondary/70 truncate">{shop.description}</p>}

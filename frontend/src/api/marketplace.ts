@@ -1037,3 +1037,28 @@ export const marketplaceApi = {
   applyForStation: (data: Record<string, unknown>) =>
     apiClient.post<ApiResponse<StationApplication>>('/marketplace/station-applications/', data).then((r) => r.data),
 };
+
+// ── Shop ↔ Gym links ───────────────────────────────────────────────────
+export interface GymLinkRequest {
+  id: string;
+  gym_id: string;
+  gym_name: string;
+  gym_handle: string;
+  gym_avatar: string;
+  shop_id: string;
+  is_primary: boolean;
+  status: 'pending' | 'active' | 'declined';
+  requested_by: string | null;
+  decided_by: string | null;
+  created_at: string;
+}
+
+const gymLinksApi = {
+  list: (status?: 'pending' | 'active' | 'declined') =>
+    apiClient.get<ApiResponse<GymLinkRequest[]>>('/marketplace/shops/gym-links/', { params: status ? { status } : undefined }).then((r) => r.data),
+
+  respond: (linkId: string, action: 'accept' | 'decline') =>
+    apiClient.post(`/marketplace/shops/gym-links/${linkId}/respond/`, { action }).then((r) => r.data),
+};
+
+export { gymLinksApi };

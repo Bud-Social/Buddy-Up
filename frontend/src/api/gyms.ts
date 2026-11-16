@@ -375,6 +375,9 @@ export interface GymShopSummary {
   created_at: string;
   units_sold_90d: number;
   orders_90d: number;
+  status: 'pending' | 'active' | 'declined';
+  is_primary: boolean;
+  decided_at: string | null;
 }
 
 export interface GymShopsPayload {

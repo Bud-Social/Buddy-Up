@@ -2727,6 +2727,78 @@ class OrganiserEventStatsView(views.APIView):
         }, 'OK'))
 
 
+class ShopGymLinkListView(views.APIView):
+    """Gym link requests for the caller's own shops."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        profile = request.user.profile
+        my_shop_ids = list(ShopMembership.objects.filter(profile=profile)
+                           .values_list('shop_id', flat=True))
+        if not my_shop_ids:
+            return Response({'success': True, 'data': [], 'message': 'OK',
+                             'errors': None, 'pagination': None})
+        links = ShopGymLink.objects.filter(shop_id__in=my_shop_ids).select_related('gym', 'requested_by', 'decided_by')
+        status = (request.query_params.get('status') or '').strip().lower()
+        if status:
+            links = links.filter(status=status)
+        status_label = {'pending': 'pending approval', 'active': 'approved', 'declined': 'declined'}
+        rows = [
+            {
+                'id': str(l.id),
+                'gym_id': str(l.gym_id),
+                'gym_name': l.gym.name,
+                'gym_handle': l.gym.handle,
+                'gym_avatar': l.gym.logo_url,
+                'shop_id': str(l.shop_id),
+                'is_primary': l.is_primary,
+                'status': l.status,
+                'requested_by': getattr(l.requested_by, 'username', None),
+                'decided_by': getattr(l.decided_by, 'username', None),
+                'created_at': l.created_at.isoformat(),
+            } for l in links.order_by('-created_at')
+        ]
+        return Response({'success': True, 'data': rows, 'message': 'OK',
+                         'errors': None, 'pagination': None})
+
+
+class ShopGymLinkRespondView(views.APIView):
+    """Owner/manager of the shop responds to a gym's request."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, link_id):
+        profile = request.user.profile
+        try:
+            link = ShopGymLink.objects.select_related('shop', 'gym').get(id=link_id)
+        except (ShopGymLink.DoesNotExist, ValueError, TypeError):
+            return Response({'success': False, 'message': 'Link not found.'}, status=404)
+        membership = ShopMembership.objects.filter(
+            shop=link.shop, profile=profile, role__in=('owner', 'manager'),
+        ).first()
+        if membership is None:
+            return Response({
+                'success': False, 'message': 'Only shop owners and managers can respond to gym link requests.',
+            }, status=status.HTTP_403_FORBIDDEN)
+        if link.status != 'pending':
+            return Response({'success': False, 'message': f'This request already became {link.status}.'}, status=409)
+        action = (request.data.get('action') or '').strip().lower()
+        if action == 'accept':
+            link.status = 'active'
+        elif action == 'decline':
+            link.status = 'declined'
+        else:
+            return Response({'success': False, 'message': 'action must be "accept" or "decline".'}, status=400)
+        link.decided_by = profile
+        link.save(update_fields=['status', 'decided_by', 'updated_at'])
+        return Response({'success': True,
+                         'data': {'id': str(link.id), 'status': link.status},
+                         'message': 'Gym link approved.' if action == 'accept' else 'Gym link declined.',
+                         'errors': None, 'pagination': None})
+
+
+
 class EventFeedbackView(views.APIView):
     """Post-event feedback.
 

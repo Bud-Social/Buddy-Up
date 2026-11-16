@@ -262,6 +262,11 @@ export default function Notifications() {
       return;
     }
 
+    if (type === 'shop_gym_link_request') {
+      navigate('/marketplace/shops?tab=gym-links');
+      return;
+    }
+
     if (type === 'event_ticket_purchased') {
       const eventId = meta.event_id;
       if (eventId) navigate(`/marketplace/events/${eventId}`);

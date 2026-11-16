@@ -19,7 +19,32 @@ from rest_framework import views, status, permissions
 from rest_framework.response import Response
 
 from .models import Gym, GymMembership
-from apps.marketplace.models import ShopGymLink, Shop, OrderItem
+from apps.marketplace.models import ShopGymLink, Shop, OrderItem, ShopMembership
+
+import logging
+logger = logging.getLogger(__name__)
+
+
+def _notify_shop_staff(gym, shop, link, notify_status):
+    from apps.notifications.tasks import create_notification
+
+    recipients = list(
+        ShopMembership.objects.filter(shop=shop, role__in=('owner', 'manager'))
+        .select_related('profile').values_list('profile__user_id', flat=True)
+    )
+    for uid in recipients:
+        try:
+            create_notification.delay(
+                str(uid), 'shop_gym_link_request',
+                f'{gym.name} wants to connect',
+                f'{gym.name} is asking to link this shop to the gym for attribution. Approve it from My Shops.',
+                {'gym_handle': gym.handle, 'gym_name': gym.name,
+                 'link_id': str(link.id), 'shop_id': str(shop.id)},
+                dedupe_key=f'shop-gym-link-{link.id}-{notify_status}',
+            )
+        except Exception:
+            logger.warning('shop_gym_link notification failed for %s', uid)
+
 
 
 def _owner_gym(request, slug):
@@ -38,6 +63,8 @@ def _link_payload(link: ShopGymLink):
     return {
         'id': str(link.id),
         'shop_id': str(shop.id),
+        'status': getattr(link, 'status', 'active'),
+        'is_primary': link.is_primary,
         'name': shop.name,
         'handle': shop.handle,
         'description': shop.description,
@@ -47,6 +74,7 @@ def _link_payload(link: ShopGymLink):
         'is_active': shop.is_active,
         'products_count': shop.products.count(),
         'created_at': link.created_at.isoformat(),
+        'decided_at': getattr(link, 'updated_at', None).isoformat() if getattr(link, 'updated_at', None) else None,
     }
 
 
@@ -66,7 +94,8 @@ class GymShopsView(views.APIView):
         total_orders_90d = 0
         artifact_totals = {}
 
-        for link in links:
+        active_links = [l for l in links if getattr(l, 'status', 'active') == 'active']
+        for link in active_links:
             shop = link.shop
             items = OrderItem.objects.filter(
                 item_type='product',
@@ -109,18 +138,29 @@ class GymShopsView(views.APIView):
                             status=status.HTTP_400_BAD_REQUEST)
         shop = Shop.objects.filter(handle__iexact=handle, is_active=True).first()
         if shop is None:
-            return Response({'success': False, 'message': f'No active shop with handle “{handle}”.'},
+            return Response({'success': False, 'message': f'No active shop with handle "{handle}".'},
                             status=status.HTTP_404_NOT_FOUND)
-        if ShopGymLink.objects.filter(gym=gym, shop=shop).exists():
-            return Response({'success': False, 'message': 'That shop is already connected.'},
-                            status=status.HTTP_409_CONFLICT)
-        link = ShopGymLink.objects.create(gym=gym, shop=shop)
-        return Response({
-            'success': True,
-            'data': _link_payload(link),
-            'message': f'{shop.name} connected to this gym.',
-            'errors': None, 'pagination': None,
-        }, status=status.HTTP_201_CREATED)
+        link, created = ShopGymLink.objects.get_or_create(
+            gym=gym, shop=shop,
+            defaults={'requested_by': request.user.profile, 'is_primary': False},
+        )
+        # Only re-open if it was a decline; never silently re-approve or downgrade.
+        if not created and link.status == 'declined':
+            link.status = 'pending'
+            link.requested_by = request.user.profile
+            link.decided_by = None
+            link.save(update_fields=['status', 'requested_by', 'decided_by', 'updated_at'])
+        notify_status = link.status  # link.status after possible reset
+        _notify_shop_staff(gym, shop, link, notify_status)
+        message = (
+            'Request sent — waiting on the shop to approve.' if link.status == 'pending'
+            else 'Linked.'
+        )
+        return Response(
+            {'success': True, 'data': _link_payload(link), 'message': message,
+             'errors': None, 'pagination': None},
+            status=status.HTTP_201_CREATED,
+        )
 
     def delete(self, request, gym_slug):
         gym, membership = _owner_gym(request, gym_slug)

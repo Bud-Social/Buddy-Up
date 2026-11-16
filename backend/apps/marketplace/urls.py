@@ -59,6 +59,9 @@ urlpatterns = [
     path('events/tickets/<uuid:ticket_id>/', views.EventTicketDetailView.as_view(), name='ticket_detail'),
     path('events/<uuid:event_id>/media/', views.EventMediaManageView.as_view(), name='event_media'),
     path('events/<uuid:event_id>/feedback/', views.EventFeedbackView.as_view(), name='event_feedback'),
+    # --- Shop ↔ Gym links ---
+    path('shops/gym-links/', views.ShopGymLinkListView.as_view(), name='shop_gym_links'),
+    path('shops/gym-links/<uuid:link_id>/respond/', views.ShopGymLinkRespondView.as_view(), name='shop_gym_link_respond'),
     path('events/<uuid:event_id>/media/<uuid:media_id>/', views.EventMediaManageView.as_view(), name='event_media_delete'),
 
     # --- Food Recognition ---

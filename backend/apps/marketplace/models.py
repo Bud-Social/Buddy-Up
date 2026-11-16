@@ -121,10 +121,35 @@ class ShopMembership(TimestampedModel):
 
 
 class ShopGymLink(TimestampedModel):
-    """A shop can be linked to one or more gyms."""
+    """A shop can be linked to one or more gyms.
+
+    The link is bidirectional by intent, but asymmetrical in rights: the gym
+    *requests* a link, the shop *approves* it. A pending row blocks any pull
+    of shop data into the gym's revenue/analytics tabs until the shop signs
+    it. Until then the gym's revenue tab hides the shop's numbers with a
+    "pending approval" badge.
+    """
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending approval'),
+        ('active', 'Approved'),
+        ('declined', 'Declined'),
+    ]
+
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='gym_links')
     gym = models.ForeignKey('gyms.Gym', on_delete=models.CASCADE, related_name='shop_links')
     is_primary = models.BooleanField(default=False)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='pending')
+    # Who requested it (the gym owner/co-owner who clicked "connect").
+    requested_by = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='requested_gym_links',
+    )
+    # Set when the shop owner/manager accepts or declines it.
+    decided_by = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='decided_gym_links',
+    )
 
     class Meta:
         db_table = 'marketplace_shop_gym_link'
