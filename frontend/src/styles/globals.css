@@ -70,8 +70,9 @@ html.ambient {
     overscroll-behavior: none;
   }
 
-  /* Touch targets minimum 48px */
-  button, a, [role="button"] {
+  /* Touch targets minimum 48px — role="switch" is excluded: it renders as a
+   * h-6 w-11 track and the 48px floor pinned it into a circle. */
+  button:not([role="switch"]), a, [role="button"] {
     @apply min-h-touch min-w-touch;
   }
 }
