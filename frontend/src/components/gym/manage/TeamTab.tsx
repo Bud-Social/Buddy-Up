@@ -86,9 +86,9 @@ export function TeamTab({ members, currentRole, onChangeRole, onRemove, busyId }
                       disabled={busyId === m.id}
                       aria-label={`Demote ${m.member_data?.display_name || 'member'} to regular member`}
                       onClick={() => onChangeRole(m, 'member')}
-                      className="text-buddy-orange"
+                      className="text-buddy-orange border border-buddy-orange/30 bg-buddy-orange/5 gap-1 rounded-full px-2.5"
                     >
-                      <UserMinus size={14} />
+                      <UserMinus size={12} /> Demote
                     </Button>
                     <Button
                       size="sm"
@@ -96,8 +96,9 @@ export function TeamTab({ members, currentRole, onChangeRole, onRemove, busyId }
                       disabled={busyId === m.id}
                       aria-label={`Toggle ${m.member_data?.display_name || 'member'} between moderator and trainer`}
                       onClick={() => onChangeRole(m, m.role === 'trainer' ? 'moderator' : 'trainer')}
+                      className="text-buddy-text-primary border border-buddy-surface-raised bg-buddy-surface gap-1 rounded-full px-2.5"
                     >
-                      <UserCog size={14} />
+                      <UserCog size={12} /> Toggle
                     </Button>
                     <Button
                       size="sm"
@@ -105,9 +106,9 @@ export function TeamTab({ members, currentRole, onChangeRole, onRemove, busyId }
                       disabled={busyId === m.id}
                       aria-label={`Remove ${m.member_data?.display_name || 'member'} from the gym`}
                       onClick={() => onRemove(m)}
-                      className="text-buddy-red"
+                      className="text-buddy-red border border-buddy-red/30 bg-buddy-red/5 gap-1 rounded-full px-2.5"
                     >
-                      <X size={14} />
+                      <X size={12} /> Remove
                     </Button>
                   </div>
                 )}

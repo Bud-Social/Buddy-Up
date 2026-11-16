@@ -441,14 +441,17 @@ class _TeamTab extends StatelessWidget {
             BuddyBadge(label: member.role, color: _roleColor(member.role)),
             if (editable) ...[
               const SizedBox(width: 6),
-              IconButton(
-                icon: const Icon(Icons.swap_horiz, size: 18, color: BuddyColors.textSecondary),
-                tooltip: 'Toggle manager / staff',
+              _TeamPill(
+                key: Key('shop-toggle-${member.id}'),
+                icon: Icons.swap_horiz,
+                label: 'Toggle',
                 onPressed: busyKey == member.id ? null : () => onToggleRole(member),
               ),
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline, size: 18, color: BuddyColors.red),
-                tooltip: 'Remove',
+              _TeamPill(
+                key: Key('shop-remove-${member.id}'),
+                icon: Icons.close,
+                label: 'Remove',
+                tint: BuddyColors.red,
                 onPressed: busyKey == member.id ? null : () => onRemove(member),
               ),
             ],
@@ -458,3 +461,41 @@ class _TeamTab extends StatelessWidget {
     );
   }
 }
+
+class _TeamPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color? tint;
+  final VoidCallback? onPressed;
+
+  const _TeamPill({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.tint,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = tint ?? BuddyColors.textSecondary;
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 12, color: color),
+        label: Text(label, style: TextStyle(fontSize: 10, color: color)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: color,
+          side: BorderSide(color: color.withValues(alpha: 0.4)),
+          backgroundColor: color.withValues(alpha: 0.06),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          minimumSize: const Size(0, 26),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: const StadiumBorder(),
+        ),
+      ),
+    );
+  }
+}
+

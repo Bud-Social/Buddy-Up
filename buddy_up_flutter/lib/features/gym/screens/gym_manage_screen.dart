@@ -1505,24 +1505,24 @@ class _TeamMemberCard extends ConsumerWidget {
           ),
           BuddyBadge(label: membership.role.replaceAll('_', ' '), color: _roleColor(membership.role)),
           if (editable) ...[
-            IconButton(
+            _TeamActionPill(
               key: Key('team-demote-${membership.memberId}'),
-              tooltip: 'Demote to member',
-              icon: const Icon(Icons.remove_circle_outline,
-                  size: 18, color: BuddyColors.gold),
+              icon: Icons.remove_circle_outline,
+              label: 'Demote',
+              tint: BuddyColors.gold,
               onPressed: () => changeRole('member'),
             ),
-            IconButton(
+            _TeamActionPill(
               key: Key('team-toggle-${membership.memberId}'),
-              tooltip: membership.role == 'trainer' ? 'Make moderator' : 'Make trainer',
-              icon: const Icon(Icons.swap_horiz,
-                  size: 18, color: BuddyColors.textSecondary),
+              icon: Icons.swap_horiz,
+              label: 'Toggle',
               onPressed: () => changeRole(membership.role == 'trainer' ? 'moderator' : 'trainer'),
             ),
-            IconButton(
+            _TeamActionPill(
               key: Key('team-remove-${membership.memberId}'),
-              tooltip: 'Remove from gym',
-              icon: const Icon(Icons.close, size: 18, color: BuddyColors.red),
+              icon: Icons.close,
+              label: 'Remove',
+              tint: BuddyColors.red,
               onPressed: remove,
             ),
           ],
@@ -1618,6 +1618,46 @@ class _ActionLogTileState extends State<_ActionLogTile> {
             _DeltaTable(before: entry.before, after: entry.after),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Small horizontally-stretched action pill for team rows. Cicular icon-only
+/// buttons had to go; these keep the affordance stretched like the organiser
+/// activator, with the label spelled out.
+class _TeamActionPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color? tint;
+  final VoidCallback onPressed;
+
+  const _TeamActionPill({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.tint,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = tint ?? BuddyColors.textSecondary;
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 12, color: color),
+        label: Text(label, style: TextStyle(fontSize: 10, color: color)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: color,
+          side: BorderSide(color: color.withValues(alpha: 0.4)),
+          backgroundColor: color.withValues(alpha: 0.06),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          minimumSize: const Size(0, 26),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: const StadiumBorder(),
+        ),
       ),
     );
   }

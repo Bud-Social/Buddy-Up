@@ -336,7 +336,7 @@ export default function GymManage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium truncate">{gym.name}</p>
-                <VerifiedGymBadge verified={gym.is_verified} />
+                <VerifiedGymBadge verified={gym.is_verified} tier={gym.tier} />
               </div>
               <p className="text-xs text-buddy-text-secondary mt-0.5">
                 @{gym.handle} · {gym.member_count} members
