@@ -13,6 +13,7 @@ import '../../../shared/widgets/role_dashboard_shell.dart';
 import '../providers/gym_manage_provider.dart';
 import '../providers/gym_provider.dart';
 
+
 /// Gym management.
 ///
 /// Reuses the exact data sources and cards `GymDetailScreen` already renders —
@@ -32,9 +33,10 @@ class GymManageScreen extends ConsumerWidget {
 
   const GymManageScreen({super.key, required this.slug});
 
-  /// Overview leads: it is the operator's own numbers, and it is the answer to
-  /// "how is my gym doing" that a management surface should open on.
-  static const tabs = ['Overview', 'Members', 'Requests', 'Schedule', 'Reviews'];
+  /// Privileged surfaces. Owners, co-owners and moderators see the full
+  /// roster; a regular member only sees what they can act on.
+  static const adminTabs = ['Overview', 'Members', 'Team', 'Requests', 'Schedule', 'Reviews', 'Logs'];
+  static const memberTabs = ['Members', 'Requests', 'Schedule', 'Reviews'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,11 +54,7 @@ class GymManageScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(gymDetailProvider(slug)),
         ),
       ),
-      data: (gym) => _ManageBody(
-        slug: slug,
-        gym: gym,
-        tabs: tabs,
-      ),
+      data: (gym) => _ManageBody(slug: slug, gym: gym),
     );
   }
 }
@@ -64,12 +62,10 @@ class GymManageScreen extends ConsumerWidget {
 class _ManageBody extends ConsumerStatefulWidget {
   final String slug;
   final Gym gym;
-  final List<String> tabs;
 
   const _ManageBody({
     required this.slug,
     required this.gym,
-    required this.tabs,
   });
 
   @override
@@ -103,6 +99,22 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
             ?.length ??
         0;
 
+    // Overview/Team/Logs are privileged surfaces — a regular member deep-linking
+    // here gets the traffic they can act on instead of 403 furniture.
+    final panelByTab = <String, Widget Function()>{
+      'Overview': _overviewTab,
+      'Members': _membersTab,
+      'Team': _teamTab,
+      'Requests': _requestsTab,
+      'Schedule': _scheduleTab,
+      'Reviews': _reviewsTab,
+      'Logs': _logsTab,
+    };
+    final tabs = isAdmin ? GymManageScreen.adminTabs : GymManageScreen.memberTabs;
+    final panels = [for (final tab in tabs) (tab, panelByTab[tab]!)];
+    if (_tabIndex >= panels.length) _tabIndex = 0;
+    final labels = [for (final panel in panels) panel.$1];
+
     return RoleDashboardShell(
       title: gym.name,
       subtitle: 'Manage @${gym.handle}',
@@ -128,24 +140,18 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
               RoleNotice(message: _actionError!, isError: true),
             if (_notice != null) RoleNotice(message: _notice!),
             RoleFilterChips<String>(
-              options: widget.tabs,
-              selected: widget.tabs[_tabIndex],
+              options: labels,
+              selected: labels[_tabIndex],
               label: (tab) => tab == 'Requests' && requestsCount > 0
                   ? '$tab ($requestsCount)'
                   : tab,
               onSelected: (tab) {
                 _clearMessages();
-                setState(() => _tabIndex = widget.tabs.indexOf(tab));
+                setState(() => _tabIndex = labels.indexOf(tab));
               },
             ),
             const SizedBox(height: 16),
-            switch (_tabIndex) {
-              0 => _overviewTab(),
-              1 => _membersTab(),
-              2 => _requestsTab(),
-              3 => _scheduleTab(),
-              _ => _reviewsTab(),
-            },
+            panels[_tabIndex].$2(),
           ],
         ),
       ),
@@ -349,6 +355,95 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
                       ),
                   ],
                 ),
+        ),
+      ],
+    );
+  }
+
+  Widget _teamTab() {
+    final membersAsync = ref.watch(gymManageMembersProvider(widget.slug));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const RoleSectionTitle('Team'),
+        membersAsync.when(
+          loading: () => const PageLoader(fullScreen: false),
+          error: (error, _) => RoleNotice(
+            message: gymManageErrorMessage(
+              error,
+              fallback: 'Could not load team.',
+            ),
+            isError: true,
+          ),
+          data: (members) {
+            const staffRoles = {'owner', 'co_owner', 'moderator', 'trainer'};
+            final staff = members
+                .where((m) => staffRoles.contains(m.role))
+                .toList()
+              ..sort((a, b) => _roleRank(a.role).compareTo(_roleRank(b.role)));
+            final counts = <String, int>{};
+            for (final member in members) {
+              counts[member.role] = (counts[member.role] ?? 0) + 1;
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    for (final role in const ['owner', 'co_owner', 'moderator', 'trainer']) ...[
+                      Expanded(child: _TeamCountTile(label: _roleLabel(role), count: counts[role] ?? 0)),
+                      if (role != 'trainer') const SizedBox(width: 8),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Promote a member to Trainer to post routines under the gym. '
+                  'Moderators triage the queue but cannot touch tier, wallet or '
+                  'deletion. Only owners and co-owners can change these roles.',
+                  style: TextStyle(fontSize: 10, color: BuddyColors.textSecondary),
+                ),
+                const SizedBox(height: 10),
+                if (staff.isEmpty)
+                  const _PanelEmpty('No staff yet. Invite someone from the Members tab and promote them here.')
+                else
+                  for (final membership in staff)
+                    _TeamMemberCard(membership: membership, slug: widget.slug),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _logsTab() {
+    final logsAsync = ref.watch(gymManageActionLogsProvider(widget.slug));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RoleSectionTitle(
+          'Action log',
+          trailing: TextButton.icon(
+            onPressed: () => ref.invalidate(gymManageActionLogsProvider(widget.slug)),
+            icon: const Icon(Icons.refresh, size: 14),
+            label: const Text('Refresh', style: TextStyle(fontSize: 11)),
+          ),
+        ),
+        logsAsync.when(
+          loading: () => const PageLoader(fullScreen: false),
+          error: (error, _) => RoleNotice(
+            message: gymManageErrorMessage(
+              error,
+              fallback: 'Could not load the action log.',
+            ),
+            isError: true,
+          ),
+          data: (logs) => logs.isEmpty
+              ? const _PanelEmpty('Nothing logged yet. Role changes, venues, coaches, announcements and events will appear here.')
+              : Column(children: [
+                  for (final entry in logs) _ActionLogTile(entry: entry),
+                ]),
         ),
       ],
     );
@@ -1272,4 +1367,318 @@ String _day(String iso) {
 String _moment(String iso) {
   final parsed = DateTime.tryParse(iso);
   return parsed == null ? iso : DateFormat.MMMd().add_jm().format(parsed);
+}
+
+
+int _roleRank(String role) {
+  switch (role) {
+    case 'owner':
+      return 0;
+    case 'co_owner':
+      return 1;
+    case 'moderator':
+      return 2;
+    case 'trainer':
+      return 3;
+    default:
+      return 4;
+  }
+}
+
+String _roleLabel(String role) {
+  switch (role) {
+    case 'owner':
+      return 'Owners';
+    case 'co_owner':
+      return 'Co-owners';
+    case 'moderator':
+      return 'Moderators';
+    case 'trainer':
+      return 'Trainers';
+    default:
+      return role.replaceAll('_', ' ');
+  }
+}
+
+/// Headcount tile for the staff roster — one per privileged role.
+class _TeamCountTile extends StatelessWidget {
+  final String label;
+  final int count;
+
+  const _TeamCountTile({required this.label, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return RoleCard(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        children: [
+          Text('$count',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(label.toUpperCase(),
+              style: const TextStyle(
+                  fontSize: 9,
+                  color: BuddyColors.textSecondary,
+                  letterSpacing: 0.5)),
+        ],
+      ),
+    );
+  }
+}
+
+/// One staff row with the same promotion grammar as the members tab:
+/// trainer ↔ moderator toggle, demote to member, and remove.
+class _TeamMemberCard extends ConsumerWidget {
+  final GymMembership membership;
+  final String slug;
+
+  const _TeamMemberCard({required this.membership, required this.slug});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final member = membership.memberData;
+    final gymAsync = ref.watch(gymDetailProvider(slug));
+    final viewerRole = gymAsync.value?.membershipRole;
+    final canManage = viewerRole == 'owner' || viewerRole == 'co_owner';
+    final editable = canManage && !const {'owner', 'co_owner'}.contains(membership.role);
+
+    Future<void> changeRole(String role) async {
+      await ref
+          .read(gymRepositoryProvider)
+          .manageMember(slug, membership.memberId, {'role': role});
+      ref.invalidate(gymManageMembersProvider(slug));
+    }
+
+    Future<void> remove() async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: BuddyColors.surface,
+          title: const Text('Remove from the gym?',
+              style: TextStyle(color: BuddyColors.textPrimary)),
+          content: Text(
+            '${member.displayName.isEmpty ? member.username : member.displayName} loses access to this gym immediately.',
+            style: const TextStyle(color: BuddyColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Keep', style: TextStyle(color: BuddyColors.textSecondary)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Remove', style: TextStyle(color: BuddyColors.red)),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      await ref.read(gymRepositoryProvider).removeMember(slug, membership.memberId);
+      ref.invalidate(gymManageMembersProvider(slug));
+    }
+
+    return RoleCard(
+      child: Row(
+        children: [
+          Avatar(
+            src: member.avatarUrl,
+            alt: member.displayName,
+            size: AvatarSize.sm,
+            verificationStatus: member.verificationStatus,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  member.displayName.isEmpty ? member.username : member.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                Text('@${member.username}',
+                    style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
+              ],
+            ),
+          ),
+          BuddyBadge(label: membership.role.replaceAll('_', ' '), color: _roleColor(membership.role)),
+          if (editable) ...[
+            IconButton(
+              key: Key('team-demote-${membership.memberId}'),
+              tooltip: 'Demote to member',
+              icon: const Icon(Icons.remove_circle_outline,
+                  size: 18, color: BuddyColors.gold),
+              onPressed: () => changeRole('member'),
+            ),
+            IconButton(
+              key: Key('team-toggle-${membership.memberId}'),
+              tooltip: membership.role == 'trainer' ? 'Make moderator' : 'Make trainer',
+              icon: const Icon(Icons.swap_horiz,
+                  size: 18, color: BuddyColors.textSecondary),
+              onPressed: () => changeRole(membership.role == 'trainer' ? 'moderator' : 'trainer'),
+            ),
+            IconButton(
+              key: Key('team-remove-${membership.memberId}'),
+              tooltip: 'Remove from gym',
+              icon: const Icon(Icons.close, size: 18, color: BuddyColors.red),
+              onPressed: remove,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One audit-trail row — expands to the before/after state delta.
+class _ActionLogTile extends StatefulWidget {
+  final GymActionLogEntry entry;
+
+  const _ActionLogTile({required this.entry});
+
+  @override
+  State<_ActionLogTile> createState() => _ActionLogTileState();
+}
+
+class _ActionLogTileState extends State<_ActionLogTile> {
+  bool _open = false;
+
+  IconData get _icon {
+    final action = widget.entry.action;
+    if (action.startsWith('gym.venue')) return Icons.place_outlined;
+    if (action.startsWith('gym.coach')) return Icons.fitness_center;
+    if (action.startsWith('gym.member')) return Icons.manage_accounts_outlined;
+    if (action.startsWith('gym.announce')) return Icons.campaign_outlined;
+    if (action.startsWith('gym.events')) return Icons.event_outlined;
+    if (action.startsWith('gym.shops')) return Icons.storefront_outlined;
+    if (action.startsWith('gym.tier')) return Icons.workspace_premium_outlined;
+    if (action.startsWith('gym.registration')) return Icons.description_outlined;
+    if (action.startsWith('gym.update')) return Icons.edit_outlined;
+    return Icons.receipt_long_outlined;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final entry = widget.entry;
+    final hasDelta = entry.before != null || entry.after != null;
+    return RoleCard(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: hasDelta ? () => setState(() => _open = !_open) : null,
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: BuddyColors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(_icon, size: 16, color: BuddyColors.green),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.action.replaceAll('.', ' · ').toUpperCase(),
+                        style: const TextStyle(
+                            fontSize: 9,
+                            color: BuddyColors.textSecondary,
+                            letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(entry.summary,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 2),
+                      Text('@${entry.actor}${entry.createdAt != null ? ' · ${_moment(entry.createdAt!.toIso8601String())}' : ''}',
+                          style: const TextStyle(
+                              fontSize: 10, color: BuddyColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                if (hasDelta)
+                  Icon(_open ? Icons.expand_less : Icons.expand_more,
+                      size: 18, color: BuddyColors.textSecondary),
+              ],
+            ),
+          ),
+          if (_open && hasDelta) ...[
+            const SizedBox(height: 8),
+            _DeltaTable(before: entry.before, after: entry.after),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Before/after table for one state delta. Never renders message/content fields.
+class _DeltaTable extends StatelessWidget {
+  final Map<String, dynamic>? before;
+  final Map<String, dynamic>? after;
+
+  const _DeltaTable({this.before, this.after});
+
+  @override
+  Widget build(BuildContext context) {
+    final keys = <String>{
+      ...?before?.keys,
+      ...?after?.keys,
+    }.toList()
+      ..sort();
+    Widget cell(dynamic value) =>
+        Text(value == null ? '—' : '$value', maxLines: 3, overflow: TextOverflow.ellipsis);
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: BuddyColors.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Table(
+        border: const TableBorder(
+          horizontalInside: BorderSide(color: BuddyColors.border, width: 0.5),
+        ),
+        columnWidths: const {
+          0: FlexColumnWidth(0.9),
+          1: FlexColumnWidth(2),
+          2: FlexColumnWidth(2),
+        },
+        children: [
+          const TableRow(
+            decoration: BoxDecoration(color: BuddyColors.surfaceRaised),
+            children: [
+              Padding(padding: EdgeInsets.all(6), child: Text('Field', style: TextStyle(fontSize: 9, color: BuddyColors.textSecondary))),
+              Padding(padding: EdgeInsets.all(6), child: Text('Before', style: TextStyle(fontSize: 9, color: BuddyColors.textSecondary))),
+              Padding(padding: EdgeInsets.all(6), child: Text('After', style: TextStyle(fontSize: 9, color: BuddyColors.textSecondary))),
+            ],
+          ),
+          for (final key in keys)
+            TableRow(
+              children: [
+                Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Text(key,
+                        style: const TextStyle(
+                            fontSize: 9,
+                            fontFamily: 'monospace',
+                            color: BuddyColors.textSecondary))),
+                Padding(padding: const EdgeInsets.all(6), child: cell(before?[key])),
+                Padding(padding: const EdgeInsets.all(6), child: cell(after?[key])),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
 }

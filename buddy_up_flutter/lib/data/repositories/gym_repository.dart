@@ -78,6 +78,15 @@ abstract class GymRepository {
     @Path('userId') String userId,
   );
 
+  /// Append-only audit trail. Moderator/owner/co-owner only upstream; every
+  /// row is a state delta from a privileged action inside the gym.
+  @GET('/gyms/{slug}/action-logs/')
+  Future<dynamic> getActionLogs(
+    @Path('slug') String slug, {
+    @Query('action') String? action,
+    @Query('limit') int? limit,
+  });
+
   /// Operator-facing analytics. Partner-only upstream (owner / co-owner /
   /// moderator); every figure carries its own window because there is no
   /// ambient "current period" to inherit. See `PartnerMetricsView`.

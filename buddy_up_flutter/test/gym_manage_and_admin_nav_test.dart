@@ -52,27 +52,37 @@ void main() {
   });
 
   group('gym management tabs', () {
-    test('opens on Overview', () {
+    test('opens on Overview for admins', () {
       // The management surface is an operator's dashboard; it should not open
       // on a member list with the numbers two taps away.
-      expect(GymManageScreen.tabs.first, 'Overview');
+      expect(GymManageScreen.adminTabs.first, 'Overview');
+    });
+
+    test('a regular member never sees privileged panels', () {
+      // Overview, Team and Logs are operator surfaces — leaking them into a
+      // member's deep link would advertise endpoints they cannot call.
+      expect(GymManageScreen.memberTabs, isNot(contains('Overview')));
+      expect(GymManageScreen.memberTabs, isNot(contains('Team')));
+      expect(GymManageScreen.memberTabs, isNot(contains('Logs')));
     });
 
     test('every tab label is short enough for one row', () {
       // These render in a tab strip; a long label wraps the strip to two rows
       // and pushes the panel content off screen.
-      for (final tab in GymManageScreen.tabs) {
+      for (final tab in [...GymManageScreen.adminTabs, ...GymManageScreen.memberTabs]) {
         expect(tab.length, lessThanOrEqualTo(9), reason: '"$tab" is too long');
       }
     });
 
     test('the panel count covers every requested surface', () {
-      expect(GymManageScreen.tabs, containsAll(<String>[
+      expect(GymManageScreen.adminTabs, containsAll(<String>[
         'Overview', // gym analytics
         'Members', // remove / change role
+        'Team', // staff roster + promotion
         'Requests',
         'Schedule',
         'Reviews',
+        'Logs', // append-only audit trail
       ]));
     });
   });

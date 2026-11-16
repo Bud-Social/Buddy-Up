@@ -91,6 +91,62 @@ final gymManageReviewsProvider =
   return _rows(raw).map(GymReview.fromJson).toList();
 });
 
+/// One entry in the gym's append-only audit trail. Moderator+ only upstream;
+/// a regular member's request returns 404 and the panel shows its empty
+/// state rather than leaking existence.
+class GymActionLogEntry {
+  final String id;
+  final String action;
+  final String summary;
+  final String actor;
+  final String? targetType;
+  final String? targetId;
+  final Map<String, dynamic>? before;
+  final Map<String, dynamic>? after;
+  final DateTime? createdAt;
+
+  const GymActionLogEntry({
+    required this.id,
+    required this.action,
+    required this.summary,
+    required this.actor,
+    this.targetType,
+    this.targetId,
+    this.before,
+    this.after,
+    this.createdAt,
+  });
+
+  factory GymActionLogEntry.fromJson(Map<String, dynamic> json) {
+    Map<String, dynamic>? delta(dynamic value) {
+      if (value is Map<String, dynamic>) return value;
+      if (value is Map) return value.map((k, v) => MapEntry('$k', v));
+      return null;
+    }
+
+    return GymActionLogEntry(
+      id: '${json['id'] ?? ''}',
+      action: '${json['action'] ?? ''}',
+      summary: '${json['summary'] ?? ''}',
+      actor: '${json['actor'] ?? ''}',
+      targetType: json['target_type'] as String?,
+      targetId: json['target_id'] as String?,
+      before: delta(json['before']),
+      after: delta(json['after']),
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse('${json['created_at']}')?.toLocal()
+          : null,
+    );
+  }
+}
+
+final gymManageActionLogsProvider =
+    FutureProvider.family<List<GymActionLogEntry>, String>((ref, slug) async {
+  final raw =
+      await ref.read(gymRepositoryProvider).getActionLogs(slug, limit: 200);
+  return _rows(raw).map(GymActionLogEntry.fromJson).toList();
+});
+
 /// The single object inside the standard `{success, data}` envelope.
 Map<String, dynamic> _payload(dynamic body) {
   final data = body is Map ? body['data'] : body;
