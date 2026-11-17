@@ -188,8 +188,52 @@ class GymSavedView(views.APIView):
         posts = sorted(posts, key=lambda p: ordering.get(p.id, len(post_ids)))
         serializer = PostSerializer(posts, many=True, context={'request': request})
         data = list(serializer.data)
-        total = Save.objects.filter(gym=gym).count()
-        return _json_response({'count': total, 'items': data})
+
+        # Merge community posts saved by the gym, rendered in the same
+        # PostSerializer-compatible shape the Saved roster expects.
+        from apps.communities.post_payload import community_post_payload
+        from apps.messaging.models import CommunityPostSave, CommunityPostRepost, CommunityPostLike, CommunityPostReaction
+        from django.db.models import Count
+        community_saves = list(
+            CommunityPostSave.objects.filter(gym=gym)
+            .select_related('post__author', 'post__conversation')
+            .order_by('-created_at')[:50]
+        )
+        community_items = []
+        if community_saves:
+            cp_ids = [save.post_id for save in community_saves]
+            reaction_types = {
+                row['post_id']: row['reaction_type']
+                for row in CommunityPostReaction.objects.filter(gym=gym, post_id__in=cp_ids)
+                .values('post_id', 'reaction_type')
+            }
+            like_ids = set(
+                CommunityPostLike.objects.filter(gym=gym, post_id__in=cp_ids)
+                .values_list('post_id', flat=True)
+            )
+            repost_ids = set(
+                CommunityPostRepost.objects.filter(gym=gym, post_id__in=cp_ids)
+                .values_list('post_id', flat=True)
+            )
+            for save in community_saves:
+                cp = save.post
+                reaction_counts = {}
+                if cp.like_count:
+                    reaction_counts['💪'] = cp.like_count
+                for row in cp.reactions.values('reaction_type').annotate(c=Count('pk')):
+                    reaction_counts[row['reaction_type']] = reaction_counts.get(row['reaction_type'], 0) + row['c']
+                community_items.append(community_post_payload(
+                    cp,
+                    reaction_counts=reaction_counts,
+                    user_reaction=('💪' if like_ids.__contains__(cp.id) else
+                                   reaction_types.get(str(cp.id))),
+                    is_saved=True,
+                    is_reposted_by_me=cp.id in repost_ids,
+                ))
+
+        data.extend(community_items)
+        count = len(data)
+        return _json_response({'count': count, 'items': data})
 
 
 class GymCommentView(views.APIView):

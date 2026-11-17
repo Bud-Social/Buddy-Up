@@ -33,9 +33,36 @@ export function SavedGymPostsPanel({ slug, gymName }: Props) {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  const unsave = async (postId: string) => {
-    setPosts((prev) => prev?.filter((p) => p.id !== postId) ?? prev);
-    try { await gymFeedApi.save(slug, postId); } catch { /* */ }
+  const handleSave = (post: Post) => {
+    if (post.community_id) {
+      gymFeedApi.saveCommunityPost(slug, post.community_id, post.id).catch(() => {});
+    } else {
+      gymFeedApi.save(slug, post.id).catch(() => {});
+    }
+  };
+
+  const handleLike = (post: Post) => {
+    if (post.community_id) {
+      gymFeedApi.reactCommunityPost(slug, post.community_id, post.id, 'like').catch(() => {});
+    } else {
+      gymFeedApi.react(slug, post.id, '💪').catch(() => {});
+    }
+  };
+
+  const handleReact = (post: Post, reaction: string) => {
+    if (post.community_id) {
+      gymFeedApi.reactCommunityPost(slug, post.community_id, post.id, reaction).catch(() => {});
+    } else {
+      gymFeedApi.react(slug, post.id, reaction).catch(() => {});
+    }
+  };
+
+  const handleRepost = (post: Post) => {
+    if (post.community_id) {
+      gymFeedApi.repostCommunityPost(slug, post.community_id, post.id).catch(() => {});
+    } else {
+      gymFeedApi.repost(slug, post.id).catch(() => {});
+    }
   };
 
   if (loading) {
@@ -63,10 +90,10 @@ export function SavedGymPostsPanel({ slug, gymName }: Props) {
           <PostCard
             key={post.id}
             post={post}
-            onSave={(id) => unsave(id)}
-            onLike={(id) => { gymFeedApi.react(slug, id, '💪').catch(() => {}); }}
-            onReact={(id, reaction) => { gymFeedApi.react(slug, id, reaction).catch(() => {}); }}
-            onRepost={(id) => { gymFeedApi.repost(slug, id).catch(() => {}); }}
+            onSave={() => handleSave(post)}
+            onLike={() => handleLike(post)}
+            onReact={(_id, reaction) => handleReact(post, reaction)}
+            onRepost={() => handleRepost(post)}
           />
         ))
       )}

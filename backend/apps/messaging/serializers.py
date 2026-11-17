@@ -280,23 +280,42 @@ class CommunityMemberSerializer(serializers.ModelSerializer):
 
 class CommunityPostCommentSerializer(serializers.ModelSerializer):
     author_data = serializers.SerializerMethodField()
+    gym_data = serializers.SerializerMethodField()
     reply_count = serializers.SerializerMethodField()
     reaction_counts = serializers.SerializerMethodField()
     user_reaction = serializers.SerializerMethodField()
 
     class Meta:
         model = CommunityPostComment
-        fields = ['id', 'post_id', 'body', 'reply_to_id', 'author_data',
+        fields = ['id', 'post_id', 'body', 'reply_to_id', 'author_data', 'gym_data',
                   'reply_count', 'media_type', 'media_url', 'sticker_pack',
                   'reaction_counts', 'user_reaction', 'created_at']
 
     def get_author_data(self, obj):
+        if obj.gym_id is not None:
+            gym = obj.gym
+            return {
+                'user_id': str(gym.id),
+                'username': gym.handle,
+                'display_name': gym.name,
+                'avatar_url': getattr(gym, 'logo_url', '') or '',
+                'is_gym': True,
+                'verification_status': 'gym',
+            }
         return {
             'user_id': str(obj.author.user_id),
             'username': obj.author.username,
             'display_name': obj.author.display_name,
             'avatar_url': obj.author.avatar_url,
+            'verification_status': obj.author.verification_status or 'none',
         }
+
+    def get_gym_data(self, obj):
+        if obj.gym_id is None:
+            return None
+        gym = obj.gym
+        logo = getattr(gym, 'logo_url', '') or ''
+        return {'id': str(gym.id), 'name': gym.name, 'handle': gym.handle, 'logo_url': logo}
 
     def get_reply_count(self, obj):
         return obj.replies.count()

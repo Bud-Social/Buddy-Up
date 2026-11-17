@@ -8,12 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';
 import type { AuthorData } from '@/types';
 
-const VERIFICATION_BADGES: Record<string, { label: string; className: string }> = {
-  trainer: { label: 'Trainer', className: 'bg-buddy-green/20 text-buddy-green' },
-  practitioner: { label: 'Practitioner', className: 'bg-buddy-gold/20 text-buddy-gold' },
-  shop: { label: 'Shop', className: 'bg-buddy-electric/20 text-buddy-electric' },
-  gym: { label: 'Gym', className: 'bg-buddy-green/20 text-buddy-green' },
-};
+import { VERIFICATION_BADGES } from '@/lib/verificationBadge';
 
 export function VerificationBadge({ status, dark = false }: { status?: string; dark?: boolean }) {
   if (!status) return null;

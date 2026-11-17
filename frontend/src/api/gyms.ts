@@ -651,6 +651,26 @@ const gymFeedApi = {
   saved: (slug: string, params: { collection?: string } = {}) =>
     apiClient.get<ApiResponse<{ count: number; items: any[] }>>(`/gyms/${slug}/feed/saved/`, { params })
       .then((r) => r.data.data),
+
+  reactCommunityPost: (slug: string, communityId: string, postId: string, reactionType: string) =>
+    apiClient.post<ApiResponse<{ reaction_type: string; is_reacted: boolean; like_count?: number }>>(
+      `/gyms/${slug}/communities/${communityId}/posts/${postId}/react/`, { reaction_type: reactionType },
+    ).then((r) => r.data.data),
+
+  repostCommunityPost: (slug: string, communityId: string, postId: string) =>
+    apiClient.post<ApiResponse<{ reposted: boolean; repost_count: number }>>(
+      `/gyms/${slug}/communities/${communityId}/posts/${postId}/repost/`, {},
+    ).then((r) => r.data.data),
+
+  saveCommunityPost: (slug: string, communityId: string, postId: string) =>
+    apiClient.post<ApiResponse<{ saved: boolean; save_count: number }>>(
+      `/gyms/${slug}/communities/${communityId}/posts/${postId}/save/`, {},
+    ).then((r) => r.data.data),
+
+  commentCommunityPost: (slug: string, communityId: string, postId: string, body: string) =>
+    apiClient.post<ApiResponse<any>>(
+      `/gyms/${slug}/communities/${communityId}/posts/${postId}/comments/`, { body },
+    ).then((r) => r.data.data),
 };
 
 export { gymFeedApi };

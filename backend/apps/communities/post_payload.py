@@ -17,7 +17,7 @@ def author_payload(cp):
         'username': author.username or '',
         'display_name': author.display_name or '',
         'avatar_url': author.avatar_url or '',
-        'verification_status': 'verified',
+        'verification_status': author.verification_status or 'none',
     }
 
 
@@ -46,13 +46,25 @@ def community_post_payload(
             reaction_counts[row['reaction_type']] = reaction_counts.get(row['reaction_type'], 0) + row['c']
 
     if reposters is None:
-        reposters = [{
-            'user_id': str(rp.profile.user_id),
-            'username': rp.profile.username or '',
-            'display_name': rp.profile.display_name or '',
-            'avatar_url': rp.profile.avatar_url or '',
-            'verification_status': rp.profile.verification_status or 'verified',
-        } for rp in cp.reposts.select_related('profile').order_by('created_at')]
+        reposters = [
+            (
+                {
+                    'user_id': str(rp.gym.id),
+                    'username': rp.gym.handle or '',
+                    'display_name': rp.gym.name or '',
+                    'avatar_url': getattr(rp.gym, 'logo_url', '') or '',
+                    'is_gym': True,
+                    'verification_status': 'gym',
+                } if rp.gym_id else {
+                    'user_id': str(rp.profile.user_id),
+                    'username': rp.profile.username or '',
+                    'display_name': rp.profile.display_name or '',
+                    'avatar_url': rp.profile.avatar_url or '',
+                    'verification_status': rp.profile.verification_status or 'none',
+                }
+            )
+            for rp in cp.reposts.select_related('profile', 'gym').order_by('created_at')
+        ]
 
     conversation = cp.conversation
     data = {

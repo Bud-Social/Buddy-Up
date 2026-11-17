@@ -44,6 +44,26 @@ export function Avatar({ src, alt, size = 'md', showRepRing = false, streakProgr
     <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-buddy-gold rounded-full border-2 border-buddy-black flex items-center justify-center">
       <span className="text-[6px] font-bold text-buddy-black">✓</span>
     </span>
+  ) : verificationStatus === 'distributor' ? (
+    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-orange-400 rounded-full border-2 border-buddy-black flex items-center justify-center">
+      <span className="text-[6px] font-bold text-buddy-black">✓</span>
+    </span>
+  ) : verificationStatus === 'shop' || verificationStatus === 'shop_owner' ? (
+    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-buddy-electric rounded-full border-2 border-buddy-black flex items-center justify-center">
+      <span className="text-[6px] font-bold text-buddy-black">✓</span>
+    </span>
+  ) : verificationStatus === 'gym' || verificationStatus === 'gym_owner' ? (
+    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-buddy-green rounded-full border-2 border-buddy-black flex items-center justify-center">
+      <span className="text-[6px] font-bold text-buddy-black">✓</span>
+    </span>
+  ) : verificationStatus === 'id' || verificationStatus === 'email' ? (
+    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-buddy-blue rounded-full border-2 border-buddy-black flex items-center justify-center">
+      <span className="text-[6px] font-bold text-buddy-black">✓</span>
+    </span>
+  ) : verificationStatus === 'delivery_partner' ? (
+    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-buddy-gold rounded-full border-2 border-buddy-black flex items-center justify-center">
+      <span className="text-[6px] font-bold text-buddy-black">✓</span>
+    </span>
   ) : null;
 
   if (!showRepRing) {

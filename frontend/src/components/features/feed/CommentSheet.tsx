@@ -260,7 +260,7 @@ export function CommentSheet({ postId, communityId, isOpen, onClose, gymSlug, gy
               })
               .map((c) => (
               <div key={c.id} className="flex gap-3 relative group">
-                <Avatar src={c.author_data?.avatar_url} alt={c.author_data?.display_name || 'User'} size="sm" />
+                <Avatar src={c.author_data?.avatar_url} alt={c.author_data?.display_name || 'User'} size="sm" verificationStatus={c.author_data?.verification_status} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm">
                     <span className="font-medium">{c.author_data?.display_name}</span>

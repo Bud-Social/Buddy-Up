@@ -6,6 +6,7 @@ from . import insights_views as __insights_views
 from . import link_request_views as __link_request_views
 from . import social_views as __social_views
 from . import inbox_views as __inbox_views
+from . import community_engage_views as __community_engage_views
 
 app_name = 'gyms'
 urlpatterns = [
@@ -37,6 +38,10 @@ urlpatterns = [
     path('<str:gym_slug>/feed/comment/', __social_views.GymCommentView.as_view(), name='feed_comment'),
     path('<str:gym_slug>/feed/save/', __social_views.GymSaveView.as_view(), name='feed_save'),
     path('<str:gym_slug>/feed/saved/', __social_views.GymSavedView.as_view(), name='feed_saved'),
+    path('<str:gym_slug>/communities/<uuid:conversation_id>/posts/<uuid:post_id>/react/', __community_engage_views.GymCommunityReactView.as_view(), name='community_react'),
+    path('<str:gym_slug>/communities/<uuid:conversation_id>/posts/<uuid:post_id>/repost/', __community_engage_views.GymCommunityRepostView.as_view(), name='community_repost'),
+    path('<str:gym_slug>/communities/<uuid:conversation_id>/posts/<uuid:post_id>/save/', __community_engage_views.GymCommunitySaveView.as_view(), name='community_save'),
+    path('<str:gym_slug>/communities/<uuid:conversation_id>/posts/<uuid:post_id>/comments/', __community_engage_views.GymCommunityCommentView.as_view(), name='community_comments'),
     path('<str:gym_slug>/inbox/', __inbox_views.GymInboxView.as_view(), name='inbox'),
     path('<str:gym_slug>/inbox/<uuid:conversation_id>/messages/', __inbox_views.GymInboxMessagesView.as_view(), name='inbox_messages'),
     path('<str:gym_slug>/feed/', views.GymFeedListView.as_view(), name='feed'),

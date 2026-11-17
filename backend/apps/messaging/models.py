@@ -289,6 +289,9 @@ class CommunityPostRepost(models.Model):
     profile = models.ForeignKey(
         'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_reposts'
     )
+    # Gym-actor reposts same pattern as feed's PostRepost — acting member
+    # retained as audit trail, gym row is the displayed identity.
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='community_post_reposts')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -297,6 +300,13 @@ class CommunityPostRepost(models.Model):
         indexes = [
             models.Index(fields=['post', '-created_at']),
             models.Index(fields=['profile', '-created_at']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['post', 'gym'],
+                condition=models.Q(gym__isnull=False),
+                name='unique_community_gym_repost',
+            ),
         ]
 
 
@@ -310,6 +320,7 @@ class CommunityPostSave(models.Model):
     profile = models.ForeignKey(
         'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_saves'
     )
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='community_post_saves')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -318,6 +329,13 @@ class CommunityPostSave(models.Model):
         indexes = [
             models.Index(fields=['post', '-created_at']),
             models.Index(fields=['profile', '-created_at']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['post', 'gym'],
+                condition=models.Q(gym__isnull=False),
+                name='unique_community_gym_save',
+            ),
         ]
 
 
@@ -331,6 +349,7 @@ class CommunityPostReaction(models.Model):
     profile = models.ForeignKey(
         'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_reactions'
     )
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='community_post_reactions')
     reaction_type = models.CharField(max_length=20, default='fire')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -340,6 +359,13 @@ class CommunityPostReaction(models.Model):
         indexes = [
             models.Index(fields=['post', 'reaction_type']),
             models.Index(fields=['profile', '-created_at']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['post', 'gym', 'reaction_type'],
+                condition=models.Q(gym__isnull=False),
+                name='unique_community_gym_reaction',
+            ),
         ]
 
 
@@ -386,10 +412,21 @@ class CommunityPostLike(TimestampedModel):
     profile = models.ForeignKey(
         'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_likes'
     )
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='community_post_likes')
 
     class Meta:
         db_table = 'messaging_community_post_like'
         unique_together = ('post', 'profile')
+        indexes = [
+            models.Index(fields=['post', 'profile']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['post', 'gym'],
+                condition=models.Q(gym__isnull=False),
+                name='unique_community_gym_like',
+            ),
+        ]
 
 
 class CommunityPostComment(TimestampedModel):
@@ -408,6 +445,8 @@ class CommunityPostComment(TimestampedModel):
     author = models.ForeignKey(
         'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_comments'
     )
+    # Set when the comment is written as a gym; acting staff stays in `author`.
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='community_post_comments')
     body = models.TextField(blank=True)
     media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES, default='text')
     media_url = models.URLField(blank=True, max_length=1000)
