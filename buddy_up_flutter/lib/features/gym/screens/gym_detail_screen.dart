@@ -8,6 +8,7 @@ import '../widgets/gym_tab_bar.dart';
 import '../widgets/schedule_post_card.dart';
 import '../widgets/review_card.dart';
 import '../widgets/verified_gym_badge.dart';
+import '../widgets/gym_contact_sheet.dart';
 import '../widgets/member_tile.dart';
 import '../../../core/api/api_error.dart';
 import '../../../shared/widgets/avatar.dart';
@@ -334,6 +335,21 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                   label: const Text('Manage'),
                 ),
               ],
+              // Message the gym — creates a gym-owned conversation, not a DM
+              // to the owner; the owner/team answer from their side.
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: () => showDialog(
+                  context: context,
+                  builder: (_) => GymContactSheet(
+                    gymName: gym.name,
+                    gymLogo: gym.logoUrl,
+                    gymSlug: widget.slug,
+                  ),
+                ),
+                icon: const Icon(Icons.forum_outlined, size: 16),
+                label: const Text('Message gym'),
+              ),
               if (gym.isDonationsEnabled) ...[
                 const SizedBox(width: 8),
                 OutlinedButton.icon(

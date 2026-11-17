@@ -9,7 +9,9 @@ import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/role_dashboard_shell.dart';
 import '../../messaging/providers/messaging_provider.dart';
 import '../providers/gym_insights_provider.dart';
+import '../providers/gym_manage_provider.dart';
 import '../../../data/models/gym_insights.dart';
+import '../../../data/models/gym.dart' as gym_models;
 
 // ---------------------------------------------------------------------------
 // Shared bits
@@ -322,11 +324,26 @@ class GymMessagesTab extends ConsumerStatefulWidget {
 
 class _GymMessagesTabState extends ConsumerState<GymMessagesTab> {
   String _filter = 'all';
+  GymInboxConversation? _active;
+  bool _memberPickerOpen = false;
+  String _memberQuery = '';
 
   @override
   Widget build(BuildContext context) {
     final slug = widget.slug;
+    if (_active != null) {
+      return _GymThreadView(
+        slug: slug,
+        conversation: _active!,
+        onBack: () => setState(() {
+          _active = null;
+          ref.invalidate(gymInboxProvider(slug));
+        }),
+      );
+    }
+
     final async = ref.watch(gymMessagesProvider(slug));
+    final inboxAsync = ref.watch(gymInboxProvider(slug));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -335,13 +352,70 @@ class _GymMessagesTabState extends ConsumerState<GymMessagesTab> {
           trailing: IconButton(
             icon: const Icon(Icons.refresh, size: 18),
             tooltip: 'Refresh',
-            onPressed: () => ref.invalidate(gymMessagesProvider(slug)),
+            onPressed: () {
+              ref.invalidate(gymMessagesProvider(slug));
+              ref.invalidate(gymInboxProvider(slug));
+            },
           ),
         ),
+        const SizedBox(height: 8),
+        const _SectionLabel('Gym inbox — members, team & clients'),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () => _openTeamChat(slug),
+                icon: const Icon(Icons.groups_2_rounded, size: 16),
+                label: const Text('Team chat', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 33),
+                  backgroundColor: BuddyColors.blue.withValues(alpha: 0.18),
+                  foregroundColor: BuddyColors.blue,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () => setState(() => _memberPickerOpen = !_memberPickerOpen),
+                icon: const Icon(Icons.person_add_alt_rounded, size: 16),
+                label: Text(_memberPickerOpen ? 'Hide members' : 'Message a member',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 33)),
+              ),
+            ),
+          ],
+        ),
+        if (_memberPickerOpen) ...[
+          const SizedBox(height: 8),
+          _MemberPicker(slug: slug, query: _memberQuery,
+              onQueryChanged: (v) => setState(() => _memberQuery = v),
+              onOpenConversation: (c) => setState(() => _active = c)),
+        ],
+        const SizedBox(height: 8),
+        inboxAsync.when(
+          loading: () => const PageLoader(fullScreen: false),
+          error: (_, _) => const RoleNotice(
+            message: 'Could not load the gym inbox.',
+            isError: true,
+          ),
+          data: (inbox) => inbox.isEmpty
+              ? const RoleNotice(
+                  message: 'No gym conversations yet — start the Team chat, message a member, or wait for a client to reach out.',
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [for (final conv in inbox) _GymInboxTile(conversation: conv, onTap: () => setState(() {
+                    _active = conv;
+                    _memberPickerOpen = false;
+                  }))],
+                ),
+        ),
+        const SizedBox(height: 10),
         async.when(
           loading: () => const PageLoader(fullScreen: false),
           error: (error, _) => const RoleNotice(
-            message: 'Could not load the gym inbox.',
+            message: 'Could not load community chats.',
             isError: true,
           ),
           data: (data) {
@@ -351,7 +425,7 @@ class _GymMessagesTabState extends ConsumerState<GymMessagesTab> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _SectionLabel('Gym inbox & community chats'),
+                const _SectionLabel('Community chats'),
                 _TileGrid(tiles: [
                   _KpiTile(label: 'Community chats', value: '${data.communityChats}'),
                   _KpiTile(label: 'Group chats', value: '${data.groupChats}'),
@@ -374,7 +448,7 @@ class _GymMessagesTabState extends ConsumerState<GymMessagesTab> {
                 if (convs.isEmpty)
                   RoleNotice(
                     message: _filter == 'all'
-                        ? 'No conversations yet. Community chats you belong to — and DMs your staff hold with members — land here.'
+                        ? 'No community conversations yet.'
                         : 'No $_filter conversations yet.',
                   )
                 else
@@ -394,6 +468,371 @@ class _GymMessagesTabState extends ConsumerState<GymMessagesTab> {
         ),
       ],
     );
+  }
+
+  Future<void> _openTeamChat(String slug) async {
+    try {
+      final conv = await gymInboxOpenConversation(slug, audience: 'team');
+      if (!mounted) return;
+      setState(() => _active = conv);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the team chat.')),
+      );
+    }
+  }
+}
+
+class _GymInboxTile extends StatelessWidget {
+  final GymInboxConversation conversation;
+  final VoidCallback onTap;
+  const _GymInboxTile({required this.conversation, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final audience = switch (conversation.conversationKind) {
+      'team' => const (label: 'TEAM', color: BuddyColors.blue),
+      'client' => const (label: 'CLIENT', color: BuddyColors.gold),
+      _ => const (label: 'MEMBER', color: BuddyColors.textSecondary),
+    };
+    return RoleCard(
+      padding: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: BuddyColors.surfaceRaised,
+                backgroundImage:
+                    conversation.avatarUrl.isNotEmpty ? NetworkImage(conversation.avatarUrl) : null,
+                child: conversation.avatarUrl.isEmpty
+                    ? Icon(
+                        conversation.isTeam ? Icons.groups_rounded : Icons.person,
+                        size: 20,
+                        color: BuddyColors.textSecondary,
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            conversation.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: audience.color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            audience.label,
+                            style: TextStyle(
+                              fontSize: 8,
+                              color: audience.color,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        if (conversation.unreadCount > 0)
+                          Container(
+                            margin: const EdgeInsets.only(left: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: BuddyColors.green,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '${conversation.unreadCount}',
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: BuddyColors.black,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    Text(
+                      '${conversation.memberCount} participants${conversation.lastMessage.isNotEmpty ? ' · ${conversation.lastMessage}' : ''}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 10, color: BuddyColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MemberPicker extends ConsumerWidget {
+  final String slug;
+  final String query;
+  final ValueChanged<String> onQueryChanged;
+  final void Function(GymInboxConversation) onOpenConversation;
+  const _MemberPicker({
+    required this.slug,
+    required this.query,
+    required this.onQueryChanged,
+    required this.onOpenConversation,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final members = ref.watch(gymManageMembersProvider(slug)).when(
+      data: (rows) => rows,
+      loading: () => const <gym_models.GymMembership>[],
+      error: (_, _) => const <gym_models.GymMembership>[],
+    );
+    final q = query.trim().toLowerCase();
+    final matches = members
+        .where((m) => m.role != 'owner')
+        .where((m) => q.isEmpty ||
+            m.memberData.username.toLowerCase().contains(q) ||
+            m.memberData.displayName.toLowerCase().contains(q))
+        .take(12)
+        .toList();
+    return RoleCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            autofocus: false,
+            onChanged: onQueryChanged,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search, size: 18),
+              hintText: 'Search members…',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (matches.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('No one matches that search.', style: TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
+            )
+          else
+            for (final member in matches)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Avatar(
+                  src: member.memberData.avatarUrl,
+                  alt: member.memberData.displayName,
+                  size: AvatarSize.sm,
+                ),
+                title: Text(member.memberData.displayName,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                subtitle: Text('@${member.memberData.username} · ${member.role}',
+                    style: const TextStyle(fontSize: 10, color: BuddyColors.textSecondary)),
+                trailing: const Icon(Icons.chat_bubble_outline, size: 16),
+                onTap: () async {
+                  try {
+                    final conv = await gymInboxOpenConversation(
+                      slug,
+                      audience: 'member',
+                      participantId: member.memberId,
+                    );
+                    if (context.mounted) onOpenConversation(conv);
+                  } catch (_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Could not open the conversation.')),
+                      );
+                    }
+                  }
+                },
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GymThreadView extends ConsumerStatefulWidget {
+  final String slug;
+  final GymInboxConversation conversation;
+  final VoidCallback onBack;
+  const _GymThreadView({required this.slug, required this.conversation, required this.onBack});
+
+  @override
+  ConsumerState<_GymThreadView> createState() => _GymThreadViewState();
+}
+
+class _GymThreadViewState extends ConsumerState<_GymThreadView> {
+  final TextEditingController _draft = TextEditingController();
+  final ScrollController _scroll = ScrollController();
+  bool _sending = false;
+  final List<GymInboxMessage> _pending = [];
+
+  @override
+  void dispose() {
+    _draft.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final conv = widget.conversation;
+    final async = ref.watch(gymInboxMessagesProvider((slug: widget.slug, conversationId: conv.id)));
+    final all = [
+      ...async.when(
+        data: (rows) => rows,
+        loading: () => const <GymInboxMessage>[],
+        error: (_, _) => const <GymInboxMessage>[],
+      ),
+      ..._pending,
+    ];
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        RoleCard(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, size: 20),
+                tooltip: 'Back to inbox',
+                onPressed: widget.onBack,
+              ),
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: BuddyColors.surfaceRaised,
+                backgroundImage:
+                    conv.avatarUrl.isNotEmpty ? NetworkImage(conv.avatarUrl) : null,
+                child: conv.avatarUrl.isEmpty
+                    ? Icon(conv.isTeam ? Icons.groups_rounded : Icons.person, size: 20)
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(conv.label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                    Text(
+                      conv.isTeam ? 'Team chat — gym staff only' : 'Gym conversation — stays with the gym, never your DMs',
+                      style: const TextStyle(fontSize: 9, color: BuddyColors.green),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: async.when(
+            loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            error: (_, _) => const Center(child: Text('Could not load this conversation.')),
+            data: (_) => ListView.builder(
+              controller: _scroll,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: all.length,
+              itemBuilder: (context, index) {
+                final message = all[index];
+                final mine = message.isMine;
+                return Align(
+                  alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    constraints: const BoxConstraints(maxWidth: 260),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: mine ? BuddyColors.green.withValues(alpha: 0.14) : BuddyColors.surfaceRaised,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(message.body, style: const TextStyle(fontSize: 12, color: BuddyColors.textPrimary)),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(0, 4, 0, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _draft,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _send(),
+                    decoration: InputDecoration(
+                      hintText: 'Message ${conv.label}…',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  icon: _sending
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.send_rounded, size: 18),
+                  tooltip: 'Send',
+                  onPressed: _sending ? null : _send,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _send() async {
+    final body = _draft.text.trim();
+    if (body.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    _draft.clear();
+    try {
+      final message = await gymInboxSendMessage(widget.slug, widget.conversation.id, body);
+      _pending.add(GymInboxMessage(
+        id: message.id,
+        senderUsername: message.senderUsername,
+        senderDisplay: message.senderDisplay,
+        body: message.body,
+        createdAt: message.createdAt,
+        isMine: true,
+      ));
+      ref.invalidate(gymInboxMessagesProvider((slug: widget.slug, conversationId: widget.conversation.id)));
+      ref.invalidate(gymInboxProvider(widget.slug));
+      _scrollToBottom();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not send that message.')),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) {
+        _scroll.jumpTo(_scroll.position.maxScrollExtent);
+      }
+    });
   }
 }
 
