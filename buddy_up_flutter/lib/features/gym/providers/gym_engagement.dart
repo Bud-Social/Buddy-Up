@@ -61,16 +61,6 @@ class GymEngagementService {
     return _unwrap(res)['saved'] == true;
   }
 
-  /// Post to the public feed as the gym. Returns the created post payload.
-  static Future<Map<String, dynamic>> createPostAsGym(
-    Dio dio,
-    String slug, {
-    required String body,
-  }) async {
-    final res = await dio.post('/gyms/$slug/feed/create-post/', data: {'body': body});
-    return _unwrap(res);
-  }
-
   /// Comments for a post. Community posts route through the gym endpoint so a
   /// linked-but-not-member gym can read them; feed comments use the public
   /// feed listing (gym-authored rows render as the gym server-side).

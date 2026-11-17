@@ -236,47 +236,6 @@ class GymSavedView(views.APIView):
         return _json_response({'count': count, 'items': data})
 
 
-class GymCreatePostView(views.APIView):
-    """Post to the public feed as the gym.
-
-    Staff action (owner/co-owner/moderator). The row is recorded with
-    ``gym=gym`` and the acting member kept as the audit trail; the feed
-    renders the gym identity. Returns the freshly serialized post so the
-    console can prepend it to its home-feed pane.
-    """
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request, gym_slug):
-        gym = _gym_by_slug(gym_slug, request)
-        if gym is None:
-            return _error('Not found.', status.HTTP_404_NOT_FOUND)
-        body = str(request.data.get('body') or '').strip()
-        if not body:
-            return _error('body is required.', status.HTTP_400_BAD_REQUEST)
-
-        post = Post.objects.create(
-            author=request.user.profile,
-            post_type='text',
-            body=body[:2000],
-            gym_tag=gym,
-            gym=gym,
-            visibility='public',
-            moderation_status='clean',
-        )
-        try:
-            from apps.gyms.audit import log_gym_action
-            log_gym_action(gym=gym, actor=request.user.profile, action='gym.post.create',
-                           summary='Posted to the public feed as the gym',
-                           target_type='post', target_id=str(post.id))
-        except Exception:  # noqa: BLE001
-            # Audit must never drop the post itself.
-            pass
-
-        from apps.feed.serializers import PostSerializer
-        serializer = PostSerializer(post, context={'request': request})
-        return _json_response(serializer.data, status_code=status.HTTP_201_CREATED)
-
-
 class GymCommentLikeView(views.APIView):
     """Toggle the gym's ❤️ like on a feed comment."""
     permission_classes = [permissions.IsAuthenticated]

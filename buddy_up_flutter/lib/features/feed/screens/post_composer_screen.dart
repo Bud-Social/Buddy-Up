@@ -32,12 +32,20 @@ const List<String> _docExtensions = [
 class PostComposerScreen extends ConsumerStatefulWidget {
   final String? communityId;
   final String? communityName;
+
+  /// When set, the post is authored *as* the gym (backend gates on the
+  /// caller holding an owner/co-owner membership — the feed/create path
+  /// mirrors the web gym console composer).
+  final String? gymId;
+  final String? gymName;
   final VoidCallback? onPostCreated;
 
   const PostComposerScreen({
     super.key,
     this.communityId,
     this.communityName,
+    this.gymId,
+    this.gymName,
     this.onPostCreated,
   });
 
@@ -491,6 +499,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     int publishedMediaCount = 0;
     String? publishedSoundId;
     if (_gymTag != null) data['gym_tag'] = _gymTag;
+    if (widget.gymId != null) {
+      data['gym'] = widget.gymId;
+      data['gym_tag'] = widget.gymId;
+    }
     if (_locationLabel.isNotEmpty) {
       data['location_label'] = _locationLabel;
       if (_locationLat != null) data['location_lat'] = _locationLat;
@@ -776,7 +788,13 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.communityName != null ? 'Post to ${widget.communityName}' : 'Create Post'),
+        title: Text(
+          widget.gymName != null
+              ? 'Post as ${widget.gymName}'
+              : widget.communityName != null
+                  ? 'Post to ${widget.communityName}'
+                  : 'Create Post',
+        ),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(),
@@ -799,6 +817,27 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (widget.gymName != null) ...[
+              Row(
+                children: [
+                  const Icon(Icons.fitness_center, size: 15, color: BuddyColors.green),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Posting to ',
+                    style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
+                  ),
+                  Flexible(
+                    child: Text(
+                      widget.gymName!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: BuddyColors.green),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
             _buildTypeSelector(),
             const SizedBox(height: 16),
             if (_postType == 'poll') _buildPollBuilder(),

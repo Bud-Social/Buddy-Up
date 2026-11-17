@@ -7,6 +7,7 @@ import { gymFeedApi } from '@/api/gyms';
 import type { Post } from '@/types';
 
 interface GymIdentity {
+  id: string;
   name: string;
   logo_url?: string;
   is_verified?: boolean;

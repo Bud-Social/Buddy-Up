@@ -118,6 +118,7 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
       'Posts': () => GymPostsTab(
             slug: widget.slug,
             identity: GymActorIdentity(
+              id: gym.id,
               name: gym.name,
               logoUrl: gym.logoUrl,
               isVerified: gym.isVerified,

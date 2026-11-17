@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PostCard } from '@/components/features/feed/PostCard';
+import { PostComposer } from '@/components/features/feed/PostComposer';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
-import { Loader2, Dumbbell, Send } from 'lucide-react';
+import { Loader2, Dumbbell, ChevronUp, PenLine } from 'lucide-react';
 import { feedApi } from '@/api/feed';
 import { gymFeedApi } from '@/api/gyms';
 import type { Post } from '@/types';
 
 interface GymIdentity {
+  id: string;
   name: string;
   logo_url?: string;
   is_verified?: boolean;
@@ -39,8 +41,13 @@ export function HomeFeedPanel({ gymSlug, gymName, gymIdentity }: HomeFeedPanelPr
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
-  const [posting, setPosting] = useState(false);
+  const [composerExpanded, setComposerExpanded] = useState(false);
+  const composerRef = useRef<HTMLDivElement>(null);
+
+  const handleGymPost = (post: Post) => {
+    setPosts((prev) => [post, ...prev]);
+    setComposerExpanded(false);
+  };
 
   const gymActor = engageAs
     ? {
@@ -50,21 +57,6 @@ export function HomeFeedPanel({ gymSlug, gymName, gymIdentity }: HomeFeedPanelPr
         tier: gymIdentity?.tier,
       }
     : null;
-
-  const postAsGym = async () => {
-    const body = draft.trim();
-    if (!engageAs || !body || posting) return;
-    setPosting(true);
-    try {
-      const created = await gymFeedApi.createPost(engageAs, { body });
-      setPosts((prev) => [created as Post, ...prev]);
-      setDraft('');
-    } catch (e: any) {
-      setError(e?.response?.data?.message || 'Could not post as the gym.');
-    } finally {
-      setPosting(false);
-    }
-  };
 
   const load = async () => {
     setIsLoading(true);
@@ -110,26 +102,42 @@ export function HomeFeedPanel({ gymSlug, gymName, gymIdentity }: HomeFeedPanelPr
           <span className="flex items-center gap-1.5"><Dumbbell size={11} className="text-buddy-green" /><span>Interacting as <span className="text-buddy-green">{gymName}</span> — your like, reply and repost appear as the gym</span></span>
         ) : 'Public home feed · read-only from the gym console'}
       </p>
+      {/* Composer: collapsed prompt expands in place — identical to the home feed */}
       {engageAs && (
-        <div className="rounded-xl border border-buddy-green/20 bg-buddy-green/5 p-2.5 space-y-2">
-          <p className="text-[9px] uppercase text-buddy-text-secondary flex items-center gap-1.5">
-            <Dumbbell size={11} className="text-buddy-green" /> Posting to the home feed as <span className="text-buddy-green">{gymName || engageAs}</span>
-          </p>
-          <div className="flex items-end gap-2">
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) postAsGym(); }}
-              placeholder="Say something to the members…"
-              rows={2}
-              maxLength={2000}
-              className="flex-1 bg-buddy-surface rounded-xl px-3 py-2 text-xs placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-buddy-green/40 resize-none"
-              aria-label="Post as the gym"
-            />
-            <Button size="sm" onClick={postAsGym} isLoading={posting} disabled={!draft.trim()} aria-label="Post as gym">
-              <Send size={13} />
-            </Button>
-          </div>
+        <div className="pb-1" ref={composerRef}>
+          {composerExpanded ? (
+            <div className="animate-in fade-in slide-in-from-top-2 duration-200 relative">
+              <button
+                onClick={() => setComposerExpanded(false)}
+                className="absolute right-3 top-3 z-10 p-1.5 rounded-full bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
+                title="Collapse composer"
+              >
+                <ChevronUp size={16} />
+              </button>
+              <PostComposer
+                gymId={gymIdentity?.id}
+                gymName={gymName}
+                placeholder="Share your workout..."
+                onPost={handleGymPost}
+                onClose={() => setComposerExpanded(false)}
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setComposerExpanded(true);
+                requestAnimationFrame(() =>
+                  composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }),
+                );
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-buddy-surface text-buddy-text-secondary hover:bg-buddy-surface-raised transition-all hover:ring-1 hover:ring-buddy-green/30"
+            >
+              <span className="p-1.5 rounded-full bg-buddy-green/15 text-buddy-green">
+                <PenLine size={16} />
+              </span>
+              Share your workout, meal, or progress...
+            </button>
+          )}
         </div>
       )}
 

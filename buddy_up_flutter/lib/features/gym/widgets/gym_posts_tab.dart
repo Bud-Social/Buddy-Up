@@ -11,6 +11,7 @@ import '../providers/gym_engagement.dart';
 import '../providers/gym_posts_provider.dart';
 import '../providers/gym_insights_provider.dart';
 import 'gym_comment_sheet.dart';
+import '../../feed/screens/post_composer_screen.dart';
 import 'gym_saved_posts_tab.dart';
 
 enum _PostsTab { gymFeed, homeFeed, saved }
@@ -215,33 +216,7 @@ class _HomeFeedPane extends ConsumerStatefulWidget {
 }
 
 class _HomeFeedPaneState extends ConsumerState<_HomeFeedPane> {
-  final _draft = TextEditingController();
-  bool _posting = false;
-
-  @override
-  void dispose() {
-    _draft.dispose();
-    super.dispose();
-  }
-
-  Future<void> _postAsGym() async {
-    final body = _draft.text.trim();
-    if (body.isEmpty || _posting) return;
-    setState(() => _posting = true);
-    try {
-      final dio = ref.read(apiClientProvider4).dio;
-      await GymEngagementService.createPostAsGym(dio, widget.slug, body: body);
-      _draft.clear();
-      ref.invalidate(gymHomeFeedProvider);
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not post as the gym.')),
-      );
-    } finally {
-      if (mounted) setState(() => _posting = false);
-    }
-  }
+  bool _composerExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -253,97 +228,60 @@ class _HomeFeedPaneState extends ConsumerState<_HomeFeedPane> {
       gymName: widget.identity.name,
       invalidate: () => ref.invalidate(gymHomeFeedProvider),
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Stack(
       children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: BuddyColors.green.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: BuddyColors.green.withValues(alpha: 0.25)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.fitness_center, size: 13, color: BuddyColors.green),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Posting to the home feed as ${widget.identity.name}',
-                      style: const TextStyle(fontSize: 10, color: BuddyColors.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_composerExpanded)
+              SizedBox(
+                height: 580,
+                child: PostComposerScreen(
+                  gymId: widget.identity.id,
+                  gymName: widget.identity.name,
+                  onPostCreated: () => setState(() => _composerExpanded = false),
+                ),
               ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _draft,
-                      style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
-                      minLines: 1,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: 'Say something to the members…',
-                        hintStyle: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
-                        filled: true,
-                        fillColor: BuddyColors.surface,
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: BuddyColors.green, width: 1)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                        isDense: true,
+            feedAsync.when(
+              loading: () => const PageLoader(fullScreen: false),
+              error: (_, _) => const RoleNotice(
+                message: 'Could not load the home feed. Pull to refresh, or try again later.',
+                isError: true,
+              ),
+              data: (posts) {
+                if (posts.isEmpty) {
+                  return const RoleNotice(
+                    message: 'The home feed is empty — create something and share it with your members.',
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final post in posts)
+                      PostCard(
+                        key: ValueKey('home:${post.id}'),
+                        post: post,
+                        gymActor: widget.identity,
+                        onLike: actions.onLike,
+                        onReact: actions.onReact,
+                        onRepost: actions.onRepost,
+                        onSave: actions.onSave,
+                        onComment: actions.onComment,
                       ),
-                      onSubmitted: (_) => _postAsGym(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _posting
-                      ? const SizedBox(width: 34, height: 34, child: Padding(padding: EdgeInsets.all(7), child: CircularProgressIndicator(strokeWidth: 2, color: BuddyColors.green)))
-                      : IconButton(
-                          onPressed: _postAsGym,
-                          icon: const Icon(Icons.send, color: BuddyColors.green),
-                          tooltip: 'Post as gym',
-                        ),
-                ],
-              ),
-            ],
-          ),
+                  ],
+                );
+              },
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        feedAsync.when(
-          loading: () => const PageLoader(fullScreen: false),
-          error: (_, _) => const RoleNotice(
-            message: 'Could not load the home feed. Pull to refresh, or try again later.',
-            isError: true,
+        Positioned(
+          right: 4,
+          bottom: 4,
+          child: FloatingActionButton(
+            heroTag: 'gym-home-feed-composer',
+            backgroundColor: BuddyColors.green,
+            onPressed: () => setState(() => _composerExpanded = !_composerExpanded),
+            child: Icon(_composerExpanded ? Icons.close : Icons.edit, color: BuddyColors.black),
           ),
-          data: (posts) {
-            if (posts.isEmpty) {
-              return const RoleNotice(
-                message: 'The home feed is empty — create something and share it with your members.',
-              );
-            }
-            return Column(
-              children: [
-                for (final post in posts)
-                  PostCard(
-                    key: ValueKey('home:${post.id}'),
-                    post: post,
-                    gymActor: widget.identity,
-                    onLike: actions.onLike,
-                    onReact: actions.onReact,
-                    onRepost: actions.onRepost,
-                    onSave: actions.onSave,
-                    onComment: actions.onComment,
-                  ),
-              ],
-            );
-          },
         ),
       ],
     );

@@ -698,13 +698,13 @@ export default function GymManage() {
             <HomeFeedPanel
               gymSlug={slug || gym.handle}
               gymName={gym.name}
-              gymIdentity={{ name: gym.name, logo_url: gym.logo_url, is_verified: gym.is_verified, tier: gym.tier }}
+              gymIdentity={{ id: gym.id, name: gym.name, logo_url: gym.logo_url, is_verified: gym.is_verified, tier: gym.tier }}
             />
           ) : (
             <SavedGymPostsPanel
               slug={slug || gym.handle}
               gymName={gym.name}
-              gymIdentity={{ name: gym.name, logo_url: gym.logo_url, is_verified: gym.is_verified, tier: gym.tier }}
+              gymIdentity={{ id: gym.id, name: gym.name, logo_url: gym.logo_url, is_verified: gym.is_verified, tier: gym.tier }}
             />
           )}
         </>
