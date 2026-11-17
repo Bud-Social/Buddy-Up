@@ -210,20 +210,41 @@ final gymInboxProvider = FutureProvider.family<List<GymInboxConversation>, Strin
       .toList();
 });
 
+/// A post the gym saved, with the community routing metadata the web console
+/// carries alongside the PostSerializer shape. Feed posts have [communityId]
+/// null; community posts route their engagement through the gym endpoints.
+class GymSavedPost {
+  final Post post;
+  final String? communityId;
+  final String? communityName;
+
+  const GymSavedPost({required this.post, this.communityId, this.communityName});
+
+  factory GymSavedPost.fromJson(Map<String, dynamic> json) {
+    final communityId = json['community_id']?.toString();
+    final communityName = json['community_name']?.toString();
+    return GymSavedPost(
+      post: Post.fromJson(json),
+      communityId: communityId == null || communityId.isEmpty ? null : communityId,
+      communityName: communityName?.isEmpty == true ? null : communityName,
+    );
+  }
+}
+
 /// Posts the gym has saved — newest first, from `/gyms/<slug>/feed/saved/`.
-/// Parsed straight into the feed Post model since the payload shape matches
-/// the feed serializer one-for-one.
-final gymSavedFeedProvider = FutureProvider.family<List<Post>, String>((ref, slug) async {
+/// The payload matches the feed serializer shape plus `community_id` /
+/// `community_name` for community posts saved by the gym.
+final gymSavedFeedProvider = FutureProvider.family<List<GymSavedPost>, String>((ref, slug) async {
   final dio = ref.read(apiClientProvider4).dio;
   final res = await dio.get('/gyms/$slug/feed/saved/');
   final payload = res.data is Map<String, dynamic>
       ? (res.data as Map<String, dynamic>)['data']
       : res.data;
   final rows = payload is Map<String, dynamic> ? payload['items'] : null;
-  if (rows is! List) return const <Post>[];
+  if (rows is! List) return const <GymSavedPost>[];
   return rows
       .whereType<Map>()
-      .map((row) => Post.fromJson(Map<String, dynamic>.from(row)))
+      .map((row) => GymSavedPost.fromJson(Map<String, dynamic>.from(row)))
       .toList();
 });
 

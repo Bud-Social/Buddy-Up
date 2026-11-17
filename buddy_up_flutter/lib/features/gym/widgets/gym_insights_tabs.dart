@@ -7,6 +7,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/role_dashboard_shell.dart';
+import '../providers/gym_engagement.dart';
+import 'gym_comment_sheet.dart';
 import '../../messaging/providers/messaging_provider.dart';
 import '../providers/gym_insights_provider.dart';
 import '../providers/gym_manage_provider.dart';
@@ -953,7 +955,8 @@ class _InboundMessageTile extends StatelessWidget {
 
 class GymCommunitiesTab extends ConsumerStatefulWidget {
   final String slug;
-  const GymCommunitiesTab({super.key, required this.slug});
+  final String gymName;
+  const GymCommunitiesTab({super.key, required this.slug, required this.gymName});
 
   @override
   ConsumerState<GymCommunitiesTab> createState() => _GymCommunitiesTabState();
@@ -968,6 +971,7 @@ class _GymCommunitiesTabState extends ConsumerState<GymCommunitiesTab> {
   String? _busyId;
   String? _error;
   final _draft = TextEditingController();
+  final Set<String> _gymLikedIds = {};
 
   @override
   void dispose() {
@@ -1037,6 +1041,58 @@ class _GymCommunitiesTabState extends ConsumerState<GymCommunitiesTab> {
     } finally {
       if (mounted) setState(() => _sending = false);
     }
+  }
+
+  Future<void> _toggleGymLike(Map<String, dynamic> post) async {
+    final communityId = (post['conversation_id'] ?? _activeFeedId ?? '').toString();
+    final postId = (post['id'] ?? '').toString();
+    if (communityId.isEmpty || postId.isEmpty) return;
+    try {
+      final dio = ref.read(apiClientProvider4).dio;
+      final res = await GymEngagementService.react(
+        dio,
+        widget.slug,
+        postId: postId,
+        reactionType: 'like',
+        communityId: communityId,
+      );
+      if (!mounted) return;
+      setState(() {
+        final liked = res['is_reacted'] == true;
+        if (liked) {
+          _gymLikedIds.add(postId);
+        } else {
+          _gymLikedIds.remove(postId);
+        }
+        final likeCount = (res['like_count'] as num?)?.toInt();
+        if (likeCount != null && _posts != null) {
+          _posts = _posts!
+              .map((p) => (p['id'] ?? '').toString() == postId
+                  ? {...p, 'like_count': likeCount}
+                  : p)
+              .toList();
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not like that post as the gym.')),
+      );
+    }
+  }
+
+  Future<void> _openGymComments(Map<String, dynamic> post) async {
+    final communityId = (post['conversation_id'] ?? _activeFeedId ?? '').toString();
+    final postId = (post['id'] ?? '').toString();
+    if (communityId.isEmpty || postId.isEmpty) return;
+    await showGymCommentSheet(
+      context,
+      slug: widget.slug,
+      gymName: widget.gymName,
+      postId: postId,
+      communityId: communityId,
+    );
+    if (mounted) await _loadPosts(communityId);
   }
 
   Future<void> _toggleMembership(GymLinkedCommunity community) async {
@@ -1239,6 +1295,9 @@ class _GymCommunitiesTabState extends ConsumerState<GymCommunitiesTab> {
                     draftController: _draft,
                     sending: _sending,
                     onSubmitPost: () => _submitPost(community.id),
+                    gymLikedIds: _gymLikedIds,
+                    onToggleLikePost: _toggleGymLike,
+                    onOpenCommentsPost: _openGymComments,
                   ),
                 ],
               const _SectionLabel('Discover & link a community'),
@@ -1280,6 +1339,9 @@ class _LinkedCommunityCard extends StatelessWidget {
   final TextEditingController draftController;
   final bool sending;
   final VoidCallback onSubmitPost;
+  final Set<String> gymLikedIds;
+  final void Function(Map<String, dynamic> post) onToggleLikePost;
+  final void Function(Map<String, dynamic> post) onOpenCommentsPost;
 
   const _LinkedCommunityCard({
     required this.community,
@@ -1294,6 +1356,9 @@ class _LinkedCommunityCard extends StatelessWidget {
     required this.draftController,
     required this.sending,
     required this.onSubmitPost,
+    required this.gymLikedIds,
+    required this.onToggleLikePost,
+    required this.onOpenCommentsPost,
   });
 
   @override
@@ -1401,7 +1466,12 @@ class _LinkedCommunityCard extends StatelessWidget {
               )
             else if (posts != null && posts!.isNotEmpty)
               for (final post in posts!)
-                _CommunityPostTile(post: post)
+                _CommunityPostTile(
+                  post: post,
+                  likedByGym: gymLikedIds.contains((post['id'] ?? '').toString()),
+                  onToggleLike: () => onToggleLikePost(post),
+                  onOpenComments: () => onOpenCommentsPost(post),
+                )
             else
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 10),
@@ -1417,7 +1487,16 @@ class _LinkedCommunityCard extends StatelessWidget {
 
 class _CommunityPostTile extends StatelessWidget {
   final Map<String, dynamic> post;
-  const _CommunityPostTile({required this.post});
+  final bool likedByGym;
+  final VoidCallback onToggleLike;
+  final VoidCallback onOpenComments;
+
+  const _CommunityPostTile({
+    required this.post,
+    required this.likedByGym,
+    required this.onToggleLike,
+    required this.onOpenComments,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1449,8 +1528,50 @@ class _CommunityPostTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(body, style: const TextStyle(fontSize: 11)),
                 const SizedBox(height: 2),
-                Text('$likes likes · $comments comments',
-                    style: const TextStyle(fontSize: 9, color: BuddyColors.textSecondary)),
+                Row(
+                  children: [
+                    InkWell(
+                      onTap: onToggleLike,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              likedByGym ? Icons.favorite : Icons.favorite_border,
+                              size: 12,
+                              color: likedByGym ? BuddyColors.green : BuddyColors.textSecondary,
+                            ),
+                            const SizedBox(width: 3),
+                            Text('$likes',
+                                style: TextStyle(
+                                    fontSize: 9,
+                                    color: likedByGym ? BuddyColors.green : BuddyColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    InkWell(
+                      onTap: onOpenComments,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.chat_bubble_outline,
+                                size: 11, color: BuddyColors.textSecondary),
+                            const SizedBox(width: 3),
+                            Text('$comments',
+                                style: const TextStyle(fontSize: 9, color: BuddyColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

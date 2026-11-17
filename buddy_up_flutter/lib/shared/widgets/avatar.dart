@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/app_theme.dart';
+import 'verification_badge.dart';
 
 enum AvatarSize { xs, sm, md, lg, xl }
 
@@ -63,9 +64,9 @@ class Avatar extends StatelessWidget {
               child: Container(
                 width: _dimension * 0.35,
                 height: _dimension * 0.35,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: BuddyColors.green,
+                  color: verificationBadgeColor(verificationStatus),
                 ),
                 child: Icon(
                   Icons.verified,

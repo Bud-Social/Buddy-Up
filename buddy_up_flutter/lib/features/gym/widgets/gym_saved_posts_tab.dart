@@ -5,13 +5,17 @@ import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/role_dashboard_shell.dart';
 import '../../feed/widgets/post_card.dart';
 import '../../messaging/providers/messaging_provider.dart';
+import '../providers/gym_engagement.dart';
 import '../providers/gym_insights_provider.dart';
+import 'gym_comment_sheet.dart';
 
-/// The gym's saved posts. Same public card as the home feed; the save
-/// toggle here is gym-scoped (`/gyms/<slug>/feed/save/`).
+/// The gym's saved posts — home-feed saves and gym-saved community posts in
+/// one list. Engagement here happens as the gym via the gym endpoints,
+/// exactly like the web console; unsave is gym-scoped.
 class GymSavedPostsTab extends ConsumerWidget {
   final String slug;
-  const GymSavedPostsTab({super.key, required this.slug});
+  final String gymName;
+  const GymSavedPostsTab({super.key, required this.slug, required this.gymName});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,18 +31,29 @@ class GymSavedPostsTab extends ConsumerWidget {
             message: 'Could not load saved posts. Pull to refresh, or try again later.',
             isError: true,
           ),
-          data: (posts) {
-            if (posts.isEmpty) {
+          data: (saved) {
+            if (saved.isEmpty) {
               return const RoleNotice(
                 message: 'Nothing saved yet — tap the bookmark on a post from the home feed to keep it here.',
               );
             }
             return Column(
               children: [
-                for (final post in posts)
+                for (final item in saved)
                   PostCard(
-                    post: post,
-                    onSave: (postId) => _toggleGymSave(ref, slug, postId, context),
+                    key: ValueKey('${item.communityId ?? 'feed'}:${item.post.id}'),
+                    post: item.post,
+                    onSave: (postId) => _toggleGymSave(ref, slug, postId, item.communityId, context),
+                    onLike: (postId) => _react(ref, slug, postId, '💪', item.communityId, context),
+                    onReact: (postId, reaction) => _react(ref, slug, postId, reaction, item.communityId, context),
+                    onRepost: (postId) => _toggleRepost(ref, slug, postId, item.communityId, context),
+                    onComment: (postId) => showGymCommentSheet(
+                      context,
+                      slug: slug,
+                      gymName: gymName,
+                      postId: postId,
+                      communityId: item.communityId,
+                    ),
                   ),
               ],
             );
@@ -48,16 +63,69 @@ class GymSavedPostsTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _toggleGymSave(WidgetRef ref, String slug, String postId, BuildContext context) async {
+  Future<void> _toggleGymSave(
+    WidgetRef ref,
+    String slug,
+    String postId,
+    String? communityId,
+    BuildContext context,
+  ) async {
     try {
-      final api = ref.read(apiClientProvider4).dio;
-      await api.post('/gyms/$slug/feed/save/', data: {'post_id': postId});
+      final dio = ref.read(apiClientProvider4).dio;
+      await GymEngagementService.toggleSave(dio, slug, postId: postId, communityId: communityId);
       if (!context.mounted) return;
       ref.invalidate(gymSavedFeedProvider(slug));
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not update saved state.')),
+      );
+    }
+  }
+
+  Future<void> _react(
+    WidgetRef ref,
+    String slug,
+    String postId,
+    String reaction,
+    String? communityId,
+    BuildContext context,
+  ) async {
+    try {
+      final dio = ref.read(apiClientProvider4).dio;
+      await GymEngagementService.react(
+        dio,
+        slug,
+        postId: postId,
+        reactionType: reaction.isEmpty ? '💪' : reaction,
+        communityId: communityId,
+      );
+      if (!context.mounted) return;
+      ref.invalidate(gymSavedFeedProvider(slug));
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not react to that post.')),
+      );
+    }
+  }
+
+  Future<void> _toggleRepost(
+    WidgetRef ref,
+    String slug,
+    String postId,
+    String? communityId,
+    BuildContext context,
+  ) async {
+    try {
+      final dio = ref.read(apiClientProvider4).dio;
+      await GymEngagementService.repost(dio, slug, postId: postId, communityId: communityId);
+      if (!context.mounted) return;
+      ref.invalidate(gymSavedFeedProvider(slug));
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not repost that.')),
       );
     }
   }

@@ -113,8 +113,8 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
       'Reviews': _reviewsTab,
       'Sessions': () => GymSessionsTab(slug: widget.slug),
       'Messages': () => GymMessagesTab(slug: widget.slug),
-      'Community': () => GymCommunitiesTab(slug: widget.slug),
-      'Saved': () => GymSavedPostsTab(slug: widget.slug),
+      'Community': () => GymCommunitiesTab(slug: widget.slug, gymName: gym.name),
+      'Saved': () => GymSavedPostsTab(slug: widget.slug, gymName: gym.name),
       'Analytics': () => GymAnalyticsTab(slug: widget.slug, gymName: gym.name),
       'Logs': _logsTab,
     };
