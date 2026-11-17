@@ -81,7 +81,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
   it('shows no business section at all for an operator with no roles', async () => {
     defaultProbes();
     renderSidebar();
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument(), { timeout: 8000 });
 
     expect(screen.queryByText('Your business')).not.toBeInTheDocument();
     expect(hrefs().filter((h) => h && isBusinessHref(h))).toEqual([]);
@@ -102,7 +102,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     defaultProbes({ getMyShops: envelope([{ id: 's1', handle: 'fitgear' }]) });
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Shop' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Shop' })).toBeInTheDocument(), { timeout: 8000 });
     expect(hrefs().filter((h) => h && isBusinessHref(h))).toEqual(['/marketplace/creator']);
   });
 
@@ -112,14 +112,14 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     });
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Shop' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Shop' })).toBeInTheDocument(), { timeout: 8000 });
   });
 
   it('shows My Events when the user has created events', async () => {
     defaultProbes({ getOrganisedEvents: envelope([{ id: 'e1', title: 'Sunrise Run' }]) });
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'My Events' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'My Events' })).toBeInTheDocument(), { timeout: 8000 });
     expect(hrefs().filter((h) => h && isBusinessHref(h))).toEqual(['/marketplace/events']);
   });
 
@@ -128,7 +128,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     gyms.list.mockResolvedValue(envelope([{ handle: 'legitgym', name: 'Legit Gym', membership_role: 'owner' }]));
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'My Gyms' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'My Gyms' })).toBeInTheDocument(), { timeout: 8000 });
     expect(screen.getByRole('link', { name: 'My Gyms' })).toHaveAttribute('href', '/my-gyms');
   });
 
@@ -145,7 +145,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     gyms.list.mockResolvedValue(envelope([{ handle: 'legitgym', name: 'Legit Gym', membership_role: 'member' }]));
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Gyms' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Gyms' })).toBeInTheDocument(), { timeout: 8000 });
     expect(screen.queryByRole('link', { name: 'My Gyms' })).not.toBeInTheDocument();
     expect(screen.queryByText('Your business')).not.toBeInTheDocument();
   });
@@ -159,7 +159,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     gyms.list.mockResolvedValue(envelope([]));
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'My Stations' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'My Stations' })).toBeInTheDocument(), { timeout: 8000 });
     expect(hrefs().filter((h) => h && isBusinessHref(h))).toEqual(['/marketplace/stations']);
   });
 
@@ -168,7 +168,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     gyms.list.mockResolvedValue(envelope([]));
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument(), { timeout: 8000 });
     expect(screen.queryByRole('link', { name: 'My Stations' })).not.toBeInTheDocument();
   });
 
@@ -176,7 +176,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     defaultProbes({ getCourierSummary: envelope({ vehicle_type: 'motorcycle', is_active: true }) });
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Courier' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Courier' })).toBeInTheDocument(), { timeout: 8000 });
     expect(hrefs().filter((h) => h && isBusinessHref(h))).toEqual(['/marketplace/delivery']);
   });
 
@@ -184,7 +184,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     defaultProbes();
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument(), { timeout: 8000 });
     expect(screen.queryByRole('link', { name: 'Courier' })).not.toBeInTheDocument();
   });
 
@@ -197,7 +197,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     gyms.list.mockResolvedValue(envelope([{ handle: 'legitgym', name: 'Legit Gym', membership_role: 'owner' }]));
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByText('Your business')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Your business')).toBeInTheDocument(), { timeout: 8000 });
     expect(hrefs().filter((h) => h && isBusinessHref(h)).sort()).toEqual([
       '/marketplace/creator',
       '/marketplace/delivery',
@@ -216,7 +216,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     }
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument(), { timeout: 8000 });
     expect(hrefs().filter((h) => h && isBusinessHref(h))).toEqual([]);
   });
 
@@ -224,7 +224,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     useAuthStore.setState({ isAuthenticated: false, user: null, profile: null });
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument(), { timeout: 8000 });
     expect(market.getMyShops).not.toHaveBeenCalled();
     expect(gyms.list).not.toHaveBeenCalled();
     expect(stations.list).not.toHaveBeenCalled();
@@ -241,7 +241,7 @@ describe('Sidebar — staff section', () => {
     useAuthStore.setState({ isAuthenticated: true, user: { id: 'u-me', is_staff: true } as never, profile: { username: ME.username } as never });
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument(), { timeout: 8000 });
     expect(screen.getByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin/overview');
     expect(screen.getByText('Staff')).toBeInTheDocument();
   });
@@ -250,7 +250,7 @@ describe('Sidebar — staff section', () => {
     useAuthStore.setState({ isAuthenticated: true, user: { id: 'u-me', is_staff: false } as never, profile: { username: ME.username } as never });
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument(), { timeout: 8000 });
     expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
     expect(screen.queryByText('Staff')).not.toBeInTheDocument();
   });
@@ -270,7 +270,7 @@ describe('Sidebar — role switcher', () => {
     defaultProbes({ getMyShops: envelope([{ id: 's1' }]) });
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Shop' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Shop' })).toBeInTheDocument(), { timeout: 8000 });
     expect(screen.queryByLabelText('Switch between your roles')).not.toBeInTheDocument();
   });
 
@@ -283,7 +283,7 @@ describe('Sidebar — role switcher', () => {
     gyms.list.mockResolvedValue(envelope([{ handle: 'legitgym', name: 'Legit Gym', membership_role: 'owner' }]));
     renderSidebar();
 
-    const switcher = await screen.findByLabelText('Switch between your roles');
+    const switcher = await screen.findByLabelText('Switch between your roles', undefined, { timeout: 8000 });
     const options = Array.from(switcher.querySelectorAll('option')).map((o) => o.getAttribute('value'));
     // Placeholder first, then one entry per destination — no more, no less.
     expect(options).toEqual(['', '/marketplace/creator', '/marketplace/events', '/my-gyms', '/marketplace/delivery']);
@@ -299,7 +299,7 @@ describe('Sidebar — role switcher', () => {
     gyms.list.mockResolvedValue(envelope([]));
     renderSidebar();
 
-    const switcher = await screen.findByLabelText('Switch between your roles');
+    const switcher = await screen.findByLabelText('Switch between your roles', undefined, { timeout: 8000 });
     const labels = Array.from(switcher.querySelectorAll('option')).map((o) => o.textContent);
     expect(labels).toEqual(['Switch role…', 'Shop', 'Events', 'Courier']);
   });

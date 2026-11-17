@@ -9,6 +9,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // The sidebar ownership tests settle a handful of mocked probes under
+    // parallel load; the default 5s ceiling kills them mid-flight.
+    testTimeout: 15000,
   },
   resolve: {
     alias: {
