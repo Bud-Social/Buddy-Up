@@ -12,6 +12,7 @@ import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/role_dashboard_shell.dart';
 import '../providers/gym_manage_provider.dart';
 import '../providers/gym_provider.dart';
+import '../widgets/gym_insights_tabs.dart';
 
 
 /// Gym management.
@@ -35,7 +36,7 @@ class GymManageScreen extends ConsumerWidget {
 
   /// Privileged surfaces. Owners, co-owners and moderators see the full
   /// roster; a regular member only sees what they can act on.
-  static const adminTabs = ['Overview', 'Members', 'Team', 'Requests', 'Schedule', 'Reviews', 'Logs'];
+  static const adminTabs = ['Overview', 'Members', 'Team', 'Requests', 'Schedule', 'Reviews', 'Sessions', 'Messages', 'Community', 'Analytics', 'Logs'];
   static const memberTabs = ['Members', 'Requests', 'Schedule', 'Reviews'];
 
   @override
@@ -108,6 +109,10 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
       'Requests': _requestsTab,
       'Schedule': _scheduleTab,
       'Reviews': _reviewsTab,
+      'Sessions': () => GymSessionsTab(slug: widget.slug),
+      'Messages': () => GymMessagesTab(slug: widget.slug),
+      'Community': () => GymCommunitiesTab(slug: widget.slug),
+      'Analytics': () => GymAnalyticsTab(slug: widget.slug, gymName: gym.name),
       'Logs': _logsTab,
     };
     final tabs = isAdmin ? GymManageScreen.adminTabs : GymManageScreen.memberTabs;

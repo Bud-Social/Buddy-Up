@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Check, MessageCircle, Send, Star, Users, X, Plus, UserMinus, UserCog } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
@@ -12,6 +12,10 @@ import { VenuesTab } from '@/components/gym/manage/VenuesTab';
 import { OnlineCoachingTab } from '@/components/gym/manage/OnlineCoachingTab';
 import { GymPostPanel } from '@/components/gym/manage/GymPostPanel';
 import { HomeFeedPanel } from '@/components/gym/manage/HomeFeedPanel';
+import { SessionsTab } from '@/components/gym/manage/SessionsTab';
+import { MessagesTab } from '@/components/gym/manage/MessagesTab';
+import { CommunitiesTab } from '@/components/gym/manage/CommunitiesTab';
+import { AnalyticsTab } from '@/components/gym/manage/AnalyticsTab';
 import { ShopsTab } from '@/components/gym/manage/ShopsTab';
 import { RevenueTab } from '@/components/gym/manage/RevenueTab';
 import { EventsTab } from '@/components/gym/manage/EventsTab';
@@ -24,7 +28,9 @@ import { RoleDashboardShell, RoleSectionTitle } from './roles/RoleShell';
 
 type Tab =
   | 'overview' | 'members' | 'requests' | 'posts' | 'shops' | 'revenue'
+  | 'analytics'
   | 'events'
+  | 'sessions' | 'messages' | 'communities'
   | 'schedule' | 'reviews'
   | 'team' | 'logs'
   | 'venues' | 'coaching' | 'announce' | 'setup';
@@ -37,8 +43,12 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'team', label: 'Team' },
   { key: 'requests', label: 'Requests' },
   { key: 'posts', label: 'Posts' },
+  { key: 'sessions', label: 'Sessions' },
+  { key: 'messages', label: 'Messages' },
+  { key: 'communities', label: 'Communities' },
   { key: 'shops', label: 'Shops' },
   { key: 'revenue', label: 'Revenue' },
+  { key: 'analytics', label: 'Analytics' },
   { key: 'events', label: 'Events' },
   { key: 'schedule', label: 'Schedule' },
   { key: 'reviews', label: 'Reviews' },
@@ -104,6 +114,9 @@ export default function GymManage() {
     setSearchParams(nextParams, { replace: true });
   };
   const [tab, setTabState] = useState<Tab>(TABS.some((t) => t.key === tabFromUrl) ? (tabFromUrl as Tab) : 'overview');
+  // Keep the active tab visible inside the side-scrollable strip,
+  // including on deep links that land past the fold.
+  const activeTabRef = useRef<HTMLButtonElement | null>(null);
 
   const setTab = (next: Tab) => {
     setTabState(next);
@@ -118,6 +131,10 @@ export default function GymManage() {
     // at the tab heading; restoration is not wanted on internal taps.
     try { window.scrollTo({ top: 0 }); } catch { /* noop */ }
   };
+  useEffect(() => {
+    activeTabRef.current?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+  }, [tab]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -332,6 +349,7 @@ export default function GymManage() {
             key={t.key}
             role="tab"
             aria-selected={tab === t.key}
+            ref={tab === t.key ? activeTabRef : undefined}
             onClick={() => setTab(t.key)}
             className={`snap-center flex-none whitespace-nowrap py-2 px-4 text-[12px] font-semibold rounded-lg transition-colors text-center min-w-[96px] ${tab === t.key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
           >
@@ -677,6 +695,26 @@ export default function GymManage() {
             <HomeFeedPanel />
           )}
         </>
+      )}
+
+      {/* Sessions — bookings on gym coaches + door check-ins */}
+      {tab === 'sessions' && (
+        <SessionsTab slug={slug || gym?.handle || ''} />
+      )}
+
+      {/* Messages — gym inbox + community chats */}
+      {tab === 'messages' && (
+        <MessagesTab slug={slug || gym?.handle || ''} />
+      )}
+
+      {/* Communities — form or join shared clubhouses */}
+      {tab === 'communities' && (
+        <CommunitiesTab slug={slug || gym?.handle || ''} />
+      )}
+
+      {/* Analytics — audience growth, conversion, revenue, connected shop */}
+      {tab === 'analytics' && gym && (
+        <AnalyticsTab slug={slug || gym.handle} gymName={gym.name} />
       )}
 
       {/* Shops — connected gyms' shops with attribution */}

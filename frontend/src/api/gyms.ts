@@ -414,3 +414,177 @@ const shopsApi = {
 };
 
 export { shopsApi };
+
+// ── Console insights: sessions, messages, communities, rich analytics ──────
+export interface GymInsightBooking {
+  id: string;
+  client: string;
+  client_display: string;
+  client_avatar: string;
+  trainer: string;
+  trainer_display: string;
+  trainer_avatar: string;
+  session_type: string;
+  status: string;
+  scheduled_at: string | null;
+  completed_at: string | null;
+  duration_minutes: number | null;
+  fee: number | null;
+  created_at: string;
+}
+
+export interface GymSessionsPayload {
+  summary: {
+    sessions_30d: number;
+    upcoming_30d: number;
+    cancelled_30d: number;
+    no_shows_30d: number;
+    check_ins_30d: number;
+    unique_attendees_30d: number;
+  };
+  bookings: GymInsightBooking[];
+  check_ins_daily: { date: string; count: number }[];
+}
+
+export interface GymGymMessageConversation {
+  id: string;
+  kind: 'community' | 'group' | 'direct';
+  name: string;
+  members: { username: string; display_name: string; avatar_url: string; role: string }[];
+  last_message_at: string | null;
+  last_message: string | null;
+  is_community: boolean;
+}
+
+export interface GymInboundMessage {
+  id: string;
+  body: string;
+  sender: string;
+  sender_display: string;
+  sender_avatar: string;
+  sent_at: string;
+  conversation: string;
+}
+
+export interface GymMessagesPayload {
+  conversations: GymGymMessageConversation[];
+  recent_inbound: GymInboundMessage[];
+  summary: {
+    community_chats: number;
+    group_chats: number;
+    direct_threads: number;
+    inbound_7d: number;
+  };
+}
+
+export interface GymLinkedCommunity {
+  id: string;
+  name: string;
+  description: string;
+  avatar_url: string;
+  cover_url: string;
+  member_count: number;
+  post_count: number;
+  is_public: boolean;
+  is_primary: boolean;
+  is_member: boolean;
+  is_gym_formed: boolean;
+  created_at: string;
+}
+
+export interface GymDiscoverableCommunity {
+  id: string;
+  name: string;
+  description: string;
+  avatar_url: string;
+  member_count: number;
+  created_at: string;
+}
+
+export interface GymCommunitiesPayload {
+  linked: GymLinkedCommunity[];
+  discoverable: GymDiscoverableCommunity[];
+  primary_count: number;
+}
+
+export interface GymAnalyticsKpis {
+  active_members: number;
+  new_members_30d: number;
+  churned_30d: number;
+  retention_rate_30d: number;
+  activation_rate_30d: number;
+  check_ins_30d: number;
+  avg_check_ins_per_day: number;
+  unique_attendees_30d: number;
+  visit_rate_30d: number;
+  bookings_30d: number;
+  completed_bookings_30d: number;
+  messages_30d: number;
+  inbound_client_messages_30d: number;
+  community_members: number;
+  revenue_30d_artifacts: number;
+  revenue_lifetime_artifacts: number;
+  posts_30d: number;
+  join_requests_30d: number;
+  join_requests_approved_30d: number;
+  join_conversion_30d: number;
+  events_hosted: number;
+  events_hosted_30d: number;
+  products_sold: number;
+  products_sold_30d: number;
+  programmes_sold: number;
+  programmes_sold_30d: number;
+  meal_plans_sold: number;
+  meal_plans_sold_30d: number;
+  shop_orders_30d: number;
+}
+
+export interface GymAnalyticsPayload {
+  kpis: GymAnalyticsKpis;
+  growth: {
+    audience_pct: number;
+    check_ins_pct: number;
+    bookings_pct: number;
+    posts_pct: number;
+    messages_pct: number;
+    revenue_pct: number;
+  };
+  timeseries: {
+    check_ins: { date: string; count: number }[];
+    new_members: { date: string; count: number }[];
+    posts: { date: string; count: number }[];
+    revenue_artifacts: { date: string; count: number }[];
+    messages: { date: string; count: number }[];
+    bookings: { date: string; count: number }[];
+  };
+  share_card: string;
+}
+
+const gymInsightsApi = {
+  sessions: (slug: string) =>
+    apiClient.get<ApiResponse<GymSessionsPayload>>(`/gyms/${slug}/sessions/`).then((r) => r.data),
+
+  messages: (slug: string) =>
+    apiClient.get<ApiResponse<GymMessagesPayload>>(`/gyms/${slug}/messages/`).then((r) => r.data),
+
+  communities: (slug: string) =>
+    apiClient.get<ApiResponse<GymCommunitiesPayload>>(`/gyms/${slug}/communities/`).then((r) => r.data),
+
+  linkCommunity: (slug: string, communityId: string, opts?: { is_primary?: boolean }) =>
+    apiClient
+      .post<ApiResponse<GymLinkedCommunity>>(`/gyms/${slug}/communities/`, { action: 'link', community_id: communityId, ...opts })
+      .then((r) => r.data),
+
+  createCommunity: (slug: string, data: { name: string; description?: string; is_public?: boolean }) =>
+    apiClient
+      .post<ApiResponse<GymLinkedCommunity>>(`/gyms/${slug}/communities/`, { action: 'create', ...data })
+      .then((r) => r.data),
+
+  unlinkCommunity: (slug: string, communityId: string) =>
+    apiClient.delete(`/gyms/${slug}/communities/`, { data: { community_id: communityId } }).then((r) => r.data),
+
+  analytics: (slug: string) =>
+    apiClient.get<ApiResponse<GymAnalyticsPayload>>(`/gyms/${slug}/analytics/`).then((r) => r.data),
+};
+
+export { gymInsightsApi };

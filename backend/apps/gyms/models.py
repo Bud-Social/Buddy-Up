@@ -686,3 +686,41 @@ class GymTierSubscription(TimestampedModel):
 
     def __str__(self):
         return f'{self.gym.name} → {self.tier} ({self.status})'
+
+
+class GymCommunityLink(TimestampedModel):
+    """Link a platform community to a gym.
+
+    A gym may form its own community, or adopt an existing one (e.g. a local
+    fitness collective). The link is bidirectional by intent: gym owners can
+    publish posts there, and the community is shown on the gym's page for
+    members to join.
+
+    Points at ``messaging.Conversation`` because every platform community
+    (whether created via ``/messaging/communities/`` or ``/communities/``)
+    keeps a ``Conversation(is_community=True)`` row with the same id — the
+    invariant that both creation paths share.
+    """
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending approval'),
+        ('active', 'Active'),
+        ('declined', 'Declined'),
+    ]
+
+    gym = models.ForeignKey('gyms.Gym', on_delete=models.CASCADE, related_name='community_links')
+    community = models.ForeignKey('messaging.Conversation', on_delete=models.CASCADE, related_name='gym_links')
+    is_primary = models.BooleanField(default=False)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='pending')
+    requested_by = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='requested_gym_communities',
+    )
+    decided_by = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='decided_gym_communities',
+    )
+
+    class Meta:
+        db_table = 'gyms_community_link'
+        unique_together = ('gym', 'community')

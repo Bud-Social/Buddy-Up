@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import tier_views
 from . import shop_views
+from . import insights_views as __insights_views
 
 app_name = 'gyms'
 urlpatterns = [
@@ -48,6 +49,10 @@ urlpatterns = [
     path('<str:gym_slug>/announce/', views.GymAnnounceView.as_view(), name='announce'),
     path('<str:gym_slug>/action-logs/', views.GymActionLogListView.as_view(), name='action_logs'),
     path('<str:gym_slug>/team/add/', views.GymTeamAddMemberView.as_view(), name='team_add_member'),
+    path('<str:gym_slug>/sessions/', __insights_views.GymSessionsView.as_view(), name='sessions'),
+    path('<str:gym_slug>/messages/', __insights_views.GymMessagesView.as_view(), name='messages'),
+    path('<str:gym_slug>/communities/', __insights_views.GymCommunitiesView.as_view(), name='communities'),
+    path('<str:gym_slug>/analytics/', __insights_views.GymAnalyticsView.as_view(), name='analytics'),
     path('<str:gym_slug>/attendance/', views.AttendanceListView.as_view(), name='attendance'),
     path('<str:gym_slug>/check-in/', views.GymCheckInView.as_view(), name='gym_check_in'),
     path('<str:gym_slug>/partner-metrics/', views.PartnerMetricsView.as_view(), name='partner_metrics'),

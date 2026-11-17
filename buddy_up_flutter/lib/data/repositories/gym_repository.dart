@@ -93,6 +93,36 @@ abstract class GymRepository {
   @GET('/gyms/{slug}/partner-metrics/')
   Future<dynamic> getPartnerMetrics(@Path('slug') String slug);
 
+  /// Bookings on gym-connected coaches + door check-ins.
+  @GET('/gyms/{slug}/sessions/')
+  Future<dynamic> getGymSessions(@Path('slug') String slug);
+
+  /// Gym inbox: community chats, gym group chats and member DMs.
+  @GET('/gyms/{slug}/messages/')
+  Future<dynamic> getGymMessages(@Path('slug') String slug);
+
+  /// Communities linked to (or discoverable for) this gym.
+  @GET('/gyms/{slug}/communities/')
+  Future<dynamic> getGymCommunities(@Path('slug') String slug);
+
+  /// Create a gym-formed community, or link/join one by `community_id`.
+  @POST('/gyms/{slug}/communities/')
+  Future<dynamic> manageGymCommunity(
+    @Path('slug') String slug,
+    @Body() Map<String, dynamic> body,
+  );
+
+  /// Unlink a community from the gym (the community itself stays).
+  @DELETE('/gyms/{slug}/communities/')
+  Future<dynamic> unlinkGymCommunity(
+    @Path('slug') String slug,
+    @Body() Map<String, dynamic> body,
+  );
+
+  /// Rich analytics: KPIs, growth deltas, 30-day series, share card.
+  @GET('/gyms/{slug}/analytics/')
+  Future<dynamic> getGymAnalytics(@Path('slug') String slug);
+
   @GET('/gyms/check-handle/')
   Future<dynamic> checkHandle(@Query('candidate') String candidate);
 
