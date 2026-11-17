@@ -1121,6 +1121,14 @@ class OrderSerializer(serializers.ModelSerializer):
     status_label = serializers.SerializerMethodField()
     is_seller = serializers.SerializerMethodField()
 
+    spent_usd = serializers.SerializerMethodField()
+
+    def get_spent_usd(self, obj):
+        try:
+            return float(obj.spent_usd or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
     class Meta:
         model = Order
         fields = ['id', 'order_number', 'status', 'status_label', 'fulfillment_type',

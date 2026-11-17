@@ -316,10 +316,10 @@ export default function OrderDetail() {
             <span className="text-buddy-text-secondary">You paid</span>
             <span className="font-bold flex items-center gap-1"><Coins size={11} className="text-buddy-green" />{artifactDisplay(order.total_artifacts) || '$0'}</span>
           </div>
-          {order.spent_usd > 0 && (
+          {Number(order.spent_usd ?? 0) > 0 && (
             <div className="flex justify-between text-buddy-text-secondary">
               <span>Value</span>
-              <span>${order.spent_usd.toFixed(2)}</span>
+              <span>${Number(order.spent_usd || 0).toFixed(2)}</span>
             </div>
           )}
         </div>

@@ -11,6 +11,7 @@ import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';
 import { VenuesTab } from '@/components/gym/manage/VenuesTab';
 import { OnlineCoachingTab } from '@/components/gym/manage/OnlineCoachingTab';
 import { GymPostPanel } from '@/components/gym/manage/GymPostPanel';
+import { HomeFeedPanel } from '@/components/gym/manage/HomeFeedPanel';
 import { ShopsTab } from '@/components/gym/manage/ShopsTab';
 import { RevenueTab } from '@/components/gym/manage/RevenueTab';
 import { EventsTab } from '@/components/gym/manage/EventsTab';
@@ -92,6 +93,16 @@ export default function GymManage() {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = (searchParams.get('tab') || '') as Tab | '';
+  const postSource = (searchParams.get('posts') || 'gym') as 'gym' | 'home';
+  const setPostSource = (next: 'gym' | 'home') => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (next === 'gym') {
+      nextParams.delete('posts');
+    } else {
+      nextParams.set('posts', 'home');
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
   const [tab, setTabState] = useState<Tab>(TABS.some((t) => t.key === tabFromUrl) ? (tabFromUrl as Tab) : 'overview');
 
   const setTab = (next: Tab) => {
@@ -637,16 +648,35 @@ export default function GymManage() {
         <OnlineCoachingTab slug={slug || gym.handle} canManage={isAdmin} members={members} />
       )}
 
-      {/* Posts — the gym identity on the home feed */}
+      {/* Posts — gym posts and home (public) feed, two nested tabs */}
       {tab === 'posts' && gym && (
-        <GymPostPanel
-          slug={slug || gym.handle}
-          gymName={gym.name}
-          gymId={gym.id}
-          canManage={isAdmin}
-          mode="post"
-          memberCount={metrics?.active_members ?? gym.member_count}
-        />
+        <>
+          <div className="flex rounded-lg bg-buddy-surface p-0.5 self-start" role="tablist" aria-label="Post source">
+            {(['gym', 'home'] as const).map((kind) => (
+              <button
+                key={kind}
+                role="tab"
+                aria-selected={postSource === kind}
+                onClick={() => setPostSource(kind)}
+                className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors ${postSource === kind ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary'}`}
+              >
+                {kind === 'gym' ? 'Gym feed' : 'Home feed'}
+              </button>
+            ))}
+          </div>
+          {postSource === 'gym' ? (
+            <GymPostPanel
+              slug={slug || gym.handle}
+              gymName={gym.name}
+              gymId={gym.id}
+              canManage={isAdmin}
+              mode="post"
+              memberCount={metrics?.active_members ?? gym.member_count}
+            />
+          ) : (
+            <HomeFeedPanel />
+          )}
+        </>
       )}
 
       {/* Shops — connected gyms' shops with attribution */}

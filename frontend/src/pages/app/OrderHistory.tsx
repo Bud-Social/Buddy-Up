@@ -111,7 +111,7 @@ export function OrdersList({ onBrowse }: { onBrowse?: () => void }) {
               <p className="flex items-center gap-1">
                 <Coins size={11} className="text-buddy-green" />
                 {artifactDisplay(order.total_artifacts) || '$0'}
-                {order.spent_usd > 0 && <span className="text-buddy-text-secondary/70">(${order.spent_usd.toFixed(2)})</span>}
+                {Number(order.spent_usd ?? 0) > 0 && <span className="text-buddy-text-secondary/70">(${Number(order.spent_usd || 0).toFixed(2)})</span>}
               </p>
             </div>
             <div className="flex items-center gap-2">
