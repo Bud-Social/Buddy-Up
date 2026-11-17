@@ -5,6 +5,7 @@ from . import shop_views
 from . import insights_views as __insights_views
 from . import link_request_views as __link_request_views
 from . import social_views as __social_views
+from . import inbox_views as __inbox_views
 
 app_name = 'gyms'
 urlpatterns = [
@@ -34,6 +35,8 @@ urlpatterns = [
     path('<str:gym_slug>/feed/react/', __social_views.GymReactView.as_view(), name='feed_react'),
     path('<str:gym_slug>/feed/repost/', __social_views.GymRepostView.as_view(), name='feed_repost'),
     path('<str:gym_slug>/feed/comment/', __social_views.GymCommentView.as_view(), name='feed_comment'),
+    path('<str:gym_slug>/inbox/', __inbox_views.GymInboxView.as_view(), name='inbox'),
+    path('<str:gym_slug>/inbox/<uuid:conversation_id>/messages/', __inbox_views.GymInboxMessagesView.as_view(), name='inbox_messages'),
     path('<str:gym_slug>/feed/', views.GymFeedListView.as_view(), name='feed'),
     path('<str:gym_slug>/donate/', views.GymDonationCreateView.as_view(), name='donate'),
     path('<str:gym_slug>/routine-posts/<uuid:post_id>/enroll/', views.SlotEnrollView.as_view(), name='slot_enroll'),

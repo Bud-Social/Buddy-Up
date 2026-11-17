@@ -12,6 +12,7 @@ import type { BuddyLive } from '@/types/live';
 import type { GymRoutinePost, GymReview } from '@/types/gym';
 import { GymDiscoursePost } from '@/components/features/gyms/GymDiscoursePost';
 import { GymCheckIn } from '@/components/features/gym/GymCheckIn';
+import { GymChatSheet } from '@/components/gym/GymChatSheet';
 import { GymGallery } from '@/components/gym/GymGallery';
 import { GymLiveWizard } from '@/components/gym/GymLiveWizard';
 import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';
@@ -88,6 +89,7 @@ export default function GymDetail() {
   const [replyText, setReplyText] = useState('');
   
   const [showDonateModal, setShowDonateModal] = useState(false);
+  const [showChatSheet, setShowChatSheet] = useState(false);
   const [donateAmount, setDonateAmount] = useState('');
   const [donateMessage, setDonateMessage] = useState('');
   
@@ -378,6 +380,9 @@ export default function GymDetail() {
               <Heart size={14} className="mr-1" /> Donate
             </Button>
           )}
+          <Button size="sm" variant="ghost" onClick={() => setShowChatSheet(true)} className="text-buddy-green border border-buddy-green/20 hover:bg-buddy-green/10" aria-label={`Message ${gym.name}`}>
+            <MessageCircle size={14} className="mr-1" /> Message gym
+          </Button>
           <Button size="sm" variant="ghost"><Star size={14} /></Button>
         </div>
 
@@ -1473,6 +1478,8 @@ export default function GymDetail() {
           </div>
         </div>
       )}
+
+      <GymChatSheet open={showChatSheet} onClose={() => setShowChatSheet(false)} gymSlug={slug!} gymName={gym.name} gymLogoUrl={gym.logo_url} />
     </div>
   );
 }

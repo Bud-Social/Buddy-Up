@@ -189,11 +189,12 @@ class GymMessagesView(views.APIView):
 
         from apps.messaging.models import Message
 
-        # Gym inbox: this viewer's DMs + gym-linked communities + gym-tagged
-        # groups (see _gym_inbox_conversations — other staff's private DMs
-        # and communities stay out).
+        # Gym inbox for the community/group surface: only community and group
+        # conversations — gym chats (kind='gym') have their own containment,
+        # so they never double-render here.
         gym_convs = (
             _gym_inbox_conversations(gym, request.user.profile)
+            .exclude(kind='gym')
             .prefetch_related('participants')
             .order_by('-last_message_at', '-created_at')[:30]
         )

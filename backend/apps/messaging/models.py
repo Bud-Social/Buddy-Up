@@ -16,6 +16,7 @@ class Conversation(TimestampedModel):
     KIND_CHOICES = [
         ('main', 'Main'),
         ('buddy', 'Buddy'),
+        ('gym', 'Gym'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)

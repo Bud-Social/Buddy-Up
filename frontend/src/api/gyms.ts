@@ -645,3 +645,62 @@ const gymFeedApi = {
 };
 
 export { gymFeedApi };
+
+// ── Contained gym inbox (gym ↔ members / team / clients) ───────────────────
+export type GymInboxAudience = 'member' | 'team' | 'client';
+
+export interface GymInboxConversation {
+  id: string;
+  kind: 'gym';
+  conversation_kind: GymInboxAudience;
+  is_group: boolean;
+  group_name: string;
+  group_avatar_url: string;
+  group_gym_id: string | null;
+  gym_name: string;
+  member_count: number;
+  participants: { user_id: string; username: string; display_name: string; avatar_url: string; role: string }[];
+  /** The non-staff participant in a member/client DM — the gym's counterpart. */
+  audience_member?: {
+    user_id: string;
+    username: string;
+    display_name: string;
+    avatar_url: string;
+  } | null;
+  last_message: string;
+  last_message_at: string | null;
+  unread_count: number;
+  is_staff_view?: boolean;
+}
+
+export interface GymInboxMessage {
+  id: string;
+  conversation: string;
+  sender: string;
+  sender_display: string;
+  sender_avatar: string;
+  sender_username: string;
+  message_type: string;
+  body: string;
+  created_at: string;
+  is_read: boolean;
+  is_gym?: boolean;
+}
+
+const gymInboxApi = {
+  list: (slug: string) =>
+    apiClient.get<ApiResponse<{ conversations: GymInboxConversation[] }>>(`/gyms/${slug}/inbox/`).then((r) => r.data.data?.conversations ?? []),
+
+  open: (slug: string, payload: { audience?: GymInboxAudience; participant_id?: string; body?: string }) =>
+    apiClient.post<ApiResponse<GymInboxConversation>>(`/gyms/${slug}/inbox/`, payload).then((r) => r.data.data),
+
+  messages: (slug: string, conversationId: string) =>
+    apiClient.get<ApiResponse<{ messages: GymInboxMessage[] }>>(`/gyms/${slug}/inbox/${conversationId}/messages/`)
+      .then((r) => r.data.data?.messages ?? []),
+
+  send: (slug: string, conversationId: string, body: string) =>
+    apiClient.post<ApiResponse<GymInboxMessage>>(`/gyms/${slug}/inbox/${conversationId}/messages/`, { body })
+      .then((r) => r.data.data),
+};
+
+export { gymInboxApi };
