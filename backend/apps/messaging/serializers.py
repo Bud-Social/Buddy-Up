@@ -265,6 +265,23 @@ class CallLogSerializer(serializers.ModelSerializer):
         }
 
 
+def _staffed_gym_ids(profile):
+    """Gyms where this profile holds a staff role — the gym-identity actors."""
+    if profile is None:
+        return []
+    try:
+        from apps.gyms.models import GymMembership
+        return list(
+            GymMembership.objects.filter(
+                member=profile,
+                role__in=['owner', 'co_owner', 'moderator'],
+                subscription_active=True,
+            ).values_list('gym_id', flat=True)
+        )
+    except Exception:  # noqa: BLE001
+        return []
+
+
 class CommunityMemberSerializer(serializers.ModelSerializer):
     user_id = serializers.CharField(source='profile.user_id')
     username = serializers.CharField(source='profile.username')
@@ -329,7 +346,9 @@ class CommunityPostCommentSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return None
-        if obj.likes.filter(profile=request.user.profile).exists():
+        from django.db.models import Q
+        gym_ids = _staffed_gym_ids(request.user.profile)
+        if obj.likes.filter(Q(profile=request.user.profile) | Q(gym_id__in=gym_ids)).exists():
             return '❤️'
         return None
 

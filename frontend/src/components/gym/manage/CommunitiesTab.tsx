@@ -1,13 +1,14 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
-  Loader2, Plus, Users, Globe, Lock, Link2, Unlink, Send, Check, Sparkles,
+  Loader2, Plus, Users, Globe, Lock, Link2, Unlink, Send, Check, Sparkles, Heart, MessageCircle,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { gymInsightsApi, type GymLinkedCommunity, type GymDiscoverableCommunity, type GymCommunitiesPayload } from '@/api/gyms';
+import { gymInsightsApi, gymFeedApi, type GymLinkedCommunity, type GymDiscoverableCommunity, type GymCommunitiesPayload } from '@/api/gyms';
 import { messagingApi, type CommunityPost } from '@/api/messaging';
+import { CommentSheet } from '@/components/features/feed/CommentSheet';
 
 interface CommunitiesTabProps {
   slug: string;
@@ -47,6 +48,8 @@ export function CommunitiesTab({ slug }: CommunitiesTabProps) {
   const [postsLoading, setPostsLoading] = useState(false);
   const [draft, setDraft] = useState('');
   const [postBusy, setPostBusy] = useState(false);
+  const [gymLiked, setGymLiked] = useState<Set<string>>(new Set());
+  const [commentTarget, setCommentTarget] = useState<{ postId: string; communityId: string } | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -162,6 +165,22 @@ export function CommunitiesTab({ slug }: CommunitiesTabProps) {
     }
   };
 
+  const handleGymLike = (post: CommunityPost) => {
+    if (!active) return;
+    gymFeedApi.reactCommunityPost(slug, active.id, post.id, 'like')
+      .then((res) => {
+        setGymLiked((prev) => {
+          const next = new Set(prev);
+          if (res?.is_reacted) next.add(post.id); else next.delete(post.id);
+          return next;
+        });
+        if (typeof res?.like_count === 'number') {
+          setPosts((prev) => prev?.map((p) => (p.id === post.id ? { ...p, like_count: res.like_count as number } : p)) ?? prev);
+        }
+      })
+      .catch(() => {});
+  };
+
   if (loading) {
     return (
       <div className="grid gap-3 animate-pulse">
@@ -255,7 +274,26 @@ export function CommunitiesTab({ slug }: CommunitiesTabProps) {
                               <p className="text-[9px] text-buddy-text-secondary/70">{timeAgo(post.created_at)}</p>
                             </div>
                             <p className="text-[11px] text-buddy-text-primary mt-0.5 whitespace-pre-wrap">{post.body}</p>
-                            <p className="text-[9px] text-buddy-text-secondary/70 mt-1">{post.like_count} likes · {post.comment_count} comments</p>
+                            <div className="flex items-center gap-4 mt-1.5">
+                              <button
+                                onClick={() => handleGymLike(post)}
+                                className={`flex items-center gap-1 text-[10px] transition-colors ${gymLiked.has(post.id) ? 'text-buddy-electric' : 'text-buddy-text-secondary hover:text-buddy-electric'}`}
+                                aria-label="Like as gym"
+                                title="Like as gym"
+                              >
+                                <Heart size={11} className={gymLiked.has(post.id) ? 'fill-buddy-electric' : ''} />
+                                <span className="tabular-nums">{post.like_count}</span>
+                              </button>
+                              <button
+                                onClick={() => setCommentTarget({ postId: post.id, communityId: community.id })}
+                                className="flex items-center gap-1 text-[10px] text-buddy-text-secondary hover:text-buddy-green transition-colors"
+                                aria-label="Comment as gym"
+                                title="Comment as gym"
+                              >
+                                <MessageCircle size={11} />
+                                <span className="tabular-nums">{post.comment_count}</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -303,6 +341,21 @@ export function CommunitiesTab({ slug }: CommunitiesTabProps) {
           <p className="text-[10px] text-buddy-text-secondary/70">No public communities to discover right now.</p>
         )}
       </div>
+
+      {/* Gym-identity comment sheet (like, reply, comment all land as the gym) */}
+      {commentTarget && (
+        <CommentSheet
+          postId={commentTarget.postId}
+          communityId={commentTarget.communityId}
+          gymSlug={slug}
+          gymName={slug}
+          isOpen
+          onClose={() => {
+            setCommentTarget(null);
+            if (activeId) loadPosts(activeId);
+          }}
+        />
+      )}
 
       {/* Create modal */}
       <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Create a gym community" size="sm">

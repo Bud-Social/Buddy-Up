@@ -667,9 +667,25 @@ const gymFeedApi = {
       `/gyms/${slug}/communities/${communityId}/posts/${postId}/save/`, {},
     ).then((r) => r.data.data),
 
-  commentCommunityPost: (slug: string, communityId: string, postId: string, body: string) =>
+  commentCommunityPost: (slug: string, communityId: string, postId: string, body: string, replyToId?: string) =>
     apiClient.post<ApiResponse<any>>(
-      `/gyms/${slug}/communities/${communityId}/posts/${postId}/comments/`, { body },
+      `/gyms/${slug}/communities/${communityId}/posts/${postId}/comments/`,
+      replyToId ? { body, reply_to_id: replyToId } : { body },
+    ).then((r) => r.data.data),
+
+  listCommunityComments: (slug: string, communityId: string, postId: string) =>
+    apiClient.get<ApiResponse<any[]>>(
+      `/gyms/${slug}/communities/${communityId}/posts/${postId}/comments/`,
+    ).then((r) => r.data.data),
+
+  toggleCommunityCommentLike: (slug: string, communityId: string, postId: string, commentId: string) =>
+    apiClient.post<ApiResponse<{ is_liked: boolean; like_count: number; reaction_counts: Record<string, number>; user_reaction: string | null }>>(
+      `/gyms/${slug}/communities/${communityId}/posts/${postId}/comments/${commentId}/like/`, {},
+    ).then((r) => r.data.data),
+
+  toggleCommentLike: (slug: string, postId: string, commentId: string) =>
+    apiClient.post<ApiResponse<{ reaction_counts: Record<string, number>; user_reaction: string | null; is_liked: boolean }>>(
+      `/gyms/${slug}/feed/comments/like/`, { post_id: postId, comment_id: commentId },
     ).then((r) => r.data.data),
 };
 

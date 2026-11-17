@@ -22,9 +22,10 @@ from apps.messaging.models import (
     CommunityPostSave,
     CommunityPostReaction,
     CommunityPostComment,
+    CommunityPostCommentLike,
     Conversation,
 )
-from apps.messaging.serializers import CommunityPostCommentSerializer
+from apps.messaging.serializers import CommunityPostCommentSerializer, _staffed_gym_ids
 
 
 def _gym_and_conversation(slug, request, conversation_id):
@@ -165,6 +166,38 @@ class GymCommunitySaveView(views.APIView):
             post.save(update_fields=['save_count', 'updated_at'])
 
         return _json_response({'saved': saved, 'save_count': post.save_count})
+
+
+class GymCommunityCommentLikeView(views.APIView):
+    """Toggle the gym's like on a community post comment."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, gym_slug, conversation_id, post_id, comment_id):
+        gym, conv = _gym_and_conversation(gym_slug, request, conversation_id)
+        if gym is None:
+            return conv
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+        comment = get_object_or_404(CommunityPostComment, id=comment_id, post=post)
+        profile = request.user.profile
+
+        from django.db.models import Q
+        with transaction.atomic():
+            existing = CommunityPostCommentLike.objects.filter(comment=comment, gym=gym).first()
+            if existing:
+                existing.delete()
+            else:
+                CommunityPostCommentLike.objects.create(comment=comment, profile=profile, gym=gym)
+
+        like_count = comment.likes.count()
+        # Gym-aware: the viewer's staffed-gym likes count as their reaction too.
+        gym_ids = _staffed_gym_ids(profile)
+        staffed_liked = comment.likes.filter(Q(profile=profile) | Q(gym_id__in=gym_ids)).exists()
+        return _json_response({
+            'is_liked': staffed_liked,
+            'like_count': like_count,
+            'reaction_counts': {'❤️': like_count} if like_count else {},
+            'user_reaction': '❤️' if staffed_liked else None,
+        })
 
 
 class GymCommunityCommentView(views.APIView):

@@ -42,7 +42,15 @@ export function CommentSheet({ postId, communityId, isOpen, onClose, gymSlug, gy
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchComments = useCallback(() => {
-    if (communityId) {
+    if (gymSlug && communityId) {
+      // Gym identity — comments are listed through the gym endpoint so the
+      // acting member's staffed-gym likes are reflected in user_reaction.
+      gymFeedApi.listCommunityComments(gymSlug, communityId, postId).then((rows) => {
+        const list = (rows ?? []) as unknown as Comment[];
+        setComments(list);
+        setLikedComments(new Set(list.filter((c) => c.user_reaction).map((c) => c.id)));
+      }).catch(() => {});
+    } else if (communityId) {
       messagingApi.getPostComments(communityId, postId).then((res) => {
         const rows = res as unknown as Comment[];
         setComments(rows);
@@ -55,7 +63,7 @@ export function CommentSheet({ postId, communityId, isOpen, onClose, gymSlug, gy
         setLikedComments(new Set(rows.filter((c) => c.user_reaction).map((c) => c.id)));
       }).catch(() => {});
     }
-  }, [communityId, postId]);
+  }, [communityId, gymSlug, postId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -77,7 +85,10 @@ export function CommentSheet({ postId, communityId, isOpen, onClose, gymSlug, gy
     setIsLoading(true);
     try {
       let newComment: Comment | null = null;
-      if (communityId) {
+      if (gymSlug && communityId) {
+        // Gym identity on a community post — the row is recorded as the gym.
+        newComment = (await gymFeedApi.commentCommunityPost(gymSlug, communityId, postId, body.trim())) as unknown as Comment;
+      } else if (communityId) {
         const res = await messagingApi.addPostComment(communityId, postId, body.trim());
         // messagingApi already unwraps the envelope; map it to the comment shape.
         newComment = res as unknown as Comment;
@@ -108,7 +119,10 @@ export function CommentSheet({ postId, communityId, isOpen, onClose, gymSlug, gy
     const text = replyBody.trim() || (replyMedia?.type === 'sticker' ? replyMedia.url : '');
     try {
       let newComment: Comment | null = null;
-      if (communityId) {
+      if (gymSlug && communityId) {
+        // Gym identity on a community post — replies are text-only.
+        newComment = (await gymFeedApi.commentCommunityPost(gymSlug, communityId, postId, text, commentId)) as unknown as Comment;
+      } else if (communityId) {
         const res = await messagingApi.addPostComment(communityId, postId, text, commentId, media);
         newComment = res as unknown as Comment;
       } else if (gymSlug) {
@@ -170,8 +184,8 @@ export function CommentSheet({ postId, communityId, isOpen, onClose, gymSlug, gy
     }));
 
     try {
-      if (communityId) {
-        const res = await messagingApi.toggleCommunityCommentLike(communityId, postId, commentId);
+      if (gymSlug && communityId) {
+        const res = await gymFeedApi.toggleCommunityCommentLike(gymSlug, communityId, postId, commentId);
         setComments((prev) => prev.map((c) => c.id === commentId
           ? { ...c, reaction_counts: res.reaction_counts, user_reaction: res.user_reaction }
           : c));
@@ -180,7 +194,17 @@ export function CommentSheet({ postId, communityId, isOpen, onClose, gymSlug, gy
           if (res.is_liked) next.add(commentId); else next.delete(commentId);
           return next;
         });
-      } else {
+      } else if (gymSlug) {
+        const res = await gymFeedApi.toggleCommentLike(gymSlug, postId, commentId);
+        setComments((prev) => prev.map((c) => c.id === commentId
+          ? { ...c, reaction_counts: res.reaction_counts, user_reaction: res.user_reaction }
+          : c));
+        setLikedComments((prev) => {
+          const next = new Set(prev);
+          if (res.is_liked) next.add(commentId); else next.delete(commentId);
+          return next;
+        });
+      } else if (communityId) {
         const res = wasLiked
           ? await feedApi.unreactComment(postId, commentId)
           : await feedApi.reactComment(postId, commentId, LIKE_REACTION);
@@ -355,7 +379,8 @@ export function CommentSheet({ postId, communityId, isOpen, onClose, gymSlug, gy
                             className="hidden"
                             onChange={handleReplyFile}
                           />
-                          {/* Media attachment bar */}
+                          {/* Media attachment bar — gym replies are text-only */}
+                          {!gymSlug && (
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => setStickerPickerOpen((open) => !open)}
@@ -389,7 +414,8 @@ export function CommentSheet({ postId, communityId, isOpen, onClose, gymSlug, gy
                               <span className="text-[11px] text-buddy-text-secondary">Uploading…</span>
                             )}
                           </div>
-                          {stickerPickerOpen && (
+                          )}
+                          {!gymSlug && stickerPickerOpen && (
                             <div className="flex flex-wrap gap-1 p-2 bg-buddy-surface rounded-lg border border-buddy-border">
                               {STICKER_EMOJIS.map((emoji) => (
                                 <button

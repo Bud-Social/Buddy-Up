@@ -236,6 +236,56 @@ class GymSavedView(views.APIView):
         return _json_response({'count': count, 'items': data})
 
 
+class GymCommentLikeView(views.APIView):
+    """Toggle the gym's ❤️ like on a feed comment."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, gym_slug):
+        gym = _gym_by_slug(gym_slug, request)
+        if gym is None:
+            return _error('Not found.', status.HTTP_404_NOT_FOUND)
+        post_id = request.data.get('post_id')
+        comment_id = request.data.get('comment_id')
+        from apps.gyms.insights_views import _coerce_uuid
+
+        def _coerce_any(value):
+            # Feed comment ids are integer PKs; post ids are UUIDs. Accept both.
+            s = str(value).strip()
+            if s.isdigit():
+                return int(s)
+            return _coerce_uuid(s)
+
+        comment = (
+            Comment.objects
+            .filter(id=_coerce_any(comment_id), post_id=_coerce_uuid(post_id),
+                    post__visibility='public', post__moderation_status='clean')
+            .first()
+            if comment_id and post_id else None
+        )
+        if comment is None:
+            return _error('Comment not found.', status.HTTP_404_NOT_FOUND)
+
+        profile = request.user.profile
+        with transaction.atomic():
+            existing = Reaction.objects.filter(comment=comment, gym=gym, reaction_type='❤️').first()
+            if existing:
+                existing.delete()
+                liked = False
+            else:
+                # One reaction per gym per comment — replace any other gym reaction.
+                Reaction.objects.filter(comment=comment, gym=gym).delete()
+                Reaction.objects.create(comment=comment, author=profile, gym=gym, reaction_type='❤️')
+                liked = True
+
+        serializer = CommentSerializer(comment, context={'request': request})
+        return _json_response({
+            'reaction_counts': serializer.data.get('reaction_counts', {}),
+            'user_reaction': '❤️' if liked else None,
+            'is_liked': liked,
+            'comment_id': str(comment.id),
+        })
+
+
 class GymCommentView(views.APIView):
     """Comment on a feed post as the gym."""
     permission_classes = [permissions.IsAuthenticated]

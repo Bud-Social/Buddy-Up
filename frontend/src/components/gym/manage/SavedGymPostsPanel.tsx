@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Loader2, Bookmark } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { PostCard } from '@/components/features/feed/PostCard';
+import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { gymFeedApi } from '@/api/gyms';
-import { feedApi } from '@/api/feed';
 import type { Post } from '@/types';
 
 interface Props {
@@ -32,6 +32,8 @@ export function SavedGymPostsPanel({ slug, gymName }: Props) {
       .catch((e: any) => setError(e?.response?.data?.message || 'Could not load saved posts.'))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  const [commentTarget, setCommentTarget] = useState<{ postId: string; communityId?: string } | null>(null);
 
   const handleSave = (post: Post) => {
     if (post.community_id) {
@@ -90,12 +92,24 @@ export function SavedGymPostsPanel({ slug, gymName }: Props) {
           <PostCard
             key={post.id}
             post={post}
+            onComment={() => setCommentTarget({ postId: post.id, communityId: post.community_id ?? undefined })}
             onSave={() => handleSave(post)}
             onLike={() => handleLike(post)}
             onReact={(_id, reaction) => handleReact(post, reaction)}
             onRepost={() => handleRepost(post)}
           />
         ))
+      )}
+
+      {commentTarget && (
+        <CommentSheet
+          postId={commentTarget.postId}
+          communityId={commentTarget.communityId}
+          gymSlug={slug}
+          gymName={gymName}
+          isOpen
+          onClose={() => setCommentTarget(null)}
+        />
       )}
     </section>
   );

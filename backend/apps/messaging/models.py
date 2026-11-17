@@ -470,10 +470,19 @@ class CommunityPostCommentLike(TimestampedModel):
     profile = models.ForeignKey(
         'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_comment_likes'
     )
+    # Set when the like is given as a gym; acting staff stays in `profile`.
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='community_post_comment_likes')
 
     class Meta:
         db_table = 'messaging_community_post_comment_like'
         unique_together = ('comment', 'profile')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['comment', 'gym'],
+                condition=models.Q(gym__isnull=False),
+                name='unique_community_gym_comment_like',
+            ),
+        ]
 
 
 class CommunityPostShare(TimestampedModel):
