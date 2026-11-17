@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Bookmark } from 'lucide-react';
+import { Bookmark } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { PostCard } from '@/components/features/feed/PostCard';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
