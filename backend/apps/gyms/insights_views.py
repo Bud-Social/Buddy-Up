@@ -2,7 +2,7 @@
 
 Kept separate from views.py so the already enormous GymDetail file doesn't
 absorb four more class definitions. All four are owner/co-owner/moderator
-gated via _require_partner_staff.
+gated via _partner_staff.
 """
 
 import datetime
