@@ -13,7 +13,7 @@ import '../../../shared/widgets/role_dashboard_shell.dart';
 import '../providers/gym_manage_provider.dart';
 import '../providers/gym_provider.dart';
 import '../widgets/gym_insights_tabs.dart';
-import '../widgets/gym_saved_posts_tab.dart';
+import '../widgets/gym_posts_tab.dart';
 
 
 /// Gym management.
@@ -38,7 +38,7 @@ class GymManageScreen extends ConsumerWidget {
   /// Privileged surfaces. Owners, co-owners and moderators see the full
   /// roster (Overview/Members/Team/Requests/...); a regular member only sees
   /// the read-only panels with an explicit notice.
-  static const adminTabs = ['Overview', 'Members', 'Team', 'Requests', 'Schedule', 'Reviews', 'Sessions', 'Messages', 'Community', 'Saved', 'Analytics', 'Logs'];
+  static const adminTabs = ['Overview', 'Members', 'Team', 'Requests', 'Posts', 'Schedule', 'Reviews', 'Sessions', 'Messages', 'Community', 'Analytics', 'Logs'];
   static const memberTabs = ['Members', 'Requests', 'Schedule', 'Reviews'];
 
   @override
@@ -114,7 +114,7 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
       'Sessions': () => GymSessionsTab(slug: widget.slug),
       'Messages': () => GymMessagesTab(slug: widget.slug),
       'Community': () => GymCommunitiesTab(slug: widget.slug, gymName: gym.name),
-      'Saved': () => GymSavedPostsTab(slug: widget.slug, gymName: gym.name),
+      'Posts': () => GymPostsTab(slug: widget.slug, gymName: gym.name),
       'Analytics': () => GymAnalyticsTab(slug: widget.slug, gymName: gym.name),
       'Logs': _logsTab,
     };
