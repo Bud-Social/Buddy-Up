@@ -55,6 +55,8 @@ def community_post_payload(
                     'avatar_url': getattr(rp.gym, 'logo_url', '') or '',
                     'is_gym': True,
                     'verification_status': 'gym',
+                    'is_verified': rp.gym.is_verified,
+                    'tier': rp.gym.tier,
                 } if rp.gym_id else {
                     'user_id': str(rp.profile.user_id),
                     'username': rp.profile.username or '',

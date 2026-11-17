@@ -69,6 +69,8 @@ _AuthorData _$AuthorDataFromJson(Map<String, dynamic> json) => _AuthorData(
   displayName: json['display_name'] as String,
   avatarUrl: json['avatar_url'] as String,
   verificationStatus: json['verification_status'] as String? ?? 'none',
+  isVerified: json['is_verified'] as bool? ?? false,
+  tier: json['tier'] as String? ?? 'regular',
   followedByViewer: json['followedByViewer'] as bool? ?? false,
 );
 
@@ -79,6 +81,8 @@ Map<String, dynamic> _$AuthorDataToJson(_AuthorData instance) =>
       'display_name': instance.displayName,
       'avatar_url': instance.avatarUrl,
       'verification_status': instance.verificationStatus,
+      'is_verified': instance.isVerified,
+      'tier': instance.tier,
       'followedByViewer': instance.followedByViewer,
     };
 
@@ -134,17 +138,27 @@ Map<String, dynamic> _$PollToJson(_Poll instance) => <String, dynamic>{
 _ReposterData _$ReposterDataFromJson(Map<String, dynamic> json) =>
     _ReposterData(
       userId: json['user_id'] as String?,
+      username: json['username'] as String?,
       displayName: json['display_name'] as String? ?? '',
       avatarUrl: json['avatar_url'] as String? ?? '',
       followedByViewer: json['followed_by_viewer'] as bool? ?? false,
+      isGym: json['is_gym'] as bool? ?? false,
+      verificationStatus: json['verification_status'] as String?,
+      isVerified: json['is_verified'] as bool? ?? false,
+      tier: json['tier'] as String? ?? 'regular',
     );
 
 Map<String, dynamic> _$ReposterDataToJson(_ReposterData instance) =>
     <String, dynamic>{
       'user_id': instance.userId,
+      'username': instance.username,
       'display_name': instance.displayName,
       'avatar_url': instance.avatarUrl,
       'followed_by_viewer': instance.followedByViewer,
+      'is_gym': instance.isGym,
+      'verification_status': instance.verificationStatus,
+      'is_verified': instance.isVerified,
+      'tier': instance.tier,
     };
 
 _OriginalPostData _$OriginalPostDataFromJson(Map<String, dynamic> json) =>

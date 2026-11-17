@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import type { Post } from '@/types';
 import type {
   ApiResponse, Gym, GymMembership, GymCategory,
   JoinRequest, GymInvite, CityResult, GymCategoryPricing,
@@ -639,6 +640,10 @@ const gymFeedApi = {
     apiClient.post<ApiResponse<{ action: 'reposted' | 'unreposted'; repost_count: number; gym_reposted: boolean }>>(
       `/gyms/${slug}/feed/repost/`, { post_id: postId },
     ).then((r) => r.data),
+
+  createPost: (slug: string, payload: { body: string }) =>
+    apiClient.post<ApiResponse<Post>>(`/gyms/${slug}/feed/create-post/`, payload)
+      .then((r) => r.data.data),
 
   comment: (slug: string, payload: { post_id: string; body: string; parent_id?: string }) =>
     apiClient.post<ApiResponse<any>>(`/gyms/${slug}/feed/comment/`, payload).then((r) => r.data.data),

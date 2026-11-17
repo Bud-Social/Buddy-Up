@@ -695,9 +695,17 @@ export default function GymManage() {
               memberCount={metrics?.active_members ?? gym.member_count}
             />
           ) : postSource === 'home' ? (
-            <HomeFeedPanel gymSlug={slug || gym.handle} gymName={gym.name} />
+            <HomeFeedPanel
+              gymSlug={slug || gym.handle}
+              gymName={gym.name}
+              gymIdentity={{ name: gym.name, logo_url: gym.logo_url, is_verified: gym.is_verified, tier: gym.tier }}
+            />
           ) : (
-            <SavedGymPostsPanel slug={slug || gym.handle} gymName={gym.name} />
+            <SavedGymPostsPanel
+              slug={slug || gym.handle}
+              gymName={gym.name}
+              gymIdentity={{ name: gym.name, logo_url: gym.logo_url, is_verified: gym.is_verified, tier: gym.tier }}
+            />
           )}
         </>
       )}

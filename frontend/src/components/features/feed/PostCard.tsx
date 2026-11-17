@@ -18,6 +18,7 @@ import { toEmoji } from '@/utils/emojiUtils';
 import { useInViewAutoplay } from '@/hooks/useInViewAutoplay';
 import { RailAction, RAIL_ICON_SIZE, nextReactionState, totalReactions, formatCount } from './RailAction';
 import { AuthorChip } from './AuthorChip';
+import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';
 import { PostShareSheet } from './PostShareSheet';
 import { useRecordPostView } from './useRecordPostView';
 import { mediaPagesFromPost, type MediaPage } from '@/lib/mediaPages';
@@ -455,6 +456,17 @@ type InteractAction = 'like' | 'comment' | 'repost' | 'save' | 'share' | 'profil
 export interface PostCardProps {
   post: Post;
   communityId?: string;
+  /**
+   * When the console is engaging as a gym, the repost ribbon shows the
+   * gym's identity (logo + name + tier badge) instead of the acting
+   * staff member's.
+   */
+  gymActor?: {
+    name: string;
+    logo_url?: string;
+    is_verified?: boolean;
+    tier?: 'regular' | 'midlevel' | 'executive';
+  } | null;
   /** Extra control rendered next to the view counter (e.g. community Join). */
   headerAction?: ReactNode;
   /** Extra content rendered at the bottom-left of the card (e.g. community tag). */
@@ -474,7 +486,7 @@ export interface PostCardProps {
   onReact?: (postId: string, reaction: string) => void;
 }
 
-export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAuthor, onLike, onRepost, onSave, onReact, communityId, headerAction, footerSlot }: PostCardProps) {
+export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAuthor, onLike, onRepost, onSave, onReact, communityId, gymActor, headerAction, footerSlot }: PostCardProps) {
   const navigate = useNavigate();
   const handedness = useHandednessStore((s) => s.handedness);
   const [post, setPost] = useState(initialPost);
@@ -952,13 +964,25 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
               .map((reposter: any, idx: number) => (
                 <Avatar key={reposter.user_id || idx} src={reposter.avatar_url} alt={reposter.display_name} size="xs" className="ring-2 ring-buddy-green/30" style={{ zIndex: 3 - idx }} verificationStatus={reposter.verification_status} />
               ))}
-            <span
-              data-testid="repost-viewer-avatar"
-              title={viewerName || 'You'}
-              className="inline-flex origin-center z-4"
-            >
-              <Avatar src={viewerAvatar} alt={viewerName || 'You'} size="xs" className="ring-2 ring-buddy-green" />
-            </span>
+            {gymActor ? (
+              <span
+                data-testid="repost-viewer-avatar"
+                title={gymActor.name}
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full overflow-hidden ring-2 ring-buddy-green z-4 bg-buddy-surface-raised"
+              >
+                {gymActor.logo_url
+                  ? <img src={gymActor.logo_url} alt="" className="w-full h-full object-cover" />
+                  : <Dumbbell size={12} className="text-buddy-green" />}
+              </span>
+            ) : (
+              <span
+                data-testid="repost-viewer-avatar"
+                title={viewerName || 'You'}
+                className="inline-flex origin-center z-4"
+              >
+                <Avatar src={viewerAvatar} alt={viewerName || 'You'} size="xs" className="ring-2 ring-buddy-green" />
+              </span>
+            )}
             {(post.reposters || []).filter((r: any) => !viewerUserId || r.user_id !== viewerUserId).length > 3 && (
               <div className="w-6 h-6 rounded-full bg-buddy-surface-raised text-[10px] font-bold flex items-center justify-center ring-2 ring-buddy-green/30">
                 +{(post.reposters || []).filter((r: any) => !viewerUserId || r.user_id !== viewerUserId).length - 3}
@@ -967,7 +991,12 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
           </div>
           <div className="flex-1 min-w-0 flex items-center gap-1.5">
             <Repeat2 size={13} className="text-buddy-green shrink-0" />
-            <span className="font-semibold text-buddy-green truncate">You reposted</span>
+            <span className="font-semibold text-buddy-green flex items-center gap-1 min-w-0">
+              <span className="truncate">{gymActor?.name ?? 'You'} reposted</span>
+              {gymActor && gymActor.is_verified && (
+                <VerifiedGymBadge verified={gymActor.is_verified} tier={gymActor.tier ?? 'regular'} size="sm" className="shrink-0" />
+              )}
+            </span>
           </div>
         </div>
       )}

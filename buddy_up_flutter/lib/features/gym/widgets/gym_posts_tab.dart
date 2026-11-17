@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/role_dashboard_shell.dart';
 import '../../feed/widgets/post_card.dart';
+import '../../feed/widgets/gym_actor_identity.dart';
 import '../../messaging/providers/messaging_provider.dart';
 import '../providers/gym_engagement.dart';
 import '../providers/gym_posts_provider.dart';
@@ -19,8 +20,8 @@ enum _PostsTab { gymFeed, homeFeed, saved }
 /// through the gym endpoints; Saved keeps the gym-scoped bookmark.
 class GymPostsTab extends ConsumerStatefulWidget {
   final String slug;
-  final String gymName;
-  const GymPostsTab({super.key, required this.slug, required this.gymName});
+  final GymActorIdentity identity;
+  const GymPostsTab({super.key, required this.slug, required this.identity});
 
   @override
   ConsumerState<GymPostsTab> createState() => _GymPostsTabState();
@@ -45,9 +46,9 @@ class _GymPostsTabState extends ConsumerState<GymPostsTab> {
         ),
         const SizedBox(height: 10),
         switch (_tab) {
-          _PostsTab.gymFeed => _GymFeedPane(slug: widget.slug, gymName: widget.gymName),
-          _PostsTab.homeFeed => _HomeFeedPane(slug: widget.slug, gymName: widget.gymName),
-          _PostsTab.saved => GymSavedPostsTab(slug: widget.slug, gymName: widget.gymName),
+          _PostsTab.gymFeed => _GymFeedPane(slug: widget.slug, identity: widget.identity),
+          _PostsTab.homeFeed => _HomeFeedPane(slug: widget.slug, identity: widget.identity),
+          _PostsTab.saved => GymSavedPostsTab(slug: widget.slug, identity: widget.identity),
         },
       ],
     );
@@ -159,8 +160,8 @@ class _GymFeedActions {
 
 class _GymFeedPane extends ConsumerWidget {
   final String slug;
-  final String gymName;
-  const _GymFeedPane({required this.slug, required this.gymName});
+  final GymActorIdentity identity;
+  const _GymFeedPane({required this.slug, required this.identity});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -169,7 +170,7 @@ class _GymFeedPane extends ConsumerWidget {
       ref: ref,
       context: context,
       slug: slug,
-      gymName: gymName,
+      gymName: identity.name,
       invalidate: () => ref.invalidate(gymOwnFeedProvider(slug)),
     );
     return feedAsync.when(
@@ -190,6 +191,7 @@ class _GymFeedPane extends ConsumerWidget {
               PostCard(
                 key: ValueKey('gym:${post.id}'),
                 post: post,
+                gymActor: identity,
                 onLike: actions.onLike,
                 onReact: actions.onReact,
                 onRepost: actions.onRepost,
@@ -203,48 +205,147 @@ class _GymFeedPane extends ConsumerWidget {
   }
 }
 
-class _HomeFeedPane extends ConsumerWidget {
+class _HomeFeedPane extends ConsumerStatefulWidget {
   final String slug;
-  final String gymName;
-  const _HomeFeedPane({required this.slug, required this.gymName});
+  final GymActorIdentity identity;
+  const _HomeFeedPane({required this.slug, required this.identity});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_HomeFeedPane> createState() => _HomeFeedPaneState();
+}
+
+class _HomeFeedPaneState extends ConsumerState<_HomeFeedPane> {
+  final _draft = TextEditingController();
+  bool _posting = false;
+
+  @override
+  void dispose() {
+    _draft.dispose();
+    super.dispose();
+  }
+
+  Future<void> _postAsGym() async {
+    final body = _draft.text.trim();
+    if (body.isEmpty || _posting) return;
+    setState(() => _posting = true);
+    try {
+      final dio = ref.read(apiClientProvider4).dio;
+      await GymEngagementService.createPostAsGym(dio, widget.slug, body: body);
+      _draft.clear();
+      ref.invalidate(gymHomeFeedProvider);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not post as the gym.')),
+      );
+    } finally {
+      if (mounted) setState(() => _posting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final feedAsync = ref.watch(gymHomeFeedProvider);
     final actions = _GymFeedActions(
       ref: ref,
       context: context,
-      slug: slug,
-      gymName: gymName,
+      slug: widget.slug,
+      gymName: widget.identity.name,
       invalidate: () => ref.invalidate(gymHomeFeedProvider),
     );
-    return feedAsync.when(
-      loading: () => const PageLoader(fullScreen: false),
-      error: (_, _) => const RoleNotice(
-        message: 'Could not load the home feed. Pull to refresh, or try again later.',
-        isError: true,
-      ),
-      data: (posts) {
-        if (posts.isEmpty) {
-          return const RoleNotice(
-            message: 'The home feed is empty — create something and share it with your members.',
-          );
-        }
-        return Column(
-          children: [
-            for (final post in posts)
-              PostCard(
-                key: ValueKey('home:${post.id}'),
-                post: post,
-                onLike: actions.onLike,
-                onReact: actions.onReact,
-                onRepost: actions.onRepost,
-                onSave: actions.onSave,
-                onComment: actions.onComment,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: BuddyColors.green.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: BuddyColors.green.withValues(alpha: 0.25)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.fitness_center, size: 13, color: BuddyColors.green),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Posting to the home feed as ${widget.identity.name}',
+                      style: const TextStyle(fontSize: 10, color: BuddyColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-          ],
-        );
-      },
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _draft,
+                      style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
+                      minLines: 1,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Say something to the members…',
+                        hintStyle: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                        filled: true,
+                        fillColor: BuddyColors.surface,
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: BuddyColors.green, width: 1)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                        isDense: true,
+                      ),
+                      onSubmitted: (_) => _postAsGym(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _posting
+                      ? const SizedBox(width: 34, height: 34, child: Padding(padding: EdgeInsets.all(7), child: CircularProgressIndicator(strokeWidth: 2, color: BuddyColors.green)))
+                      : IconButton(
+                          onPressed: _postAsGym,
+                          icon: const Icon(Icons.send, color: BuddyColors.green),
+                          tooltip: 'Post as gym',
+                        ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        feedAsync.when(
+          loading: () => const PageLoader(fullScreen: false),
+          error: (_, _) => const RoleNotice(
+            message: 'Could not load the home feed. Pull to refresh, or try again later.',
+            isError: true,
+          ),
+          data: (posts) {
+            if (posts.isEmpty) {
+              return const RoleNotice(
+                message: 'The home feed is empty — create something and share it with your members.',
+              );
+            }
+            return Column(
+              children: [
+                for (final post in posts)
+                  PostCard(
+                    key: ValueKey('home:${post.id}'),
+                    post: post,
+                    gymActor: widget.identity,
+                    onLike: actions.onLike,
+                    onReact: actions.onReact,
+                    onRepost: actions.onRepost,
+                    onSave: actions.onSave,
+                    onComment: actions.onComment,
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }

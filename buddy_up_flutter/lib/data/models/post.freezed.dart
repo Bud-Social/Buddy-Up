@@ -614,7 +614,7 @@ as Map<String, dynamic>?,
 /// @nodoc
 mixin _$AuthorData {
 
-@JsonKey(name: 'user_id') String? get userId; String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;@JsonKey(name: 'verification_status') String get verificationStatus;/// Client-managed follow state; the backend does not echo this yet.
+@JsonKey(name: 'user_id') String? get userId; String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;@JsonKey(name: 'verification_status') String get verificationStatus;@JsonKey(name: 'is_verified') bool get isVerified;@JsonKey(name: 'tier') String get tier;/// Client-managed follow state; the backend does not echo this yet.
  bool get followedByViewer;
 /// Create a copy of AuthorData
 /// with the given fields replaced by the non-null parameter values.
@@ -628,16 +628,16 @@ $AuthorDataCopyWith<AuthorData> get copyWith => _$AuthorDataCopyWithImpl<AuthorD
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthorData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.followedByViewer, followedByViewer) || other.followedByViewer == followedByViewer));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthorData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.tier, tier) || other.tier == tier)&&(identical(other.followedByViewer, followedByViewer) || other.followedByViewer == followedByViewer));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,verificationStatus,followedByViewer);
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,verificationStatus,isVerified,tier,followedByViewer);
 
 @override
 String toString() {
-  return 'AuthorData(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, verificationStatus: $verificationStatus, followedByViewer: $followedByViewer)';
+  return 'AuthorData(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, verificationStatus: $verificationStatus, isVerified: $isVerified, tier: $tier, followedByViewer: $followedByViewer)';
 }
 
 
@@ -648,7 +648,7 @@ abstract mixin class $AuthorDataCopyWith<$Res>  {
   factory $AuthorDataCopyWith(AuthorData value, $Res Function(AuthorData) _then) = _$AuthorDataCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'user_id') String? userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus, bool followedByViewer
+@JsonKey(name: 'user_id') String? userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'tier') String tier, bool followedByViewer
 });
 
 
@@ -665,13 +665,15 @@ class _$AuthorDataCopyWithImpl<$Res>
 
 /// Create a copy of AuthorData
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? userId = freezed,Object? username = null,Object? displayName = null,Object? avatarUrl = null,Object? verificationStatus = null,Object? followedByViewer = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = freezed,Object? username = null,Object? displayName = null,Object? avatarUrl = null,Object? verificationStatus = null,Object? isVerified = null,Object? tier = null,Object? followedByViewer = null,}) {
   return _then(_self.copyWith(
 userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String?,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
+as String,isVerified: null == isVerified ? _self.isVerified : isVerified // ignore: cast_nullable_to_non_nullable
+as bool,tier: null == tier ? _self.tier : tier // ignore: cast_nullable_to_non_nullable
 as String,followedByViewer: null == followedByViewer ? _self.followedByViewer : followedByViewer // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
@@ -758,10 +760,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus,  bool followedByViewer)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'tier')  String tier,  bool followedByViewer)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AuthorData() when $default != null:
-return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.followedByViewer);case _:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.isVerified,_that.tier,_that.followedByViewer);case _:
   return orElse();
 
 }
@@ -779,10 +781,10 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus,  bool followedByViewer)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'tier')  String tier,  bool followedByViewer)  $default,) {final _that = this;
 switch (_that) {
 case _AuthorData():
-return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.followedByViewer);case _:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.isVerified,_that.tier,_that.followedByViewer);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -799,10 +801,10 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String? userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus,  bool followedByViewer)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String? userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'tier')  String tier,  bool followedByViewer)?  $default,) {final _that = this;
 switch (_that) {
 case _AuthorData() when $default != null:
-return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.followedByViewer);case _:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.isVerified,_that.tier,_that.followedByViewer);case _:
   return null;
 
 }
@@ -814,7 +816,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 @JsonSerializable()
 
 class _AuthorData implements AuthorData {
-  const _AuthorData({@JsonKey(name: 'user_id') this.userId, required this.username, @JsonKey(name: 'display_name') required this.displayName, @JsonKey(name: 'avatar_url') required this.avatarUrl, @JsonKey(name: 'verification_status') this.verificationStatus = 'none', this.followedByViewer = false});
+  const _AuthorData({@JsonKey(name: 'user_id') this.userId, required this.username, @JsonKey(name: 'display_name') required this.displayName, @JsonKey(name: 'avatar_url') required this.avatarUrl, @JsonKey(name: 'verification_status') this.verificationStatus = 'none', @JsonKey(name: 'is_verified') this.isVerified = false, @JsonKey(name: 'tier') this.tier = 'regular', this.followedByViewer = false});
   factory _AuthorData.fromJson(Map<String, dynamic> json) => _$AuthorDataFromJson(json);
 
 @override@JsonKey(name: 'user_id') final  String? userId;
@@ -822,6 +824,8 @@ class _AuthorData implements AuthorData {
 @override@JsonKey(name: 'display_name') final  String displayName;
 @override@JsonKey(name: 'avatar_url') final  String avatarUrl;
 @override@JsonKey(name: 'verification_status') final  String verificationStatus;
+@override@JsonKey(name: 'is_verified') final  bool isVerified;
+@override@JsonKey(name: 'tier') final  String tier;
 /// Client-managed follow state; the backend does not echo this yet.
 @override@JsonKey() final  bool followedByViewer;
 
@@ -838,16 +842,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthorData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.followedByViewer, followedByViewer) || other.followedByViewer == followedByViewer));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthorData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.tier, tier) || other.tier == tier)&&(identical(other.followedByViewer, followedByViewer) || other.followedByViewer == followedByViewer));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,verificationStatus,followedByViewer);
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,verificationStatus,isVerified,tier,followedByViewer);
 
 @override
 String toString() {
-  return 'AuthorData(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, verificationStatus: $verificationStatus, followedByViewer: $followedByViewer)';
+  return 'AuthorData(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, verificationStatus: $verificationStatus, isVerified: $isVerified, tier: $tier, followedByViewer: $followedByViewer)';
 }
 
 
@@ -858,7 +862,7 @@ abstract mixin class _$AuthorDataCopyWith<$Res> implements $AuthorDataCopyWith<$
   factory _$AuthorDataCopyWith(_AuthorData value, $Res Function(_AuthorData) _then) = __$AuthorDataCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'user_id') String? userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus, bool followedByViewer
+@JsonKey(name: 'user_id') String? userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'tier') String tier, bool followedByViewer
 });
 
 
@@ -875,13 +879,15 @@ class __$AuthorDataCopyWithImpl<$Res>
 
 /// Create a copy of AuthorData
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? userId = freezed,Object? username = null,Object? displayName = null,Object? avatarUrl = null,Object? verificationStatus = null,Object? followedByViewer = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = freezed,Object? username = null,Object? displayName = null,Object? avatarUrl = null,Object? verificationStatus = null,Object? isVerified = null,Object? tier = null,Object? followedByViewer = null,}) {
   return _then(_AuthorData(
 userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String?,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
+as String,isVerified: null == isVerified ? _self.isVerified : isVerified // ignore: cast_nullable_to_non_nullable
+as bool,tier: null == tier ? _self.tier : tier // ignore: cast_nullable_to_non_nullable
 as String,followedByViewer: null == followedByViewer ? _self.followedByViewer : followedByViewer // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
@@ -1471,7 +1477,7 @@ as List<String>,
 /// @nodoc
 mixin _$ReposterData {
 
-@JsonKey(name: 'user_id') String? get userId;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;@JsonKey(name: 'followed_by_viewer') bool get followedByViewer;
+@JsonKey(name: 'user_id') String? get userId;@JsonKey(name: 'username') String? get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;@JsonKey(name: 'followed_by_viewer') bool get followedByViewer;@JsonKey(name: 'is_gym') bool get isGym;@JsonKey(name: 'verification_status') String? get verificationStatus;@JsonKey(name: 'is_verified') bool get isVerified;@JsonKey(name: 'tier') String get tier;
 /// Create a copy of ReposterData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1484,16 +1490,16 @@ $ReposterDataCopyWith<ReposterData> get copyWith => _$ReposterDataCopyWithImpl<R
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReposterData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.followedByViewer, followedByViewer) || other.followedByViewer == followedByViewer));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReposterData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.followedByViewer, followedByViewer) || other.followedByViewer == followedByViewer)&&(identical(other.isGym, isGym) || other.isGym == isGym)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.tier, tier) || other.tier == tier));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,userId,displayName,avatarUrl,followedByViewer);
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,followedByViewer,isGym,verificationStatus,isVerified,tier);
 
 @override
 String toString() {
-  return 'ReposterData(userId: $userId, displayName: $displayName, avatarUrl: $avatarUrl, followedByViewer: $followedByViewer)';
+  return 'ReposterData(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, followedByViewer: $followedByViewer, isGym: $isGym, verificationStatus: $verificationStatus, isVerified: $isVerified, tier: $tier)';
 }
 
 
@@ -1504,7 +1510,7 @@ abstract mixin class $ReposterDataCopyWith<$Res>  {
   factory $ReposterDataCopyWith(ReposterData value, $Res Function(ReposterData) _then) = _$ReposterDataCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'followed_by_viewer') bool followedByViewer
+@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'username') String? username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'followed_by_viewer') bool followedByViewer,@JsonKey(name: 'is_gym') bool isGym,@JsonKey(name: 'verification_status') String? verificationStatus,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'tier') String tier
 });
 
 
@@ -1521,13 +1527,18 @@ class _$ReposterDataCopyWithImpl<$Res>
 
 /// Create a copy of ReposterData
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? userId = freezed,Object? displayName = null,Object? avatarUrl = null,Object? followedByViewer = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = freezed,Object? username = freezed,Object? displayName = null,Object? avatarUrl = null,Object? followedByViewer = null,Object? isGym = null,Object? verificationStatus = freezed,Object? isVerified = null,Object? tier = null,}) {
   return _then(_self.copyWith(
 userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String?,username: freezed == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
 as String?,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String,followedByViewer: null == followedByViewer ? _self.followedByViewer : followedByViewer // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,isGym: null == isGym ? _self.isGym : isGym // ignore: cast_nullable_to_non_nullable
+as bool,verificationStatus: freezed == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
+as String?,isVerified: null == isVerified ? _self.isVerified : isVerified // ignore: cast_nullable_to_non_nullable
+as bool,tier: null == tier ? _self.tier : tier // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -1612,10 +1623,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'followed_by_viewer')  bool followedByViewer)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'username')  String? username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'followed_by_viewer')  bool followedByViewer, @JsonKey(name: 'is_gym')  bool isGym, @JsonKey(name: 'verification_status')  String? verificationStatus, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'tier')  String tier)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReposterData() when $default != null:
-return $default(_that.userId,_that.displayName,_that.avatarUrl,_that.followedByViewer);case _:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.followedByViewer,_that.isGym,_that.verificationStatus,_that.isVerified,_that.tier);case _:
   return orElse();
 
 }
@@ -1633,10 +1644,10 @@ return $default(_that.userId,_that.displayName,_that.avatarUrl,_that.followedByV
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'followed_by_viewer')  bool followedByViewer)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'username')  String? username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'followed_by_viewer')  bool followedByViewer, @JsonKey(name: 'is_gym')  bool isGym, @JsonKey(name: 'verification_status')  String? verificationStatus, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'tier')  String tier)  $default,) {final _that = this;
 switch (_that) {
 case _ReposterData():
-return $default(_that.userId,_that.displayName,_that.avatarUrl,_that.followedByViewer);case _:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.followedByViewer,_that.isGym,_that.verificationStatus,_that.isVerified,_that.tier);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1653,10 +1664,10 @@ return $default(_that.userId,_that.displayName,_that.avatarUrl,_that.followedByV
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'followed_by_viewer')  bool followedByViewer)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'username')  String? username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'followed_by_viewer')  bool followedByViewer, @JsonKey(name: 'is_gym')  bool isGym, @JsonKey(name: 'verification_status')  String? verificationStatus, @JsonKey(name: 'is_verified')  bool isVerified, @JsonKey(name: 'tier')  String tier)?  $default,) {final _that = this;
 switch (_that) {
 case _ReposterData() when $default != null:
-return $default(_that.userId,_that.displayName,_that.avatarUrl,_that.followedByViewer);case _:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.followedByViewer,_that.isGym,_that.verificationStatus,_that.isVerified,_that.tier);case _:
   return null;
 
 }
@@ -1668,13 +1679,18 @@ return $default(_that.userId,_that.displayName,_that.avatarUrl,_that.followedByV
 @JsonSerializable()
 
 class _ReposterData implements ReposterData {
-  const _ReposterData({@JsonKey(name: 'user_id') this.userId, @JsonKey(name: 'display_name') this.displayName = '', @JsonKey(name: 'avatar_url') this.avatarUrl = '', @JsonKey(name: 'followed_by_viewer') this.followedByViewer = false});
+  const _ReposterData({@JsonKey(name: 'user_id') this.userId, @JsonKey(name: 'username') this.username, @JsonKey(name: 'display_name') this.displayName = '', @JsonKey(name: 'avatar_url') this.avatarUrl = '', @JsonKey(name: 'followed_by_viewer') this.followedByViewer = false, @JsonKey(name: 'is_gym') this.isGym = false, @JsonKey(name: 'verification_status') this.verificationStatus, @JsonKey(name: 'is_verified') this.isVerified = false, @JsonKey(name: 'tier') this.tier = 'regular'});
   factory _ReposterData.fromJson(Map<String, dynamic> json) => _$ReposterDataFromJson(json);
 
 @override@JsonKey(name: 'user_id') final  String? userId;
+@override@JsonKey(name: 'username') final  String? username;
 @override@JsonKey(name: 'display_name') final  String displayName;
 @override@JsonKey(name: 'avatar_url') final  String avatarUrl;
 @override@JsonKey(name: 'followed_by_viewer') final  bool followedByViewer;
+@override@JsonKey(name: 'is_gym') final  bool isGym;
+@override@JsonKey(name: 'verification_status') final  String? verificationStatus;
+@override@JsonKey(name: 'is_verified') final  bool isVerified;
+@override@JsonKey(name: 'tier') final  String tier;
 
 /// Create a copy of ReposterData
 /// with the given fields replaced by the non-null parameter values.
@@ -1689,16 +1705,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReposterData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.followedByViewer, followedByViewer) || other.followedByViewer == followedByViewer));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReposterData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.followedByViewer, followedByViewer) || other.followedByViewer == followedByViewer)&&(identical(other.isGym, isGym) || other.isGym == isGym)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.isVerified, isVerified) || other.isVerified == isVerified)&&(identical(other.tier, tier) || other.tier == tier));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,userId,displayName,avatarUrl,followedByViewer);
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,followedByViewer,isGym,verificationStatus,isVerified,tier);
 
 @override
 String toString() {
-  return 'ReposterData(userId: $userId, displayName: $displayName, avatarUrl: $avatarUrl, followedByViewer: $followedByViewer)';
+  return 'ReposterData(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, followedByViewer: $followedByViewer, isGym: $isGym, verificationStatus: $verificationStatus, isVerified: $isVerified, tier: $tier)';
 }
 
 
@@ -1709,7 +1725,7 @@ abstract mixin class _$ReposterDataCopyWith<$Res> implements $ReposterDataCopyWi
   factory _$ReposterDataCopyWith(_ReposterData value, $Res Function(_ReposterData) _then) = __$ReposterDataCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'followed_by_viewer') bool followedByViewer
+@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'username') String? username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'followed_by_viewer') bool followedByViewer,@JsonKey(name: 'is_gym') bool isGym,@JsonKey(name: 'verification_status') String? verificationStatus,@JsonKey(name: 'is_verified') bool isVerified,@JsonKey(name: 'tier') String tier
 });
 
 
@@ -1726,13 +1742,18 @@ class __$ReposterDataCopyWithImpl<$Res>
 
 /// Create a copy of ReposterData
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? userId = freezed,Object? displayName = null,Object? avatarUrl = null,Object? followedByViewer = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = freezed,Object? username = freezed,Object? displayName = null,Object? avatarUrl = null,Object? followedByViewer = null,Object? isGym = null,Object? verificationStatus = freezed,Object? isVerified = null,Object? tier = null,}) {
   return _then(_ReposterData(
 userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String?,username: freezed == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
 as String?,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String,followedByViewer: null == followedByViewer ? _self.followedByViewer : followedByViewer // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,isGym: null == isGym ? _self.isGym : isGym // ignore: cast_nullable_to_non_nullable
+as bool,verificationStatus: freezed == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
+as String?,isVerified: null == isVerified ? _self.isVerified : isVerified // ignore: cast_nullable_to_non_nullable
+as bool,tier: null == tier ? _self.tier : tier // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/role_dashboard_shell.dart';
 import '../../feed/widgets/post_card.dart';
+import '../../feed/widgets/gym_actor_identity.dart';
 import '../../messaging/providers/messaging_provider.dart';
 import '../providers/gym_engagement.dart';
 import '../providers/gym_insights_provider.dart';
@@ -14,8 +15,8 @@ import 'gym_comment_sheet.dart';
 /// exactly like the web console; unsave is gym-scoped.
 class GymSavedPostsTab extends ConsumerWidget {
   final String slug;
-  final String gymName;
-  const GymSavedPostsTab({super.key, required this.slug, required this.gymName});
+  final GymActorIdentity identity;
+  const GymSavedPostsTab({super.key, required this.slug, required this.identity});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,6 +44,7 @@ class GymSavedPostsTab extends ConsumerWidget {
                   PostCard(
                     key: ValueKey('${item.communityId ?? 'feed'}:${item.post.id}'),
                     post: item.post,
+                    gymActor: identity,
                     onSave: (postId) => _toggleGymSave(ref, slug, postId, item.communityId, context),
                     onLike: (postId) => _react(ref, slug, postId, '💪', item.communityId, context),
                     onReact: (postId, reaction) => _react(ref, slug, postId, reaction, item.communityId, context),
@@ -50,7 +52,7 @@ class GymSavedPostsTab extends ConsumerWidget {
                     onComment: (postId) => showGymCommentSheet(
                       context,
                       slug: slug,
-                      gymName: gymName,
+                      gymName: identity.name,
                       postId: postId,
                       communityId: item.communityId,
                     ),

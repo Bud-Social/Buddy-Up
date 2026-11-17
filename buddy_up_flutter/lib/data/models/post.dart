@@ -105,6 +105,8 @@ abstract class AuthorData with _$AuthorData {
     @JsonKey(name: 'display_name') required String displayName,
     @JsonKey(name: 'avatar_url') required String avatarUrl,
     @JsonKey(name: 'verification_status') @Default('none') String verificationStatus,
+    @JsonKey(name: 'is_verified') @Default(false) bool isVerified,
+    @JsonKey(name: 'tier') @Default('regular') String tier,
     /// Client-managed follow state; the backend does not echo this yet.
     @Default(false) bool followedByViewer,
   }) = _AuthorData;
@@ -149,9 +151,14 @@ abstract class Poll with _$Poll {
 abstract class ReposterData with _$ReposterData {
   const factory ReposterData({
     @JsonKey(name: 'user_id') String? userId,
+    @JsonKey(name: 'username') String? username,
     @JsonKey(name: 'display_name') @Default('') String displayName,
     @JsonKey(name: 'avatar_url') @Default('') String avatarUrl,
     @JsonKey(name: 'followed_by_viewer') @Default(false) bool followedByViewer,
+    @JsonKey(name: 'is_gym') @Default(false) bool isGym,
+    @JsonKey(name: 'verification_status') String? verificationStatus,
+    @JsonKey(name: 'is_verified') @Default(false) bool isVerified,
+    @JsonKey(name: 'tier') @Default('regular') String tier,
   }) = _ReposterData;
 
   factory ReposterData.fromJson(Map<String, dynamic> json) =>

@@ -16,6 +16,8 @@ import '../../../shared/widgets/toast.dart';
 import '../providers/feed_provider.dart';
 import '../../settings/providers/settings_providers.dart';
 import 'repost_indicator.dart';
+import 'gym_actor_identity.dart';
+import '../../../features/gym/widgets/verified_gym_badge.dart';
 import 'poll_widget.dart';
 import 'ai_analysis_card.dart';
 
@@ -51,6 +53,9 @@ class PostCard extends ConsumerStatefulWidget {
   final void Function(String postId, String reaction)? onReact;
   final void Function(String? username)? onProfileTap;
   final void Function(String postId, List<String> optionIds)? onPollVote;
+  /// When the console acts as a gym, the repost ribbon renders the gym
+  /// identity instead of the acting staff member's.
+  final GymActorIdentity? gymActor;
 
   const PostCard({
     super.key,
@@ -65,6 +70,7 @@ class PostCard extends ConsumerStatefulWidget {
     this.onReact,
     this.onProfileTap,
     this.onPollVote,
+    this.gymActor,
   });
 
   @override
@@ -218,6 +224,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                 viewerAvatarUrl: viewer?.avatarUrl,
                 viewerDisplayName: viewer?.displayName,
                 viewerUserId: viewerUserId,
+                gymActor: widget.gymActor,
               ),
 
             _buildHeader(context),
@@ -296,13 +303,30 @@ class _PostCardState extends ConsumerState<PostCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _displayAuthor.displayName,
-                  style: const TextStyle(
-                    color: BuddyColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _displayAuthor.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: BuddyColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    if (_displayAuthor.verificationStatus == 'gym' &&
+                        _displayAuthor.isVerified) ...[
+                      const SizedBox(width: 5),
+                      VerifiedGymBadge(
+                        verified: _displayAuthor.isVerified,
+                        tier: _displayAuthor.tier,
+                        size: 14,
+                      ),
+                    ],
+                  ],
                 ),
                 Text(
                   '@${_displayAuthor.username}',

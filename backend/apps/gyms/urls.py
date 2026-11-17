@@ -35,6 +35,7 @@ urlpatterns = [
     path('<str:gym_slug>/reviews/<uuid:review_id>/reply/', views.GymReviewReplyView.as_view(), name='review_reply'),
     path('<str:gym_slug>/feed/react/', __social_views.GymReactView.as_view(), name='feed_react'),
     path('<str:gym_slug>/feed/repost/', __social_views.GymRepostView.as_view(), name='feed_repost'),
+    path('<str:gym_slug>/feed/create-post/', __social_views.GymCreatePostView.as_view(), name='feed_create_post'),
     path('<str:gym_slug>/feed/comment/', __social_views.GymCommentView.as_view(), name='feed_comment'),
     path('<str:gym_slug>/feed/comments/like/', __social_views.GymCommentLikeView.as_view(), name='feed_comment_like'),
     path('<str:gym_slug>/feed/save/', __social_views.GymSaveView.as_view(), name='feed_save'),

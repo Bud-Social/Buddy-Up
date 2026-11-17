@@ -6,9 +6,17 @@ import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { gymFeedApi } from '@/api/gyms';
 import type { Post } from '@/types';
 
+interface GymIdentity {
+  name: string;
+  logo_url?: string;
+  is_verified?: boolean;
+  tier?: 'regular' | 'midlevel' | 'executive';
+}
+
 interface Props {
   slug: string;
   gymName: string;
+  gymIdentity?: GymIdentity;
 }
 
 /**
@@ -16,7 +24,7 @@ interface Props {
  * or reference. Same public cards as the home feed, but only the gym's
  * curator is toggling them.
  */
-export function SavedGymPostsPanel({ slug, gymName }: Props) {
+export function SavedGymPostsPanel({ slug, gymName, gymIdentity }: Props) {
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +42,13 @@ export function SavedGymPostsPanel({ slug, gymName }: Props) {
   }, [slug]);
 
   const [commentTarget, setCommentTarget] = useState<{ postId: string; communityId?: string } | null>(null);
+
+  const gymActor = {
+    name: gymIdentity?.name || gymName,
+    logo_url: gymIdentity?.logo_url,
+    is_verified: gymIdentity?.is_verified,
+    tier: gymIdentity?.tier,
+  };
 
   const handleSave = (post: Post) => {
     if (post.community_id) {
@@ -92,6 +107,7 @@ export function SavedGymPostsPanel({ slug, gymName }: Props) {
           <PostCard
             key={post.id}
             post={post}
+            gymActor={gymActor}
             onComment={() => setCommentTarget({ postId: post.id, communityId: post.community_id ?? undefined })}
             onSave={() => handleSave(post)}
             onLike={() => handleLike(post)}

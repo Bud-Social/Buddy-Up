@@ -7,6 +7,7 @@ import '../../../shared/widgets/avatar.dart';
 import '../../messaging/providers/messaging_provider.dart';
 import '../providers/gym_engagement.dart';
 import '../providers/gym_insights_provider.dart';
+import '../../gym/widgets/verified_gym_badge.dart';
 
 /// Open the gym-identity comment sheet for a post.
 ///
@@ -65,6 +66,8 @@ class _CommentRow {
   final String avatarUrl;
   final String? verificationStatus;
   final bool isGym;
+  final bool isGymVerified;
+  final String tier;
   final int likeCount;
   final int replyCount;
   final bool likedByGym;
@@ -79,6 +82,8 @@ class _CommentRow {
     required this.avatarUrl,
     this.verificationStatus,
     required this.isGym,
+    required this.isGymVerified,
+    required this.tier,
     required this.likeCount,
     required this.replyCount,
     required this.likedByGym,
@@ -99,6 +104,8 @@ class _CommentRow {
       avatarUrl: avatar is String ? avatar : '',
       verificationStatus: author['verification_status']?.toString(),
       isGym: author['is_gym'] == true,
+      isGymVerified: author['is_gym'] == true && author['is_verified'] == true,
+      tier: (author['tier'] ?? 'regular').toString(),
       likeCount: likes,
       replyCount: (json['reply_count'] as num?)?.toInt() ?? 0,
       likedByGym: json['user_reaction'] != null,
@@ -115,6 +122,8 @@ class _CommentRow {
         avatarUrl: avatarUrl,
         verificationStatus: verificationStatus,
         isGym: isGym,
+        isGymVerified: isGymVerified,
+        tier: tier,
         likeCount: likeCount ?? this.likeCount,
         replyCount: replyCount ?? this.replyCount,
         likedByGym: likedByGym ?? this.likedByGym,
@@ -382,9 +391,9 @@ class _GymCommentSheetState extends ConsumerState<GymCommentSheet> {
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: BuddyColors.textPrimary),
                             ),
                           ),
-                          if (c.isGym) ...[
-                            const SizedBox(width: 6),
-                            const _GymChip(),
+                          if (c.isGym && c.isGymVerified) ...[
+                            const SizedBox(width: 5),
+                            VerifiedGymBadge(verified: c.isGymVerified, tier: c.tier, size: 14),
                           ],
                           const SizedBox(width: 6),
                           if (c.username.isNotEmpty)
@@ -490,22 +499,6 @@ class _GymCommentSheetState extends ConsumerState<GymCommentSheet> {
     } catch (_) {
       return iso;
     }
-  }
-}
-
-class _GymChip extends StatelessWidget {
-  const _GymChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(
-        color: BuddyColors.green.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: const Text('GYM', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: BuddyColors.green, letterSpacing: 0.5)),
-    );
   }
 }
 

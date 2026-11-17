@@ -318,6 +318,8 @@ class CommunityPostCommentSerializer(serializers.ModelSerializer):
                 'avatar_url': getattr(gym, 'logo_url', '') or '',
                 'is_gym': True,
                 'verification_status': 'gym',
+                'is_verified': gym.is_verified,
+                'tier': gym.tier,
             }
         return {
             'user_id': str(obj.author.user_id),
@@ -332,7 +334,8 @@ class CommunityPostCommentSerializer(serializers.ModelSerializer):
             return None
         gym = obj.gym
         logo = getattr(gym, 'logo_url', '') or ''
-        return {'id': str(gym.id), 'name': gym.name, 'handle': gym.handle, 'logo_url': logo}
+        return {'id': str(gym.id), 'name': gym.name, 'handle': gym.handle, 'logo_url': logo,
+                'is_verified': gym.is_verified, 'tier': gym.tier}
 
     def get_reply_count(self, obj):
         return obj.replies.count()

@@ -14,6 +14,7 @@ import '../providers/gym_manage_provider.dart';
 import '../providers/gym_provider.dart';
 import '../widgets/gym_insights_tabs.dart';
 import '../widgets/gym_posts_tab.dart';
+import '../../feed/widgets/gym_actor_identity.dart';
 
 
 /// Gym management.
@@ -114,7 +115,15 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
       'Sessions': () => GymSessionsTab(slug: widget.slug),
       'Messages': () => GymMessagesTab(slug: widget.slug),
       'Community': () => GymCommunitiesTab(slug: widget.slug, gymName: gym.name),
-      'Posts': () => GymPostsTab(slug: widget.slug, gymName: gym.name),
+      'Posts': () => GymPostsTab(
+            slug: widget.slug,
+            identity: GymActorIdentity(
+              name: gym.name,
+              logoUrl: gym.logoUrl,
+              isVerified: gym.isVerified,
+              tier: gym.tier,
+            ),
+          ),
       'Analytics': () => GymAnalyticsTab(slug: widget.slug, gymName: gym.name),
       'Logs': _logsTab,
     };

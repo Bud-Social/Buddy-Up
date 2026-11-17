@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Send, Heart, Flag, MoreHorizontal, UserPlus, MessageCircle, Smile, Image as ImageIcon, Video as VideoIcon, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
+import { VerifiedGymBadge } from '@/components/gym/VerifiedGymBadge';
 import { RichText } from '@/components/ui/RichText';
 import { feedApi } from '@/api';
 import { messagingApi } from '@/api/messaging';
@@ -288,6 +289,9 @@ export function CommentSheet({ postId, communityId, isOpen, onClose, gymSlug, gy
                 <div className="flex-1 min-w-0">
                   <p className="text-sm">
                     <span className="font-medium">{c.author_data?.display_name}</span>
+                    {c.author_data?.is_gym && c.author_data?.is_verified && (
+                      <VerifiedGymBadge verified={c.author_data.is_verified} tier={c.author_data.tier ?? 'regular'} size="sm" className="inline-block align-[-2px] ml-1" />
+                    )}
                     <span className="text-buddy-text-secondary text-xs ml-1">@{c.author_data?.username}</span>
                   </p>
                   <p className={`text-sm mt-0.5 cursor-pointer select-text ${c.media_type === 'sticker' ? 'text-2xl leading-tight' : ''}`}

@@ -106,7 +106,8 @@ class CommentSerializer(serializers.ModelSerializer):
         gym = obj.gym
         request = self.context.get('request')
         logo = absolute_media_url(request, getattr(gym, 'logo_url', '') or '')
-        return {'id': str(gym.id), 'name': gym.name, 'handle': gym.handle, 'logo_url': logo}
+        return {'id': str(gym.id), 'name': gym.name, 'handle': gym.handle, 'logo_url': logo,
+                'is_verified': gym.is_verified, 'tier': gym.tier}
 
     def get_author_data(self, obj):
         if obj.is_anonymous:
@@ -122,6 +123,8 @@ class CommentSerializer(serializers.ModelSerializer):
                 'avatar_url': logo,
                 'verification_status': 'gym',
                 'is_gym': True,
+                'is_verified': gym.is_verified,
+                'tier': gym.tier,
             }
         request = self.context.get('request')
         return {
@@ -219,6 +222,8 @@ class PostSerializer(serializers.ModelSerializer):
                 'avatar_url': logo,
                 'verification_status': 'gym',
                 'is_gym': True,
+                'is_verified': gym.is_verified,
+                'tier': gym.tier,
             }
         request = self.context.get('request')
         return {
@@ -356,10 +361,14 @@ class PostSerializer(serializers.ModelSerializer):
                 logo = getattr(gym, 'logo_url', '') or ''
                 rows.append({
                     'user_id': str(gym.id),
+                    'username': gym.handle,
                     'display_name': gym.name,
                     'avatar_url': absolute_media_url(request, logo) if logo else '',
                     'followed_by_viewer': False,
                     'is_gym': True,
+                    'verification_status': 'gym',
+                    'is_verified': gym.is_verified,
+                    'tier': gym.tier,
                 })
             else:
                 rows.append({

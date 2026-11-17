@@ -1,7 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
 import '../../../shared/widgets/avatar.dart';
+import 'gym_actor_identity.dart';
+import '../../gym/widgets/verified_gym_badge.dart';
 
 class RepostIndicator extends StatefulWidget {
   final List<ReposterData> reposters;
@@ -17,6 +20,10 @@ class RepostIndicator extends StatefulWidget {
   /// viewer who reposted from drawing themselves twice.
   final String? viewerUserId;
 
+  /// When the console acts as a gym, the viewer slot shows the gym's
+  /// identity and the label names the gym rather than the member.
+  final GymActorIdentity? gymActor;
+
   const RepostIndicator({
     super.key,
     this.reposters = const [],
@@ -25,6 +32,7 @@ class RepostIndicator extends StatefulWidget {
     this.viewerAvatarUrl,
     this.viewerDisplayName,
     this.viewerUserId,
+    this.gymActor,
   });
 
   @override
@@ -125,16 +133,26 @@ class _RepostIndicatorState extends State<RepostIndicator>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              '${widget.username} reposted',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: BuddyColors.green,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                            Flexible(
+                              child: Text(
+                                '${widget.gymActor?.name ?? widget.username} reposted',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: BuddyColors.green,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
+                            if (widget.gymActor?.isVerified ?? false) ...[
+                              const SizedBox(width: 4),
+                              VerifiedGymBadge(
+                                verified: widget.gymActor!.isVerified,
+                                tier: widget.gymActor!.tier,
+                                size: 13,
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -150,7 +168,8 @@ class _RepostIndicatorState extends State<RepostIndicator>
   }
 
   Widget _buildStackedAvatars(BuildContext context, List<ReposterData> people) {
-    final viewerSlot = (widget.viewerAvatarUrl ?? '').isNotEmpty;
+    final gymActor = widget.gymActor;
+    final viewerSlot = gymActor != null || (widget.viewerAvatarUrl ?? '').isNotEmpty;
     // Skip a backend echo of the viewer — the animated slot below owns it.
     // Compare ids first (what the server sends); fall back to the avatar
     // for payloads that predate the id comparison on the web.
@@ -180,6 +199,7 @@ class _RepostIndicatorState extends State<RepostIndicator>
                 src: visible[i].avatarUrl,
                 alt: visible[i].displayName,
                 size: AvatarSize.xs,
+                verificationStatus: visible[i].verificationStatus,
               ),
             ),
           if (overflow > 0)
@@ -216,11 +236,35 @@ class _RepostIndicatorState extends State<RepostIndicator>
                       shape: BoxShape.circle,
                       border: Border.all(color: BuddyColors.green, width: 1.5),
                     ),
-                    child: Avatar(
-                      src: widget.viewerAvatarUrl,
-                      alt: widget.viewerDisplayName ?? '?',
-                      size: AvatarSize.xs,
-                    ),
+                    child: gymActor != null
+                        ? Container(
+                            key: const ValueKey('viewer-repost-avatar'),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: BuddyColors.green, width: 1.5),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: gymActor.logoUrl.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: gymActor.logoUrl,
+                                    width: 24,
+                                    height: 24,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, _) => const SizedBox.shrink(),
+                                    errorWidget: (_, _, _) => const SizedBox.shrink(),
+                                  )
+                                : Container(
+                                    width: 24,
+                                    height: 24,
+                                    alignment: Alignment.center,
+                                    child: const Icon(Icons.fitness_center, size: 13, color: BuddyColors.green),
+                                  ),
+                          )
+                        : Avatar(
+                            src: widget.viewerAvatarUrl,
+                            alt: widget.viewerDisplayName ?? '?',
+                            size: AvatarSize.xs,
+                          ),
                   ),
                 ),
               ),

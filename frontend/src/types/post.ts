@@ -29,6 +29,9 @@ export interface AuthorData {
   display_name: string;
   avatar_url: string;
   verification_status?: string;
+  is_gym?: boolean;
+  is_verified?: boolean;
+  tier?: 'regular' | 'midlevel' | 'executive';
 }
 
 /** Creative-studio edits (IG/TikTok style) stored per media item. */
@@ -234,9 +237,14 @@ export interface Post {
 
 export interface ReposterData {
   user_id?: string;
+  username?: string;
   display_name: string;
   avatar_url: string;
   followed_by_viewer?: boolean;
+  is_gym?: boolean;
+  verification_status?: string;
+  is_verified?: boolean;
+  tier?: 'regular' | 'midlevel' | 'executive';
 }
 
 export interface Comment {
