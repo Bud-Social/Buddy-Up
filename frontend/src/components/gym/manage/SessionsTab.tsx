@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarClock, CheckCircle2, Dumbbell, Loader2, UserCheck, XCircle, UserX, Clock3 } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Dumbbell, UserCheck, XCircle, UserX, Clock3 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
 import { gymInsightsApi, type GymSessionsPayload } from '@/api/gyms';
@@ -111,7 +111,6 @@ export function SessionsTab({ slug }: SessionsTabProps) {
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <p className="text-[10px] uppercase text-buddy-text-secondary">Bookings on gym coaches</p>
-          {loading && <Loader2 size={12} className="animate-spin text-buddy-green" />}
         </div>
         {payload && payload.bookings.length > 0 ? (
           <div className="max-h-96 overflow-y-auto divide-y divide-buddy-surface-raised">

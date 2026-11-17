@@ -58,7 +58,6 @@ function GrowthChip({ label, pct }: { label: string; pct: number }) {
   );
 }
 
-const CHART_H = 150;
 const xTick = (v: string) => String(v).slice(5);
 
 /**
@@ -291,7 +290,7 @@ export function AnalyticsTab({ slug, gymName }: AnalyticsTabProps) {
       {segment === 'messaging' && k && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <KpiTile label="Messages · 30d" value={k.messages_30d} sub="All gym conversations" />
+            <KpiTile label="Messages · 30d" value={k.messages_30d} sub="Your inbox & linked communities" />
             <KpiTile label="From real clients" value={k.inbound_client_messages_30d} sub="Not your staff" />
             <KpiTile label="Messaging growth" value={`${g?.messages_pct ?? 0}%`} sub="vs previous 30d" />
             <KpiTile label="Community members" value={k.community_members} sub="Across linked communities" />

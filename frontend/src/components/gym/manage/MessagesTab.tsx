@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, MessagesSquare, Users, Inbox, Send } from 'lucide-react';
+import { MessagesSquare, Users, Inbox, Send } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
 import { gymInsightsApi, type GymMessagesPayload } from '@/api/gyms';

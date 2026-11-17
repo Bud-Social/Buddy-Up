@@ -31,6 +31,46 @@ def _partner_staff(gym, request):
     ).first() is not None
 
 
+def _gym_inbox_conversations(gym, viewer):
+    """The conversations that belong in *this viewer's* gym inbox.
+
+    Deliberately narrow — this is the inbox of the person operating the gym,
+    not a surveillance feed of everything other staff do with members:
+
+    1. DMs (not groups, not communities) the viewer personally participates
+       in — the messages they exchanged with clients or colleagues.
+    2. Communities linked to this gym (gym-formed or adopted).
+    3. Group conversations explicitly tagged to the gym.
+
+    A trainer's private DMs with a client never surface to the owner — the
+    owner manages the gym, not the coach's personal relationships.
+    """
+    from apps.messaging.models import Conversation
+
+    my_dms = (
+        Conversation.objects.filter(participants=viewer, is_group=False, is_community=False)
+    )
+    linked = Conversation.objects.filter(
+        is_community=True, gym_links__gym=gym, gym_links__status='active',
+    )
+    tagged = Conversation.objects.filter(group_gym=gym)
+    return (my_dms | linked | tagged).distinct()
+
+
+def _coerce_uuid(value):
+    """Return a UUID for ``value`` or None.
+
+    Callers pass client-supplied ids straight into lookups; Django raises
+    ``ValidationError`` (uncaught by DRF's default handling) when the literal
+    does not parse, so validate here instead of try/except at each site.
+    """
+    import uuid as _uuid
+    try:
+        return _uuid.UUID(str(value))
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
 def _gym_staff_profiles(gym):
     return (
         GymMembership.objects.filter(gym=gym, role__in=['owner', 'co_owner', 'moderator'])
@@ -147,12 +187,13 @@ class GymMessagesView(views.APIView):
 
         staff_ids = list(_gym_staff_profiles(gym))
 
-        from apps.messaging.models import Conversation, Message
+        from apps.messaging.models import Message
 
-        # Gym conversations: group chats tagged to the gym + conversations the
-        # gym's staff created with gym members.
+        # Gym inbox: this viewer's DMs + gym-linked communities + gym-tagged
+        # groups (see _gym_inbox_conversations — other staff's private DMs
+        # and communities stay out).
         gym_convs = (
-            Conversation.objects.filter(Q(group_gym=gym) | Q(created_by__in=staff_ids))
+            _gym_inbox_conversations(gym, request.user.profile)
             .prefetch_related('participants')
             .order_by('-last_message_at', '-created_at')[:30]
         )
@@ -172,11 +213,10 @@ class GymMessagesView(views.APIView):
                 'is_community': conv.is_community,
             })
 
-        
+        inbox = _gym_inbox_conversations(gym, request.user.profile)
         recent_messages = (
-            Message.objects.filter(
-                Q(conversation__participants__in=staff_ids) | Q(conversation__group_gym=gym),
-            )
+            Message.objects.filter(conversation__in=inbox)
+            .distinct()
             .select_related('sender', 'conversation')
             .exclude(sender__in=staff_ids)
             .order_by('-created_at')[:50]
@@ -201,9 +241,9 @@ class GymMessagesView(views.APIView):
                 'group_chats': sum(1 for c in conversations if not c['is_community'] and c['kind'] == 'group'),
                 'direct_threads': sum(1 for c in conversations if c['kind'] == 'direct'),
                 'inbound_7d': Message.objects.filter(
-                    Q(conversation__participants__in=staff_ids) | Q(conversation__group_gym=gym),
+                    conversation__in=_gym_inbox_conversations(gym, request.user.profile),
                     created_at__gte=timezone.now() - datetime.timedelta(days=7),
-                ).exclude(sender__in=staff_ids).count(),
+                ).distinct().exclude(sender__in=staff_ids).count(),
             },
         })
 
@@ -299,10 +339,10 @@ class GymCommunitiesView(views.APIView):
     def post(self, request, gym_slug):
         """Create a gym-formed community, or link/join an existing one.
 
-        ``action='create'`` (default) mints a fresh
-        ``Conversation(is_community=True)`` with ``group_gym=gym``, enrolls the
-        caller as owner and records the link as primary. ``action='link'``
-        attaches an existing platform community by ``community_id``.
+        ``action='create'`` mints a fresh ``Conversation(is_community=True)``
+        with ``group_gym=gym``, enrolls the caller as owner and records the
+        link as primary. ``action='link'`` (the default) attaches an existing
+        platform community by ``community_id``.
         """
         import uuid
 
@@ -352,6 +392,10 @@ class GymCommunitiesView(views.APIView):
                     gym=gym, community=community, status='active',
                     is_primary=True, requested_by=profile,
                 )
+                # Primary means the one the gym leads with — demote the rest.
+                GymCommunityLink.objects.filter(
+                    gym=gym, is_primary=True,
+                ).exclude(pk=link.pk).update(is_primary=False)
             return _json_response({
                 'id': str(community.id),
                 'community_id': str(community.id),
@@ -366,33 +410,42 @@ class GymCommunitiesView(views.APIView):
             }, status_code=status.HTTP_201_CREATED)
 
         # action == 'link'
-        community_id = request.data.get('community_id')
-        try:
-            community = Conversation.objects.get(id=community_id, is_community=True)
-        except (Conversation.DoesNotExist, ValueError, TypeError):
+        community_uuid = _coerce_uuid(request.data.get('community_id'))
+        community = (
+            Conversation.objects.filter(id=community_uuid, is_community=True).first()
+            if community_uuid else None
+        )
+        if community is None:
             return _error('Community not found.', status.HTTP_404_NOT_FOUND)
 
         is_primary = bool(request.data.get('is_primary', False))
-        link, created = GymCommunityLink.objects.get_or_create(
-            gym=gym, community=community,
-            defaults={'requested_by': profile, 'status': 'active', 'is_primary': is_primary},
-        )
-        if not created:
-            link.status = 'active'
-            link.requested_by = profile
-            link.decided_by = None
-            if is_primary:
-                link.is_primary = True
-            link.save(update_fields=['status', 'requested_by', 'decided_by', 'is_primary'])
-
-        # A gym joining someone else's community enrols its acting owner as a
-        # member, if not already one.
-        if not community.participants.filter(pk=profile.pk).exists():
-            community.participants.add(profile)
-            ConversationMembership.objects.get_or_create(
-                conversation=community, profile=profile,
-                defaults={'role': 'member'},
+        with transaction.atomic():
+            link, created = GymCommunityLink.objects.get_or_create(
+                gym=gym, community=community,
+                defaults={'requested_by': profile, 'status': 'active', 'is_primary': is_primary},
             )
+            if not created:
+                link.status = 'active'
+                link.requested_by = profile
+                link.decided_by = None
+                if is_primary:
+                    link.is_primary = True
+                link.save(update_fields=['status', 'requested_by', 'decided_by', 'is_primary'])
+
+            if link.is_primary:
+                # Primary means the one the gym leads with — demote the rest.
+                GymCommunityLink.objects.filter(
+                    gym=gym, is_primary=True,
+                ).exclude(pk=link.pk).update(is_primary=False)
+
+            # A gym joining someone else's community enrols its acting owner as
+            # a member, if not already one.
+            if not community.participants.filter(pk=profile.pk).exists():
+                community.participants.add(profile)
+                ConversationMembership.objects.get_or_create(
+                    conversation=community, profile=profile,
+                    defaults={'role': 'member'},
+                )
 
         member_count = ConversationMembership.objects.filter(conversation=community).count()
         return _json_response({
@@ -418,10 +471,12 @@ class GymCommunitiesView(views.APIView):
         ).first()
         if membership is None:
             return _error('Only an owner or co-owner can unlink a community.', status.HTTP_403_FORBIDDEN)
-        community_id = request.data.get('community_id')
-        try:
-            community = Conversation.objects.get(id=community_id, is_community=True)
-        except (Conversation.DoesNotExist, ValueError, TypeError):
+        community_uuid = _coerce_uuid(request.data.get('community_id'))
+        community = (
+            Conversation.objects.filter(id=community_uuid, is_community=True).first()
+            if community_uuid else None
+        )
+        if community is None:
             return _error('Community not found.', status.HTTP_404_NOT_FOUND)
         GymCommunityLink.objects.filter(gym=gym, community=community).delete()
         return _json_response({'unlinked': True})
@@ -446,7 +501,7 @@ def _series_from_counts(days, counts):
     return series
 
 
-def _timeseries(gym, days, predicate):
+def _timeseries(gym, days, predicate, viewer=None):
     """Return {date, count} for the last N days — one GROUP BY query each."""
     now = timezone.now()
     start = timezone.make_aware(datetime.datetime.combine(
@@ -472,12 +527,11 @@ def _timeseries(gym, days, predicate):
                 .annotate(c=Sum('quantity')))
     elif predicate == 'messages':
         from apps.messaging.models import Message
-        staff_ids = list(_gym_staff_profiles(gym))
         rows = (Message.objects.filter(
-                    Q(conversation__participants__in=staff_ids) | Q(conversation__group_gym=gym),
+                    conversation__in=_gym_inbox_conversations(gym, viewer),
                     created_at__gte=start,
                 ).annotate(d=TruncDate('created_at')).values('d')
-                .annotate(c=Count('id')))
+                .annotate(c=Count('id', distinct=True)))
     elif predicate == 'bookings':
         from apps.sessions.models import BookingSession
         coach_ids = list(
@@ -528,10 +582,10 @@ class GymAnalyticsView(views.APIView):
         prev_bookings = BookingSession.objects.filter(trainer_id__in=coach_ids, created_at__gte=prev_30d, created_at__lt=since_30d).count()
 
         staff_ids = list(_gym_staff_profiles(gym))
-        gym_conv_q = Q(conversation__participants__in=staff_ids) | Q(conversation__group_gym=gym)
-        messages_30d = Message.objects.filter(gym_conv_q, created_at__gte=since_30d).count()
-        prev_messages_30d = Message.objects.filter(gym_conv_q, created_at__gte=prev_30d, created_at__lt=since_30d).count()
-        inbound_client_messages_30d = Message.objects.filter(gym_conv_q, created_at__gte=since_30d).exclude(sender__in=staff_ids).count()
+        inbox = _gym_inbox_conversations(gym, request.user.profile)
+        messages_30d = Message.objects.filter(conversation__in=inbox, created_at__gte=since_30d).count()
+        prev_messages_30d = Message.objects.filter(conversation__in=inbox, created_at__gte=prev_30d, created_at__lt=since_30d).count()
+        inbound_client_messages_30d = Message.objects.filter(conversation__in=inbox, created_at__gte=since_30d).exclude(sender__in=staff_ids).count()
         community_members = (
             Conversation.objects.filter(
                 is_community=True, gym_links__gym=gym, gym_links__status='active',
@@ -583,7 +637,8 @@ class GymAnalyticsView(views.APIView):
             OrderItem.objects.filter(
                 order__payment_status='paid', order__created_at__gte=since_30d,
             ).filter(
-                Q(product__shop_id__in=shop_ids) | Q(programme__shop_id__in=shop_ids) | Q(meal_plan__shop_id__in=shop_ids)
+                Q(product__shop_id__in=shop_ids) | Q(programme__shop_id__in=shop_ids)
+                | Q(meal_plan__shop_id__in=shop_ids) | Q(event__shop_id__in=shop_ids)
             ).values('order').distinct().count()
             if shop_ids else 0
         )
@@ -592,7 +647,7 @@ class GymAnalyticsView(views.APIView):
         daily_new_members = _timeseries(gym, 30, 'new_members')
         daily_posts = _timeseries(gym, 30, 'posts')
         daily_revenue = _timeseries(gym, 30, 'revenue')
-        daily_messages = _timeseries(gym, 30, 'messages')
+        daily_messages = _timeseries(gym, 30, 'messages', viewer=request.user.profile)
         daily_bookings = _timeseries(gym, 30, 'bookings')
 
         return _json_response({

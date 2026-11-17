@@ -1351,7 +1351,7 @@ class _GymAnalyticsTabState extends ConsumerState<GymAnalyticsTab> {
                 ] else if (_segment == 'messaging') ...[
                   _TileGrid(tiles: [
                     _KpiTile(label: 'Messages · 30d', value: '${k.messages30d}',
-                        sub: 'All gym conversations'),
+                        sub: 'Your inbox & linked communities'),
                     _KpiTile(label: 'From real clients', value: '${k.inboundClientMessages30d}',
                         sub: 'Not your staff'),
                     _KpiTile(label: 'Messaging growth', value: '${g.messagesPct.toStringAsFixed(1)}%',
