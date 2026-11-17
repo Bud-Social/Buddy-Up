@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../data/models/gym_insights.dart';
+import '../../../data/models/post.dart';
 import '../../messaging/providers/messaging_provider.dart';
 import 'gym_provider.dart';
 
@@ -206,6 +207,23 @@ final gymInboxProvider = FutureProvider.family<List<GymInboxConversation>, Strin
   return rows
       .whereType<Map>()
       .map((row) => GymInboxConversation.fromJson(Map<String, dynamic>.from(row)))
+      .toList();
+});
+
+/// Posts the gym has saved — newest first, from `/gyms/<slug>/feed/saved/`.
+/// Parsed straight into the feed Post model since the payload shape matches
+/// the feed serializer one-for-one.
+final gymSavedFeedProvider = FutureProvider.family<List<Post>, String>((ref, slug) async {
+  final dio = ref.read(apiClientProvider4).dio;
+  final res = await dio.get('/gyms/$slug/feed/saved/');
+  final payload = res.data is Map<String, dynamic>
+      ? (res.data as Map<String, dynamic>)['data']
+      : res.data;
+  final rows = payload is Map<String, dynamic> ? payload['items'] : null;
+  if (rows is! List) return const <Post>[];
+  return rows
+      .whereType<Map>()
+      .map((row) => Post.fromJson(Map<String, dynamic>.from(row)))
       .toList();
 });
 
