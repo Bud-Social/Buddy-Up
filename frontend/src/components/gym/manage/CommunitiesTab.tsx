@@ -33,6 +33,7 @@ export function CommunitiesTab({ slug }: CommunitiesTabProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
@@ -101,8 +102,10 @@ export function CommunitiesTab({ slug }: CommunitiesTabProps) {
   const linkCommunity = async (community: GymDiscoverableCommunity) => {
     setBusyId(community.id);
     setError(null);
+    setNotice(null);
     try {
       await gymInsightsApi.linkCommunity(slug, community.id);
+      setNotice(`Request sent to ${community.name} — their owner or an admin will review it. You'll be notified when they decide.`);
       load();
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Could not link that community.');
@@ -176,6 +179,7 @@ export function CommunitiesTab({ slug }: CommunitiesTabProps) {
         <Button size="sm" onClick={() => setCreateOpen(true)}><Plus size={14} className="mr-1" />New community</Button>
       </div>
 
+      {notice && <p className="text-[11px] text-buddy-green bg-buddy-green/10 border border-buddy-green/20 rounded-lg px-2 py-1.5" role="status">{notice}</p>}
       {error && <p className="text-[11px] text-buddy-red bg-buddy-red/10 border border-buddy-red/20 rounded-lg px-2 py-1.5" role="alert">{error}</p>}
 
       {/* Linked communities */}
@@ -188,8 +192,9 @@ export function CommunitiesTab({ slug }: CommunitiesTabProps) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-xs font-bold truncate">{community.name}</p>
+                    {community.status === 'pending' && <span className="text-[9px] uppercase font-bold text-buddy-gold bg-buddy-gold/10 border border-buddy-gold/20 rounded-full px-1.5 py-0.5">Pending approval</span>}
                     {community.is_gym_formed && <span className="text-[9px] uppercase font-bold text-buddy-green bg-buddy-green/10 border border-buddy-green/20 rounded-full px-1.5 py-0.5 flex items-center gap-0.5"><Sparkles size={9} />Gym-formed</span>}
-                    {community.is_primary && <span className="text-[9px] uppercase font-bold text-buddy-gold bg-buddy-gold/10 border border-buddy-gold/20 rounded-full px-1.5 py-0.5">Primary</span>}
+                    {community.is_primary && community.status === 'active' && <span className="text-[9px] uppercase font-bold text-buddy-gold bg-buddy-gold/10 border border-buddy-gold/20 rounded-full px-1.5 py-0.5">Primary</span>}
                     <span className="text-[9px] uppercase font-semibold text-buddy-text-secondary bg-buddy-surface border border-buddy-surface-raised rounded-full px-1.5 py-0.5 flex items-center gap-0.5">{community.is_public ? <Globe size={9} /> : <Lock size={9} />}{community.is_public ? 'Public' : 'Private'}</span>
                   </div>
                   {community.description && <p className="text-[10px] text-buddy-text-secondary mt-0.5 line-clamp-2">{community.description}</p>}
@@ -198,17 +203,20 @@ export function CommunitiesTab({ slug }: CommunitiesTabProps) {
                     <button onClick={() => toggleFeed(community.id)} className="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary transition-colors">
                       {activeId === community.id ? 'Hide feed' : 'View feed & post'}
                     </button>
-                    <button
-                      onClick={() => joinLeave(community)}
-                      disabled={busyId === community.id}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors ${community.is_member ? 'bg-buddy-surface text-buddy-text-primary' : 'bg-buddy-green text-buddy-black'}`}
-                    >
-                      {busyId === community.id ? '…' : community.is_member ? 'Leave' : 'Join'}
-                    </button>
+                    {community.status !== 'pending' && (
+                      <button
+                        onClick={() => joinLeave(community)}
+                        disabled={busyId === community.id}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors ${community.is_member ? 'bg-buddy-surface text-buddy-text-primary' : 'bg-buddy-green text-buddy-black'}`}
+                      >
+                        {busyId === community.id ? '…' : community.is_member ? 'Leave' : 'Join'}
+                      </button>
+                    )}
                     <button
                       onClick={() => unlinkCommunity(community)}
                       disabled={busyId === community.id}
-                      aria-label="Unlink community"
+                      aria-label={community.status === 'pending' ? 'Cancel request' : 'Unlink community'}
+                      title={community.status === 'pending' ? 'Cancel request' : 'Unlink community'}
                       className="px-2 py-1 rounded-lg text-[10px] font-semibold text-buddy-red/80 hover:text-buddy-red hover:bg-buddy-red/10 transition-colors"
                     >
                       {busyId === community.id ? <Loader2 size={11} className="animate-spin" /> : <Unlink size={11} />}

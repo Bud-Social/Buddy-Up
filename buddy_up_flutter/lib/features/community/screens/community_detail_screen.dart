@@ -513,6 +513,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                                   initialDescription: detail.description,
                                   initialIsPublic: detail.isPublic,
                                   initialCoverUrl: detail.coverUrl,
+                                  canManage: true,
                                 ),
                               ),
                             ),

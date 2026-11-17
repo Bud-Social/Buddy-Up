@@ -270,7 +270,7 @@ class GymCommunitiesView(views.APIView):
 
         profile = request.user.profile
         links = list(
-            GymCommunityLink.objects.filter(gym=gym, status='active')
+            GymCommunityLink.objects.filter(gym=gym, status__in=['active', 'pending'])
             .select_related('community')
         )
         conv_ids = [link.community_id for link in links]
@@ -300,16 +300,17 @@ class GymCommunitiesView(views.APIView):
                 'post_count': post_counts.get(c.id, 0),
                 'is_public': c.is_public,
                 'is_primary': bool(link.is_primary) if link is not None else False,
-                'is_member': c.id in member_conv_ids,
                 'is_gym_formed': c.group_gym_id == gym.id,
                 'created_at': c.created_at.isoformat(),
+                'is_member': c.id in member_conv_ids,
+                'status': link.status if link is not None else 'active',
             }
 
         rows = [community_row(link.community, link) for link in links]
 
         discover_qs = (
             Conversation.objects.filter(is_community=True, is_public=True)
-            .exclude(gym_links__gym=gym, gym_links__status='active')
+            .exclude(gym_links__gym=gym, gym_links__status__in=['active', 'pending'])
             .exclude(id__in=conv_ids)
             .order_by('-last_message_at', '-created_at')[:12]
         )
@@ -422,21 +423,40 @@ class GymCommunitiesView(views.APIView):
         with transaction.atomic():
             link, created = GymCommunityLink.objects.get_or_create(
                 gym=gym, community=community,
-                defaults={'requested_by': profile, 'status': 'active', 'is_primary': is_primary},
+                defaults={'requested_by': profile, 'status': 'pending', 'is_primary': is_primary},
             )
             if not created:
-                link.status = 'active'
+                # Re-requesting after a decline re-opens the ask; an already
+                # pending ask is simply left alone.
+                if link.status == 'declined':
+                    link.status = 'pending'
                 link.requested_by = profile
                 link.decided_by = None
                 if is_primary:
                     link.is_primary = True
                 link.save(update_fields=['status', 'requested_by', 'decided_by', 'is_primary'])
 
-            if link.is_primary:
-                # Primary means the one the gym leads with — demote the rest.
-                GymCommunityLink.objects.filter(
-                    gym=gym, is_primary=True,
-                ).exclude(pk=link.pk).update(is_primary=False)
+            from apps.messaging.models import ConversationMembership
+            from apps.notifications.tasks import create_notification
+            owner_ids = list(
+                ConversationMembership.objects.filter(
+                    conversation=community, role__in=['owner', 'admin'],
+                ).values_list('profile__user_id', flat=True)
+            )
+            for owner_id in owner_ids:
+                create_notification.delay(
+                    recipient_id=str(owner_id),
+                    notification_type='gym_community_link_request',
+                    title=f'{gym.name} asked to link with {community.group_name}',
+                    body='Review the request in the community settings.',
+                    metadata={
+                        'gym_handle': gym.handle,
+                        'gym_name': gym.name,
+                        'community_id': str(community.id),
+                        'community_name': community.group_name,
+                        'link_id': link.pk,
+                    },
+                )
 
             # A gym joining someone else's community enrols its acting owner as
             # a member, if not already one.
@@ -457,6 +477,8 @@ class GymCommunitiesView(views.APIView):
             'member_count': member_count,
             'is_member': True,
             'is_primary': link.is_primary,
+            'status': link.status,
+            'is_gym_formed': False,
             'created': False,
         })
 

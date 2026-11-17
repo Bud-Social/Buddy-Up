@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   Users, MoreHorizontal, Settings2, Copy,
   MessageCircle, UserPlus, CalendarDays, Video, Clock, Plus, Trash2,
-  LogOut, MapPin, Radio,
+  LogOut, MapPin, Radio, Dumbbell,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -17,12 +17,14 @@ import {
   messagingApi, type Community, type CommunityPost, type CommunityEvent,
   type CommunityLive, type CommunitySchedule,
 } from '@/api/messaging';
+import { GymLinkRequestsPanel } from '@/components/gym/GymLinkRequestsPanel';
 import type { Post } from '@/types/post';
 
-type Tab = 'feed' | 'members' | 'events' | 'schedules' | 'lives';
+type Tab = 'feed' | 'members' | 'events' | 'schedules' | 'lives' | 'gyms';
 
 const TABS: { key: Tab; label: string; icon: typeof Users }[] = [
   { key: 'feed', label: 'Feed', icon: Users },
+  { key: 'gyms', label: 'Gym requests', icon: Dumbbell },
   { key: 'members', label: 'Members', icon: Users },
   { key: 'events', label: 'Events', icon: CalendarDays },
   { key: 'schedules', label: 'Schedules', icon: Clock },
@@ -452,6 +454,7 @@ export default function CommunityDetail() {
     : tab === 'members' ? filteredMembers.length
     : tab === 'events' ? events.length
     : tab === 'schedules' ? schedules.length
+    : tab === 'gyms' ? 0
     : lives.length;
 
   return (
@@ -525,7 +528,7 @@ export default function CommunityDetail() {
       {/* ── Tabs (sticky, attached to the top while the body scrolls) ── */}
       <nav className="sticky top-0 z-20 bg-buddy-black/95 backdrop-blur border-b border-buddy-surface">
         <div className="max-w-2xl mx-auto px-4 flex gap-1 overflow-x-auto">
-          {TABS.map(({ key, label, icon: Icon }) => (
+          {TABS.filter(({ key }) => key !== 'gyms' || canManage).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               type="button"
@@ -827,6 +830,10 @@ export default function CommunityDetail() {
                   ))
                 )}
               </section>
+            )}
+
+            {tab === 'gyms' && canManage && (
+              <GymLinkRequestsPanel communityId={communityId ?? ''} />
             )}
 
             {shareableRows > 0 && tab !== 'feed' && (

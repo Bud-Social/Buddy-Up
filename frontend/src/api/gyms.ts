@@ -490,6 +490,8 @@ export interface GymLinkedCommunity {
   is_member: boolean;
   is_gym_formed: boolean;
   created_at: string;
+  /** 'pending' until the community approves the link. */
+  status?: 'pending' | 'active' | 'declined';
 }
 
 export interface GymDiscoverableCommunity {
@@ -588,3 +590,40 @@ const gymInsightsApi = {
 };
 
 export { gymInsightsApi };
+
+// ── Community-side approval of gym→community link requests ─────────────────
+export interface GymLinkRequest {
+  id: number;
+  gym_handle: string;
+  gym_name: string;
+  gym_logo_url: string;
+  gym_category: string;
+  gym_member_count: number;
+  community_id: string;
+  community_name: string;
+  requested_by: string;
+  created_at: string;
+}
+
+export interface GymLinkRequestDecideResult {
+  id: number;
+  status: 'active' | 'declined';
+  is_primary: boolean;
+  community_id: string;
+  gym_handle: string;
+}
+
+const communityLinkApi = {
+  list: (communityId?: string) =>
+    apiClient.get<ApiResponse<{ requests: GymLinkRequest[]; count: number }>>(
+      '/gyms/community-link-requests/',
+      { params: communityId ? { community_id: communityId } : {} },
+    ).then((r) => r.data),
+
+  decide: (requestId: number, decision: 'approved' | 'declined') =>
+    apiClient.post<ApiResponse<GymLinkRequestDecideResult>>(
+      `/gyms/community-link-requests/${requestId}/decide/`, { decision },
+    ).then((r) => r.data),
+};
+
+export { communityLinkApi };

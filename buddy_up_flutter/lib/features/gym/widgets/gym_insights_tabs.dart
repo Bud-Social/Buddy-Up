@@ -625,6 +625,10 @@ class _GymCommunitiesTabState extends ConsumerState<GymCommunitiesTab> {
           .read(gymCommunityActionsProvider)
           .linkCommunity(widget.slug, community.id);
       await _refresh();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Request sent to ${community.name} — their owner or an admin will review it.')),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _error = 'Could not link that community.');
@@ -875,9 +879,11 @@ class _LinkedCommunityCard extends StatelessWidget {
                       children: [
                         Text(_clip(community.name, 46),
                             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                        if (community.status == 'pending')
+                          const _Badge(label: 'PENDING', color: BuddyColors.gold),
                         if (community.isGymFormed)
                           const _Badge(label: 'GYM-FORMED', color: BuddyColors.green),
-                        if (community.isPrimary)
+                        if (community.isPrimary && community.status == 'active')
                           const _Badge(label: 'PRIMARY', color: BuddyColors.gold),
                         _Badge(
                           label: community.isPublic ? 'PUBLIC' : 'PRIVATE',
@@ -904,14 +910,15 @@ class _LinkedCommunityCard extends StatelessWidget {
                           label: activeFeed ? 'Hide feed' : 'View feed & post',
                           onPressed: onToggleFeed,
                         ),
-                        _MiniAction(
-                          label: community.isMember ? 'Leave' : 'Join',
-                          filled: !community.isMember,
-                          onPressed: busy ? null : onToggleMembership,
-                        ),
+                        if (community.status != 'pending')
+                          _MiniAction(
+                            label: community.isMember ? 'Leave' : 'Join',
+                            filled: !community.isMember,
+                            onPressed: busy ? null : onToggleMembership,
+                          ),
                         _MiniAction(
                           icon: Icons.link_off,
-                          label: '',
+                          label: community.status == 'pending' ? 'Cancel request' : '',
                           destructive: true,
                           onPressed: busy ? null : onUnlink,
                         ),
@@ -1130,7 +1137,7 @@ class _MiniAction extends StatelessWidget {
     if (destructive) {
       return IconButton(
         onPressed: onPressed,
-        tooltip: 'Unlink community',
+        tooltip: label.isNotEmpty ? label : 'Unlink community',
         icon: Icon(icon ?? Icons.link_off, size: 16, color: BuddyColors.red),
         visualDensity: VisualDensity.compact,
       );

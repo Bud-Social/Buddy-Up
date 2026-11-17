@@ -27,6 +27,8 @@ class Notification(TimestampedModel):
         ('gym_removed', 'Gym Membership Removed'),
         ('gym_joined', 'Gym Membership Approved'),
         ('gym_announcement', 'Gym Announcement'),
+        ('gym_community_link_request', 'Gym Community Link Request'),
+        ('gym_community_link_decided', 'Gym Community Link Decision'),
         ('staff_role_granted', 'Staff Role Granted'),
         ('staff_role_revoked', 'Staff Role Revoked'),
         ('session_booked', 'Session Booked'),

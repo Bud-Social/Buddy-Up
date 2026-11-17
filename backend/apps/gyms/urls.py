@@ -3,6 +3,7 @@ from . import views
 from . import tier_views
 from . import shop_views
 from . import insights_views as __insights_views
+from . import link_request_views as __link_request_views
 
 app_name = 'gyms'
 urlpatterns = [
@@ -11,6 +12,8 @@ urlpatterns = [
     path('check-handle/', views.CheckHandleView.as_view(), name='check_handle'),
     path('categories/', views.GymCategoriesView.as_view(), name='categories'),
     path('cities/', views.CitySearchView.as_view(), name='cities'),
+    path('community-link-requests/', __link_request_views.GymLinkRequestListView.as_view(), name='community_link_requests'),
+    path('community-link-requests/<int:request_id>/decide/', __link_request_views.GymLinkRequestDecideView.as_view(), name='community_link_request_decide'),
     path('<str:gym_slug>/', views.GymDetailView.as_view(), name='detail'),
     path('<str:gym_slug>/join/', views.JoinGymView.as_view(), name='join'),
     path('<str:gym_slug>/membership/checkout/', views.GymMembershipCheckoutView.as_view(), name='membership_checkout'),

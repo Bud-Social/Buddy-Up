@@ -226,6 +226,7 @@ class GymLinkedCommunity {
   final bool isPrimary;
   final bool isMember;
   final bool isGymFormed;
+  final String status;
 
   const GymLinkedCommunity({
     this.id = '',
@@ -238,6 +239,7 @@ class GymLinkedCommunity {
     this.isPrimary = false,
     this.isMember = false,
     this.isGymFormed = false,
+    this.status = 'active',
   });
 
   factory GymLinkedCommunity.fromJson(Map<String, dynamic> json) =>
@@ -252,6 +254,7 @@ class GymLinkedCommunity {
         isPrimary: json['is_primary'] == true,
         isMember: json['is_member'] == true,
         isGymFormed: json['is_gym_formed'] == true,
+        status: json['status']?.toString() ?? 'active',
       );
 }
 

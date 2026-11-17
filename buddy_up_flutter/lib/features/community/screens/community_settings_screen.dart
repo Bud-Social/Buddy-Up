@@ -14,6 +14,7 @@ class CommunitySettingsScreen extends ConsumerStatefulWidget {
   final bool initialIsPublic;
   final String? initialAvatarUrl;
   final String? initialCoverUrl;
+  final bool canManage;
 
   const CommunitySettingsScreen({
     super.key,
@@ -23,6 +24,7 @@ class CommunitySettingsScreen extends ConsumerStatefulWidget {
     this.initialIsPublic = true,
     this.initialAvatarUrl,
     this.initialCoverUrl,
+    this.canManage = false,
   });
 
   @override
@@ -260,6 +262,14 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
             onChanged: (v) => setState(() => _groupChatEnabled = v),
           ),
 
+          if (widget.canManage) ...[
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            _GymLinkRequestsSection(communityId: widget.communityId),
+            const SizedBox(height: 16),
+          ],
+
           const SizedBox(height: 32),
           const Divider(),
           const SizedBox(height: 16),
@@ -276,6 +286,216 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
             icon: const Icon(Icons.delete_forever),
             label: const Text('Delete Community'),
             onPressed: _deleteCommunity,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pending gym→community link requests. Gym owners ask; the community's
+/// owner/admin decides here.
+class _GymLinkRequestsSection extends ConsumerStatefulWidget {
+  final String communityId;
+  const _GymLinkRequestsSection({required this.communityId});
+
+  @override
+  ConsumerState<_GymLinkRequestsSection> createState() =>
+      _GymLinkRequestsSectionState();
+}
+
+class _GymLinkRequestsSectionState
+    extends ConsumerState<_GymLinkRequestsSection> {
+  List<Map<String, dynamic>>? _requests;
+  bool _loading = true;
+  String? _busyId;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final dio = ref.read(apiClientProvider4).dio;
+      final res = await dio.get(
+        '/gyms/community-link-requests/',
+        queryParameters: {'community_id': widget.communityId},
+      );
+      final data = (res.data as Map<String, dynamic>?)?['data'];
+      final rows = data is Map<String, dynamic> ? data['requests'] : null;
+      if (!mounted) return;
+      setState(() {
+        _requests = rows is List
+            ? rows
+                .whereType<Map>()
+                .map((row) => Map<String, dynamic>.from(row))
+                .toList()
+            : const [];
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _requests = const [];
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _decide(Map<String, dynamic> request, String decision) async {
+    setState(() => _busyId = '${request['id']}');
+    try {
+      final dio = ref.read(apiClientProvider4).dio;
+      await dio.post(
+        '/gyms/community-link-requests/${request['id']}/decide/',
+        data: {'decision': decision},
+      );
+      if (!mounted) return;
+      setState(() {
+        _requests = _requests
+            ?.where((row) => '${row['id']}' != '${request['id']}')
+            .toList();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(decision == 'approved' ? 'Gym linked' : 'Request declined')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not record that decision. Try again.')),
+      );
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Gym Requests',
+            style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 2),
+        Text(
+          'Gyms asking to link with this community. Approve to connect them; decline to turn the ask down.',
+          style: TextStyle(fontSize: 11, color: cs.onSurface.withValues(alpha: 0.6)),
+        ),
+        const SizedBox(height: 10),
+        if (_loading)
+          const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)))
+        else if (_requests == null || _requests!.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text('No pending gym requests.',
+                style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6))),
+          )
+        else
+          for (final request in _requests!)
+            _GymLinkRequestTile(
+              request: request,
+              busy: _busyId == '${request['id']}',
+              onDecide: _decide,
+            ),
+      ],
+    );
+  }
+}
+
+class _GymLinkRequestTile extends StatelessWidget {
+  final Map<String, dynamic> request;
+  final bool busy;
+  final Future<void> Function(Map<String, dynamic>, String) onDecide;
+
+  const _GymLinkRequestTile({
+    required this.request,
+    required this.busy,
+    required this.onDecide,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final name = (request['gym_name'] ?? 'Gym').toString();
+    final handle = (request['gym_handle'] ?? '').toString();
+    final category = (request['gym_category'] ?? '').toString();
+    final members = request['gym_member_count'];
+    final requestedBy = (request['requested_by'] ?? '').toString();
+    final logo = (request['gym_logo_url'] ?? '').toString();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: cs.surface,
+            backgroundImage: logo.isNotEmpty ? NetworkImage(logo) : null,
+            child: logo.isEmpty ? const Icon(Icons.fitness_center, size: 22) : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                Text(
+                  [
+                    if (handle.isNotEmpty) '@$handle',
+                    if (category.isNotEmpty) category,
+                    if (members != null) '$members members',
+                  ].join(' · '),
+                  style: TextStyle(fontSize: 11, color: cs.onSurface.withValues(alpha: 0.65)),
+                ),
+                if (requestedBy.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text('Asked by $requestedBy',
+                        style: TextStyle(fontSize: 10, color: cs.onSurface.withValues(alpha: 0.5))),
+                  ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    FilledButton.icon(
+                      onPressed: busy ? null : () => onDecide(request, 'approved'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 30),
+                        backgroundColor: BuddyColors.green,
+                        foregroundColor: BuddyColors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                      ),
+                      icon: busy
+                          ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, color: BuddyColors.black))
+                          : const Icon(Icons.check, size: 14),
+                      label: const Text('Approve'),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: busy ? null : () => onDecide(request, 'declined'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 30),
+                        foregroundColor: BuddyColors.red,
+                        side: const BorderSide(color: BuddyColors.red),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                      ),
+                      icon: const Icon(Icons.close, size: 14),
+                      label: const Text('Decline'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
