@@ -1150,19 +1150,20 @@ class CreatePostView(views.APIView):
         validated = serializer.validated_data
         validated['media_urls'] = post_media_urls
 
-        # Posting as the gym is a role, not a claim: only the gym's owner or
-        # co-owner may author a gym post. Anyone else is 403, loudly.
+        # Posting as the gym is a role, not a claim: only gym staff (owner,
+        # co-owner or moderator) may author a gym post. Anyone else is 403,
+        # loudly.
         gym_obj = validated.get('gym')
         if gym_obj is not None:
             from apps.gyms.models import GymMembership
             may_post = GymMembership.objects.filter(
                 gym=gym_obj, member=request.user.profile,
-                role__in=['owner', 'co_owner'],
+                role__in=GYM_FEED_MODERATOR_ROLES,
             ).exists()
             if not may_post:
                 return Response({
                     'success': False, 'data': None,
-                    'message': 'Only the gym’s owner or co-owner can post as the gym.',
+                    'message': 'Only gym staff (owner, co-owner or moderator) can post as the gym.',
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_403_FORBIDDEN)
 

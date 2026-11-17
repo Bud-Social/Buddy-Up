@@ -437,7 +437,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
     gym_tag = serializers.PrimaryKeyRelatedField(
         queryset=Gym.objects.all(), required=False, allow_null=True
     )
-    # Posting as the gym (not just tagging it). Only owners/co-owners may set.
+    # Posting as the gym (not just tagging it). Only gym staff may set this.
     gym = serializers.PrimaryKeyRelatedField(
         queryset=Gym.objects.all(), required=False, allow_null=True
     )
