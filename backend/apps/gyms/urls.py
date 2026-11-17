@@ -4,6 +4,7 @@ from . import tier_views
 from . import shop_views
 from . import insights_views as __insights_views
 from . import link_request_views as __link_request_views
+from . import social_views as __social_views
 
 app_name = 'gyms'
 urlpatterns = [
@@ -30,6 +31,9 @@ urlpatterns = [
     path('<str:gym_slug>/routine-posts/<uuid:post_id>/', views.GymRoutinePostDetailView.as_view(), name='routine_post_detail'),
     path('<str:gym_slug>/reviews/', views.GymReviewListView.as_view(), name='reviews'),
     path('<str:gym_slug>/reviews/<uuid:review_id>/reply/', views.GymReviewReplyView.as_view(), name='review_reply'),
+    path('<str:gym_slug>/feed/react/', __social_views.GymReactView.as_view(), name='feed_react'),
+    path('<str:gym_slug>/feed/repost/', __social_views.GymRepostView.as_view(), name='feed_repost'),
+    path('<str:gym_slug>/feed/comment/', __social_views.GymCommentView.as_view(), name='feed_comment'),
     path('<str:gym_slug>/feed/', views.GymFeedListView.as_view(), name='feed'),
     path('<str:gym_slug>/donate/', views.GymDonationCreateView.as_view(), name='donate'),
     path('<str:gym_slug>/routine-posts/<uuid:post_id>/enroll/', views.SlotEnrollView.as_view(), name='slot_enroll'),

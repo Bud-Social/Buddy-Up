@@ -692,7 +692,7 @@ export default function GymManage() {
               memberCount={metrics?.active_members ?? gym.member_count}
             />
           ) : (
-            <HomeFeedPanel />
+            <HomeFeedPanel gymSlug={slug || gym.handle} gymName={gym.name} />
           )}
         </>
       )}

@@ -2,19 +2,28 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PostCard } from '@/components/features/feed/PostCard';
-import { Loader2 } from 'lucide-react';
+import { CommentSheet } from '@/components/features/feed/CommentSheet';
+import { Loader2, Dumbbell } from 'lucide-react';
 import { feedApi } from '@/api/feed';
+import { gymFeedApi } from '@/api/gyms';
 import type { Post } from '@/types';
+
+interface HomeFeedPanelProps {
+  /** When set, the console engages with the home feed *as the gym*. */
+  gymSlug?: string;
+  gymName?: string;
+}
 
 /**
  * Read-only view of the public home feed from inside the gym console.
  *
- * This is the "Home feed" half of the nested posts tab — every BuddyUp account
- * can post here; the gym's own "Post as gym" and announcement flows target
- * the same surface, which is why an admin may want to see it side-by-side
- * with the gym feed.
+ * Passed a gym identity it stops being read-only: liking, reacting,
+ * reposting and commenting act as the gym (via /gyms/:slug/feed/* endpoints)
+ * instead of as the acting staff member's personal account.
  */
-export function HomeFeedPanel() {
+export function HomeFeedPanel({ gymSlug, gymName }: HomeFeedPanelProps) {
+  const engageAs = gymSlug || null;
+  const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [hasMore, setHasMore] = useState(true);
@@ -61,7 +70,11 @@ export function HomeFeedPanel() {
 
   return (
     <section className="space-y-2">
-      <p className="text-[9px] uppercase text-buddy-text-secondary">Public home feed · read-only from the gym console</p>
+      <p className="text-[9px] uppercase text-buddy-text-secondary">
+        {engageAs && gymName ? (
+          <span className="flex items-center gap-1.5"><Dumbbell size={11} className="text-buddy-green" /><span>Interacting as <span className="text-buddy-green">{gymName}</span> — your like, reply and repost appear as the gym</span></span>
+        ) : 'Public home feed · read-only from the gym console'}
+      </p>
       {error && <p className="text-[10px] text-buddy-red bg-buddy-red/5 border border-buddy-red/20 rounded-lg px-3 py-2" role="alert">{error}</p>}
 
       {isLoading ? (
@@ -73,7 +86,14 @@ export function HomeFeedPanel() {
       ) : (
         <>
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard
+              key={post.id}
+              post={post}
+              onComment={engageAs ? (id) => setCommentPostId(id) : undefined}
+              onLike={engageAs ? (id) => { gymFeedApi.react(engageAs, id, '💪').catch(() => {}); } : undefined}
+              onReact={engageAs ? (id, reaction) => { gymFeedApi.react(engageAs, id, reaction).catch(() => {}); } : undefined}
+              onRepost={engageAs ? (id) => { gymFeedApi.repost(engageAs, id).catch(() => {}); } : undefined}
+            />
           ))}
           {hasMore && (
             <div className="flex justify-center pt-1">
@@ -84,8 +104,16 @@ export function HomeFeedPanel() {
           )}
         </>
       )}
+
+      {engageAs && (
+        <CommentSheet
+          postId={commentPostId ?? ''}
+          gymSlug={engageAs}
+          gymName={gymName}
+          isOpen={!!commentPostId}
+          onClose={() => setCommentPostId(null)}
+        />
+      )}
     </section>
   );
 }
-
-export default HomeFeedPanel;

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from collections import Counter
+from django.db.models import Q
 from common.utils import absolute_media_url
 from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, Draft, PostMedia, Sound
 from apps.gyms.models import Gym
@@ -29,6 +30,23 @@ def normalize_reaction(key):
     if not key:
         return key
     return LEGACY_REACTION_EMOJI_MAP.get(key, key)
+
+
+def _staffed_gym_ids(profile):
+    """Gyms where this profile holds a staff role — the gym-identity actors."""
+    if profile is None:
+        return []
+    try:
+        from apps.gyms.models import GymMembership
+        return list(
+            GymMembership.objects.filter(
+                member=profile,
+                role__in=['owner', 'co_owner', 'moderator'],
+                subscription_active=True,
+            ).values_list('gym_id', flat=True)
+        )
+    except Exception:  # noqa: BLE001
+        return []
 
 
 class PollOptionSerializer(serializers.ModelSerializer):
@@ -69,21 +87,42 @@ class PollSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     author_data = serializers.SerializerMethodField()
+    gym_data = serializers.SerializerMethodField()
     reply_count = serializers.SerializerMethodField()
     reaction_counts = serializers.SerializerMethodField()
     user_reaction = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ['id', 'post_id', 'author_id', 'author_data', 'body', 'media_type',
+        fields = ['id', 'post_id', 'author_id', 'author_data', 'gym_data', 'body', 'media_type',
                    'media_url', 'sticker_pack', 'parent_id',
                    'is_anonymous', 'reply_count', 'reaction_counts', 'user_reaction',
                    'created_at', 'updated_at']
         read_only_fields = ['id', 'author_id', 'created_at', 'updated_at']
 
+    def get_gym_data(self, obj):
+        if obj.gym_id is None:
+            return None
+        gym = obj.gym
+        request = self.context.get('request')
+        logo = absolute_media_url(request, getattr(gym, 'logo_url', '') or '')
+        return {'id': str(gym.id), 'name': gym.name, 'handle': gym.handle, 'logo_url': logo}
+
     def get_author_data(self, obj):
         if obj.is_anonymous:
             return {'display_name': 'Anonymous BuddyUp Fit Member', 'username': '', 'avatar_url': ''}
+        if obj.gym_id is not None:
+            gym = obj.gym
+            request = self.context.get('request')
+            logo = absolute_media_url(request, getattr(gym, 'logo_url', '') or '')
+            return {
+                'user_id': '',
+                'username': gym.handle,
+                'display_name': gym.name,
+                'avatar_url': logo,
+                'verification_status': 'gym',
+                'is_gym': True,
+            }
         request = self.context.get('request')
         return {
             'user_id': str(obj.author.user_id),
@@ -107,7 +146,10 @@ class CommentSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return None
-        reaction = obj.reactions.filter(author=request.user.profile).first()
+        gym_ids = _staffed_gym_ids(request.user.profile)
+        reaction = obj.reactions.filter(
+            Q(author=request.user.profile) | Q(gym_id__in=gym_ids)
+        ).first()
         return normalize_reaction(reaction.reaction_type) if reaction else None
 
 
@@ -166,6 +208,18 @@ class PostSerializer(serializers.ModelSerializer):
     def get_author_data(self, obj):
         if obj.is_anonymous:
             return {'display_name': 'Anonymous BuddyUp Fit Member', 'username': '', 'avatar_url': ''}
+        if obj.gym_id is not None:
+            gym = obj.gym
+            request = self.context.get('request')
+            logo = absolute_media_url(request, getattr(gym, 'logo_url', '') or '')
+            return {
+                'user_id': '',
+                'username': gym.handle,
+                'display_name': gym.name,
+                'avatar_url': logo,
+                'verification_status': 'gym',
+                'is_gym': True,
+            }
         request = self.context.get('request')
         return {
             'user_id': str(obj.author.user_id),
@@ -186,7 +240,10 @@ class PostSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return None
-        reaction = obj.reactions.filter(author=request.user.profile).first()
+        gym_ids = _staffed_gym_ids(request.user.profile)
+        reaction = obj.reactions.filter(
+            Q(author=request.user.profile) | Q(gym_id__in=gym_ids)
+        ).first()
         return normalize_reaction(reaction.reaction_type) if reaction else None
 
     def get_comment_count(self, obj):
@@ -209,7 +266,11 @@ class PostSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return False
-        return obj.reposts.filter(profile=request.user.profile, is_deleted=False).exists()
+        gym_ids = _staffed_gym_ids(request.user.profile)
+        return obj.reposts.filter(
+            Q(profile=request.user.profile) | Q(gym_id__in=gym_ids),
+            is_deleted=False,
+        ).exists()
 
     def get_is_repost(self, obj):
         """True when the viewer follows anyone who reposted this post."""

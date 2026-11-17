@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from django.db import models
+from django.db.models import Q
 from common.models import TimestampedModel, SoftDeleteModel
 from common.age_gating import CONTENT_RATING_CHOICES, CONTENT_RATING_DEFAULT
 
@@ -95,6 +96,9 @@ class PostRepost(TimestampedModel, SoftDeleteModel):
     # related_name='reposts' deliberately keeps the old accessor so aggregate
     # queries like ``Count('reposts')`` on Post keep working against the log.
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='reposts')
+    # Set when the repost is done *as* a gym; the acting staff member is
+    # still recorded in ``profile`` for audit.
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='reposts')
     # Optional quoted commentary kept from the previous repost UX; unused by
     # the plain ribbon but accepted so old clients don't 400.
     quote_body = models.TextField(blank=True)
@@ -102,8 +106,19 @@ class PostRepost(TimestampedModel, SoftDeleteModel):
     class Meta:
         db_table = 'feed_post_repost'
         constraints = [
+            # Personal reposts keep the original (profile, post) uniqueness;
+            # gym-identity reposts run off the (post, gym) constraint instead,
+            # so the same staff member can repost as several gyms without
+            # colliding with either the personal row or another gym's row.
             models.UniqueConstraint(
-                fields=['profile', 'post'], name='unique_post_repost_per_profile',
+                fields=['profile', 'post'],
+                condition=Q(gym__isnull=True),
+                name='unique_post_repost_per_profile',
+            ),
+            models.UniqueConstraint(
+                fields=['post', 'gym'],
+                condition=Q(gym__isnull=False),
+                name='unique_post_repost_per_gym',
             ),
         ]
         indexes = [
@@ -146,6 +161,9 @@ class Comment(TimestampedModel):
 
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='comments')
+    # Set when the comment is engaged *as* a gym; the acting staff member is
+    # still recorded in ``author`` for audit. Public renderers surface the gym.
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='comments')
     body = models.TextField(blank=True)
     media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES, default='text')
     media_url = models.URLField(blank=True, max_length=1000)
@@ -164,6 +182,9 @@ class Reaction(TimestampedModel):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='reactions', null=True, blank=True)
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='reactions', null=True, blank=True)
     author = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='reactions')
+    # Set when the engagement is done *as* a gym; the acting staff member is
+    # still recorded in ``author`` for audit.
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='reactions')
     reaction_type = models.CharField(max_length=20)
 
     class Meta:
@@ -171,6 +192,16 @@ class Reaction(TimestampedModel):
         constraints = [
             models.UniqueConstraint(fields=['post', 'author', 'reaction_type'], name='unique_post_reaction'),
             models.UniqueConstraint(fields=['comment', 'author', 'reaction_type'], name='unique_comment_reaction'),
+            models.UniqueConstraint(
+                fields=['post', 'gym', 'reaction_type'],
+                condition=Q(gym__isnull=False),
+                name='unique_gym_post_reaction',
+            ),
+            models.UniqueConstraint(
+                fields=['comment', 'gym', 'reaction_type'],
+                condition=Q(gym__isnull=False),
+                name='unique_gym_comment_reaction',
+            ),
         ]
 
 

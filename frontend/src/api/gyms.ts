@@ -627,3 +627,21 @@ const communityLinkApi = {
 };
 
 export { communityLinkApi };
+
+// ── Gym-identity engagement on the public home feed ────────────────────────
+const gymFeedApi = {
+  react: (slug: string, postId: string, reactionType?: string) =>
+    apiClient.post<ApiResponse<{ reaction_counts: Record<string, number>; gym_reaction: string | null; post_id: string }>>(
+      `/gyms/${slug}/feed/react/`, { post_id: postId, reaction_type: reactionType },
+    ).then((r) => r.data),
+
+  repost: (slug: string, postId: string) =>
+    apiClient.post<ApiResponse<{ action: 'reposted' | 'unreposted'; repost_count: number; gym_reposted: boolean }>>(
+      `/gyms/${slug}/feed/repost/`, { post_id: postId },
+    ).then((r) => r.data),
+
+  comment: (slug: string, payload: { post_id: string; body: string; parent_id?: string }) =>
+    apiClient.post<ApiResponse<any>>(`/gyms/${slug}/feed/comment/`, payload).then((r) => r.data.data),
+};
+
+export { gymFeedApi };

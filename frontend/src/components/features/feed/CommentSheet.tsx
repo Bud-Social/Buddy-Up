@@ -5,6 +5,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { RichText } from '@/components/ui/RichText';
 import { feedApi } from '@/api';
 import { messagingApi } from '@/api/messaging';
+import { gymFeedApi } from '@/api/gyms';
 import { profilesApi } from '@/api/profiles';
 import { track } from '@/lib/analytics';
 import { isProfanityFilterEnabled, maskProfanity } from '@/lib/profanity';
@@ -12,16 +13,19 @@ import type { Comment } from '@/types';
 
 interface CommentSheetProps {
   postId: string;
-  communityId?: string;
   isOpen: boolean;
   onClose: () => void;
+  communityId?: string;
+  /** When set, this sheet acts as the given gym (comments post as the gym). */
+  gymSlug?: string;
+  gymName?: string;
 }
 
 const LIKE_REACTION = '❤️';
 
 const likeCount = (comment: Comment) => comment.reaction_counts?.[LIKE_REACTION] || 0;
 
-export function CommentSheet({ postId, communityId, isOpen, onClose }: CommentSheetProps) {
+export function CommentSheet({ postId, communityId, isOpen, onClose, gymSlug, gymName }: CommentSheetProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [body, setBody] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +81,10 @@ export function CommentSheet({ postId, communityId, isOpen, onClose }: CommentSh
         const res = await messagingApi.addPostComment(communityId, postId, body.trim());
         // messagingApi already unwraps the envelope; map it to the comment shape.
         newComment = res as unknown as Comment;
+      } else if (gymSlug) {
+        // Gym identity — the row is recorded as the gym (with the acting
+        // staff member kept as the audit trail).
+        newComment = (await gymFeedApi.comment(gymSlug, { post_id: postId, body: body.trim() })) as unknown as Comment;
       } else {
         newComment = (await feedApi.comment(postId, { body: body.trim() })) as unknown as Comment;
       }
@@ -103,6 +111,8 @@ export function CommentSheet({ postId, communityId, isOpen, onClose }: CommentSh
       if (communityId) {
         const res = await messagingApi.addPostComment(communityId, postId, text, commentId, media);
         newComment = res as unknown as Comment;
+      } else if (gymSlug) {
+        newComment = (await gymFeedApi.comment(gymSlug, { post_id: postId, body: text, parent_id: commentId })) as unknown as Comment;
       } else {
         newComment = (await feedApi.comment(postId, {
           body: text,
@@ -223,6 +233,12 @@ export function CommentSheet({ postId, communityId, isOpen, onClose }: CommentSh
             <X size={20} />
           </button>
         </div>
+        {gymSlug && (
+          <div className="mx-4 mb-2 flex items-center gap-1.5 rounded-lg bg-buddy-green/10 border border-buddy-green/20 px-2.5 py-1.5">
+            <MessageCircle size={12} className="text-buddy-green shrink-0" />
+            <p className="text-[10px] text-buddy-green">Commenting as <span className="font-semibold">{gymName || gymSlug}</span> — the comment appears as the gym</p>
+          </div>
+        )}
 
         <div className="flex gap-2 px-4 py-2 border-b border-buddy-surface-raised">
           {(['newest', 'oldest', 'top'] as const).map((s) => (
