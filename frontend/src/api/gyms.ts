@@ -429,7 +429,7 @@ export interface GymInsightBooking {
   scheduled_at: string | null;
   completed_at: string | null;
   duration_minutes: number | null;
-  fee: number | null;
+  fee: number | Record<string, number> | null;
   created_at: string;
 }
 
