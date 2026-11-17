@@ -132,7 +132,9 @@ export default function GymManage() {
     try { window.scrollTo({ top: 0 }); } catch { /* noop */ }
   };
   useEffect(() => {
-    activeTabRef.current?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+    if (typeof activeTabRef.current?.scrollIntoView === 'function') {
+      activeTabRef.current.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+    }
   }, [tab]);
 
   const [loading, setLoading] = useState(true);
