@@ -187,17 +187,20 @@ class GymMessagesView(views.APIView):
 
         staff_ids = list(_gym_staff_profiles(gym))
 
-        from apps.messaging.models import Message
+        from apps.messaging.models import Message, Conversation
 
-        # Gym inbox for the community/group surface: only community and group
-        # conversations — gym chats (kind='gym') have their own containment,
-        # so they never double-render here.
-        gym_convs = (
-            _gym_inbox_conversations(gym, request.user.profile)
-            .exclude(kind='gym')
-            .prefetch_related('participants')
-            .order_by('-last_message_at', '-created_at')[:30]
+        # Community chats: the communities the gym has linked with (joined) —
+        # this is the console inbox, not any staff member's personal chats.
+        linked_ids = list(
+            GymCommunityLink.objects.filter(gym=gym, status='active')
+            .values_list('community_id', flat=True)
         )
+        gym_convs = (
+            Conversation.objects.filter(
+                is_community=True,
+                id__in=linked_ids,
+            ) | Conversation.objects.filter(group_gym=gym, is_community=True)
+        ).distinct().prefetch_related('participants').order_by('-last_message_at', '-created_at')[:30]
         conversations = []
         for conv in gym_convs:
             members = list(conv.participants.values_list('username', 'display_name', 'avatar_url', 'role')[:8])
@@ -239,8 +242,8 @@ class GymMessagesView(views.APIView):
             'recent_inbound': messages,
             'summary': {
                 'community_chats': sum(1 for c in conversations if c['is_community']),
-                'group_chats': sum(1 for c in conversations if not c['is_community'] and c['kind'] == 'group'),
-                'direct_threads': sum(1 for c in conversations if c['kind'] == 'direct'),
+                'group_chats': Conversation.objects.filter(kind='gym', group_gym=gym, is_group=True).count(),
+                'direct_threads': Conversation.objects.filter(kind='gym', group_gym=gym, is_group=False).count(),
                 'inbound_7d': Message.objects.filter(
                     conversation__in=_gym_inbox_conversations(gym, request.user.profile),
                     created_at__gte=timezone.now() - datetime.timedelta(days=7),

@@ -260,7 +260,10 @@ class PostSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return False
-        return obj.saves.filter(user=request.user.profile).exists()
+        gym_ids = _staffed_gym_ids(request.user.profile)
+        return obj.saves.filter(
+            Q(user=request.user.profile) | Q(gym_id__in=gym_ids),
+        ).exists()
 
     def get_is_reposted_by_me(self, obj):
         request = self.context.get('request')
@@ -339,22 +342,33 @@ class PostSerializer(serializers.ModelSerializer):
                 followed_ids = set(viewer.following.values_list('followee_id', flat=True))
         except Exception:  # noqa: BLE001 — attribution ordering is best-effort
             pass
-        reposts = list(obj.reposts.filter(is_deleted=False).select_related('profile')[:20])
+        reposts = list(obj.reposts.filter(is_deleted=False).select_related('profile', 'gym')[:20])
         if viewer is not None:
             # A profile's primary key is its user, so the repost row's
             # profile id is the user's id.
             reposts = [r for r in reposts if r.profile_id != viewer.user_id]
         # TikTok-style attribution: accounts the viewer follows first.
         reposts.sort(key=lambda r: (r.profile_id not in followed_ids, r.created_at))
-        return [
-            {
-                'user_id': str(r.profile.user_id),
-                'display_name': r.profile.display_name,
-                'avatar_url': absolute_media_url(request, r.profile.avatar_url),
-                'followed_by_viewer': r.profile_id in followed_ids,
-            }
-            for r in reposts
-        ]
+        rows = []
+        for r in reposts:
+            if r.gym_id is not None:
+                gym = r.gym
+                logo = getattr(gym, 'logo_url', '') or ''
+                rows.append({
+                    'user_id': str(gym.id),
+                    'display_name': gym.name,
+                    'avatar_url': absolute_media_url(request, logo) if logo else '',
+                    'followed_by_viewer': False,
+                    'is_gym': True,
+                })
+            else:
+                rows.append({
+                    'user_id': str(r.profile.user_id),
+                    'display_name': r.profile.display_name,
+                    'avatar_url': absolute_media_url(request, r.profile.avatar_url),
+                    'followed_by_viewer': r.profile_id in followed_ids,
+                })
+        return rows
 
 
 class CommentCreateSerializer(serializers.Serializer):

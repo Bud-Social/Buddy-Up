@@ -14,7 +14,7 @@ from django.db.models import Count
 from rest_framework import permissions, status, views
 from rest_framework.response import Response
 
-from apps.feed.models import Comment, Post, PostRepost, Reaction
+from apps.feed.models import Comment, Post, PostRepost, Reaction, Save
 from apps.feed.serializers import CommentSerializer
 from apps.gyms.insights_views import _partner_staff, _error, _json_response
 
@@ -96,10 +96,19 @@ class GymRepostView(views.APIView):
         profile = request.user.profile
 
         with transaction.atomic():
-            existing = PostRepost.objects.filter(post=original, gym=gym, is_deleted=False).first()
-            if existing:
+            # The PostRepost table tolerates one row per (post, gym), which
+            # may be a soft-delete from an earlier toggle — restore on toggle,
+            # soft-delete on un-toggle. De-dupes the race-free toggle.
+            existing = PostRepost.objects.filter(post=original, gym=gym).first()
+            if existing and not existing.is_deleted:
                 existing.soft_delete()
                 action = 'unreposted'
+            elif existing and existing.is_deleted:
+                existing.is_deleted = False
+                existing.deleted_at = None
+                existing.quote_body = quote_body[:500]
+                existing.save(update_fields=['is_deleted', 'deleted_at', 'quote_body', 'updated_at'])
+                action = 'reposted'
             else:
                 PostRepost.objects.create(
                     profile=profile,
@@ -127,6 +136,60 @@ class GymRepostView(views.APIView):
             'errors': None,
             'pagination': None,
         })
+
+
+class GymSaveView(views.APIView):
+    """Toggle the gym's save on a feed post (never a collection)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, gym_slug):
+        gym = _gym_by_slug(gym_slug, request)
+        if gym is None:
+            return _error('Not found.', status.HTTP_404_NOT_FOUND)
+        post_id = request.data.get('post_id')
+        post = _public_post(post_id)
+        if post is None:
+            return _error('Post not found.', status.HTTP_404_NOT_FOUND)
+        profile = request.user.profile
+        with transaction.atomic():
+            existing = Save.objects.filter(post=post, gym=gym).first()
+            if existing:
+                existing.delete()
+                saved = False
+            else:
+                Save.objects.create(user=profile, post=post, gym=gym)
+                saved = True
+        return _json_response({
+            'saved': saved,
+            'post_id': str(post.id),
+        })
+
+
+class GymSavedView(views.APIView):
+    """Posts the gym has saved, newest first, shaped for the console feed."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, gym_slug):
+        gym = _gym_by_slug(gym_slug, request)
+        if gym is None:
+            return _error('Not found.', status.HTTP_404_NOT_FOUND)
+        post_ids = list(
+            Save.objects.filter(gym=gym)
+            .order_by('-created_at')
+            .values_list('post_id', flat=True)[:50]
+        )
+        from apps.feed.serializers import PostSerializer
+        posts = (
+            Post.objects.filter(id__in=post_ids)
+            .exclude(moderation_status='removed')
+            .select_related('author', 'gym')
+        )
+        ordering = {pid: i for i, pid in enumerate(post_ids)}
+        posts = sorted(posts, key=lambda p: ordering.get(p.id, len(post_ids)))
+        serializer = PostSerializer(posts, many=True, context={'request': request})
+        data = list(serializer.data)
+        total = Save.objects.filter(gym=gym).count()
+        return _json_response({'count': total, 'items': data})
 
 
 class GymCommentView(views.APIView):

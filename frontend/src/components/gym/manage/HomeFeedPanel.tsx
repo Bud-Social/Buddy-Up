@@ -93,6 +93,7 @@ export function HomeFeedPanel({ gymSlug, gymName }: HomeFeedPanelProps) {
               onLike={engageAs ? (id) => { gymFeedApi.react(engageAs, id, '💪').catch(() => {}); } : undefined}
               onReact={engageAs ? (id, reaction) => { gymFeedApi.react(engageAs, id, reaction).catch(() => {}); } : undefined}
               onRepost={engageAs ? (id) => { gymFeedApi.repost(engageAs, id).catch(() => {}); } : undefined}
+              onSave={engageAs ? (id) => { gymFeedApi.save(engageAs, id).catch(() => {}); } : undefined}
             />
           ))}
           {hasMore && (

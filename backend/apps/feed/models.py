@@ -207,12 +207,22 @@ class Reaction(TimestampedModel):
 
 class Save(TimestampedModel):
     user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='saves')
+    # Gym-actor applies the same pattern as Reaction/Comment/PostRepost: a gym
+    # can keep its own saved list, acting staff stays the audit trail.
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='saves')
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='saves')
     collection = models.CharField(max_length=100, blank=True)
 
     class Meta:
         db_table = 'feed_save'
         unique_together = ('user', 'post')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['post', 'gym'],
+                condition=Q(gym__isnull=False),
+                name='unique_gym_save',
+            ),
+        ]
 
 
 class Poll(TimestampedModel):

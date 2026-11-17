@@ -642,6 +642,15 @@ const gymFeedApi = {
 
   comment: (slug: string, payload: { post_id: string; body: string; parent_id?: string }) =>
     apiClient.post<ApiResponse<any>>(`/gyms/${slug}/feed/comment/`, payload).then((r) => r.data.data),
+
+  save: (slug: string, postId: string) =>
+    apiClient.post<ApiResponse<{ saved: boolean; post_id: string }>>(
+      `/gyms/${slug}/feed/save/`, { post_id: postId },
+    ).then((r) => r.data.data),
+
+  saved: (slug: string, params: { collection?: string } = {}) =>
+    apiClient.get<ApiResponse<{ count: number; items: any[] }>>(`/gyms/${slug}/feed/saved/`, { params })
+      .then((r) => r.data.data),
 };
 
 export { gymFeedApi };

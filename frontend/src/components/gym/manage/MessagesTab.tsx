@@ -264,9 +264,9 @@ export function MessagesTab({ slug }: MessagesTabProps) {
       {/* Summary strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {[
-          { label: 'Community chats', value: summary?.community_chats ?? 0 },
-          { label: 'Group chats', value: summary?.group_chats ?? 0 },
-          { label: 'Direct threads', value: summary?.direct_threads ?? 0 },
+          { label: 'Communities linked', value: summary?.community_chats ?? 0 },
+          { label: 'Gym team', value: summary?.group_chats ?? 0 },
+          { label: 'Gym DMs', value: summary?.direct_threads ?? 0 },
           { label: 'Client messages · 7d', value: summary?.inbound_7d ?? 0 },
         ].map(({ label, value }) => (
           <Card key={label} className="p-3">

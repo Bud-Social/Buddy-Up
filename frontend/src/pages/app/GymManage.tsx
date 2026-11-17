@@ -12,6 +12,7 @@ import { VenuesTab } from '@/components/gym/manage/VenuesTab';
 import { OnlineCoachingTab } from '@/components/gym/manage/OnlineCoachingTab';
 import { GymPostPanel } from '@/components/gym/manage/GymPostPanel';
 import { HomeFeedPanel } from '@/components/gym/manage/HomeFeedPanel';
+import { SavedGymPostsPanel } from '@/components/gym/manage/SavedGymPostsPanel';
 import { SessionsTab } from '@/components/gym/manage/SessionsTab';
 import { MessagesTab } from '@/components/gym/manage/MessagesTab';
 import { CommunitiesTab } from '@/components/gym/manage/CommunitiesTab';
@@ -103,13 +104,13 @@ export default function GymManage() {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = (searchParams.get('tab') || '') as Tab | '';
-  const postSource = (searchParams.get('posts') || 'gym') as 'gym' | 'home';
-  const setPostSource = (next: 'gym' | 'home') => {
+  const postSource = (searchParams.get('posts') || 'gym') as 'gym' | 'home' | 'saved';
+  const setPostSource = (next: 'gym' | 'home' | 'saved') => {
     const nextParams = new URLSearchParams(searchParams);
     if (next === 'gym') {
       nextParams.delete('posts');
     } else {
-      nextParams.set('posts', 'home');
+      nextParams.set('posts', next);
     }
     setSearchParams(nextParams, { replace: true });
   };
@@ -668,11 +669,11 @@ export default function GymManage() {
         <OnlineCoachingTab slug={slug || gym.handle} canManage={isAdmin} members={members} />
       )}
 
-      {/* Posts — gym posts and home (public) feed, two nested tabs */}
+      {/* Posts — gym posts, home feed as the gym, and gym-saved posts */}
       {tab === 'posts' && gym && (
         <>
           <div className="flex rounded-lg bg-buddy-surface p-0.5 self-start" role="tablist" aria-label="Post source">
-            {(['gym', 'home'] as const).map((kind) => (
+            {(['gym', 'home', 'saved'] as const).map((kind) => (
               <button
                 key={kind}
                 role="tab"
@@ -680,7 +681,7 @@ export default function GymManage() {
                 onClick={() => setPostSource(kind)}
                 className={`px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors ${postSource === kind ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary'}`}
               >
-                {kind === 'gym' ? 'Gym feed' : 'Home feed'}
+                {kind === 'gym' ? 'Gym feed' : kind === 'home' ? 'Home feed' : 'Saved'}
               </button>
             ))}
           </div>
@@ -693,8 +694,10 @@ export default function GymManage() {
               mode="post"
               memberCount={metrics?.active_members ?? gym.member_count}
             />
-          ) : (
+          ) : postSource === 'home' ? (
             <HomeFeedPanel gymSlug={slug || gym.handle} gymName={gym.name} />
+          ) : (
+            <SavedGymPostsPanel slug={slug || gym.handle} gymName={gym.name} />
           )}
         </>
       )}
