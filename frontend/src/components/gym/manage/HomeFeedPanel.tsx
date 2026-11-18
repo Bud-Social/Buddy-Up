@@ -62,7 +62,7 @@ export function HomeFeedPanel({ gymSlug, gymName, gymIdentity }: HomeFeedPanelPr
     setIsLoading(true);
     setError(null);
     try {
-      const res = await feedApi.getFeed('for_you');
+      const res = await feedApi.getFeed('for_you', undefined, { includeGym: true });
       const items = (res.data as Post[] | { results?: Post[] } | undefined) ?? [];
       const list = Array.isArray(items) ? items : (items.results ?? []);
       setPosts(list);
@@ -80,7 +80,7 @@ export function HomeFeedPanel({ gymSlug, gymName, gymIdentity }: HomeFeedPanelPr
     if (!hasMore || isLoadingMore) return;
     setIsLoadingMore(true);
     try {
-      const res = await feedApi.getFeed('for_you', cursor);
+      const res = await feedApi.getFeed('for_you', cursor, { includeGym: true });
       const items = (res.data as Post[] | { results?: Post[] } | undefined) ?? [];
       const list = Array.isArray(items) ? items : (items.results ?? []);
       setPosts((prev) => [...prev, ...list]);

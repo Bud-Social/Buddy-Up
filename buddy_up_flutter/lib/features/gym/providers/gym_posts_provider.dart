@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/post.dart';
-import '../../feed/providers/feed_provider.dart';
 import '../../messaging/providers/messaging_provider.dart';
 
 /// Posts surfaces for the gym console's Posts tab.
@@ -29,9 +28,10 @@ final gymOwnFeedProvider = FutureProvider.family.autoDispose<List<Post>, String>
 });
 
 /// The public home feed as it lands for this member — used by the gym console
-/// so staff can engage with it *as the gym*.
+/// so staff can engage with it *as the gym*. Gym-authored posts are included
+/// (visible in the gym console's own Home feed tab, as intended).
 final gymHomeFeedProvider = FutureProvider.autoDispose<List<Post>>((ref) async {
-  final repo = ref.watch(feedRepositoryProvider);
-  final raw = await repo.getFeed();
-  return _rows(raw);
+  final dio = ref.read(apiClientProvider4).dio;
+  final res = await dio.get('/feed/', queryParameters: {'tab': 'for_you', 'include_gym': '1'});
+  return _rows(res.data);
 });

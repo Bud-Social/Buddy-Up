@@ -32,12 +32,13 @@ export interface SignUploadData {
 }
 
 export const feedApi = {
-  getFeed: (tab: FeedTab = 'for_you', cursor?: string, opts?: { excludePostTypes?: string[] }) =>
+  getFeed: (tab: FeedTab = 'for_you', cursor?: string, opts?: { excludePostTypes?: string[]; includeGym?: boolean }) =>
     apiClient.get<ApiResponse<Post[]>>('/feed/', {
       params: {
         tab,
         cursor,
         ...(opts?.excludePostTypes?.length ? { exclude_post_types: opts.excludePostTypes.join(',') } : {}),
+        ...(opts?.includeGym ? { include_gym: '1' } : {}),
       },
     }).then((r) => r.data),
 

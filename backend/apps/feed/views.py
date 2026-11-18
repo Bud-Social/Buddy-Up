@@ -795,13 +795,18 @@ class FeedView(views.APIView):
     def get(self, request):
         tab = request.query_params.get('tab', 'for_you')
         post_type = request.query_params.get('post_type')
+        # The gym console's own "Home feed" tab needs to see gym-authored
+        # posts too (they would never match FeedPost's gym_tag__isnull=True
+        # manager). Callers opt in with ?include_gym=1.
+        include_gym = request.query_params.get('include_gym') in ('1', 'true')
+        base_manager = Post if include_gym else FeedPost
 
         user_profile = request.user.profile
 
         if tab in ('videos', 'videos_following'):
             # TikTok-style video feed. DB-level filtering (post_type) keeps it
             # paginated; legacy photo posts carrying video URLs still match.
-            base = FeedPost.objects.filter(
+            base = base_manager.objects.filter(
                 moderation_status='clean',
                 visibility='public',
             ).exclude(
@@ -873,12 +878,12 @@ class FeedView(views.APIView):
 
         if tab == 'following':
             followed_ids = user_profile.following.values_list('followee_id', flat=True)
-            queryset = FeedPost.objects.filter(
+            queryset = base_manager.objects.filter(
                 author_id__in=followed_ids,
                 moderation_status='clean',
             ).filter(_audience_q(user_profile)).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
         elif tab == 'nearby':
-            queryset = FeedPost.objects.filter(
+            queryset = base_manager.objects.filter(
                 moderation_status='clean',
             ).filter(_audience_q(user_profile))
             if user_profile.location_city:
@@ -897,7 +902,7 @@ class FeedView(views.APIView):
             followed_ids = set(user_profile.following.values_list('followee_id', flat=True))
             gym_ids = set(user_profile.gym_memberships.filter(subscription_active=True).values_list('gym_id', flat=True))
 
-            queryset = FeedPost.objects.filter(
+            queryset = base_manager.objects.filter(
                 moderation_status='clean',
             ).filter(_audience_q(user_profile))
             if post_type and post_type in dict(Post.POST_TYPES):
