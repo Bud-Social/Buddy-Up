@@ -2833,11 +2833,13 @@ class StoriesView(views.APIView):
                 'errors': None, 'pagination': None,
             })
 
+        from apps.feed.views import _audience_q
         posts = (
             Post.objects.filter(
                 post_type='moment', is_deleted=False, moderation_status='clean',
                 created_at__gte=since, author_id__in=ids,
             )
+            .filter(_audience_q(profile))
             .select_related('author')
             .order_by('-created_at')
         )

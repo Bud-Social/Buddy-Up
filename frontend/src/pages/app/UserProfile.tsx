@@ -17,6 +17,7 @@ import {
   Calendar,
   Dumbbell,
   Sparkles,
+  Lock,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
@@ -45,6 +46,7 @@ export default function UserProfile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [hasStory, setHasStory] = useState(false);
+  const [isLockedProfile, setIsLockedProfile] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [pingLoading, setPingLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
@@ -70,6 +72,7 @@ export default function UserProfile() {
     setIsLoading(true);
     try {
       const res = await profilesApi.getProfile(username);
+      setIsLockedProfile(res?.message === 'This profile is private.');
       setProfile(res.data);
       setIsFollowing(res.data.is_following || false);
     } catch {
@@ -161,7 +164,7 @@ export default function UserProfile() {
   };
 
   const fetchPosts = async () => {
-    if (!profile?.username) return;
+    if (!profile?.username || isLockedProfile) return;
     setPostsLoading(true);
     try {
       const res = await profilesApi.getProfilePosts(profile.username);
@@ -174,14 +177,14 @@ export default function UserProfile() {
   };
 
   useEffect(() => {
-    if (!profile?.username) return;
+    if (!profile?.username || isLockedProfile) return;
     messagingApi.getStories()
       .then((res) => {
         const reels = res.data ?? [];
         setHasStory(reels.some((r) => r.user.username === profile.username && r.stories.length > 0));
       })
       .catch(() => { setHasStory(false); });
-  }, [profile?.username]);
+  }, [profile?.username, isLockedProfile]);
 
   useEffect(() => {
     if (activeTab === 'lives' && profile?.username) fetchLives();
@@ -208,6 +211,30 @@ export default function UserProfile() {
     });
     return Array.from(tags);
   }, [allPosts]);
+
+  if (isLockedProfile && profile) {
+    return (
+      <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
+        <div className="flex flex-col items-center text-center pt-16 pb-10">
+          <div className="p-1 rounded-full bg-buddy-surface-raised border border-buddy-green/30 mb-4">
+            <Avatar src={profile.avatar_url} alt={profile.display_name} size="xl" className="ring-2 ring-buddy-black" />
+          </div>
+          <h1 className="text-xl font-bold text-buddy-text-primary">{profile.display_name}</h1>
+          <p className="text-sm text-buddy-text-secondary">@{profile.username}</p>
+          <div className="mt-5 flex items-center gap-2 rounded-2xl border border-buddy-green/30 bg-buddy-green/5 px-5 py-3">
+            <Lock size={18} className="text-buddy-green shrink-0" />
+            <div className="text-left">
+              <p className="text-sm font-semibold text-buddy-text-primary">This account is private</p>
+              <p className="text-xs text-buddy-text-secondary">Only buddies can see {profile.display_name?.split(' ')[0] || 'this member'}'s posts and stories.</p>
+            </div>
+          </div>
+          <Button variant="primary" size="sm" className="mt-6 gap-1.5" onClick={() => navigate(-1)}>
+            Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

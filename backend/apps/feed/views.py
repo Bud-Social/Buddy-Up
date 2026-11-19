@@ -572,6 +572,35 @@ def _auto_captions_requested(request) -> bool:
     return str(raw).strip().lower() in ('1', 'true', 'yes', 'on')
 
 
+def _viewer_buddy_ids(user_profile) -> set:
+    """Confirmed-buddy profile ids for the viewer."""
+    return set(
+        BuddyRelationship.objects.filter(
+            (db_models.Q(from_user=user_profile) | db_models.Q(to_user=user_profile)),
+            status='confirmed',
+        ).values_list(
+            db_models.Case(db_models.When(from_user=user_profile, then='to_user_id'), default='from_user_id'),
+            flat=True,
+        )
+    )
+
+
+def _profile_privacy_q(user_profile, buddy_ids=None):
+    """Q-filter: authors whose personal content this viewer may see.
+
+    A private profile is visible only to its owner and confirmed buddies.
+    Gym-authored posts are governed by gym walls, never by the staff member's
+    personal privacy setting.
+    """
+    buddy_ids = buddy_ids if buddy_ids is not None else _viewer_buddy_ids(user_profile)
+    return (
+        db_models.Q(gym__isnull=False)
+        | db_models.Q(author__privacy_level='public')
+        | db_models.Q(author=user_profile)
+        | db_models.Q(author_id__in=buddy_ids, author__privacy_level='private')
+    )
+
+
 def _audience_q(user_profile):
     """Q-filter matching every post the viewer is allowed to see.
 
@@ -583,15 +612,7 @@ def _audience_q(user_profile):
     """
     from apps.gyms.models import GymMembership
 
-    buddy_ids = set(
-        BuddyRelationship.objects.filter(
-            (db_models.Q(from_user=user_profile) | db_models.Q(to_user=user_profile)),
-            status='confirmed',
-        ).values_list(
-            db_models.Case(db_models.When(from_user=user_profile, then='to_user_id'), default='from_user_id'),
-            flat=True,
-        )
-    )
+    buddy_ids = _viewer_buddy_ids(user_profile)
     my_gym_ids = set(
         GymMembership.objects.filter(member=user_profile, subscription_active=True)
         .values_list('gym_id', flat=True)
@@ -601,31 +622,51 @@ def _audience_q(user_profile):
         subscription_active=True,
         gym_id__in=my_gym_ids,
     )
+    profile_privacy = _profile_privacy_q(user_profile, buddy_ids)
     return (
-        db_models.Q(visibility='public')
-        | db_models.Q(author=user_profile)
-        | (
-            db_models.Q(visibility='buddies')
-            & (db_models.Q(author_id__in=buddy_ids) | db_models.Q(author=user_profile))
-        )
-        | (
-            db_models.Q(visibility='gym_members')
-            & (
-                db_models.Exists(shared_gym)
-                | (db_models.Q(gym_tag_id__isnull=False) & db_models.Q(gym_tag_id__in=my_gym_ids))
+        (
+            db_models.Q(visibility='public')
+            | db_models.Q(author=user_profile)
+            | (
+                db_models.Q(visibility='buddies')
+                & (db_models.Q(author_id__in=buddy_ids) | db_models.Q(author=user_profile))
+            )
+            | (
+                db_models.Q(visibility='gym_members')
+                & (
+                    db_models.Exists(shared_gym)
+                    | (db_models.Q(gym_tag_id__isnull=False) & db_models.Q(gym_tag_id__in=my_gym_ids))
+                )
             )
         )
+        & profile_privacy
     )
 
 
-def _can_view_post(post, user_profile) -> bool:
-    """Object-level visibility check used by detail/comments surfaces."""
-    if not post.visibility or post.visibility == 'public':
+def _author_privacy_ok(post, user_profile) -> bool:
+    """Private-author gate. Gym-authored posts are never staff-gated."""
+    if getattr(post, 'gym_id', None):
+        return True
+    author = post.author
+    if getattr(author, 'privacy_level', 'public') != 'private':
         return True
     if not user_profile:
         return False
     if post.author_id == user_profile.user_id:
         return True
+    return post.author_id in _viewer_buddy_ids(user_profile)
+
+
+def _can_view_post(post, user_profile) -> bool:
+    """Object-level visibility check used by detail/comments surfaces."""
+    if not post.visibility or post.visibility == 'public':
+        return _author_privacy_ok(post, user_profile)
+    if not user_profile:
+        return False
+    if post.author_id == user_profile.user_id:
+        return True
+    if not _author_privacy_ok(post, user_profile):
+        return False
     if post.visibility == 'private':
         return False
     if post.visibility == 'buddies':

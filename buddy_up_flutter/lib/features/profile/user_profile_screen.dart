@@ -22,6 +22,7 @@ import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/error_view.dart';
 import '../../shared/widgets/page_loader.dart';
 import '../../shared/widgets/toast.dart';
+import '../../shared/widgets/button.dart';
 import '../feed/widgets/post_card.dart';
 import 'widgets/buddy_search_card.dart';
 
@@ -215,6 +216,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     with SingleTickerProviderStateMixin {
   Profile? _profile;
   bool _isLoading = true;
+  bool _profileLocked = false;
   String? _error;
 
   // Action loading states
@@ -253,12 +255,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       _error = null;
     });
     try {
-      final profile = await _profileRepo.getProfile(widget.username);
+      // Raw envelope read — the locked payload for private accounts is
+      // recognisable by its message, which the typed model drops.
+      final raw = await ref.read(apiClientProvider4).dio.get('/profiles/${widget.username}/');
+      final envelope = raw.data is Map<String, dynamic> ? raw.data as Map<String, dynamic> : <String, dynamic>{};
+      final locked = envelope['message'] == 'This profile is private.';
+      final data = envelope['data'];
+      final profile = Profile.fromJson(Map<String, dynamic>.from(data as Map));
       setState(() {
+        _profileLocked = locked;
         _profile = profile;
         _isLoading = false;
       });
-      _loadPosts();
+      if (!locked) _loadPosts();
     } catch (_) {
       setState(() {
         _error = 'User not found';
@@ -439,6 +448,74 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
+  Widget _buildLockedCard(Profile p) {
+    return Scaffold(
+      backgroundColor: BuddyColors.black,
+      appBar: AppBar(
+        backgroundColor: BuddyColors.black,
+        elevation: 0,
+        foregroundColor: BuddyColors.textPrimary,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: BuddyColors.green.withValues(alpha: 0.4), width: 2),
+              ),
+              child: Avatar(src: p.avatarUrl, alt: p.displayName, size: AvatarSize.xl),
+            ),
+            const SizedBox(height: 14),
+            Text(p.displayName,
+                style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
+            Text('@${p.username}', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+            const SizedBox(height: 22),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              margin: const EdgeInsets.symmetric(horizontal: 32),
+              decoration: BoxDecoration(
+                color: BuddyColors.green.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: BuddyColors.green.withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.lock_outline, color: BuddyColors.green, size: 22),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('This account is private',
+                            style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+                        Text('Only buddies can see @${p.username}\'s posts and stories.',
+                            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            BuddyButton(
+              label: 'Send buddy request',
+              icon: Icons.person_add_alt_1,
+              onPressed: _handleBuddy,
+              variant: BuddyButtonVariant.primary,
+              size: BuddyButtonSize.md,
+              isLoading: _buddyLoading,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -446,6 +523,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     if (_isLoading) return const PageLoader();
     if (_error != null) return ErrorView(message: _error!, onRetry: _load);
     if (_profile == null) return const ErrorView(message: 'Profile not found');
+    if (_profileLocked) return _buildLockedCard(_profile!);
 
     final p = _profile!;
 

@@ -94,14 +94,47 @@ class UserProfileView(generics.RetrieveAPIView):
                 status='confirmed'
             ).exists()
         ):
+            # Full-shape locked payload: clients can render a locked card
+            # without a parser branch — same field set, zeroed values.
             return Response({
                 'success': True,
                 'data': {
+                    'user_id': str(profile.user_id),
                     'username': profile.username,
                     'display_name': profile.display_name,
+                    'bio': '',
                     'avatar_url': profile.avatar_url,
+                    'cover_url': '',
+                    'pronouns': '',
+                    'location_city': '',
+                    'location_country': '',
+                    'role': 'user',
                     'verification_status': profile.verification_status,
                     'privacy_level': 'private',
+                    'streak_days': 0,
+                    'artifact_balance': {},
+                    'external_link': None,
+                    'content_rating': 'general',
+                    'workout_schedule': None,
+                    'preferences': None,
+                    'show_active_status': False,
+                    'is_anonymous_posting': False,
+                    'onboarding_completed': True,
+                    'terms_accepted_at': None,
+                    'marketing_consent': False,
+                    'buddy_count': 0,
+                    'following_count': 0,
+                    'follower_count': 0,
+                    'gym_count': 0,
+                    'post_count': 0,
+                    'is_buddy': False,
+                    'is_following': False,
+                    'buddy_status': None,
+                    'is_blocked': False,
+                    'creator_balance': {},
+                    'creator_display_name': '',
+                    'created_at': None,
+                    'updated_at': None,
                 },
                 'message': 'This profile is private.',
                 'errors': None,
@@ -1761,7 +1794,34 @@ class UserPostsView(views.APIView):
             VIS_HIDDEN, VIS_TOMBSTONE, takedown_map, tombstone_payload, visibility_for,
         )
 
-        qs = Post.objects.filter(author=profile, is_deleted=False).order_by('-created_at')
+        viewer = request.user if request.user.is_authenticated else None
+        viewer_profile = viewer.profile if viewer else None
+
+        # Private account: the whole post wall collapses for non-buddies.
+        if profile.privacy_level == 'private' and (
+            viewer_profile is None
+            or viewer_profile.user_id != profile.user_id
+        ):
+            from apps.profiles.models import BuddyRelationship
+            from django.db.models import Q as _Q
+            is_buddy = BuddyRelationship.objects.filter(
+                (_Q(from_user_id=viewer_profile.user_id) & _Q(to_user_id=profile.user_id))
+                | (_Q(from_user_id=profile.user_id) & _Q(to_user_id=viewer_profile.user_id)),
+                status='confirmed',
+            ).exists() if viewer_profile else False
+            if not is_buddy:
+                return Response({
+                    'success': True, 'data': [],
+                    'message': 'This profile is private.',
+                    'errors': None, 'pagination': None,
+                })
+
+        # Apply the same per-post visibility gates as the feed.
+        from apps.feed.views import _audience_q
+        if viewer_profile:
+            qs = Post.objects.filter(author=profile, is_deleted=False).filter(_audience_q(viewer_profile)).order_by('-created_at')
+        else:
+            qs = Post.objects.filter(author=profile, is_deleted=False, visibility='public', author__privacy_level='public').order_by('-created_at')
 
         # This endpoint filters `is_deleted` but never `moderation_status`, so a
         # moderated-away post was still served here in full -- body and media --
@@ -1771,7 +1831,6 @@ class UserPostsView(views.APIView):
         # Now: staff and the author keep seeing it (with the tombstone attached),
         # and everyone else gets an empty row in its place rather than nothing,
         # so a viewer can tell "taken down" from "never existed".
-        viewer = request.user if request.user.is_authenticated else None
         page_size = int(request.query_params.get('limit', 20))
         qs = qs[:page_size]
 
