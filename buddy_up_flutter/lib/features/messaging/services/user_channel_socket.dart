@@ -28,6 +28,7 @@ class UserChannelSocket {
   final String userId;
   String _token;
   final void Function(IncomingCallDetails details) onIncomingCall;
+  final void Function(String conversationId, String? sessionId)? onCallEnded;
   WebSocketChannel? _channel;
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
@@ -38,6 +39,7 @@ class UserChannelSocket {
     required this.userId,
     required String token,
     required this.onIncomingCall,
+    this.onCallEnded,
   }) : _token = token;
 
   void updateToken(String newToken) {
@@ -77,6 +79,13 @@ class UserChannelSocket {
                 fromName: decoded['from_display_name'] as String? ?? '',
                 fromAvatar: decoded['from_avatar_url'] as String? ?? '',
               ));
+            } else if (decoded['type'] == 'call_ended' && !_disposed) {
+              // The far side left a two-person call — the server closed the
+              // session, so this client must tear down too.
+              onCallEnded?.call(
+                decoded['conversation_id'] as String? ?? '',
+                decoded['session_id'] as String?,
+              );
             }
           } catch (_) {}
         },

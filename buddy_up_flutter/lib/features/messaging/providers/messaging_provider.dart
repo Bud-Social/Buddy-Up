@@ -8,6 +8,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/chat/chat_socket.dart';
 import '../services/user_channel_socket.dart';
+import 'livekit_call_provider.dart';
 
 final messagingRepositoryProvider = Provider<MessagingRepository>((ref) {
   final dio = ref.watch(apiClientProvider4).dio;
@@ -380,6 +381,19 @@ final userChannelSocketProvider = Provider.family<UserChannelSocket?, String>((r
     onIncomingCall: (details) {
       // Surface ringing/late-join invites; the overlay decides what to show.
       ref.read(pendingInviteProvider.notifier).set(details);
+    },
+    onCallEnded: (conversationId, _) {
+      // Hang up mirrors the web client: if we're in (or ringing for) this
+      // call, end it locally so both screens agree the call is over.
+      final cs = ref.read(liveKitCallProvider);
+      if (cs.conversationId != conversationId) return;
+      if (cs.isActive) {
+        ref.read(liveKitCallProvider.notifier).leave();
+      }
+      final invite = ref.read(pendingInviteProvider);
+      if (invite != null && invite.conversationId == conversationId) {
+        ref.read(pendingInviteProvider.notifier).set(null);
+      }
     },
   );
   ref.onDispose(socket.dispose);

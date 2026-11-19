@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' as lk;
@@ -30,6 +31,25 @@ class CallTile {
   });
 }
 
+/// Text sent or received over the call's data channel (topic `call-events`),
+/// mirroring the web client's on-screen-text protocol.
+class CallChatEvent {
+  final int id;
+  final String text;
+  final String from;
+  final bool isLocal;
+
+  const CallChatEvent({
+    required this.id,
+    required this.text,
+    required this.from,
+    required this.isLocal,
+  });
+}
+
+/// Topic the web client publishes call text/captions under.
+const kCallEventsTopic = 'call-events';
+
 class LiveKitCallState {
   final LkCallPhase phase;
   final String callType; // 'audio' | 'video'
@@ -37,6 +57,7 @@ class LiveKitCallState {
   final String? cameraError;
   final String? sessionId;
   final String conversationId;
+  final List<CallChatEvent> callMessages;
 
   const LiveKitCallState({
     this.phase = LkCallPhase.idle,
@@ -45,6 +66,7 @@ class LiveKitCallState {
     this.cameraError,
     this.sessionId,
     this.conversationId = '',
+    this.callMessages = const [],
   });
 
   LiveKitCallState copyWith({
@@ -55,6 +77,7 @@ class LiveKitCallState {
     bool clearCameraError = false,
     String? sessionId,
     String? conversationId,
+    List<CallChatEvent>? callMessages,
   }) {
     return LiveKitCallState(
       phase: phase ?? this.phase,
@@ -63,6 +86,7 @@ class LiveKitCallState {
       cameraError: clearCameraError ? null : (cameraError ?? this.cameraError),
       sessionId: sessionId ?? this.sessionId,
       conversationId: conversationId ?? this.conversationId,
+      callMessages: callMessages ?? this.callMessages,
     );
   }
 
@@ -78,6 +102,7 @@ class LiveKitCallController extends Notifier<LiveKitCallState> {
   lk.Room? _room;
   lk.CancelListenFunc? _cancelEvents;
   int _attempt = 0;
+  int _chatId = 0;
 
   @override
   LiveKitCallState build() {
@@ -154,9 +179,14 @@ class LiveKitCallController extends Notifier<LiveKitCallState> {
       _resetToIdle();
       return false;
     }
-    state = state.copyWith(sessionId: creds['session_id'] as String?);
+    state = state.copyWith(sessionId: creds['session_id'] as String?, callMessages: const []);
 
-    final room = lk.Room();
+    final room = lk.Room(
+      roomOptions: const lk.RoomOptions(
+        adaptiveStream: true, // don't blast video when the remote tile is backgrounded
+        dynacast: true, // pause un-consumed simulcast layers — meaningfully less upstream CPU + data
+      ),
+    );
     _room = room;
     _cancelEvents = room.events.listen((event) {
       if (attempt != _attempt) return;
@@ -171,6 +201,8 @@ class LiveKitCallController extends Notifier<LiveKitCallState> {
           event is lk.TrackPublishedEvent ||
           event is lk.TrackUnpublishedEvent) {
         _rebuildTiles();
+      } else if (event is lk.DataReceivedEvent) {
+        if (attempt == _attempt) _onDataEvent(event);
       } else if (event is lk.RoomDisconnectedEvent) {
         if (attempt == _attempt) {
           _markEnded();
@@ -214,6 +246,54 @@ class LiveKitCallController extends Notifier<LiveKitCallState> {
     state = state.copyWith(phase: LkCallPhase.inCall);
     return true;
   }
+
+  void _onDataEvent(lk.DataReceivedEvent event) {
+    try {
+      final raw = utf8.decode(event.data);
+      final map = jsonDecode(raw);
+      if (map is! Map<String, dynamic>) return;
+      final kind = map['kind'];
+      final text = map['text'];
+      if (kind != 'text' && kind != 'caption') return;
+      if (text is! String || text.trim().isEmpty) return;
+      state = state.copyWith(callMessages: [
+        ...state.callMessages,
+        CallChatEvent(
+          id: _chatId++,
+          text: text.length > 300 ? text.substring(0, 300) : text,
+          from: (map['from'] as String?)?.trim().isNotEmpty == true ? map['from'] as String : 'Someone',
+          isLocal: false,
+        ),
+      ]);
+    } catch (_) { /* not a call-chat payload */ }
+  }
+
+  /// Send a short text line to everyone in the call. Returns false when the
+  /// payload could not be published.
+  Future<bool> sendCallText(String text, {required String fromName}) async {
+    final room = _room;
+    final trimmed = text.trim();
+    if (room == null || trimmed.isEmpty) return false;
+    final payload = utf8.encode(jsonEncode({
+      'kind': 'text',
+      'text': trimmed,
+      'from': fromName,
+      'final': true,
+      'at': DateTime.now().millisecondsSinceEpoch,
+    }));
+    try {
+      await room.localParticipant?.publishData(payload, reliable: true, topic: kCallEventsTopic);
+    } catch (_) {
+      return false;
+    }
+    state = state.copyWith(callMessages: [
+      ...state.callMessages,
+      CallChatEvent(id: _chatId++, text: trimmed, from: fromName, isLocal: true),
+    ]);
+    return true;
+  }
+
+  void clearCallMessages() => state = state.copyWith(callMessages: const []);
 
   Future<void> leave() async {
     final convoId = state.conversationId;

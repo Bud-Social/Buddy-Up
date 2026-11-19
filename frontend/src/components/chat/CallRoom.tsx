@@ -131,6 +131,32 @@ function ParticipantTile({ tile, big }: { tile: CallTile; big?: boolean }) {
   );
 }
 
+/**
+ * Stage video that attaches srcObject exactly once per track — re-renders
+ * (tile rebuilds after every LiveKit event) must not re-create the MediaStream
+ * or the element visibly flickers.
+ */
+function StableStageVideo({ tile, className, shotRef }: { tile: CallTile; className: string; shotRef?: React.MutableRefObject<HTMLVideoElement | null> }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const { track } = activeVideoTrack(tile);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (!track) { el.srcObject = null; return; }
+    try { el.srcObject = new MediaStream([track]); void el.play().catch(() => {}); } catch { /* noop */ }
+    return () => { el.srcObject = null; };
+  }, [track]);
+
+  return (
+    <video
+      ref={(el) => { videoRef.current = el; if (shotRef) shotRef.current = el; }}
+      autoPlay playsInline muted={tile.isLocal}
+      className={className}
+    />
+  );
+}
+
 const fmt = (secs: number) => `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
 
 export function CallRoom({
@@ -444,13 +470,8 @@ export function CallRoom({
               {focusTile ? (
                 <div className="absolute inset-0">
                   {activeVideoTrack(focusTile).track ? (
-                    <video autoPlay playsInline muted={focusTile.isLocal}
-                      className={`absolute inset-0 w-full h-full ${focusTile.isScreenSharing ? 'object-contain' : 'object-cover'}`}
-                      ref={(el) => {
-                        stageShotRef.current = el;
-                        const t = activeVideoTrack(focusTile).track;
-                        if (el && t) { try { el.srcObject = new MediaStream([t]); void el.play().catch(() => {}); } catch { /* noop */ } }
-                      }} />
+                    <StableStageVideo tile={focusTile} shotRef={stageShotRef}
+                      className={`absolute inset-0 w-full h-full ${focusTile.isScreenSharing ? 'object-contain' : 'object-cover'}`} />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                       <Avatar src={focusTile.avatarUrl} alt={focusTile.name} size="xl" className="opacity-80" />
@@ -473,12 +494,8 @@ export function CallRoom({
                   className="absolute bottom-3 right-3 w-24 h-32 sm:w-28 sm:h-36 rounded-xl overflow-hidden border-2 border-buddy-green/40 shadow-2xl z-10 bg-gray-800"
                   title={selfFocused ? 'Back to them' : 'Show me'}>
                   {activeVideoTrack(overlayTile).track ? (
-                    <video autoPlay playsInline muted={overlayTile.isLocal}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      ref={(el) => {
-                        const t = activeVideoTrack(overlayTile).track;
-                        if (el && t) { try { el.srcObject = new MediaStream([t]); void el.play().catch(() => {}); } catch { /* noop */ } }
-                      }} />
+                    <StableStageVideo tile={overlayTile}
+                      className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center"><Avatar src={overlayTile.avatarUrl} alt="" size="md" /></div>
                   )}

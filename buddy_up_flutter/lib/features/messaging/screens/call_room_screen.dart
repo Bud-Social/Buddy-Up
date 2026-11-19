@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart' show VideoTrackRenderer, VideoViewFit;
+import 'package:livekit_client/livekit_client.dart' show VideoTrackRenderer, VideoViewFit, AudioManager;
 
 import '../../../core/audio/ringtone.dart';
 import '../../../shared/widgets/avatar.dart';
@@ -28,6 +28,8 @@ class CallRoomScreen extends ConsumerStatefulWidget {
 }
 
 class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
+  bool _chatOpen = false;
+  final TextEditingController _chatDraft = TextEditingController();
   /// Display name of the remote person who asked for the video switch, if any.
   String? _switchRequestFrom;
   bool _switchPending = false;
@@ -44,6 +46,7 @@ class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
   @override
   void dispose() {
     Ringtone.stop('ringback');
+    _chatDraft.dispose();
     _socketSub?.cancel();
     super.dispose();
   }
@@ -116,6 +119,19 @@ class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
     setState(() => _switchRequestFrom = null);
   }
 
+  Future<void> _sendChat(String text) async {
+    if (text.trim().isEmpty) return;
+    final profile = ref.read(authProvider).profile;
+    final displayName = profile?.displayName;
+    final fromName = (displayName != null && displayName.trim().isNotEmpty)
+        ? displayName
+        : (profile?.username ?? 'You');
+    final ok = await ref
+        .read(liveKitCallProvider.notifier)
+        .sendCallText(text, fromName: fromName);
+    if (ok) _chatDraft.clear();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(liveKitCallProvider);
@@ -150,6 +166,13 @@ class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
                   child: _ParticipantGrid(tiles: state.tiles),
                 ),
               ),
+              if (_chatOpen)
+                _CallChatPanel(
+                  messages: state.callMessages,
+                  controller: _chatDraft,
+                  onClose: () => setState(() => _chatOpen = false),
+                  onSend: _sendChat,
+                ),
               if (state.cameraError != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 6, left: 16, right: 16),
@@ -164,6 +187,8 @@ class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
               state: state,
               switchPending: _switchPending,
               onRequestVideoSwitch: _requestVideoSwitch,
+              chatOpen: _chatOpen,
+              onToggleChat: () => setState(() => _chatOpen = !_chatOpen),
             ),
           ],
         ),
@@ -534,11 +559,15 @@ class _Controls extends ConsumerWidget {
   final LiveKitCallState state;
   final bool switchPending;
   final VoidCallback onRequestVideoSwitch;
+  final bool chatOpen;
+  final VoidCallback onToggleChat;
 
   const _Controls({
     required this.state,
     required this.switchPending,
     required this.onRequestVideoSwitch,
+    this.chatOpen = false,
+    required this.onToggleChat,
   });
 
   @override
@@ -570,6 +599,12 @@ class _Controls extends ConsumerWidget {
         runSpacing: 10,
         children: [
           _ControlButton(
+            icon: chatOpen ? Icons.chat_bubble : Icons.chat_bubble_outline,
+            label: 'Text',
+            color: chatOpen ? BuddyColors.green : Colors.white24,
+            onTap: onToggleChat,
+          ),
+          _ControlButton(
             icon: isMuted ? Icons.mic_off : Icons.mic,
             label: isMuted ? 'Unmute' : 'Mute',
             color: isMuted ? BuddyColors.green : Colors.white24,
@@ -596,6 +631,7 @@ class _Controls extends ConsumerWidget {
               color: switchPending ? Colors.white24 : Colors.white24,
               onTap: onRequestVideoSwitch,
             ),
+          if (inCall) const _SpeakerButton(),
           if (inCall)
             _ControlButton(
               icon: Icons.person_add_outlined,
@@ -658,6 +694,165 @@ class _ControlButton extends StatelessWidget {
           style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
         ),
       ],
+    );
+  }
+}
+
+
+/// Toggles speakerphone vs earpiece while in a call — a long-standing ask on
+/// mobile where default audio routing prefers the earpiece on some devices.
+class _SpeakerButton extends StatefulWidget {
+  const _SpeakerButton();
+
+  @override
+  State<_SpeakerButton> createState() => _SpeakerButtonState();
+}
+
+class _SpeakerButtonState extends State<_SpeakerButton> {
+  bool _speakerOn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final current = AudioManager.instance.isSpeakerOutputPreferred;
+      if (mounted) setState(() => _speakerOn = current);
+    });
+  }
+
+  Future<void> _toggle() async {
+    final next = !_speakerOn;
+    try {
+      await AudioManager.instance.setSpeakerOutputPreferred(next);
+      if (mounted) setState(() => _speakerOn = next);
+    } catch (_) { /* device refused the route — keep the old state */ }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ControlButton(
+      icon: _speakerOn ? Icons.volume_up : Icons.volume_mute_outlined,
+      label: _speakerOn ? 'Speaker' : 'Earpiece',
+      color: _speakerOn ? BuddyColors.green : Colors.white24,
+      onTap: _toggle,
+    );
+  }
+}
+
+
+/// On-screen text overlay shown during the call — the Flutter counterpart of
+/// the web client's RemoteCallEvent panel. Messages carry the sender's
+/// display name so group calls stay readable.
+class _CallChatPanel extends StatelessWidget {
+  final List<CallChatEvent> messages;
+  final TextEditingController controller;
+  final VoidCallback onClose;
+  final Future<void> Function(String text) onSend;
+
+  const _CallChatPanel({
+    required this.messages,
+    required this.controller,
+    required this.onClose,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 190,
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 6, 0),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text('In-call text',
+                      style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+                ),
+                InkWell(
+                  onTap: onClose,
+                  borderRadius: BorderRadius.circular(16),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.close, color: Colors.white54, size: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: messages.isEmpty
+                ? const Center(
+                    child: Text('Nothing yet — say hi 👋',
+                        style: TextStyle(color: Colors.white38, fontSize: 12)),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+                    itemCount: messages.length,
+                    itemBuilder: (_, i) {
+                      final m = messages[i];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: RichText(
+                          text: TextSpan(
+                            style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
+                            children: [
+                              TextSpan(
+                                text: m.isLocal ? 'You' : m.from,
+                                style: const TextStyle(color: BuddyColors.green, fontWeight: FontWeight.w700),
+                              ),
+                              TextSpan(text: '  ${m.text}'),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Type a message…',
+                      hintStyle: const TextStyle(color: Colors.white24),
+                      isDense: true,
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.06),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide(color: BuddyColors.green.withValues(alpha: 0.5)),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    ),
+                    onSubmitted: onSend,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton(
+                  onPressed: () => onSend(controller.text),
+                  icon: const Icon(Icons.send_rounded, color: BuddyColors.green, size: 20),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
