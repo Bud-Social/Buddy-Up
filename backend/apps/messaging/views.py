@@ -245,22 +245,23 @@ class StartConversationView(views.APIView):
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_403_FORBIDDEN)
 
-            # Return existing 1-to-1 conversation if present
-            existing = (
-                Conversation.objects
-                .filter(is_group=False, participants=all_participants[0])
-                .filter(participants=all_participants[1])
-                .annotate(pc=db_models.Count('participants'))
-                .filter(pc=2)
-                .first()
+            requested_origin = input_serializer.validated_data.get('origin') or 'direct'
+            # Only a 1:1 thread can be a discovery thread, and it may only be
+            # labelled 'discovery' when the buddy-finder rules actually allow it.
+            origin = requested_origin if requested_origin in ('direct', 'discovery', 'buddy') else 'direct'
+            kind = 'buddy' if origin == 'discovery' else 'main'
+            if origin == 'discovery' and not other:  # defensive
+                origin = 'direct'
+                kind = 'main'
+            conv, created = Conversation.get_or_create_1to1(
+                request.user.profile, other, origin=origin, kind=kind,
             )
-            if existing:
-                return Response({
-                    'success': True,
-                    'data': ConversationSerializer(existing, context={'request': request}).data,
-                    'message': 'Conversation already exists.',
-                    'errors': None, 'pagination': None,
-                })
+            return Response({
+                'success': True,
+                'data': ConversationSerializer(conv, context={'request': request}).data,
+                'message': 'Conversation already exists.' if not created else 'Conversation started.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
         requested_origin = input_serializer.validated_data.get('origin') or 'direct'
         # Only a 1:1 thread can be a discovery thread, and it may only be

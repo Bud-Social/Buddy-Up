@@ -22,6 +22,10 @@ class Conversation(TimestampedModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     participants = models.ManyToManyField('profiles.Profile', related_name='conversations')
     is_group = models.BooleanField(default=False)
+    # Canonical key for 1:1 conversations (sorted pair). Populated on save;
+    # enforces that only one main/buddy thread exists between any two
+    # profiles. Empty for group/community/gym threads.
+    pair_key = models.CharField(max_length=100, blank=True, default='', db_index=True)
     # How this conversation came about: opened directly, via discovery/buddy
     # search, auto-created on buddy confirmation, group, or community.
     origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, default='direct', db_index=True)
@@ -56,11 +60,51 @@ class Conversation(TimestampedModel):
         indexes = [
             models.Index(fields=['is_group', 'last_message_at']),
             models.Index(fields=['group_gym']),
+            models.Index(fields=['pair_key']),
+        ]
+        constraints = [
+            # Only non-empty pair_keys are deduplicated — group/community/gym
+            # threads keep whatever uniqueness the app gives them.
+            models.UniqueConstraint(
+                fields=['pair_key'],
+                condition=models.Q(pair_key__gt=''),
+                name='unique_conversation_pair_key',
+            ),
         ]
 
     @property
     def member_count(self):
         return self.memberships.count()
+
+    @staticmethod
+    def pair_key_for(profile_a, profile_b):
+        parts = sorted([str(profile_a.user_id), str(profile_b.user_id)])
+        return '|'.join(parts)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_or_create_1to1(cls, profile_a, profile_b, **defaults):
+        """Fetch or create the canonical main/buddy thread between two profiles.
+
+        Also guarantees the `participants` M2M is populated exactly once.
+        """
+        key = cls.pair_key_for(profile_a, profile_b)
+        match = cls.objects.filter(pair_key=key).first()
+        if match:
+            if match.participants.count() == 0:
+                match.participants.set([profile_a, profile_b])
+            return match, False
+        defaults.setdefault('is_group', False)
+        defaults.setdefault('pair_key', key)
+        match, created = cls.objects.get_or_create(pair_key=key, defaults=defaults)
+        if created:
+            match.participants.set([profile_a, profile_b])
+        return match, created
+
+    def __str__(self):
+        return f'Conversation {self.id}'
 
 
 class ConversationPromotion(TimestampedModel):

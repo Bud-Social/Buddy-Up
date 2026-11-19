@@ -17,23 +17,11 @@ def create_buddy_conversation(sender, instance, created, **kwargs):
         return
 
     from .models import Conversation
-    from django.db import models as db_models
 
     user_a = instance.from_user
     user_b = instance.to_user
 
-    # Idempotent check: find any existing 1-to-1 conversation between them
-    existing = (
-        Conversation.objects
-        .filter(is_group=False, participants=user_a)
-        .filter(participants=user_b)
-        .annotate(pc=db_models.Count('participants'))
-        .filter(pc=2)
-        .first()
-    )
-
-    if existing:
-        return  # already exists
-
-    conv = Conversation.objects.create(is_group=False, origin='buddy')
-    conv.participants.set([user_a, user_b])
+    # Idempotent: fetch or create the canonical 1-to-1 thread; the DB
+    # constraint on pair_key guarantees no duplicates even if two signals
+    # raced on the same pair.
+    conv, _ = Conversation.get_or_create_1to1(user_a, user_b, origin='buddy', kind='buddy')
