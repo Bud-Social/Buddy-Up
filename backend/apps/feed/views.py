@@ -43,6 +43,54 @@ from apps.ai.client import ai_post
 logger = logging.getLogger(__name__)
 
 
+def _page_window(ordered, cursor, size):
+    """Slice the ordered in-memory post list around the client's cursor.
+
+    Cursors are post ids — stable under any reordering the ranker emits.
+    Raises ValueError so callers can surface a 400.
+    """
+    if not cursor:
+        return list(ordered)[:size]
+    idx = next((i for i, p in enumerate(ordered) if str(p.id) == cursor), None)
+    if idx is None:
+        raise ValueError('Invalid or expired feed cursor.')
+    return list(ordered)[idx + 1: idx + 1 + size]
+
+
+def _paginate_ordered(request, ordered):
+    """Unified pipeline: rank → fetch → serve, paginated by post id.
+
+    Every discovery tab routes through here so pagination never silently
+    ends while more posts exist in the underlying queryset.
+    """
+    user_profile = request.user.profile
+    paginator = CursorPagination()
+    page_size = paginator.get_page_size(request)
+    try:
+        window = _page_window(ordered, request.query_params.get('cursor'), page_size + 1)
+    except ValueError as exc:
+        return Response({
+            'success': False, 'data': None, 'message': str(exc),
+            'errors': {'cursor': [str(exc)]}, 'pagination': None,
+        }, status=status.HTTP_400_BAD_REQUEST)
+    page_posts = window[:page_size]
+    has_next = len(window) > page_size
+    deduped = _dedupe_reposts_for_viewer(page_posts, user_profile)
+    serializer = FeedPostSerializer(deduped, many=True, context={'request': request})
+    next_cursor = str(page_posts[-1].id) if (has_next and page_posts) else None
+    return Response({
+        'success': True,
+        'data': serializer.data,
+        'message': 'OK',
+        'errors': None,
+        'pagination': {
+            'count': len(deduped),
+            'next': _next_link(request, next_cursor) if next_cursor else None,
+            'previous': None,
+        },
+    })
+
+
 def _looks_like_video(url: str) -> bool:
     if not url:
         return False
@@ -707,7 +755,10 @@ def _rank_for_you(request, user_profile, queryset, buddy_ids, followed_ids, gym_
     Returns a Response, or None so the caller falls back to DB ranking if the
     AI service is unavailable or the pool is empty.
     """
-    pool = list(queryset[:ai_ranking.POOL_SIZE].annotate(
+    base_qs = queryset.order_by('-is_pinned', '-created_at')
+    pinned = list(base_qs.filter(is_pinned=True))
+    rest_qs = base_qs.filter(is_pinned=False)
+    pool = list(rest_qs.annotate(
         reaction_count=db_models.Subquery(
             Reaction.objects.filter(post=db_models.OuterRef('pk'))
             .values('post').annotate(c=db_models.Count('pk')).values('c'),
@@ -723,22 +774,27 @@ def _rank_for_you(request, user_profile, queryset, buddy_ids, followed_ids, gym_
             .values('post').annotate(c=db_models.Count('pk')).values('c'),
             output_field=db_models.IntegerField(),
         ),
-    ))
+    )[:ai_ranking.POOL_SIZE])
     if not pool:
-        return None
+        ordered = pinned + list(rest_qs.order_by('-created_at'))
+        return _paginate_ordered(request, ordered)
 
     candidates = ai_ranking.build_candidates(pool, user_profile, buddy_ids, followed_ids, gym_ids)
     ranked = ai_ranking.rank_candidates(str(user_profile.user_id), candidates)
     if ranked is None:
-        return None
+        # AI unavailable: pin first, then pure chronological — same pagination contract.
+        ordered = pinned + list(rest_qs.order_by('-created_at'))
+        return _paginate_ordered(request, ordered)
 
     score_by_id = {c['post_id']: c for c in ranked}
-    ordered = sorted(
+    ordered_pool = sorted(
         pool,
-        key=lambda p: (-int(p.is_pinned), -score_by_id.get(str(p.id), {}).get('ml_score', 0.0)),
+        key=lambda p: -score_by_id.get(str(p.id), {}).get('ml_score', 0.0),
     )
-
-    deduped = _dedupe_reposts_for_viewer(ordered, user_profile)
+    # Everything beyond the ML pool keeps chronological order as a stable tail,
+    # so infinite scroll never hits an empty page while more posts exist.
+    remainder = list(rest_qs.exclude(id__in=[p.id for p in ordered_pool]).order_by('-created_at'))
+    deduped = _dedupe_reposts_for_viewer(pinned + ordered_pool + remainder, user_profile)
 
     # Persist rank + algorithm context per user for a short window so
     # engagement feedback can be attributed to the impression that earned it.
@@ -756,37 +812,7 @@ def _rank_for_you(request, user_profile, queryset, buddy_ids, followed_ids, gym_
     except Exception:  # noqa: BLE001 — attribution is best-effort
         pass
 
-    paginator = CursorPagination()
-    page_size = paginator.get_page_size(request)
-    cursor = request.query_params.get('cursor')
-    try:
-        page_window = ai_ranking.paginate_ranked(deduped, cursor, page_size + 1)
-    except ValueError as exc:
-        return Response({
-            'success': False, 'data': None, 'message': str(exc),
-            'errors': {'cursor': [str(exc)]}, 'pagination': None,
-        }, status=status.HTTP_400_BAD_REQUEST)
-    page_posts = page_window[:page_size]
-    has_next = len(page_window) > page_size
-
-    serializer = FeedPostSerializer(page_posts, many=True, context={'request': request})
-    next_cursor = str(page_posts[-1].id) if page_posts and has_next else None
-    return Response({
-        'success': True,
-        'data': serializer.data,
-        'ranking': {
-            'feed_request_id': feed_request_id,
-            'algorithm_version': 'linucb-v1',
-            'source': 'ai',
-        },
-        'message': 'OK',
-        'errors': None,
-        'pagination': {
-            'count': len(page_posts),
-            'next': _next_link(request, next_cursor) if next_cursor else None,
-            'previous': None,
-        },
-    })
+    return _paginate_ordered(request, deduped)
 
 
 class FeedView(views.APIView):
@@ -835,46 +861,15 @@ class FeedView(views.APIView):
                     db_models.When(gym_tag_id__in=gym_ids, then=db_models.Value(75)),
                     default=db_models.Value(10),
                 ),
-            ).order_by('-rank', '-created_at')
+            ).order_by('-is_pinned', '-rank', '-created_at')
             queryset = _apply_hide_mute_exclusions(queryset, user_profile)
             queryset = gate_mature_queryset(request, queryset)
-            # Video-ness is verified in Python over the pool only — the pool
-            # itself is already narrowed by post_type below.
+            # Video-ness is verified in Python (media_urls is JSON) — keep
+            # the full ranked list so scrolling never runs dry.
             video_types = ['short_video', 'long_video']
-            typed_pool = queryset.filter(post_type__in=video_types)
-            videos = [p for p in list(typed_pool[:200]) if any(_looks_like_video(u) for u in (p.media_urls or []))]
-
-            # Cursor pagination over the ranked video pool (same pattern as
-            # the for_you tab: opaque post-id cursor + _next_link builder).
-            paginator = CursorPagination()
-            page_size = paginator.get_page_size(request)
-            cursor = request.query_params.get('cursor')
-            if cursor:
-                start = next((i for i, p in enumerate(videos) if str(p.id) == cursor), None)
-                if start is None:
-                    return Response({
-                        'success': False, 'data': None,
-                        'message': 'Invalid or expired feed cursor.',
-                        'errors': {'cursor': ['Invalid or expired feed cursor.']},
-                        'pagination': None,
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                videos = videos[start + 1:]
-            page_posts = videos[:page_size]
-            has_next = len(videos) > page_size
-            next_cursor = str(page_posts[-1].id) if page_posts and has_next else None
-
-            serializer = FeedPostSerializer(page_posts, many=True, context={'request': request})
-            return Response({
-                'success': True,
-                'data': serializer.data,
-                'message': 'OK',
-                'errors': None,
-                'pagination': {
-                    'count': len(page_posts),
-                    'next': _next_link(request, next_cursor) if next_cursor else None,
-                    'previous': None,
-                },
-            })
+            videos = [p for p in queryset.filter(post_type__in=video_types)
+                      if any(_looks_like_video(u) for u in (p.media_urls or []))]
+            return _paginate_ordered(request, videos)
 
         if tab == 'following':
             followed_ids = user_profile.following.values_list('followee_id', flat=True)
@@ -930,32 +925,11 @@ class FeedView(views.APIView):
             if ranked_response is not None:
                 return ranked_response
 
-        # following / nearby land here (for_you only falls
-        # through when the ranked pool is empty; its exclusions are already
-        # applied above, re-applying is a harmless no-op).
+        # following / nearby land here — all tabs share the same id-cursor
+        # pagination so infinite scroll keeps serving posts while they exist.
         queryset = _apply_hide_mute_exclusions(queryset, user_profile)
         queryset = gate_mature_queryset(request, queryset)
-
-        paginator = CursorPagination()
-        paginator.ordering = '-created_at'
-        page = paginator.paginate_queryset(queryset, request)
-        page_posts = list(page)
-
-        deduped_posts = _dedupe_reposts_for_viewer(page_posts, user_profile)
-
-        serializer = FeedPostSerializer(deduped_posts, many=True, context={'request': request})
-
-        return Response({
-            'success': True,
-            'data': serializer.data,
-            'message': 'OK',
-            'errors': None,
-            'pagination': {
-                'count': len(deduped_posts),
-                'next': paginator.get_next_link(),
-                'previous': paginator.get_previous_link(),
-            },
-        })
+        return _paginate_ordered(request, queryset)
 
 
 # Roles that moderate a gym's own feed. Kept as one tuple because pinning and

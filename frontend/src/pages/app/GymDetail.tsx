@@ -308,7 +308,8 @@ export default function GymDetail() {
       {/* Header */}
       <div className="relative h-40 bg-gradient-to-b from-buddy-surface to-buddy-black">
         {gym.cover_url && <img src={gym.cover_url} alt="" className="w-full h-full object-cover" />}
-        <div className="absolute bottom-4 left-4 flex items-end gap-3">
+        <div className="absolute inset-0 bg-gradient-to-t from-buddy-black/90 via-buddy-black/45 to-transparent" />
+        <div className="absolute bottom-3 left-4 right-4 flex items-end gap-3">
           <div className="w-16 h-16 rounded-xl bg-buddy-green/10 flex items-center justify-center text-3xl border-2 border-buddy-black">
             {gym.logo_url ? <img src={gym.logo_url} alt="" className="w-full h-full rounded-xl object-cover" /> : '🏋️'}
           </div>

@@ -334,12 +334,36 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              itemCount: state.posts.length + (state.isLoadingMore ? 1 : 0),
+              itemCount: state.posts.length +
+                  (state.isLoadingMore ? 1 : 0) +
+                  (!state.hasMore && state.posts.isNotEmpty ? 1 : 0),
               itemBuilder: (_, i) {
-                if (i == state.posts.length) {
+                if (i == state.posts.length && state.isLoadingMore) {
                   return const Padding(
                     padding: EdgeInsets.all(16),
                     child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final tailIndex =
+                    state.posts.length + (state.isLoadingMore ? 1 : 0);
+                if (!state.hasMore && state.posts.isNotEmpty && i == tailIndex) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.check_circle, size: 26, color: BuddyColors.green),
+                        const SizedBox(height: 6),
+                        const Text("You're all caught up",
+                            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+                        const SizedBox(height: 10),
+                        TextButton.icon(
+                          onPressed: () => notifier.refresh(),
+                          icon: const Icon(Icons.arrow_upward, size: 15, color: BuddyColors.green),
+                          label: const Text('Load latest posts',
+                              style: TextStyle(color: BuddyColors.green, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
                   );
                 }
                 final post = state.posts[i];

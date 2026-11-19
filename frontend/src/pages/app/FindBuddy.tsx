@@ -72,7 +72,6 @@ export default function FindBuddy() {
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [goals, setGoals] = useState<string[]>([]);
-  const [dob, setDob] = useState('');
   const [ageBand, setAgeBand] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [pace, setPace] = useState('');
@@ -217,9 +216,8 @@ export default function FindBuddy() {
         incognito,
         available_now: looking ?? lookingNow,
         search_radius_km: radius === 'auto' ? null : radius,
-        ...(dob && !hasBirthday ? { dob } : {}),
         ...(coords ? { latitude: coords.lat, longitude: coords.lng } : {}),
-      } as Partial<BuddySearchProfile> & { dob?: string });
+      } as Partial<BuddySearchProfile>);
       const sp = res.data as BuddySearchProfile;
       if (sp.age_band) setAgeBand(sp.age_band);
       if (typeof sp.available_now === 'boolean') setLookingNow(sp.available_now);
@@ -442,23 +440,17 @@ export default function FindBuddy() {
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {!hasBirthday && (
-                <label className="text-xs text-buddy-text-secondary">Birth date (for age band {ageBand || '—'})
-                  <input type="date" value={dob} onChange={(e) => setDob(e.target.value)}
-                    className="mt-1 w-full bg-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm text-buddy-text-primary focus:outline-none" />
-                </label>
-              )}
+            <div className="grid grid-cols-1 gap-2">
               <label className="text-xs text-buddy-text-secondary">Pace
                 <input type="text" value={pace} onChange={(e) => setPace(e.target.value)} placeholder="Easy / steady / brisk"
                   className="mt-1 w-full bg-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm placeholder:text-buddy-text-secondary/50 focus:outline-none" />
               </label>
             </div>
-            {hasBirthday && (
               <p className="text-xs text-buddy-text-secondary">
-                Your age band ({ageBand || '—'}) comes from the date of birth on your account.
+                {hasBirthday
+                  ? `Your age band (${ageBand || '—'}) comes from the date of birth on your account.`
+                  : 'Set your date of birth in onboarding (or Settings) to unlock an age band for matching.'}
               </p>
-            )}
             <label className="block text-xs text-buddy-text-secondary">Neighbourhood
               <input type="text" value={neighbourhood} onChange={(e) => setNeighbourhood(e.target.value)} placeholder="Kileleshwa"
                 className="mt-1 w-full bg-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm placeholder:text-buddy-text-secondary/50 focus:outline-none" />

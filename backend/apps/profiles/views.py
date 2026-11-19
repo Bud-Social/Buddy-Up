@@ -4,7 +4,6 @@ from django.conf import settings
 from django.db import models as db_models
 from django.utils import timezone
 from django.db.models import Q
-from django.contrib.postgres.search import SearchVector, SearchQuery
 from rest_framework import views, permissions, status, generics
 from rest_framework.response import Response
 
@@ -706,19 +705,21 @@ class ProfileSearchView(views.APIView):
         queryset = Profile.objects.filter(privacy_level='public')
 
         if q:
-            from django.db import connection
-            if connection.vendor == 'postgresql':
-                queryset = queryset.annotate(
-                    search=SearchVector('username', 'display_name', 'bio'),
-                ).filter(
-                    search=SearchQuery(q)
-                )
-            else:
-                queryset = queryset.filter(
-                    Q(username__icontains=q) |
-                    Q(display_name__icontains=q) |
-                    Q(bio__icontains=q)
-                )
+            from django.db import models as db_models
+            # Word-style FTS misses partial handles ("jmb" vs "jmbngugimbugua"),
+            # so always match on icontains and surface exact/prefix hits first.
+            queryset = queryset.filter(
+                db_models.Q(username__icontains=q) |
+                db_models.Q(display_name__icontains=q) |
+                db_models.Q(bio__icontains=q)
+            ).annotate(
+                _starts=db_models.Case(
+                    db_models.When(username__istartswith=q, then=db_models.Value(2)),
+                    db_models.When(display_name__istartswith=q, then=db_models.Value(1)),
+                    default=db_models.Value(0),
+                    output_field=db_models.IntegerField(),
+                ),
+            ).order_by('-_starts', 'username')
         if role:
             queryset = queryset.filter(role=role)
         if location:

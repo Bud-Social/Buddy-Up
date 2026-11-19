@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
-  Loader2, Users, ArrowUp, Plus, Search, Flame, UserCheck, PenLine, ChevronUp, X,
+  Loader2, Users, ArrowUp, Plus, Search, Flame, UserCheck, PenLine, ChevronUp, X, CheckCircle2,
+  UsersRound,
 } from 'lucide-react';
 import { PostCard } from '@/components/features/feed/PostCard';
 import { CommunityPostCard } from '@/components/features/feed/CommunityPostCard';
@@ -778,6 +779,22 @@ export default function Feed() {
                 />
               </div>
             ))}
+
+            {!hasMore && (
+              <div className="flex flex-col items-center gap-3 py-8 border-t border-buddy-surface-raised">
+                <p className="text-sm text-buddy-text-secondary flex items-center gap-1.5">
+                  <CheckCircle2 size={16} className="text-buddy-green" /> You&apos;re all caught up
+                </p>
+                <button
+                  onClick={() => fetchPosts(activeTab, true)}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-buddy-green/40 bg-buddy-green/10 text-buddy-green text-sm font-bold hover:bg-buddy-green hover:text-buddy-black transition-colors"
+                >
+                  {isLoading ? <Loader2 size={14} className="animate-spin" /> : <ArrowUp size={14} strokeWidth={3} />}
+                  Load latest posts
+                </button>
+              </div>
+            )}
 
             {isLoading && (
               <div className="flex justify-center py-8">

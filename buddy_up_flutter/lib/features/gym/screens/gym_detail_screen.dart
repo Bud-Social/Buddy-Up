@@ -208,9 +208,27 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
               expandedHeight: 200,
               pinned: true,
               flexibleSpace: FlexibleSpaceBar(
-                background: gym.coverUrl.isNotEmpty
-                    ? Image.network(gym.coverUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => _coverPlaceholder())
-                    : _coverPlaceholder(),
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (gym.coverUrl.isNotEmpty)
+                      Image.network(gym.coverUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => _coverPlaceholder())
+                    else
+                      _coverPlaceholder(),
+                    // Always-dark scrim so the back button and any overlaid
+                    // text stay legible on bright covers.
+                    DecoratedBox(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.black54, Color(0x33000000), Colors.black87],
+                          stops: [0.0, 0.5, 1.0],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 if (gym.isMember)
