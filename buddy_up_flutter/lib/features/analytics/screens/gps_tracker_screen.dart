@@ -178,26 +178,36 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen> {
     setState(() => _saving = true);
     try {
       final distanceKm = _distanceM / 1000.0;
-      final created = await ref.read(analyticsRepositoryProvider).createActivity({
-        'activity_type': _activityType,
-        'source': 'gps',
-        'duration_seconds': _elapsedS,
-        'distance_meters': _distanceM,
-        'avg_pace': distanceKm > 0 ? _elapsedS / distanceKm : null,
-        'calories_burned': _estimateCalories(),
-        'route': _route,
-        'started_at': DateTime.now()
-            .subtract(Duration(seconds: _elapsedS))
-            .toIso8601String(),
-      });
+      final created = await ref
+          .read(analyticsLogProvider.notifier)
+          .logActivity({
+            'activity_type': _activityType,
+            'source': 'gps',
+            'duration_seconds': _elapsedS,
+            'distance_meters': _distanceM,
+            'avg_pace': distanceKm > 0 ? _elapsedS / distanceKm : null,
+            'calories_burned': _estimateCalories(),
+            'route': _route,
+            'started_at': DateTime.now()
+                .subtract(Duration(seconds: _elapsedS))
+                .toIso8601String(),
+          });
+      if (created == null) {
+        setState(() => _error = 'Failed to save activity. Please try again.');
+        return;
+      }
+      final queued = created['queued'] == true;
+      final activityId = created['id'] as String?;
       ref.read(analyticsSummaryProvider.notifier).refresh();
       if (mounted) {
-        final data = created['data'];
-        final activityId = data is Map ? data['id'] as String? : null;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Activity saved'),
-            action: activityId != null
+            content: Text(
+              queued
+                  ? 'Saved on this device — it uploads when you reconnect.'
+                  : 'Activity saved',
+            ),
+            action: !queued && activityId != null
                 ? SnackBarAction(
                     label: 'Share',
                     onPressed: () async {

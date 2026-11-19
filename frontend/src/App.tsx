@@ -9,6 +9,7 @@ import { PWAUpdateBanner } from './components/PWAUpdateBanner';
 import { useAuthStore } from './store/authStore';
 import { refreshAccessToken, isAuthRefreshRejection } from './api/client';
 import { useNotificationListener } from './hooks/useNotificationListener';
+import { useActivityQueue } from './hooks/useActivityQueue';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,9 +60,16 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
   useNotificationListener();
   return (
     <>
+      <ActivityQueueSync />
       {children}
     </>
   );
+}
+
+/** Drains activities recorded while offline, app-wide, once a session exists. */
+function ActivityQueueSync() {
+  useActivityQueue();
+  return null;
 }
 
 export function App() {

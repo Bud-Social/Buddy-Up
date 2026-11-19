@@ -7,6 +7,7 @@ import '../providers/analytics_provider.dart';
 import '../utils/analytics_format.dart';
 import '../utils/analytics_share.dart';
 import '../widgets/analytics_widgets.dart';
+import '../widgets/activity_queue_banner.dart';
 import 'gps_tracker_screen.dart';
 
 const List<({String key, String label, IconData icon})> _activityTypes = [
@@ -72,6 +73,13 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
       _distanceController.clear();
       _caloriesController.clear();
       await ref.read(analyticsSummaryProvider.notifier).refresh();
+      if (created['queued'] == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Saved on this device — it uploads when you reconnect.'),
+          ),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -98,6 +106,7 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const ActivityQueueBanner(),
           // GPS tracker entry — hybrid keyless tracking, parity with web.
           Padding(
             padding: const EdgeInsets.only(bottom: 12),

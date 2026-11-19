@@ -10,6 +10,9 @@ import { analyticsApi } from '@/api/analytics';
 import { useToast } from '@/components/ui/Toast';
 import { analyticsShareUrl, buildShareText, shareActivity } from '@/lib/shareWorkout';
 import { ActivityInsights } from '@/components/analytics/ActivityInsights';
+import { ActivityQueueBanner } from '@/components/analytics/ActivityQueueBanner';
+import { enqueueActivity, isRetryableActivityError, newActivityClientId, removeQueuedActivity } from '@/lib/offlineActivities';
+import { useAuthStore } from '@/store/authStore';
 import type { ActivityRecordInput, ActivitySummary, AnalyticsPeriod } from '@/types/analytics';
 
 const ACTIVITY_TYPES: { key: ActivityRecordInput['activity_type']; label: string; icon: typeof Footprints }[] = [
@@ -70,6 +73,7 @@ export function ActivityTab({ period }: { period: AnalyticsPeriod }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<ActivityRecordInput | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [queuedId, setQueuedId] = useState<string | null>(null);
   const [replayingId, setReplayingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
@@ -238,17 +242,37 @@ export function ActivityTab({ period }: { period: AnalyticsPeriod }) {
     if (elapsed <= 0) return false;
     setSaving(true);
     setError(null);
+    const clientId = newActivityClientId();
+    const payload: ActivityRecordInput = { ...buildPayload(), source_event_id: clientId };
     try {
-      const payload = buildPayload();
       const res = await analyticsApi.createActivity(payload);
       setSaved(payload);
       setSavedId((res.data as { id?: string } | undefined)?.id ?? null);
+      setQueuedId(null);
       setPoints([]);
       setDistanceM(0);
       setElapsed(0);
       load();
       return true;
-    } catch {
+    } catch (err) {
+      // Unreachable API: keep the session on the device for a later replay.
+      const unreachable = (typeof navigator !== 'undefined' && navigator.onLine === false)
+        || isRetryableActivityError(err);
+      const ownerId = useAuthStore.getState().user?.id;
+      if (unreachable && ownerId) {
+        try {
+          await enqueueActivity(payload, ownerId);
+          setSaved(payload);
+          setSavedId(null);
+          setQueuedId(clientId);
+          setPoints([]);
+          setDistanceM(0);
+          setElapsed(0);
+          return true;
+        } catch {
+          // Storage refused too — fall through to the visible error.
+        }
+      }
       setError('Failed to save activity.');
       return false;
     } finally {
@@ -257,6 +281,16 @@ export function ActivityTab({ period }: { period: AnalyticsPeriod }) {
   };
 
   const handleUndoSave = async () => {
+    if (queuedId) {
+      try {
+        await removeQueuedActivity(queuedId);
+        setSaved(null);
+        setQueuedId(null);
+      } catch {
+        setError('Could not undo the save.');
+      }
+      return;
+    }
     if (!savedId) {
       setSaved(null);
       return;
@@ -277,6 +311,7 @@ export function ActivityTab({ period }: { period: AnalyticsPeriod }) {
     setElapsed(0);
     setSaved(null);
     setSavedId(null);
+    setQueuedId(null);
     setError(null);
   };
 
@@ -295,6 +330,8 @@ export function ActivityTab({ period }: { period: AnalyticsPeriod }) {
     <div className="space-y-4">
       {/* What the numbers say — records, trends, goals and routes. */}
       <ActivityInsights period={period} />
+
+      <ActivityQueueBanner />
 
       {/* Live tracker */}
       <Card className="p-4">
@@ -411,8 +448,10 @@ export function ActivityTab({ period }: { period: AnalyticsPeriod }) {
 
         {saved && (
           <div className="mt-3 flex items-center justify-between gap-2 text-sm">
-            <p className="text-buddy-green">
-              Saved {titleCase(saved.activity_type)} — {formatKm(saved.distance_meters / 1000)} km in {formatDuration(saved.duration_seconds)}.
+            <p className={queuedId ? 'text-buddy-gold' : 'text-buddy-green'}>
+              {queuedId
+                ? `Saved on this device — ${titleCase(saved.activity_type)} uploads when you reconnect.`
+                : `Saved ${titleCase(saved.activity_type)} — ${formatKm(saved.distance_meters / 1000)} km in ${formatDuration(saved.duration_seconds)}.`}
             </p>
             <button onClick={() => void handleUndoSave()} className="text-xs text-buddy-text-secondary hover:text-buddy-text-primary underline flex-shrink-0">
               Undo

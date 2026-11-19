@@ -12,6 +12,9 @@ import { useActivityTracker, type TrackerType } from '@/hooks/useActivityTracker
 import { activityMetrics, activityLabel } from '@/lib/activityMetrics';
 import { analyticsApi } from '@/api/analytics';
 import { track } from '@/lib/analytics';
+import { enqueueActivity, isRetryableActivityError, newActivityClientId, removeQueuedActivity } from '@/lib/offlineActivities';
+import { useAuthStore } from '@/store/authStore';
+import { ActivityQueueBanner } from '@/components/analytics/ActivityQueueBanner';
 import type { ActivityRecordInput } from '@/types/analytics';
 
 const TYPES: { key: TrackerType; label: string; icon: typeof Footprints; hint: string }[] = [
@@ -38,6 +41,7 @@ export default function NewActivity() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<ActivityRecordInput | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [queuedId, setQueuedId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
 
   // The kind and the target come from the page the user came from.
@@ -96,14 +100,37 @@ export default function NewActivity() {
       return;
     }
     setSaving(true);
+    const clientId = newActivityClientId();
+    const payload: ActivityRecordInput = {
+      ...buildPayload(),
+      source_event_id: clientId,
+      ...(notes.trim() ? { notes: notes.trim() } : {}),
+    };
     try {
-      const payload = { ...buildPayload(), ...(notes.trim() ? { notes: notes.trim() } : {}) };
       const res = await analyticsApi.createActivity(payload);
       setSaved(payload);
       setSavedId((res.data as { id?: string } | undefined)?.id ?? null);
       track('activity.saved', { surface: 'activities_new', properties: { activity_type: payload.activity_type } });
       toast('success', 'Activity saved.');
-    } catch {
+    } catch (error) {
+      // The server never answered (offline, timeout, flaky network): keep the
+      // full session on the device and replay it when the connection returns.
+      const unreachable = (typeof navigator !== 'undefined' && navigator.onLine === false)
+        || isRetryableActivityError(error);
+      const ownerId = useAuthStore.getState().user?.id;
+      if (unreachable && ownerId) {
+        try {
+          await enqueueActivity(payload, ownerId);
+          setSaved(payload);
+          setSavedId(null);
+          setQueuedId(clientId);
+          track('activity.queued_offline', { surface: 'activities_new', properties: { activity_type: payload.activity_type } });
+          toast('info', 'Saved on this device. It will upload when you are back online.');
+          return;
+        } catch {
+          // Storage refused too — report the honest failure below.
+        }
+      }
       toast('error', 'Could not save the activity.');
     } finally {
       setSaving(false);
@@ -111,6 +138,17 @@ export default function NewActivity() {
   };
 
   const handleUndo = async () => {
+    if (queuedId) {
+      try {
+        await removeQueuedActivity(queuedId);
+        setSaved(null);
+        setQueuedId(null);
+        toast('success', 'Activity removed.');
+      } catch {
+        toast('error', 'Could not remove the activity.');
+      }
+      return;
+    }
     if (!savedId) {
       setSaved(null);
       return;
@@ -129,6 +167,7 @@ export default function NewActivity() {
     reset();
     setSaved(null);
     setSavedId(null);
+    setQueuedId(null);
     setNotes('');
   };
 
@@ -163,15 +202,21 @@ export default function NewActivity() {
         <div className="flex-1 min-w-0">
           <h1 className="font-display text-2xl font-extrabold">New activity</h1>
           <p className="text-sm text-buddy-text-secondary">
-            {saved ? 'Saved. Share it, or record another.' : 'Pick what you are doing, then start.'}
+            {queuedId
+              ? 'Saved on this device. It uploads automatically when you reconnect.'
+              : saved
+                ? 'Saved. Share it, or record another.'
+                : 'Pick what you are doing, then start.'}
           </p>
         </div>
-        {saved && (
+        {saved && savedId && (
           <Button size="sm" variant="outline" onClick={handleShare}>
             Share
           </Button>
         )}
       </div>
+
+      <ActivityQueueBanner />
 
       {/* The kind of activity — it decides which numbers matter. */}
       <Card className="p-4">

@@ -230,6 +230,58 @@ class ActivityAnalyticsDetailTests(TestCase):
         self.assertIn('weekly', activity)
 
 
+class ActivityOfflineReplayTests(TestCase):
+    """Activities queued offline must replay without creating duplicates."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='offline@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(user=self.user, username='offlineuser', display_name='Offline User')
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+
+    def _payload(self, source_event_id='client-session-1'):
+        return {
+            'activity_type': 'run',
+            'source': 'gps',
+            'source_event_id': source_event_id,
+            'duration_seconds': 1800,
+            'distance_meters': 5000,
+            'route': [[-1.29, 36.82, 1], [-1.28, 36.83, 2]],
+        }
+
+    def test_replaying_the_same_session_writes_one_row(self):
+        from .models import ActivityRecord
+
+        first = self.client.post('/api/v1/analytics/activities/', self._payload(), format='json')
+        second = self.client.post('/api/v1/analytics/activities/', self._payload(), format='json')
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        # A replay is accepted (200) and returns the original row, not a duplicate.
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(first.data['data']['id'], second.data['data']['id'])
+        self.assertEqual(ActivityRecord.objects.filter(user=self.profile).count(), 1)
+        self.assertEqual(
+            ActivityRecord.objects.get(user=self.profile).route,
+            [[-1.29, 36.82, 1], [-1.28, 36.83, 2]],
+        )
+
+    def test_the_idempotency_key_is_scoped_per_user(self):
+        from .models import ActivityRecord
+
+        other = User.objects.create_user(email='offline2@example.com', password='TestPass123!')
+        Profile.objects.create(user=other, username='offlineuser2', display_name='Offline User 2')
+
+        mine = self.client.post('/api/v1/analytics/activities/', self._payload(), format='json')
+        self.assertEqual(mine.status_code, status.HTTP_201_CREATED)
+
+        other_client = APIClient()
+        other_client.force_authenticate(other)
+        theirs = other_client.post('/api/v1/analytics/activities/', self._payload(), format='json')
+
+        self.assertEqual(theirs.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(ActivityRecord.objects.count(), 2)
+
+
 class EventIngestionTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(email='events@example.com', password='TestPass123!')

@@ -278,6 +278,8 @@ export interface ShareReportResult {
 
 export interface ActivityRecordInput {
   activity_type: 'walk' | 'run' | 'hike' | 'cycle';
+  /** Client-generated idempotency key — lets an offline replay dedupe server-side. */
+  source_event_id?: string;
   started_at?: string;
   duration_seconds: number;
   distance_meters: number;

@@ -1,13 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
+import '../../../core/auth/auth_provider.dart';
 import '../../../data/models/analytics.dart';
 import '../../../data/repositories/analytics_repository.dart';
+import '../services/activity_queue_service.dart';
 
 final apiClientProvider12 = Provider<ApiClient>((_) => ApiClient());
 
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
   final dio = ref.watch(apiClientProvider12).dio;
   return AnalyticsRepository(dio);
+});
+
+final activityQueueServiceProvider = Provider<ActivityQueueService>((ref) {
+  return ActivityQueueService(ref.watch(analyticsRepositoryProvider));
 });
 
 final analyticsPeriodProvider =
@@ -57,7 +63,10 @@ class AnalyticsSummaryNotifier extends Notifier<AnalyticsSummaryState> {
     final p = period ?? ref.read(analyticsPeriodProvider);
     if (p != null) {
       ref.read(analyticsPeriodProvider.notifier).set(p);
-      state = const AnalyticsSummaryState(isLoading: true);
+      // Keep the last summary visible while reloading, and on failure: an
+      // offline device should still show what it already knows.
+      final previous = state.summary;
+      state = AnalyticsSummaryState(summary: previous, isLoading: true);
       try {
         final raw = await _repository.getSummary(period: p);
         state = AnalyticsSummaryState(
@@ -66,7 +75,7 @@ class AnalyticsSummaryNotifier extends Notifier<AnalyticsSummaryState> {
           ),
         );
       } catch (e) {
-        state = AnalyticsSummaryState(error: e.toString());
+        state = AnalyticsSummaryState(summary: previous, error: e.toString());
       }
     }
   }
@@ -165,10 +174,27 @@ class AnalyticsLogNotifier extends Notifier<AnalyticsHistoryState> {
   }
 
   Future<Map<String, dynamic>?> logActivity(Map<String, dynamic> data) async {
+    final queue = ref.read(activityQueueServiceProvider);
+    final ownerId = ref.read(authProvider).user?.id;
+    final payload = <String, dynamic>{
+      ...data,
+      'source_event_id':
+          data['source_event_id'] ?? ActivityQueueService.newClientId(),
+    };
     try {
-      final raw = await _repository.createActivity(data);
+      final raw = await _repository.createActivity(payload);
       return raw['data'] as Map<String, dynamic>?;
     } catch (e) {
+      // An unreachable or failing API should not cost the user their session:
+      // keep it on the device and replay it when the server is healthy.
+      if (ownerId != null && ActivityQueueService.isRetryable(e)) {
+        try {
+          final record = await queue.enqueue(payload, ownerId: ownerId);
+          return {'queued': true, 'client_id': record.clientId};
+        } catch (_) {
+          // Local storage refused too — surface the original failure.
+        }
+      }
       state = state.copyWith(error: e.toString());
       return null;
     }

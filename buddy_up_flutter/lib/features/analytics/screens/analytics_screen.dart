@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/button.dart';
 import '../providers/analytics_provider.dart';
 import 'overview_tab.dart';
 import 'workouts_tab.dart';
@@ -10,6 +11,8 @@ import 'activity_tab.dart';
 import 'body_tab.dart';
 import 'report_tab.dart';
 import 'countdowns_tab.dart';
+import 'gps_tracker_screen.dart';
+import '../widgets/activity_queue_banner.dart';
 
 const List<({String key, String label})> _periods = [
   (key: 'week', label: 'Week'),
@@ -123,10 +126,35 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
       body: state.isLoading
           ? const PageLoader()
           : state.error != null && state.summary == null
-          ? ErrorView(
-              message: state.error!,
-              onRetry: () =>
-                  ref.read(analyticsSummaryProvider.notifier).refresh(),
+          ? Column(
+              children: [
+                Expanded(
+                  child: ErrorView(
+                    message: state.error!,
+                    onRetry: () =>
+                        ref.read(analyticsSummaryProvider.notifier).refresh(),
+                  ),
+                ),
+                // Tracking is on-device and works without the API, so a failed
+                // summary must not take the feature away. Queued sessions
+                // upload automatically once the connection returns.
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(24, 0, 24, 12),
+                  child: ActivityQueueBanner(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                  child: BuddyButton(
+                    label: 'Track an activity offline',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<bool>(
+                        builder: (_) => const GpsTrackerScreen(),
+                      ),
+                    ),
+                    size: BuddyButtonSize.sm,
+                  ),
+                ),
+              ],
             )
           : TabBarView(
               controller: _tabController,

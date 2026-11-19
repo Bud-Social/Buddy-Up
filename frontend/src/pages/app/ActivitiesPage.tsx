@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { analyticsApi } from '@/api/analytics';
 import { RouteMap } from '@/components/analytics/RouteMap';
+import { ActivityQueueBanner } from '@/components/analytics/ActivityQueueBanner';
 import { activityMetrics } from '@/lib/activityMetrics';
 import type { ActivityRecent } from '@/types/analytics';
 
@@ -100,7 +101,7 @@ export default function ActivitiesPage() {
       setActivities(Array.isArray(data) ? data : []);
       setLoading(false);
     }).catch((err) => {
-      setError(err?.response?.data?.message || 'Failed to load activities');
+      setError(err?.response?.data?.message || 'Could not reach the server. Saved sessions will appear when you reconnect.');
       setLoading(false);
     });
   }, []);
@@ -238,13 +239,8 @@ export default function ActivitiesPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="p-4 max-w-5xl mx-auto rounded-lg bg-buddy-error/10 p-4 border border-buddy-error/20 text-buddy-error">
-        {error}
-      </div>
-    );
-  }
+  // A failed history fetch must not hide the page: tracking still works
+  // offline, and the queue banner explains what is waiting to upload.
 
   const totalDistance = activities.reduce((sum, a) => sum + (a.distance_km || 0), 0);
   const totalDuration = activities.reduce((sum, a) => sum + (a.duration_seconds || 0), 0);
@@ -353,6 +349,8 @@ export default function ActivitiesPage() {
           })}
         </div>
       </div>
+
+      <ActivityQueueBanner />
 
       {error && (
         <div className="rounded-lg bg-buddy-error/10 p-3 border border-buddy-error/20 text-buddy-error text-sm">{error}</div>

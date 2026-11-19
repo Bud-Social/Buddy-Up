@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'core/auth/auth_provider.dart';
 import 'core/auth/biometric_provider.dart';
+import 'features/analytics/providers/analytics_provider.dart';
 import 'features/notifications/services/push_notification_service.dart';
 import 'features/messaging/widgets/call_host.dart';
 import 'features/settings/widgets/alarm_ring_host.dart';
@@ -26,19 +29,65 @@ class BuddyUpApp extends ConsumerStatefulWidget {
   ConsumerState<BuddyUpApp> createState() => _BuddyUpAppState();
 }
 
-class _BuddyUpAppState extends ConsumerState<BuddyUpApp> {
+class _BuddyUpAppState extends ConsumerState<BuddyUpApp> with WidgetsBindingObserver {
+  Timer? _activitySyncTimer;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     Future.microtask(() {
       ref.read(pushNotificationServiceProvider).initialize();
     });
     // Trigger biometric state load (and lock if enabled) at startup.
     ref.read(biometricProvider.notifier);
+    // Activities recorded offline replay as soon as a session exists, then on
+    // a slow tick while the app is open and whenever it returns to the
+    // foreground (the connection may only come back while backgrounded).
+    Future.microtask(_syncPendingActivities);
+    _activitySyncTimer = Timer.periodic(
+      const Duration(seconds: 60),
+      (_) => _syncPendingActivities(),
+    );
+  }
+
+  Future<void> _syncPendingActivities() async {
+    final ownerId = ref.read(authProvider).user?.id;
+    if (ownerId == null) return;
+    try {
+      final result = await ref
+          .read(activityQueueServiceProvider)
+          .flush(ownerId);
+      if (!mounted) return;
+      if (result.synced > 0) {
+        await ref.read(analyticsSummaryProvider.notifier).refresh();
+      }
+    } catch (_) {
+      // Storage or transport trouble — the queue stays for the next attempt.
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _syncPendingActivities();
+    }
+  }
+
+  @override
+  void dispose() {
+    _activitySyncTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authProvider.select((s) => s.user?.id), (previous, next) {
+      if (next != null && next != previous) {
+        Future.microtask(_syncPendingActivities);
+      }
+    });
     final authState = ref.watch(authProvider);
     final themeMode = ref.watch(themeModeProvider);
     final biometric = ref.watch(biometricProvider);
