@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
@@ -9,7 +9,6 @@ import { PWAUpdateBanner } from './components/PWAUpdateBanner';
 import { useAuthStore } from './store/authStore';
 import { refreshAccessToken, isAuthRefreshRejection } from './api/client';
 import { useNotificationListener } from './hooks/useNotificationListener';
-import { profilesApi } from './api';
 
 const queryClient = new QueryClient({
   defaultOptions: {

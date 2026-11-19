@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   Loader2, Users, ArrowUp, Plus, Search, Flame, UserCheck, PenLine, ChevronUp, X, CheckCircle2,
-  UsersRound,
 } from 'lucide-react';
 import { PostCard } from '@/components/features/feed/PostCard';
 import { CommunityPostCard } from '@/components/features/feed/CommunityPostCard';
