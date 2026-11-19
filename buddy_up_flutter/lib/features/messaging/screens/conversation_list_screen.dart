@@ -179,11 +179,11 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
             Consumer(
               builder: (context, ref, _) {
                 final stories = ref.watch(storiesProvider);
-                if (stories.reels.isEmpty) return const SizedBox.shrink();
                 return StoryStrip(
                   reels: stories.reels,
                   seenIds: _seenStories,
                   onOpen: _openStory,
+                  onAddStory: () => context.go('/messages/story/create'),
                 );
               },
             ),
@@ -194,6 +194,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
               'stories' => _StoriesTab(
                   seenIds: _seenStories,
                   onOpen: _openStory,
+                  onAddStory: () => context.go('/messages/story/create'),
                 ),
               _ => _MessagesTab(
                   query: query,
@@ -588,8 +589,9 @@ class _CallRow extends StatelessWidget {
 class _StoriesTab extends ConsumerWidget {
   final Set<String> seenIds;
   final void Function(int reelIndex) onOpen;
+  final VoidCallback? onAddStory;
 
-  const _StoriesTab({required this.seenIds, required this.onOpen});
+  const _StoriesTab({required this.seenIds, required this.onOpen, this.onAddStory});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -630,9 +632,42 @@ class _StoriesTab extends ConsumerWidget {
           crossAxisSpacing: 10,
           childAspectRatio: 3 / 4,
         ),
-        itemCount: state.reels.length,
+        itemCount: state.reels.length + (onAddStory != null ? 1 : 0),
         itemBuilder: (_, i) {
-          final reel = state.reels[i];
+          if (onAddStory != null && i == 0) {
+            return Semantics(
+              label: 'Add your story',
+              button: true,
+              child: GestureDetector(
+                onTap: onAddStory,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Container(color: BuddyColors.surface),
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 54,
+                              height: 54,
+                              decoration: const BoxDecoration(color: BuddyColors.surfaceRaised, shape: BoxShape.circle),
+                              child: const Icon(Icons.add, size: 28, color: Colors.green),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text('Add story', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+          final reel = state.reels[onAddStory != null ? i - 1 : i];
           final first = reel.stories.first;
           final thumb = first.mediaUrls.isNotEmpty ? first.mediaUrls.first : '';
           return GestureDetector(

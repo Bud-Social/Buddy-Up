@@ -31,29 +31,77 @@ class StoryStrip extends StatelessWidget {
   final List<StoryReel> reels;
   final Set<String> seenIds;
   final void Function(int reelIndex) onOpen;
+  final VoidCallback? onAddStory;
 
   const StoryStrip({
     super.key,
     required this.reels,
     required this.seenIds,
     required this.onOpen,
+    this.onAddStory,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (reels.isEmpty) return const SizedBox.shrink();
+    if (reels.isEmpty && onAddStory == null) return const SizedBox.shrink();
     return SizedBox(
       height: 92,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        itemCount: reels.length,
+        itemCount: (onAddStory != null ? 1 : 0) + reels.length,
         separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, i) {
-          final reel = reels[i];
+          if (onAddStory != null && i == 0) {
+            return Semantics(
+              label: 'Add your story',
+              button: true,
+              child: GestureDetector(
+                onTap: onAddStory,
+                child: SizedBox(
+                  width: 64,
+                  child: Column(
+                    children: [
+                      Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(2.5),
+                            decoration: const BoxDecoration(shape: BoxShape.circle, color: BuddyColors.surface),
+                            child: const SizedBox(width: 50, height: 50, child: Center(child: Icon(Icons.person, size: 26, color: BuddyColors.textSecondary))),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: BuddyColors.green,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: BuddyColors.black, width: 2),
+                              ),
+                              child: const Icon(Icons.add, size: 14, color: BuddyColors.black),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text('Your story',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 10)),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
+          final reelIndex = onAddStory != null ? i - 1 : i;
+          final reel = reels[reelIndex];
           final unread = reel.stories.any((s) => !seenIds.contains(s.id));
           return GestureDetector(
-            onTap: () => onOpen(i),
+            onTap: () => onOpen(reelIndex),
             child: SizedBox(
               width: 64,
               child: Column(

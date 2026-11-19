@@ -2824,7 +2824,8 @@ class StoriesView(views.APIView):
         following_ids = FollowRelationship.objects.filter(
             follower=profile,
         ).values_list('followee_id', flat=True)
-        ids = peer_ids | set(following_ids)
+        # Always include self so the user sees their own "add / view" slot first.
+        ids = peer_ids | set(following_ids) | ({profile.pk} if profile.pk else set())
 
         if not ids:
             return Response({
@@ -2868,7 +2869,11 @@ class StoriesView(views.APIView):
             if grouped[aid]['latest_at'] is None:
                 grouped[aid]['latest_at'] = post.created_at.isoformat()
 
-        data = [grouped[aid] for aid in order]
+        # Pin my own reel to the front, then the rest newest-first.
+        self_id = str(profile.pk)
+        self_entry = grouped.get(self_id)
+        ordered_ids = ([self_entry] if self_entry else []) + [grouped[aid] for aid in order if aid != self_id]
+        data = ordered_ids
         return Response({
             'success': True, 'data': data, 'message': 'OK',
             'errors': None, 'pagination': None,

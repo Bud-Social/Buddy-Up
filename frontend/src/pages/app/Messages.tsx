@@ -24,6 +24,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/components/ui/Toast';
 import { apiClient } from '@/api/client';
 import { messagingApi } from '@/api/messaging';
+import { StoryCreateSheet } from '@/components/features/messaging/StoryCreateSheet';
 import type { Conversation, Message as MsgType, LinkPreviewData, CallHistoryEntry, StoryReel } from '@/api/messaging';
 import { useAuthStore } from '@/store/authStore';
 import { useChatSocket } from '@/hooks/useChatSocket';
@@ -338,6 +339,7 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   const [storyReels, setStoryReels] = useState<StoryReel[] | null>(null);
   const [storyReelsLoading, setStoryReelsLoading] = useState(false);
   const [storyViewer, setStoryViewer] = useState<{ reelIndex: number; storyIndex: number } | null>(null);
+  const [storyCreateOpen, setStoryCreateOpen] = useState(false);
   // Local "seen" set so the story ring shows unread state without a server flag.
   const [seenStories, setSeenStories] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem('buddyup-seen-stories') ?? '[]') as string[]); }
@@ -1117,6 +1119,17 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
       )}
 
       {/* Story viewer */}
+      <StoryCreateSheet
+        isOpen={storyCreateOpen}
+        onClose={() => setStoryCreateOpen(false)}
+        onStoryPosted={() => {
+          const fetchStories = (messagingApi as { getStories?: typeof messagingApi.getStories }).getStories;
+          if (typeof fetchStories !== 'function') return;
+          fetchStories.call(messagingApi)
+            .then((res) => setStoryReels(res.data ?? []))
+            .catch(() => {});
+        }}
+      />
       {storyViewer && (() => {
         const reel = storyReels?.[storyViewer.reelIndex];
         const story = reel?.stories[storyViewer.storyIndex];
@@ -1265,9 +1278,15 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
           )}
 
           {/* Story strip — buddies and people you follow, newest first */}
-          {!isDiscovery && listTab === 'messages' && storyReels && storyReels.length > 0 && (
+          {!isDiscovery && listTab === 'messages' && (
             <div className="flex gap-3 overflow-x-auto scrollbar-hide mt-3 pb-1 -mx-1 px-1">
-              {storyReels.map((reel, i) => {
+              <button onClick={() => setStoryCreateOpen(true)} className="flex flex-col items-center gap-1 shrink-0 w-16" aria-label="Add your story">
+                <span className="p-[2.5px] rounded-full bg-buddy-surface-raised border-2 border-dashed border-buddy-green/50">
+                  <Avatar src={profile?.avatar_url || ''} alt="Add your story" size="md" className="ring-2 ring-buddy-black" />
+                </span>
+                <span className="text-[9px] text-buddy-green truncate w-full text-center">Your story</span>
+              </button>
+              {storyReels?.map((reel, i) => {
                 const unread = reel.stories.some((s) => !seenStories.has(s.id));
                 return (
                   <button key={reel.user.user_id} onClick={() => openReel(i)} className="flex flex-col items-center gap-1 shrink-0 w-16">

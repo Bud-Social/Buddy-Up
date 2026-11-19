@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Radio, Play, Clock, Users, Camera, Settings, Moon, Sun, Monitor, Contrast, Loader, MessageCircle, Shield, BarChart3, Repeat, Bookmark } from 'lucide-react';
+import { Radio, Play, Clock, Users, Camera, Settings, Moon, Sun, Monitor, Contrast, Loader, MessageCircle, Shield, BarChart3, Repeat, Bookmark, Plus } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { CropModal } from '@/components/ui/CropModal';
 import { useToast } from '@/components/ui/Toast';
 import { InterestChips } from '@/components/profile/InterestChips';
+import { StoryCreateSheet } from '@/components/features/messaging/StoryCreateSheet';
 import { BuddySearchCard } from '@/components/profile/BuddySearchCard';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
@@ -43,6 +44,7 @@ export default function Profile() {
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [storyOpen, setStoryOpen] = useState(false);
   const [editBio, setEditBio] = useState(profile?.bio || '');
   const [editDisplayName, setEditDisplayName] = useState(profile?.display_name || '');
   const [isSaving, setIsSaving] = useState(false);
@@ -175,7 +177,9 @@ export default function Profile() {
     : null;
 
   return (
-    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
+    <>
+      <StoryCreateSheet isOpen={storyOpen} onClose={() => setStoryOpen(false)} />
+      <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <Card className="p-6 mb-6">
         <div className="flex items-start gap-4 mb-4">
           <div className="relative inline-block flex-shrink-0">
@@ -259,6 +263,9 @@ export default function Profile() {
 
         {!isEditing && (
           <div className="flex gap-2 mb-2">
+            <Button variant="outline" className="flex-1 gap-1.5" onClick={() => setStoryOpen(true)}>
+              <Plus size={16} /> Add story
+            </Button>
             <Button variant="outline" className="flex-1" onClick={() => setIsEditing(true)}>Edit Profile</Button>
             <Button variant="outline" onClick={() => navigate('/verification')} className="flex-1 gap-1.5" disabled={profile.verification_status !== 'none' && profile.verification_status !== 'email'}>
               <Shield size={16} />
@@ -478,6 +485,7 @@ export default function Profile() {
           onClose={() => { setCropImage(null); URL.revokeObjectURL(cropImage); }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

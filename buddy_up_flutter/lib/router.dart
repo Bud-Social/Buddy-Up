@@ -86,6 +86,7 @@ import 'features/sessions/screens/schedule_screen.dart';
 import 'features/sessions/screens/availability_screen.dart';
 import 'features/sessions/screens/programme_weeks_screen.dart';
 import 'features/messaging/screens/conversation_list_screen.dart';
+import 'features/messaging/screens/story_create_screen.dart';
 import 'features/messaging/screens/chat_screen.dart';
 import 'features/community/screens/communities_screen.dart';
 import 'features/community/screens/community_detail_screen.dart';
@@ -893,6 +894,10 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           GoRoute(
             path: '/messages',
             builder: (_, _) => const ConversationListScreen(),
+          ),
+          GoRoute(
+            path: '/messages/story/create',
+            builder: (_, _) => const StoryCreateScreen(),
           ),
           GoRoute(
             path: '/messages/:conversationId',

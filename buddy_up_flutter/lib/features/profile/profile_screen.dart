@@ -277,6 +277,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     BuddyButton(
+                      label: 'Add story',
+                      icon: Icons.add_a_photo_outlined,
+                      onPressed: () => context.push('/messages/story/create'),
+                      variant: BuddyButtonVariant.primary,
+                      size: BuddyButtonSize.sm,
+                    ),
+                    const SizedBox(width: 10),
+                    BuddyButton(
                       label: 'Edit Profile',
                       icon: Icons.edit_outlined,
                       onPressed: () async {

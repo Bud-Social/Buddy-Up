@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,10 @@ import '../../data/models/buddy.dart';
 import '../../data/models/post.dart';
 import '../../data/models/profile.dart';
 import '../../data/repositories/profile_repository.dart';
+import '../messaging/widgets/story_strip.dart';
+import '../messaging/widgets/story_viewer.dart';
+import '../messaging/providers/messaging_provider.dart';
+import '../../data/models/messaging.dart';
 import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/error_view.dart';
 import '../../shared/widgets/page_loader.dart';
@@ -197,15 +203,15 @@ class _AnimatedProfileButtonState extends State<AnimatedProfileButton>
 // Main Screen
 // ---------------------------------------------------------------------------
 
-class UserProfileScreen extends StatefulWidget {
+class UserProfileScreen extends ConsumerStatefulWidget {
   final String username;
   const UserProfileScreen({super.key, required this.username});
 
   @override
-  State<UserProfileScreen> createState() => _UserProfileScreenState();
+  ConsumerState<UserProfileScreen> createState() => _UserProfileScreenState();
 }
 
-class _UserProfileScreenState extends State<UserProfileScreen>
+class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     with SingleTickerProviderStateMixin {
   Profile? _profile;
   bool _isLoading = true;
@@ -697,6 +703,40 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   // ── Action Buttons ────────────────────────────────────────────────────────
 
+  Future<void> _viewStory() async {
+    final repo = ref.read(messagingRepositoryProvider);
+    try {
+      final res = await repo.getStories();
+      final reels = (res['data'] as List? ?? const []);
+      final match = reels.cast<Map<String, dynamic>>().firstWhere(
+            (r) => (r['user']?['username'] ?? '').toString() == widget.username &&
+                ((r['stories'] as List?)?.isNotEmpty ?? false),
+            orElse: () => const <String, dynamic>{},
+          );
+      if (match.isEmpty) {
+        if (!mounted) return;
+        showToast(context, 'No story in the last 24h', type: ToastType.info);
+        return;
+      }
+      // Build a lightweight viewer payload; reuse the existing StoryViewer.
+      final parsed = reels.map((r) => StoryReel.fromJson(Map<String, dynamic>.from(r as Map))).toList();
+      final index = parsed.indexWhere((r) => r.user.username == widget.username);
+      if (index < 0) return;
+      if (!mounted) return;
+      final nav = Navigator.of(context);
+      final ids = await loadSeenStories();
+      nav.push(
+        MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (_) => StoryViewer(reels: parsed, initialReelIndex: index, seenIds: ids),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      showToast(context, 'Could not load story', type: ToastType.error);
+    }
+  }
+
   Widget _buildActions(Profile p) {
     final buddy = _buddyButtonProps(p);
     return Padding(
@@ -744,6 +784,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             foregroundColor: BuddyColors.textPrimary,
             borderColor: BuddyColors.border,
             onPressed: _openMessage,
+          ),
+          const SizedBox(width: 8),
+          // View Story Button
+          AnimatedProfileButton(
+            label: 'Story',
+            icon: Icons.auto_awesome_motion_rounded,
+            backgroundColor: BuddyColors.surfaceRaised,
+            foregroundColor: BuddyColors.green,
+            borderColor: BuddyColors.border,
+            onPressed: _viewStory,
           ),
           const SizedBox(width: 8),
           // Ping Button

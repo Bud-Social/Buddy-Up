@@ -44,6 +44,7 @@ export default function UserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [hasStory, setHasStory] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [pingLoading, setPingLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
@@ -171,6 +172,16 @@ export default function UserProfile() {
       setPostsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!profile?.username) return;
+    messagingApi.getStories()
+      .then((res) => {
+        const reels = res.data ?? [];
+        setHasStory(reels.some((r) => r.user.username === profile.username && r.stories.length > 0));
+      })
+      .catch(() => { setHasStory(false); });
+  }, [profile?.username]);
 
   useEffect(() => {
     if (activeTab === 'lives' && profile?.username) fetchLives();
@@ -408,6 +419,17 @@ export default function UserProfile() {
 
           {/* Sub Action Buttons: Follow, Ping, Message */}
           <div className="flex gap-2">
+            {hasStory && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 gap-1.5 transition-all duration-200 active:scale-95 border-buddy-green/40 text-buddy-green hover:bg-buddy-green/10"
+                onClick={() => navigate('/messages')}
+              >
+                View story
+              </Button>
+            )}
+
             <Button
               variant={isFollowing ? 'outline' : 'primary'}
               size="sm"
