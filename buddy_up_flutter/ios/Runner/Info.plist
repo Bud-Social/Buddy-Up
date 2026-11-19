@@ -29,7 +29,11 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Buddy-Up uses the camera to take progress photos and scan your meals.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Buddy-Up uses your location to find gyms, workout buddies, and events near you while the app is open.</string>
+	<string>Buddy-Up uses your location to find gyms, workout buddies, and events near you, and to track workouts while you are out.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Buddy-Up needs background location so your run or ride keeps tracking when the screen is off or locked.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Buddy-Up needs background location so your run or ride keeps tracking when the screen is off or locked.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Buddy-Up uses the microphone for live workout sessions and video calls with your buddies.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -62,6 +66,7 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+		<string>location</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

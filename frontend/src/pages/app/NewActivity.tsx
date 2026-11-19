@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Activity as ActivityIcon, Footprints, Navigation, Timer, Mountain,
-  Bike, Play, Square, Save, Trash2, MapPin, Loader2,
+  Bike, Play, Square, Save, Trash2, MapPin, Loader2, Moon,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -33,7 +33,7 @@ export default function NewActivity() {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const tracker = useActivityTracker('run');
-  const { state, setType, start, stop, reset, buildPayload, estimateSteps } = tracker;
+  const { state, setType, start, stop, reset, buildPayload, estimateSteps, wakeLockActive, wakeLockSupported } = tracker;
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<ActivityRecordInput | null>(null);
@@ -236,6 +236,27 @@ export default function NewActivity() {
               </span>
             )}
           </div>
+        )}
+
+        {state.tracking && (
+          <p className="mb-3 text-[11px] text-buddy-text-secondary flex items-center gap-1.5">
+            {wakeLockSupported && wakeLockActive ? (
+              <>
+                <Moon size={11} className="text-buddy-green" />
+                Screen stays awake while tracking. If you switch apps, GPS may pause — finish the session here.
+              </>
+            ) : wakeLockSupported ? (
+              <>
+                <Moon size={11} className="text-buddy-gold" />
+                Screen kept awake not available — keep this page in the foreground, GPS suspends in background tabs.
+              </>
+            ) : (
+              <>
+                <Moon size={11} className="text-buddy-gold" />
+                Your browser doesn't support keeping the screen awake — keep this page in the foreground while tracking.
+              </>
+            )}
+          </p>
         )}
 
         <RouteMap route={liveRoute} height={280} follow={state.tracking} />

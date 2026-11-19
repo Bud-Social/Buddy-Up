@@ -17,6 +17,13 @@ export interface TrackPoint {
 
 export type TrackerType = ActivityRecordInput['activity_type'];
 
+// Minimal WakeLock shape — DOM lib may lag behind the spec in older TS configs.
+interface WakeLockSentinel {
+  readonly released: boolean;
+  release(): Promise<void>;
+  addEventListener(type: 'release', listener: () => void): void;
+}
+
 export interface TrackerState {
   type: TrackerType;
   tracking: boolean;
@@ -57,6 +64,8 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [points, setPoints] = useState<TrackPoint[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const watchIdRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -64,6 +73,28 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
   const motionStepsRef = useRef(0);
   const lastMotionAtRef = useRef(0);
   const motionHandlerRef = useRef<((e: DeviceMotionEvent) => void) | null>(null);
+
+  // Keep the screen awake during a session — the closest a browser can get to
+  // "screen locked" tracking. The OS releases the lock when the tab hides, so we
+  // also re-acquire whenever the page comes back to the foreground.
+  const acquireWakeLock = useCallback(async () => {
+    const nav = navigator as Navigator & { wakeLock?: { request: (type: 'screen') => Promise<WakeLockSentinel> } };
+    if (!nav.wakeLock) return;
+    try {
+      wakeLockRef.current = await nav.wakeLock.request('screen');
+      wakeLockRef.current.addEventListener('release', () => setWakeLockActive(false));
+      setWakeLockActive(true);
+    } catch {
+      setWakeLockActive(false);
+    }
+  }, []);
+
+  const releaseWakeLock = useCallback(() => {
+    const sentinel = wakeLockRef.current;
+    wakeLockRef.current = null;
+    setWakeLockActive(false);
+    sentinel?.release().catch(() => {});
+  }, []);
 
   // ── Hybrid step counting ──────────────────────────────────────────────────
   // Real motion-sensor cadence when the browser offers it; otherwise a
@@ -120,7 +151,8 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
     setError(null);
     motionStepsRef.current = 0;
     lastPosRef.current = null;
-  }, []);
+    releaseWakeLock();
+  }, [releaseWakeLock]);
 
   const start = useCallback(() => {
     setError(null);
@@ -163,7 +195,8 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
     if (type === 'walk') startMotionListener();
     timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
     setTracking(true);
-  }, [startMotionListener, type]);
+    void acquireWakeLock();
+  }, [acquireWakeLock, startMotionListener, type]);
 
   const stop = useCallback(() => {
     if (watchIdRef.current !== null) {
@@ -175,8 +208,9 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
       timerRef.current = null;
     }
     stopMotionListener();
+    releaseWakeLock();
     setTracking(false);
-  }, [stopMotionListener]);
+  }, [stopMotionListener, releaseWakeLock]);
 
   // The distance follows the route.
   useEffect(() => {
@@ -187,6 +221,15 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
   }, [points]);
 
   useEffect(() => () => { stop(); }, [stop]);
+
+  useEffect(() => {
+    if (!tracking) return;
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void acquireWakeLock();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [tracking, acquireWakeLock]);
 
   /** The payload for the tracker, with the numbers each kind cares about. */
   const buildPayload = useCallback((): ActivityRecordInput => {
@@ -212,6 +255,8 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
     type, tracking, elapsed, distanceM, steps, gpsFix, gpsAccuracy, points, error,
   };
 
+  const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
+
   return {
     state,
     setType,
@@ -220,5 +265,7 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
     reset,
     buildPayload,
     estimateSteps,
+    wakeLockActive,
+    wakeLockSupported,
   };
 }

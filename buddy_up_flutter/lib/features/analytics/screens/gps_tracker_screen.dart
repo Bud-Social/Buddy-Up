@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -74,15 +75,17 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen> {
     }
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      setState(() => _error = 'Location permission denied.');
+      final isPermanent = permission == LocationPermission.deniedForever;
+      setState(() => _error = isPermanent
+          ? 'Location denied forever. Enable it in Settings to track a session.'
+          : 'Location permission denied.');
       return;
     }
 
     // First fix immediately so zero-movement sessions still have a start pin.
     try {
       final first = await Geolocator.getCurrentPosition(
-        locationSettings:
-            const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: _currentLocationSettings(),
       ).timeout(const Duration(seconds: 15));
       _onPosition(first);
     } catch (_) {
@@ -90,10 +93,7 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen> {
     }
 
     _positionSub = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
-      ),
+      locationSettings: _streamLocationSettings(),
     ).listen(_onPosition, onError: (Object e) {
       if (mounted) setState(() => _error = 'GPS error: $e');
     });
@@ -103,6 +103,44 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen> {
     });
 
     setState(() => _tracking = true);
+  }
+
+  /// Settings that keep the GPS alive when the screen is off/locked.
+  /// Android: foreground service + persistent notification + wake lock.
+  /// iOS: background location indicator (user must grant "Always" for
+  /// fully-screen-locked tracking; "When In Use" still streams while the
+  /// blue bar is lit).
+  LocationSettings _currentLocationSettings() {
+    if (Platform.isAndroid) {
+      return AndroidSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+        intervalDuration: const Duration(seconds: 5),
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          notificationTitle: 'BuddyUp is tracking your session',
+          notificationText: 'Screen can lock — GPS keeps running. Tap to open.',
+          enableWakeLock: true,
+          setOngoing: true,
+        ),
+      );
+    }
+    if (Platform.isIOS) {
+      return AppleSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+        activityType: ActivityType.fitness,
+        allowBackgroundLocationUpdates: true,
+        showBackgroundLocationIndicator: true,
+        pauseLocationUpdatesAutomatically: false,
+      );
+    }
+    return const LocationSettings(accuracy: LocationAccuracy.high);
+  }
+
+  LocationSettings _streamLocationSettings() {
+    if (Platform.isAndroid) return _currentLocationSettings();
+    if (Platform.isIOS) return _currentLocationSettings();
+    return const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 5);
   }
 
   void _onPosition(Position pos) {
@@ -272,6 +310,17 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen> {
                   ),
                 ),
               ),
+              if (_tracking)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    Platform.isIOS
+                        ? 'Lock the screen and GPS keeps working — allow "Always" location for best results.'
+                        : 'Screen can lock — GPS keeps running in a pinned notification.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 10.5),
+                  ),
+                ),
               const SizedBox(height: 20),
 
               // Live elapsed time
