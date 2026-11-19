@@ -68,6 +68,10 @@ def _safe_media_url(value) -> str:
 
 def _allowed_to_message(requester: Profile, other: Profile) -> bool:
     """Return True if requester can message other."""
+    if requester.user_id == other.user_id:
+        # Self-messaging ("Message yourself") is always allowed — it's how a
+        # personal note/journal channel works.
+        return True
     if other.role in ('trainer', 'practitioner') or requester.role in ('trainer', 'practitioner'):
         return True
     is_buddy = BuddyRelationship.objects.filter(
