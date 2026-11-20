@@ -20,9 +20,12 @@ class _MessagingRepository implements MessagingRepository {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<dynamic> getConversations({String? kind}) async {
+  Future<dynamic> getConversations({String? kind, String? archived}) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'kind': kind};
+    final queryParameters = <String, dynamic>{
+      r'kind': kind,
+      r'archived': archived,
+    };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;

@@ -209,8 +209,11 @@ class MessageBubble extends StatelessWidget {
   /// View-once, recipient side: a pill until opened; a tombstone after. The
   /// sender always sees the media itself with a 1× badge.
   Widget? _buildViewOnceGate() {
-    if (isMine || !message.viewOnce) return null;
+    if (!message.viewOnce) return null;
     final opened = message.viewOnceOpenedAt != null;
+    // The sender keeps the media until it is consumed, then it is removed
+    // from storage server-side and both sides see a tombstone.
+    if (isMine && !opened) return null;
     if (opened) {
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -225,7 +228,7 @@ class MessageBubble extends StatelessWidget {
               Text('Opened',
                   style: TextStyle(
                       color: BuddyColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
-              Text('View-once · media no longer available',
+              Text('View-once · media removed after viewing',
                   style: TextStyle(color: BuddyColors.textSecondary, fontSize: 10)),
             ],
           ),

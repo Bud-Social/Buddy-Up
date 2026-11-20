@@ -1,4 +1,5 @@
 import hashlib
+from unittest.mock import patch
 
 from datetime import timedelta
 
@@ -1463,3 +1464,26 @@ class AccountEventChoiceIntegrityTests(SimpleTestCase):
             undeclared, set(),
             f'_log_event writes undeclared MFA event types: {sorted(undeclared)}',
         )
+
+
+class GoogleSignInTests(TestCase):
+    """A Google-verified email must not strand a new user on the login screen."""
+
+    @patch('apps.accounts.views.id_token.verify_oauth2_token')
+    def test_new_verified_google_account_signs_in_immediately(self, verify):
+        verify.return_value = {
+            'email': 'google-new-signin@example.com',
+            'email_verified': True,
+            'sub': 'google-sub-new-signin',
+            'name': 'New Google User',
+        }
+        response = self.client.post(
+            '/api/v1/auth/google/',
+            {'credential': 'header.payload.signature'}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data['data']
+        self.assertTrue(data['access'])
+        self.assertTrue(data['refresh'])
+        self.assertTrue(User.objects.get(email='google-new-signin@example.com').email_verified)
+        self.assertTrue(data.get('onboarding_required'))

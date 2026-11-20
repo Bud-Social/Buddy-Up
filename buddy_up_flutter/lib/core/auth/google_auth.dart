@@ -47,4 +47,14 @@ class GoogleAuth {
     return error is GoogleSignInException &&
         error.code == GoogleSignInExceptionCode.canceled;
   }
+
+  /// Configuration failures on Android are almost always an unregistered
+  /// signing certificate. Name that cause so the user can fix it instead of
+  /// thinking the app simply "went back to login".
+  static String? configurationHint(Object error) {
+    if (error is! GoogleSignInException) return null;
+    return 'Google sign-in could not complete (${error.code.name}). If this '
+        'happens on Android, register this build\'s SHA-1 certificate in the '
+        'Google Cloud Android OAuth client, then try again.';
+  }
 }

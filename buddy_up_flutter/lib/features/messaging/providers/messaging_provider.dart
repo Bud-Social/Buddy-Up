@@ -79,7 +79,11 @@ class ConversationsNotifier extends Notifier<ConversationsState> {
   /// [filter] narrows the list; omitting it keeps whatever filter is already
   /// active (a promotion re-reads through the same filter). Pass
   /// [clearFilter] from the unfiltered Messages tab.
-  Future<void> load({ConversationFilter? filter, bool clearFilter = false}) async {
+  Future<void> load({
+    ConversationFilter? filter,
+    bool clearFilter = false,
+    bool archived = false,
+  }) async {
     state = state.copyWith(
       isLoading: true,
       error: null,
@@ -87,7 +91,7 @@ class ConversationsNotifier extends Notifier<ConversationsState> {
       clearFilter: clearFilter,
     );
     try {
-      final raw = await _repository.getConversations();
+      final raw = await _repository.getConversations(archived: archived ? 'true' : null);
       final all = _parseConvList(raw['data']);
       state = state.copyWith(
         conversations: _apply(state.filter, all),

@@ -6,7 +6,7 @@ import ipaddress
 import socket
 from datetime import timedelta
 from pathlib import PurePosixPath
-from urllib.parse import unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
@@ -14,6 +14,7 @@ from django.http import FileResponse, Http404
 from django.utils import timezone
 from django.core.cache import cache
 from django.core.files.storage import default_storage
+from django.core import signing
 
 from rest_framework import views, permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -690,6 +691,29 @@ class UploadAttachmentView(views.APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+def _storage_path_for_url(url):
+    """Return the storage-relative path for one of our own media URLs."""
+    if not url:
+        return None
+    storage_base_path = urlparse(default_storage.url('')).path.rstrip('/') + '/'
+    media_path = urlparse(url).path
+    if not media_path.startswith(storage_base_path):
+        return None
+    relative = unquote(media_path[len(storage_base_path):]).lstrip('/')
+    parts = PurePosixPath(relative)
+    if (not relative.startswith('messaging/') or '..' in parts.parts
+            or parts.is_absolute()):
+        return None
+    return relative
+
+
+def _view_once_token(message_id, user_id):
+    return signing.dumps(
+        {'message_id': str(message_id), 'user_id': str(user_id)},
+        salt='view-once',
+    )
+
+
 class ServeMessageFileView(views.APIView):
     """
     Authenticated file proxy for message attachments.
@@ -697,24 +721,42 @@ class ServeMessageFileView(views.APIView):
     """
     permission_classes = [permissions.IsAuthenticated]
 
+    # View-once links carry their own signed, recipient-bound token because
+    # an <img>/<video> tag cannot send an Authorization header.
+    permission_classes = [permissions.AllowAny]
+
     def get(self, request, message_id):
         msg = get_object_or_404(Message, id=message_id)
-        get_object_or_404(Conversation, id=msg.conversation_id, participants=request.user.profile)
+        is_view_once = bool(msg.view_once)
+        if is_view_once:
+            token = request.query_params.get('token', '')
+            try:
+                claims = signing.loads(token, salt='view-once', max_age=120)
+            except signing.BadSignature:
+                raise Http404('This view-once link has expired.')
+            if str(claims.get('message_id')) != str(msg.id):
+                raise Http404('Invalid view-once link.')
+            owner_id = str(claims.get('user_id', ''))
+            if not Conversation.objects.filter(
+                id=msg.conversation_id, participants__user_id=owner_id,
+            ).exists():
+                raise Http404('Invalid view-once link.')
+        else:
+            if not request.user.is_authenticated:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Authentication credentials were not provided.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_403_FORBIDDEN)
+            get_object_or_404(
+                Conversation, id=msg.conversation_id, participants=request.user.profile,
+            )
 
         if not msg.media_url:
             raise Http404('No attachment on this message.')
-
-        # Only proxy attachments that were placed in our messaging storage.
-        # Never turn an arbitrary URL saved in a message into a filesystem path.
-        storage_base_path = urlparse(default_storage.url('')).path.rstrip('/') + '/'
-        media_path = urlparse(msg.media_url).path
-        if not media_path.startswith(storage_base_path):
+        relative_path = _storage_path_for_url(msg.media_url)
+        if not relative_path:
             raise Http404('Attachment is not available through the secure proxy.')
-        relative_path = unquote(media_path[len(storage_base_path):]).lstrip('/')
-        path_parts = PurePosixPath(relative_path)
-        if (not relative_path.startswith('messaging/') or '..' in path_parts.parts
-                or path_parts.is_absolute()):
-            raise Http404('Invalid attachment path.')
 
         try:
             attachment = default_storage.open(relative_path, 'rb')
@@ -732,10 +774,18 @@ class ServeMessageFileView(views.APIView):
         response['X-Content-Type-Options'] = 'nosniff'
         response['X-Frame-Options'] = 'DENY'
         response['Content-Security-Policy'] = "default-src 'none'; media-src 'self'; img-src 'self'"
-        if msg.view_once:
-            if msg.view_once_opened_at and msg.sender_id != request.user.profile.pk:
-                raise Http404('This view-once message has already been opened.')
+        if is_view_once:
+            # One serve only. Remove the stored object and drop the URL from
+            # the message, so cached copies of the old URL are dead too.
             response['Cache-Control'] = 'no-store'
+            default_storage.delete(relative_path)
+            msg.media_url = ''
+            msg.save(update_fields=['media_url', 'updated_at'])
+            _notify_conversation_participants(Conversation.objects.get(id=msg.conversation_id), {
+                'type': 'view_once_consumed',
+                'conversation_id': str(msg.conversation_id),
+                'message_id': str(msg.id),
+            })
         else:
             response['Cache-Control'] = 'private, max-age=3600'
         return response
@@ -2808,13 +2858,28 @@ class ViewOnceOpenedView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_403_FORBIDDEN)
 
-        # The first open returns the media URL. It is deliberately not part of
-        # the normal message payload, so a recipient cannot keep a copy of it
-        # from the conversation feed.
-        media_url = msg.media_url if not msg.view_once_opened_at else ''
+        # First open: rotate the stored object to a fresh path so any URL a
+        # client captured earlier stops working, and return a short-lived
+        # signed proxy URL for the one permitted view.
+        media_url = ''
         if not msg.view_once_opened_at:
+            old_path = _storage_path_for_url(msg.media_url)
+            if old_path:
+                extension = PurePosixPath(old_path).suffix
+                new_path = f'messaging/viewonce/{uuid.uuid4().hex}{extension}'
+                try:
+                    with default_storage.open(old_path, 'rb') as source:
+                        new_path = default_storage.save(new_path, source)
+                    default_storage.delete(old_path)
+                    msg.media_url = default_storage.url(new_path)
+                except OSError:
+                    logger.exception('view-once media rotation failed for message=%s', msg.id)
             msg.view_once_opened_at = timezone.now()
-            msg.save(update_fields=['view_once_opened_at', 'updated_at'])
+            msg.save(update_fields=['media_url', 'view_once_opened_at', 'updated_at'])
+            media_url = request.build_absolute_uri(
+                f'/api/v1/messaging/messages/{msg.id}/serve/'
+                f'?token={quote(_view_once_token(msg.id, request.user.profile.user_id))}'
+            )
             _notify_conversation_participants(Conversation.objects.get(id=msg.conversation_id), {
                 'type': 'view_once_opened',
                 'conversation_id': str(msg.conversation_id),

@@ -8,7 +8,10 @@ abstract class MessagingRepository {
   factory MessagingRepository(Dio dio, {String baseUrl}) = _MessagingRepository;
 
   @GET('/messaging/conversations/')
-  Future<dynamic> getConversations({@Query('kind') String? kind});
+  Future<dynamic> getConversations({
+    @Query('kind') String? kind,
+    @Query('archived') String? archived,
+  });
 
   @POST('/messaging/conversations/start/')
   Future<dynamic> startConversation(@Body() Map<String, dynamic> body);

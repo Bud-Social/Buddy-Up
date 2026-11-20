@@ -34,6 +34,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
 
   static const _tabs = [
     ('messages', 'Messages'),
+    ('archived', 'Archived'),
     ('communities', 'Community'),
     ('calls', 'Calls'),
     ('stories', 'Stories'),
@@ -59,7 +60,12 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
 
   void _openTab(String tab) {
     setState(() => _listTab = tab);
-    if (tab == 'communities' && !_communitiesLoaded) {
+    if (tab == 'messages' || tab == 'archived') {
+      ref.read(conversationsProvider.notifier).load(
+        clearFilter: true,
+        archived: tab == 'archived',
+      );
+    } else if (tab == 'communities' && !_communitiesLoaded) {
       _communitiesLoaded = true;
       ref.read(communityConversationsProvider.notifier).load();
     } else if (tab == 'calls' && !_callsLoaded) {
@@ -100,7 +106,10 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
           tooltip: 'Menu',
           onPressed: () => AppNav.open(context),
         ),
-        title: const Text('Messages', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          _listTab == 'archived' ? 'Archived' : 'Messages',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),

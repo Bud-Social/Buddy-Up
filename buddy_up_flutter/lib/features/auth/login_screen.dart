@@ -273,7 +273,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
         if (mounted) showToast(context, message.isNotEmpty ? message : 'Google Sign-In failed.', type: ToastType.error);
       } else {
-        if (mounted) showToast(context, 'Google Sign-In failed: $e', type: ToastType.error);
+        final hint = GoogleAuth.configurationHint(e);
+        if (mounted) {
+          showToast(
+            context,
+            hint ?? 'Google Sign-In failed: $e',
+            type: ToastType.error,
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

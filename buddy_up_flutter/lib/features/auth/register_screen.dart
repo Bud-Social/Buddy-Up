@@ -293,7 +293,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         }
         if (mounted) showToast(context, message.isNotEmpty ? message : 'Google Sign-In failed.', type: ToastType.error);
       } else {
-        if (mounted) showToast(context, 'Google Sign-In failed: $e', type: ToastType.error);
+        final hint = GoogleAuth.configurationHint(e);
+        if (mounted) {
+          showToast(context, hint ?? 'Google Sign-In failed: $e', type: ToastType.error);
+        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -425,6 +428,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   keyboardType: TextInputType.phone,
                   prefixIcon: Icons.phone_outlined,
                 ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 4, left: 4),
+                  child: Text(
+                    'Optional. Leave it blank if you prefer.',
+                    style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 BuddyInput(
                   controller: _passwordController,
@@ -500,8 +510,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Because you are under 18, we need a parent or guardian. '
-                          'Provide at least one contact.',
+                          'Because you are 16 or 17, we need a parent or guardian. '
+                          'Provide at least one contact (name, email or phone).',
                           style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
                         ),
                         const SizedBox(height: 12),

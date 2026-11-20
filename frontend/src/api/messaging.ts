@@ -293,8 +293,13 @@ export const messagingApi = {
    * Buddy chats have their own inbox, so they never mix with the rest of
    * the messaging.
    */
-  getConversations: (kind: 'main' | 'buddy' | 'communities' = 'main') =>
-    apiClient.get<ApiResponse<Conversation[]>>('/messaging/conversations/', { params: { kind } }).then((r) => r.data),
+  getConversations: (
+    kind: 'main' | 'buddy' | 'communities' = 'main',
+    archived = false,
+  ) =>
+    apiClient.get<ApiResponse<Conversation[]>>('/messaging/conversations/', {
+      params: archived ? { kind, archived: 'true' } : { kind },
+    }).then((r) => r.data),
 
   /**
    * Start (or reuse) a conversation. Pass `origin: 'discovery'` for threads opened

@@ -55,11 +55,15 @@ class MessageSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         request = self.context.get('request')
         viewer = getattr(getattr(request, 'user', None), 'profile', None) if request else None
-        # A view-once payload is delivered exactly once. After the recipient
-        # opens it, the media URL is withheld for everyone but the sender.
-        if instance.view_once and instance.view_once_opened_at:
+        # A view-once payload is never delivered in the conversation feed:
+        # recipients only receive a URL from the consume endpoint, and only
+        # on the first open. The sender keeps their own copy.
+        if instance.view_once:
             if viewer is None or viewer.pk != instance.sender.pk:
                 data['media_url'] = ''
+                reply = data.get('reply_data')
+                if isinstance(reply, dict):
+                    reply['media_url'] = ''
         return data
 
     def get_sender_data(self, obj):

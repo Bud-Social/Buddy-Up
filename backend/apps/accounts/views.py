@@ -1660,23 +1660,31 @@ class GoogleLoginView(views.APIView):
             user.consent_log = log
             user.save(update_fields=['consent_log'])
 
-        # For newly created users, send activation email instead of direct login
+        # New Google accounts arrive with a verified email from Google itself.
+        # Trust it so the first sign-in completes instead of bouncing the user
+        # back to the login screen behind an activation email they may never
+        # see. Accounts whose provider did not verify the email still go
+        # through activation (kept for Apple and other providers).
         if created:
-            activation_token = _generate_activation_token(user)
-            send_activation_email.delay(str(user.id), activation_token)
-            _log_event(user, 'activation_email_sent', request, metadata={'method': 'google'})
+            if info.get('email_verified') is True:
+                user.email_verified = True
+                user.save(update_fields=['email_verified'])
+            else:
+                activation_token = _generate_activation_token(user)
+                send_activation_email.delay(str(user.id), activation_token)
+                _log_event(user, 'activation_email_sent', request, metadata={'method': 'google'})
 
-            return Response({
-                'success': True,
-                'data': {
-                    'require_activation': True,
-                    'email': user.email,
+                return Response({
+                    'success': True,
+                    'data': {
+                        'require_activation': True,
+                        'email': user.email,
+                        'message': 'Account created! Please check your email to activate your account.',
+                    },
                     'message': 'Account created! Please check your email to activate your account.',
-                },
-                'message': 'Account created! Please check your email to activate your account.',
-                'errors': None,
-                'pagination': None,
-            }, status=status.HTTP_201_CREATED)
+                    'errors': None,
+                    'pagination': None,
+                }, status=status.HTTP_201_CREATED)
 
         try:
             data, challenged = _finalize_social_login(user, 'google', request)

@@ -6,6 +6,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/security/screen_guard.dart';
 
 /// Fullscreen viewer for a view-once payload. The URL is handed over by the
 /// consumption endpoint (not stored in the conversation payload), and the
@@ -44,6 +45,7 @@ class _ViewOnceViewerState extends State<ViewOnceViewer> {
   @override
   void initState() {
     super.initState();
+    unawaited(ScreenGuard.secure());
     if (widget.isAudio || _isVideo) {
       _player = Player();
       if (_isVideo) _videoController = VideoController(_player!);
@@ -58,6 +60,7 @@ class _ViewOnceViewerState extends State<ViewOnceViewer> {
 
   @override
   void dispose() {
+    unawaited(ScreenGuard.release());
     _closeTimer?.cancel();
     _player?.dispose();
     super.dispose();

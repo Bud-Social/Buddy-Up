@@ -983,7 +983,7 @@ class ConversationPreferenceTests(TestCase):
         self.client.force_authenticate(self.alice_user)
         first = self.client.post(f'/api/v1/messaging/messages/{message.id}/view-once/')
         self.assertEqual(first.status_code, status.HTTP_200_OK)
-        self.assertEqual(first.data['data']['media_url'], '/media/messaging/once.jpg')
+        self.assertIn('/serve/?token=', first.data['data']['media_url'])
         second = self.client.post(f'/api/v1/messaging/messages/{message.id}/view-once/')
         self.assertEqual(second.data['data']['media_url'], '')
 
@@ -991,3 +991,46 @@ class ConversationPreferenceTests(TestCase):
             f'/api/v1/messaging/conversations/{self.conversation.id}/messages/',
         ).data['data']
         self.assertEqual(listed[0]['media_url'], '')
+
+
+class ViewOnceServeTests(TestCase):
+    """The one-shot link dies after a single serve; old URLs stop working too."""
+
+    def setUp(self):
+        self.alice_user = User.objects.create_user(email='serve-alice@example.com', password='TestPass123!')
+        self.bob_user = User.objects.create_user(email='serve-bob@example.com', password='TestPass123!')
+        self.alice = Profile.objects.create(user=self.alice_user, username='serve-alice', display_name='Alice')
+        self.bob = Profile.objects.create(user=self.bob_user, username='serve-bob', display_name='Bob')
+        self.conversation = Conversation.objects.create()
+        self.conversation.participants.add(self.alice, self.bob)
+        self.client = APIClient()
+        self.client.force_authenticate(self.alice_user)
+
+    def test_signed_link_serves_once_then_deletes_media(self):
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+
+        png = (
+            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
+            b'\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xcf'
+            b'\xc0\xf0\x1f\x00\x05\x05\x02\x00\xb5\xa9\x93\x9d\x00\x00\x00\x00IEND'
+            b'\xaeB`\x82'
+        )
+        stored = default_storage.save('messaging/viewonce-serve.png', ContentFile(png))
+        message = Message.objects.create(
+            conversation=self.conversation, sender=self.bob,
+            message_type='photo', media_url=default_storage.url(stored),
+            view_once=True,
+        )
+        opened = self.client.post(f'/api/v1/messaging/messages/{message.id}/view-once/')
+        self.assertEqual(opened.status_code, status.HTTP_200_OK)
+        url = opened.data['data']['media_url']
+
+        anonymous = APIClient()
+        first = anonymous.get(url)
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertTrue(b''.join(first.streaming_content).startswith(b'\x89PNG'))
+
+        message.refresh_from_db()
+        self.assertEqual(message.media_url, '')
+        self.assertEqual(anonymous.get(url).status_code, status.HTTP_404_NOT_FOUND)

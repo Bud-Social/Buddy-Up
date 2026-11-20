@@ -512,7 +512,8 @@ class ChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
             'sender_id': str(msg.sender.user_id),
             'message_type': msg.message_type,
             'body': msg.body,
-            'media_url': msg.media_url,
+            # View-once media is only handed out by the consume endpoint.
+            'media_url': '' if msg.view_once else msg.media_url,
             'media_mime': msg.media_mime,
             'file_name': msg.file_name,
             'reply_to_id': str(msg.reply_to_id) if msg.reply_to_id else None,

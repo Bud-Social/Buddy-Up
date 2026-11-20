@@ -333,7 +333,8 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [messagesLoading, setMessagesLoading] = useState(false);
   // Tab bar on the conversations panel: messages / communities / calls / stories.
-  const [listTab, setListTab] = useState<'messages' | 'communities' | 'calls' | 'stories'>('messages');
+  const [listTab, setListTab] = useState<'messages' | 'archived' | 'communities' | 'calls' | 'stories'>('messages');
+  const [archivedOnly, setArchivedOnly] = useState(false);
   const [communityConvos, setCommunityConvos] = useState<Conversation[]>([]);
   const [communityLoading, setCommunityLoading] = useState(false);
   const [callHistory, setCallHistory] = useState<CallHistoryEntry[] | null>(null);
@@ -677,11 +678,11 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   const fetchConversations = useCallback(async () => {
     try {
       // Buddy chats have their own inbox; the server decides what is in it.
-      const res = await messagingApi.getConversations(isDiscovery ? 'buddy' : 'main');
+      const res = await messagingApi.getConversations(isDiscovery ? 'buddy' : 'main', archivedOnly);
       setConversations(res.data ?? []);
     } catch { /* silent */ }
     finally { setIsLoading(false); }
-  }, [isDiscovery]);
+  }, [isDiscovery, archivedOnly]);
 
   useEffect(() => {
     fetchConversations();
@@ -1291,17 +1292,18 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
             )}
           </div>
 
-          {/* Tab bar: messages / communities / calls / stories */}
-          <div className="grid grid-cols-4 rounded-2xl bg-buddy-surface p-1 mb-3">
+          {/* Tab bar: messages / archived / communities / calls / stories */}
+          <div className="grid grid-cols-5 rounded-2xl bg-buddy-surface p-1 mb-3">
             {([
               { key: 'messages', label: 'Messages' },
+              { key: 'archived', label: 'Archived' },
               { key: 'communities', label: 'Community' },
               { key: 'calls', label: 'Calls' },
               { key: 'stories', label: 'Stories' },
             ] as const).map(({ key, label }) => (
               <button
                 key={key}
-                onClick={() => setListTab(key)}
+                onClick={() => { setListTab(key); setArchivedOnly(key === 'archived'); }}
                 aria-pressed={listTab === key}
                 className={`text-[11px] font-semibold rounded-xl py-1.5 transition-colors ${
                   listTab === key ? 'bg-buddy-black text-buddy-green shadow-sm' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
