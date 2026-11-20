@@ -313,9 +313,11 @@ export default function GymDetail() {
           <div className="w-16 h-16 rounded-xl bg-buddy-green/10 flex items-center justify-center text-3xl border-2 border-buddy-black">
             {gym.logo_url ? <img src={gym.logo_url} alt="" className="w-full h-full rounded-xl object-cover" /> : '🏋️'}
           </div>
-          <div>
+          {/* A solid backing panel keeps the name, handle, member count and
+              location readable over any cover photo. */}
+          <div className="min-w-0 rounded-xl bg-buddy-black/75 backdrop-blur-md border border-white/10 px-3 py-2 shadow-lg">
             <div className="flex items-center gap-2">
-              <h1 className="font-heading text-xl font-semibold">{gym.name}</h1>
+              <h1 className="font-heading text-xl font-semibold truncate">{gym.name}</h1>
               <VerifiedGymBadge
                 verified={gym.is_verified}
                 tier={gym.tier}
@@ -327,9 +329,9 @@ export default function GymDetail() {
                 }}
               />
             </div>
-            <p className="text-xs text-buddy-text-secondary">@{gym.handle} · {memberCount} members</p>
+            <p className="text-xs text-white/75">@{gym.handle} · {memberCount} members</p>
             {(gym.location_summary?.venue_count ?? 0) > 0 && (
-              <p className="flex items-center gap-1 text-xs text-buddy-text-secondary mt-0.5">
+              <p className="flex items-center gap-1 text-xs text-white/75 mt-0.5">
                 <MapPin size={12} />
                 {(gym.location_summary?.venue_count ?? 0) > 1
                   ? `${gym.location_summary?.venue_count} locations${
