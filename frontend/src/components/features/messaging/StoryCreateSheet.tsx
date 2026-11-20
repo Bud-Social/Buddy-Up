@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, ImagePlus, Video, Globe, Users, Lock, Loader2 } from 'lucide-react';
+import { X, ImagePlus, Video, Globe, Users, Lock } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { messagingApi } from '@/api/messaging';

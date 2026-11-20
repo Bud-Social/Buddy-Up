@@ -314,7 +314,7 @@ export function CallRoom({
     };
     rec.onend = () => setCaptionsOn(false);
     try { rec.start(); setCaptionsOn(true); } catch { toast('error', 'Could not start captions'); }
-  }, [captionsOn, publishCallEvent, toast]);
+  }, [captionsOn, publishCallEvent, toast, localTile?.name]);
 
   // Screen record with the call audio mixed in. Local screenshot/snapshot never
   // falls back to the other person's video stream: if a screen cannot be
@@ -419,7 +419,7 @@ export function CallRoom({
     setLiveText({ kind: 'text', text, from: 'You', at: Date.now() });
     setTextDraft('');
     setTextMode(false);
-  }, [publishCallEvent, textDraft]);
+  }, [publishCallEvent, textDraft, localTile?.name]);
 
   // Buddies for the add-people panel.
   useEffect(() => {

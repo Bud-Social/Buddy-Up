@@ -217,8 +217,8 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                       _coverPlaceholder(),
                     // Always-dark scrim so the back button and any overlaid
                     // text stay legible on bright covers.
-                    DecoratedBox(
-                      decoration: const BoxDecoration(
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,

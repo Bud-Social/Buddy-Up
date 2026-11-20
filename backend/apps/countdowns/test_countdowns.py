@@ -620,7 +620,6 @@ class RoutineAutoDetectionTests(TestCase):
         )
 
     def test_three_separate_days_create_a_routine(self):
-        from apps.countdowns.models import Routine
         from apps.countdowns.services import maybe_create_activity_routine
 
         self._activity(1)

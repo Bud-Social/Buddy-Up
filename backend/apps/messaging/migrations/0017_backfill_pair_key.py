@@ -1,7 +1,7 @@
 """Backfill pair_key for 1:1 main/buddy conversations, collapse duplicates,
 then add the uniqueness constraint."""
 
-from django.db import migrations, models
+from django.db import migrations
 
 
 def _pair_key_for(a_id, b_id):

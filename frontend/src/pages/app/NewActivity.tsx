@@ -113,7 +113,6 @@ export default function NewActivity() {
       document.removeEventListener('visibilitychange', onVisibility);
     };
   // persistCheckpoint reads live values from latestRef by design.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.tracking]);
 
   // The kind and the target come from the page the user came from.
