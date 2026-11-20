@@ -95,6 +95,11 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+            // Release-only R8 minification, applied together with the Dart
+            // obfuscation + split-debug-info flags so the shipped APK is small
+            // and debuggable-from-source via the mapping file.
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }
