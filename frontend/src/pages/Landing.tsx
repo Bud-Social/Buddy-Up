@@ -41,7 +41,7 @@ import { Card } from '@/components/ui/Card';
 import { Logo } from '@/components/ui/Logo';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { isReducedMotionEnabled } from '@/lib/reducedMotion';
-import { APP_URL } from '@/config/downloads';
+import { APP_URL, GITHUB_RELEASE_APK_URL } from '@/config/downloads';
 import {
   FUNDRAISER_URL,
   PLEDGE_FORM_URL,
@@ -1005,6 +1005,17 @@ export default function Landing() {
                 )}
               </div>
             )}
+          </div>
+          {/* Android direct download — the GitHub release APK is the canonical
+              sideloaded-install download link. */}
+          <div className="mt-8 text-center">
+            <a
+              href={GITHUB_RELEASE_APK_URL}
+              className="inline-flex items-center gap-2 bg-buddy-green text-buddy-black rounded-2xl px-6 py-4 hover:brightness-110 transition-all"
+            >
+              <Download size={20} />
+              <span className="font-heading font-semibold">Android direct download · APK</span>
+            </a>
           </div>
           {isDesktop && !canInstall && (
             <p className="text-xs text-buddy-text-secondary mt-6">
