@@ -145,12 +145,14 @@ jobs:
         run: flutter test
       - name: Build release APK
         working-directory: buddy_up_flutter
-        run: flutter build apk --release
+        run: flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/flutter-apk/debug_info --split-per-abi
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: buddyup-release-apk
-          path: buddy_up_flutter/build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            buddy_up_flutter/build/app/outputs/flutter-apk/app-*-release.apk
+          if-no-files-found: error
       - name: Build release App Bundle (Play Store)
         working-directory: buddy_up_flutter
         run: flutter build appbundle --release
