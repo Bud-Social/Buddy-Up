@@ -18,6 +18,7 @@ import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 import 'verify_registration_otp_screen.dart';
 import 'totp_enrolment_state.dart';
+import 'activation_prompt.dart';
 
 enum LoginStep { credentials, otp, totp }
 
@@ -218,6 +219,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       final res = await _authRepo.googleLogin({'credential': credential});
 
+      // A brand-new Google account is created but held for email activation.
+      if (res.requireActivation) {
+        if (mounted) await showActivationRequired(context, res.activationEmail);
+        return;
+      }
+
       // A challenge, not a session. Handle it before touching auth state --
       // handleLoginSuccess deliberately refuses these.
       if (res.requireTotp && res.tempToken != null) {
@@ -290,6 +297,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         'first_name': credential.givenName,
         'last_name': credential.familyName,
       });
+      if (res.requireActivation) {
+        if (mounted) await showActivationRequired(context, res.activationEmail);
+        return;
+      }
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
       // GoRouter sends onboarding-incomplete accounts to /onboarding.
       if (mounted) context.go('/feed');

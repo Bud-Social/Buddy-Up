@@ -64,6 +64,33 @@ class _CacheClearingMixin:
         self.addCleanup(cache.clear)
 
 
+class PublicUsernameCheckTests(TestCase):
+    """Pre-registration username availability used by the Flutter sign-up form."""
+
+    def setUp(self):
+        self.client = APIClient()
+        user = User.objects.create_user(email='taken@example.com', password='TestPass123!')
+        Profile.objects.create(user=user, username='taken_user', display_name='Taken User')
+
+    def test_available_username(self):
+        response = self.client.get('/api/v1/auth/check-username/', {'username': 'fresh_user'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['data']['available'])
+        self.assertIsNone(response.data['data']['reason'])
+
+    def test_taken_username_is_case_insensitive(self):
+        response = self.client.get('/api/v1/auth/check-username/', {'username': 'TAKEN_USER'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['data']['available'])
+        self.assertEqual(response.data['data']['reason'], 'taken')
+
+    def test_invalid_username(self):
+        response = self.client.get('/api/v1/auth/check-username/', {'username': 'ab!'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['data']['available'])
+        self.assertEqual(response.data['data']['reason'], 'invalid')
+
+
 class AuthTests(TestCase):
     def setUp(self):
         self.client = APIClient()

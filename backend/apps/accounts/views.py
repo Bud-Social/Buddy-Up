@@ -388,6 +388,42 @@ def _authenticate_allow_inactive(request, email, password):
     return None
 
 
+class PublicCheckUsernameView(views.APIView):
+    """Live username availability for the sign-up form (pre-auth).
+
+    Mirrors profiles.CheckUsernameView but allows anonymous callers, since a
+    user cannot hold a token before registering. Throttled with the existing
+    ``username_check`` scope. The register serializer remains the authority.
+    """
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'username_check'
+
+    def get(self, request):
+        import re
+
+        username = str(request.query_params.get('username', '')).strip()
+        if not username:
+            return Response({
+                'success': True, 'data': {'available': False, 'reason': 'required'},
+                'message': 'Username required.', 'errors': None, 'pagination': None,
+            })
+        if not re.fullmatch(r'[A-Za-z0-9_]{3,30}', username):
+            return Response({
+                'success': True, 'data': {'available': False, 'reason': 'invalid'},
+                'message': '3–30 characters; letters, numbers and underscores only.',
+                'errors': None, 'pagination': None,
+            })
+        taken = Profile.objects.filter(username__iexact=username.lower()).exists()
+        return Response({
+            'success': True,
+            'data': {'available': not taken, 'reason': 'taken' if taken else None},
+            'message': 'Available.' if not taken else 'Already taken.',
+            'errors': None, 'pagination': None,
+        })
+
+
 class RegisterView(views.APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]

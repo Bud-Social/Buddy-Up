@@ -4,6 +4,9 @@ from apps.profiles import views as profiles_views
 
 app_name = 'accounts'
 urlpatterns = [
+    # Public, throttled username availability check for the sign-up form.
+    # The authenticated variant lives at /profiles/check-username/.
+    path('check-username/', views.PublicCheckUsernameView.as_view(), name='check_username_public'),
     path('register/', views.RegisterView.as_view(), name='register'),
     path('verify-registration-otp/', views.VerifyRegistrationOTPView.as_view(), name='verify_registration_otp'),
     path('activate/', views.ActivateAccountView.as_view(), name='activate_account'),

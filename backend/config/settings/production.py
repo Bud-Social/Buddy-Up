@@ -23,6 +23,8 @@ ALLOWED_HOSTS = [
     '.containers.snapdeploy.app',
     # Primary API hosts
     'backend.buddyupfit.com',
+    # Web app origin (Vercel) — app requests and CORS preflights
+    'app.buddyupfit.com',
     # Legacy host (suspended) kept for old clients
     'backend-api.buddyupfit.com',
     # Frontend app hosts (Vercel) — needed for WebSocket Origin validation

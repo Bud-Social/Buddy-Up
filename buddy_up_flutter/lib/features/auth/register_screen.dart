@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -6,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/api/api_client.dart';
+import '../../core/env/env.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/age_gating.dart';
 import '../../data/models/auth_models.dart';
@@ -16,6 +19,7 @@ import '../../shared/widgets/toast.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/auth/google_auth.dart';
 import 'verify_registration_otp_screen.dart';
+import 'activation_prompt.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -45,6 +49,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   // Apple sign-in is an iOS-only option; hide it on Android and web.
   bool get _showAppleSignIn => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
+  static final RegExp _usernamePattern = RegExp(r'^[A-Za-z0-9_]{3,30}$');
+  Timer? _usernameTimer;
+  int _usernameCheckId = 0;
+  // checking | available | taken | invalid | unknown (endpoint unreachable)
+  String? _usernameStatus;
+
+  String? get _usernameHint {
+    switch (_usernameStatus) {
+      case 'checking':
+        return 'Checking availability…';
+      case 'available':
+        return '✓ Username available';
+      case 'taken':
+        return 'This username is already taken';
+      case 'invalid':
+        return '3-30 letters, numbers and underscores only';
+      case 'unknown':
+        return 'Availability will be checked when you sign up';
+      default:
+        return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +80,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   void dispose() {
+    _usernameTimer?.cancel();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -82,8 +110,73 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (picked != null) setState(() => _dob = picked);
   }
 
+  void _onUsernameChanged(String value) {
+    _usernameTimer?.cancel();
+    final candidate = value.trim();
+    final id = ++_usernameCheckId;
+    if (candidate.isEmpty) {
+      if (mounted) setState(() => _usernameStatus = null);
+      return;
+    }
+    if (!_usernamePattern.hasMatch(candidate)) {
+      if (mounted) setState(() => _usernameStatus = 'invalid');
+      return;
+    }
+    if (mounted) setState(() => _usernameStatus = 'checking');
+    _usernameTimer = Timer(const Duration(milliseconds: 500), () {
+      _checkUsername(candidate, id);
+    });
+  }
+
+  Future<void> _checkUsername(String username, int id) async {
+    try {
+      final response = await Dio().get<Map<String, dynamic>>(
+        '${Env.apiBaseUrl}/auth/check-username/',
+        queryParameters: {'username': username},
+        options: Options(headers: const {'User-Agent': 'BuddyUp-Fit-App'}),
+      );
+      final data = response.data;
+      if (!mounted || id != _usernameCheckId || data == null) return;
+      final payload = data['data'] is Map ? data['data'] as Map : data;
+      final available = payload['available'] == true;
+      setState(() => _usernameStatus = available
+          ? 'available'
+          : (payload['reason'] == 'invalid' ? 'invalid' : 'taken'));
+    } catch (_) {
+      if (!mounted || id != _usernameCheckId) return;
+      // The check endpoint may not be deployed yet; the register serializer
+      // still validates the username, so do not block sign-up on this.
+      setState(() => _usernameStatus = 'unknown');
+    }
+  }
+
+  String _registrationError(Object e) {
+    if (e is DioException && e.response?.data is Map) {
+      final data = e.response!.data as Map;
+      final errors = data['errors'];
+      if (errors is Map && errors.isNotEmpty) {
+        final firstKey = errors.keys.first;
+        final messages = errors[firstKey];
+        if (messages is List && messages.isNotEmpty) {
+          return '$firstKey: ${messages.first}';
+        }
+      }
+      final message = data['message'] as String?;
+      if (message != null && message.isNotEmpty) return message;
+    }
+    return e.toString().replaceFirst('Exception: ', '');
+  }
+
   Future<void> _handleRegister() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_usernameStatus == 'checking') {
+      showToast(context, 'Still checking username availability.', type: ToastType.error);
+      return;
+    }
+    if (_usernameStatus == 'taken' || _usernameStatus == 'invalid') {
+      showToast(context, 'Please choose an available username.', type: ToastType.error);
+      return;
+    }
     if (!_acceptedTerms || !_acceptedPrivacy) {
       showToast(context, 'You must accept the terms and privacy policy.', type: ToastType.error);
       return;
@@ -151,8 +244,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     } catch (e) {
       if (mounted) {
         showToast(
-          context, 
-          'Registration failed: ${e.toString().replaceAll('Exception: ', '')}', 
+          context,
+          'Registration failed: ${_registrationError(e)}',
           type: ToastType.error,
         );
       }
@@ -170,6 +263,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
 
       final res = await _authRepo.googleLogin({'credential': credential});
+      if (res.requireActivation) {
+        if (mounted) await showActivationRequired(context, res.activationEmail);
+        return;
+      }
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
       // New Google emails are auto-registered by the backend; GoRouter sends
       // onboarding-incomplete accounts to /onboarding (consent first).
@@ -217,6 +314,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         'first_name': credential.givenName,
         'last_name': credential.familyName,
       });
+      if (res.requireActivation) {
+        if (mounted) await showActivationRequired(context, res.activationEmail);
+        return;
+      }
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
       // GoRouter sends onboarding-incomplete accounts to /onboarding.
       if (mounted) context.go('/feed');
@@ -270,12 +371,39 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   label: 'Username',
                   hint: 'Choose a username',
                   prefixIcon: Icons.alternate_email,
+                  onChanged: _onUsernameChanged,
+                  suffixIcon: _usernameStatus == 'checking'
+                      ? Icons.hourglass_top
+                      : _usernameStatus == 'available'
+                          ? Icons.check_circle
+                          : _usernameStatus == 'taken' || _usernameStatus == 'invalid'
+                              ? Icons.error_outline
+                              : null,
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Required';
-                    if (v.length < 3) return 'At least 3 characters';
+                    final value = (v ?? '').trim();
+                    if (value.isEmpty) return 'Required';
+                    if (!_usernamePattern.hasMatch(value)) {
+                      return '3-30 letters, numbers and underscores';
+                    }
+                    if (_usernameStatus == 'taken') return 'This username is already taken';
                     return null;
                   },
                 ),
+                if (_usernameHint != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      _usernameHint!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _usernameStatus == 'available'
+                            ? BuddyColors.green
+                            : _usernameStatus == 'taken' || _usernameStatus == 'invalid'
+                                ? Colors.red
+                                : BuddyColors.textSecondary,
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 16),
                 BuddyInput(
                   controller: _emailController,

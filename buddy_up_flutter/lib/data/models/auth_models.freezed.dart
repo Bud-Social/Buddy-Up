@@ -855,7 +855,7 @@ as String,
 /// @nodoc
 mixin _$LoginOTPResponse {
 
- String? get access; String? get refresh; User? get user; Profile? get profile;@JsonKey(name: 'new_device') bool get newDevice;@JsonKey(name: 'require_totp') bool get requireTotp;@JsonKey(name: 'temp_token') String? get tempToken;@JsonKey(name: 'require_otp') bool get requireOtp;@JsonKey(name: 'login_token') String? get loginToken;@JsonKey(name: 'masked_email') String? get maskedEmail;@JsonKey(name: 'mfa_enrolment_pending') bool get mfaEnrolmentPending;@JsonKey(name: 'require_age_setup') bool get requireAgeSetup;@JsonKey(name: 'onboarding_required') bool get onboardingRequired;
+ String? get access; String? get refresh; User? get user; Profile? get profile;@JsonKey(name: 'new_device') bool get newDevice;@JsonKey(name: 'require_totp') bool get requireTotp;@JsonKey(name: 'temp_token') String? get tempToken;@JsonKey(name: 'require_otp') bool get requireOtp;@JsonKey(name: 'login_token') String? get loginToken;@JsonKey(name: 'masked_email') String? get maskedEmail;@JsonKey(name: 'mfa_enrolment_pending') bool get mfaEnrolmentPending;@JsonKey(name: 'require_age_setup') bool get requireAgeSetup;@JsonKey(name: 'onboarding_required') bool get onboardingRequired;@JsonKey(name: 'require_activation') bool get requireActivation;@JsonKey(name: 'email') String? get activationEmail;
 /// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -868,16 +868,16 @@ $LoginOTPResponseCopyWith<LoginOTPResponse> get copyWith => _$LoginOTPResponseCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoginOTPResponse&&(identical(other.access, access) || other.access == access)&&(identical(other.refresh, refresh) || other.refresh == refresh)&&(identical(other.user, user) || other.user == user)&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.newDevice, newDevice) || other.newDevice == newDevice)&&(identical(other.requireTotp, requireTotp) || other.requireTotp == requireTotp)&&(identical(other.tempToken, tempToken) || other.tempToken == tempToken)&&(identical(other.requireOtp, requireOtp) || other.requireOtp == requireOtp)&&(identical(other.loginToken, loginToken) || other.loginToken == loginToken)&&(identical(other.maskedEmail, maskedEmail) || other.maskedEmail == maskedEmail)&&(identical(other.mfaEnrolmentPending, mfaEnrolmentPending) || other.mfaEnrolmentPending == mfaEnrolmentPending)&&(identical(other.requireAgeSetup, requireAgeSetup) || other.requireAgeSetup == requireAgeSetup)&&(identical(other.onboardingRequired, onboardingRequired) || other.onboardingRequired == onboardingRequired));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoginOTPResponse&&(identical(other.access, access) || other.access == access)&&(identical(other.refresh, refresh) || other.refresh == refresh)&&(identical(other.user, user) || other.user == user)&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.newDevice, newDevice) || other.newDevice == newDevice)&&(identical(other.requireTotp, requireTotp) || other.requireTotp == requireTotp)&&(identical(other.tempToken, tempToken) || other.tempToken == tempToken)&&(identical(other.requireOtp, requireOtp) || other.requireOtp == requireOtp)&&(identical(other.loginToken, loginToken) || other.loginToken == loginToken)&&(identical(other.maskedEmail, maskedEmail) || other.maskedEmail == maskedEmail)&&(identical(other.mfaEnrolmentPending, mfaEnrolmentPending) || other.mfaEnrolmentPending == mfaEnrolmentPending)&&(identical(other.requireAgeSetup, requireAgeSetup) || other.requireAgeSetup == requireAgeSetup)&&(identical(other.onboardingRequired, onboardingRequired) || other.onboardingRequired == onboardingRequired)&&(identical(other.requireActivation, requireActivation) || other.requireActivation == requireActivation)&&(identical(other.activationEmail, activationEmail) || other.activationEmail == activationEmail));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,access,refresh,user,profile,newDevice,requireTotp,tempToken,requireOtp,loginToken,maskedEmail,mfaEnrolmentPending,requireAgeSetup,onboardingRequired);
+int get hashCode => Object.hash(runtimeType,access,refresh,user,profile,newDevice,requireTotp,tempToken,requireOtp,loginToken,maskedEmail,mfaEnrolmentPending,requireAgeSetup,onboardingRequired,requireActivation,activationEmail);
 
 @override
 String toString() {
-  return 'LoginOTPResponse(access: $access, refresh: $refresh, user: $user, profile: $profile, newDevice: $newDevice, requireTotp: $requireTotp, tempToken: $tempToken, requireOtp: $requireOtp, loginToken: $loginToken, maskedEmail: $maskedEmail, mfaEnrolmentPending: $mfaEnrolmentPending, requireAgeSetup: $requireAgeSetup, onboardingRequired: $onboardingRequired)';
+  return 'LoginOTPResponse(access: $access, refresh: $refresh, user: $user, profile: $profile, newDevice: $newDevice, requireTotp: $requireTotp, tempToken: $tempToken, requireOtp: $requireOtp, loginToken: $loginToken, maskedEmail: $maskedEmail, mfaEnrolmentPending: $mfaEnrolmentPending, requireAgeSetup: $requireAgeSetup, onboardingRequired: $onboardingRequired, requireActivation: $requireActivation, activationEmail: $activationEmail)';
 }
 
 
@@ -888,7 +888,7 @@ abstract mixin class $LoginOTPResponseCopyWith<$Res>  {
   factory $LoginOTPResponseCopyWith(LoginOTPResponse value, $Res Function(LoginOTPResponse) _then) = _$LoginOTPResponseCopyWithImpl;
 @useResult
 $Res call({
- String? access, String? refresh, User? user, Profile? profile,@JsonKey(name: 'new_device') bool newDevice,@JsonKey(name: 'require_totp') bool requireTotp,@JsonKey(name: 'temp_token') String? tempToken,@JsonKey(name: 'require_otp') bool requireOtp,@JsonKey(name: 'login_token') String? loginToken,@JsonKey(name: 'masked_email') String? maskedEmail,@JsonKey(name: 'mfa_enrolment_pending') bool mfaEnrolmentPending,@JsonKey(name: 'require_age_setup') bool requireAgeSetup,@JsonKey(name: 'onboarding_required') bool onboardingRequired
+ String? access, String? refresh, User? user, Profile? profile,@JsonKey(name: 'new_device') bool newDevice,@JsonKey(name: 'require_totp') bool requireTotp,@JsonKey(name: 'temp_token') String? tempToken,@JsonKey(name: 'require_otp') bool requireOtp,@JsonKey(name: 'login_token') String? loginToken,@JsonKey(name: 'masked_email') String? maskedEmail,@JsonKey(name: 'mfa_enrolment_pending') bool mfaEnrolmentPending,@JsonKey(name: 'require_age_setup') bool requireAgeSetup,@JsonKey(name: 'onboarding_required') bool onboardingRequired,@JsonKey(name: 'require_activation') bool requireActivation,@JsonKey(name: 'email') String? activationEmail
 });
 
 
@@ -905,7 +905,7 @@ class _$LoginOTPResponseCopyWithImpl<$Res>
 
 /// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? access = freezed,Object? refresh = freezed,Object? user = freezed,Object? profile = freezed,Object? newDevice = null,Object? requireTotp = null,Object? tempToken = freezed,Object? requireOtp = null,Object? loginToken = freezed,Object? maskedEmail = freezed,Object? mfaEnrolmentPending = null,Object? requireAgeSetup = null,Object? onboardingRequired = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? access = freezed,Object? refresh = freezed,Object? user = freezed,Object? profile = freezed,Object? newDevice = null,Object? requireTotp = null,Object? tempToken = freezed,Object? requireOtp = null,Object? loginToken = freezed,Object? maskedEmail = freezed,Object? mfaEnrolmentPending = null,Object? requireAgeSetup = null,Object? onboardingRequired = null,Object? requireActivation = null,Object? activationEmail = freezed,}) {
   return _then(_self.copyWith(
 access: freezed == access ? _self.access : access // ignore: cast_nullable_to_non_nullable
 as String?,refresh: freezed == refresh ? _self.refresh : refresh // ignore: cast_nullable_to_non_nullable
@@ -920,7 +920,9 @@ as String?,maskedEmail: freezed == maskedEmail ? _self.maskedEmail : maskedEmail
 as String?,mfaEnrolmentPending: null == mfaEnrolmentPending ? _self.mfaEnrolmentPending : mfaEnrolmentPending // ignore: cast_nullable_to_non_nullable
 as bool,requireAgeSetup: null == requireAgeSetup ? _self.requireAgeSetup : requireAgeSetup // ignore: cast_nullable_to_non_nullable
 as bool,onboardingRequired: null == onboardingRequired ? _self.onboardingRequired : onboardingRequired // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,requireActivation: null == requireActivation ? _self.requireActivation : requireActivation // ignore: cast_nullable_to_non_nullable
+as bool,activationEmail: freezed == activationEmail ? _self.activationEmail : activationEmail // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 /// Create a copy of LoginOTPResponse
@@ -1029,10 +1031,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? access,  String? refresh,  User? user,  Profile? profile, @JsonKey(name: 'new_device')  bool newDevice, @JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String? tempToken, @JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String? loginToken, @JsonKey(name: 'masked_email')  String? maskedEmail, @JsonKey(name: 'mfa_enrolment_pending')  bool mfaEnrolmentPending, @JsonKey(name: 'require_age_setup')  bool requireAgeSetup, @JsonKey(name: 'onboarding_required')  bool onboardingRequired)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? access,  String? refresh,  User? user,  Profile? profile, @JsonKey(name: 'new_device')  bool newDevice, @JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String? tempToken, @JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String? loginToken, @JsonKey(name: 'masked_email')  String? maskedEmail, @JsonKey(name: 'mfa_enrolment_pending')  bool mfaEnrolmentPending, @JsonKey(name: 'require_age_setup')  bool requireAgeSetup, @JsonKey(name: 'onboarding_required')  bool onboardingRequired, @JsonKey(name: 'require_activation')  bool requireActivation, @JsonKey(name: 'email')  String? activationEmail)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LoginOTPResponse() when $default != null:
-return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice,_that.requireTotp,_that.tempToken,_that.requireOtp,_that.loginToken,_that.maskedEmail,_that.mfaEnrolmentPending,_that.requireAgeSetup,_that.onboardingRequired);case _:
+return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice,_that.requireTotp,_that.tempToken,_that.requireOtp,_that.loginToken,_that.maskedEmail,_that.mfaEnrolmentPending,_that.requireAgeSetup,_that.onboardingRequired,_that.requireActivation,_that.activationEmail);case _:
   return orElse();
 
 }
@@ -1050,10 +1052,10 @@ return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDev
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? access,  String? refresh,  User? user,  Profile? profile, @JsonKey(name: 'new_device')  bool newDevice, @JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String? tempToken, @JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String? loginToken, @JsonKey(name: 'masked_email')  String? maskedEmail, @JsonKey(name: 'mfa_enrolment_pending')  bool mfaEnrolmentPending, @JsonKey(name: 'require_age_setup')  bool requireAgeSetup, @JsonKey(name: 'onboarding_required')  bool onboardingRequired)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? access,  String? refresh,  User? user,  Profile? profile, @JsonKey(name: 'new_device')  bool newDevice, @JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String? tempToken, @JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String? loginToken, @JsonKey(name: 'masked_email')  String? maskedEmail, @JsonKey(name: 'mfa_enrolment_pending')  bool mfaEnrolmentPending, @JsonKey(name: 'require_age_setup')  bool requireAgeSetup, @JsonKey(name: 'onboarding_required')  bool onboardingRequired, @JsonKey(name: 'require_activation')  bool requireActivation, @JsonKey(name: 'email')  String? activationEmail)  $default,) {final _that = this;
 switch (_that) {
 case _LoginOTPResponse():
-return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice,_that.requireTotp,_that.tempToken,_that.requireOtp,_that.loginToken,_that.maskedEmail,_that.mfaEnrolmentPending,_that.requireAgeSetup,_that.onboardingRequired);case _:
+return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice,_that.requireTotp,_that.tempToken,_that.requireOtp,_that.loginToken,_that.maskedEmail,_that.mfaEnrolmentPending,_that.requireAgeSetup,_that.onboardingRequired,_that.requireActivation,_that.activationEmail);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1070,10 +1072,10 @@ return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDev
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? access,  String? refresh,  User? user,  Profile? profile, @JsonKey(name: 'new_device')  bool newDevice, @JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String? tempToken, @JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String? loginToken, @JsonKey(name: 'masked_email')  String? maskedEmail, @JsonKey(name: 'mfa_enrolment_pending')  bool mfaEnrolmentPending, @JsonKey(name: 'require_age_setup')  bool requireAgeSetup, @JsonKey(name: 'onboarding_required')  bool onboardingRequired)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? access,  String? refresh,  User? user,  Profile? profile, @JsonKey(name: 'new_device')  bool newDevice, @JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String? tempToken, @JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String? loginToken, @JsonKey(name: 'masked_email')  String? maskedEmail, @JsonKey(name: 'mfa_enrolment_pending')  bool mfaEnrolmentPending, @JsonKey(name: 'require_age_setup')  bool requireAgeSetup, @JsonKey(name: 'onboarding_required')  bool onboardingRequired, @JsonKey(name: 'require_activation')  bool requireActivation, @JsonKey(name: 'email')  String? activationEmail)?  $default,) {final _that = this;
 switch (_that) {
 case _LoginOTPResponse() when $default != null:
-return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice,_that.requireTotp,_that.tempToken,_that.requireOtp,_that.loginToken,_that.maskedEmail,_that.mfaEnrolmentPending,_that.requireAgeSetup,_that.onboardingRequired);case _:
+return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice,_that.requireTotp,_that.tempToken,_that.requireOtp,_that.loginToken,_that.maskedEmail,_that.mfaEnrolmentPending,_that.requireAgeSetup,_that.onboardingRequired,_that.requireActivation,_that.activationEmail);case _:
   return null;
 
 }
@@ -1085,7 +1087,7 @@ return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDev
 @JsonSerializable()
 
 class _LoginOTPResponse implements LoginOTPResponse {
-  const _LoginOTPResponse({this.access, this.refresh, this.user, this.profile, @JsonKey(name: 'new_device') this.newDevice = false, @JsonKey(name: 'require_totp') this.requireTotp = false, @JsonKey(name: 'temp_token') this.tempToken, @JsonKey(name: 'require_otp') this.requireOtp = false, @JsonKey(name: 'login_token') this.loginToken, @JsonKey(name: 'masked_email') this.maskedEmail, @JsonKey(name: 'mfa_enrolment_pending') this.mfaEnrolmentPending = false, @JsonKey(name: 'require_age_setup') this.requireAgeSetup = false, @JsonKey(name: 'onboarding_required') this.onboardingRequired = false});
+  const _LoginOTPResponse({this.access, this.refresh, this.user, this.profile, @JsonKey(name: 'new_device') this.newDevice = false, @JsonKey(name: 'require_totp') this.requireTotp = false, @JsonKey(name: 'temp_token') this.tempToken, @JsonKey(name: 'require_otp') this.requireOtp = false, @JsonKey(name: 'login_token') this.loginToken, @JsonKey(name: 'masked_email') this.maskedEmail, @JsonKey(name: 'mfa_enrolment_pending') this.mfaEnrolmentPending = false, @JsonKey(name: 'require_age_setup') this.requireAgeSetup = false, @JsonKey(name: 'onboarding_required') this.onboardingRequired = false, @JsonKey(name: 'require_activation') this.requireActivation = false, @JsonKey(name: 'email') this.activationEmail});
   factory _LoginOTPResponse.fromJson(Map<String, dynamic> json) => _$LoginOTPResponseFromJson(json);
 
 @override final  String? access;
@@ -1101,6 +1103,8 @@ class _LoginOTPResponse implements LoginOTPResponse {
 @override@JsonKey(name: 'mfa_enrolment_pending') final  bool mfaEnrolmentPending;
 @override@JsonKey(name: 'require_age_setup') final  bool requireAgeSetup;
 @override@JsonKey(name: 'onboarding_required') final  bool onboardingRequired;
+@override@JsonKey(name: 'require_activation') final  bool requireActivation;
+@override@JsonKey(name: 'email') final  String? activationEmail;
 
 /// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
@@ -1115,16 +1119,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoginOTPResponse&&(identical(other.access, access) || other.access == access)&&(identical(other.refresh, refresh) || other.refresh == refresh)&&(identical(other.user, user) || other.user == user)&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.newDevice, newDevice) || other.newDevice == newDevice)&&(identical(other.requireTotp, requireTotp) || other.requireTotp == requireTotp)&&(identical(other.tempToken, tempToken) || other.tempToken == tempToken)&&(identical(other.requireOtp, requireOtp) || other.requireOtp == requireOtp)&&(identical(other.loginToken, loginToken) || other.loginToken == loginToken)&&(identical(other.maskedEmail, maskedEmail) || other.maskedEmail == maskedEmail)&&(identical(other.mfaEnrolmentPending, mfaEnrolmentPending) || other.mfaEnrolmentPending == mfaEnrolmentPending)&&(identical(other.requireAgeSetup, requireAgeSetup) || other.requireAgeSetup == requireAgeSetup)&&(identical(other.onboardingRequired, onboardingRequired) || other.onboardingRequired == onboardingRequired));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoginOTPResponse&&(identical(other.access, access) || other.access == access)&&(identical(other.refresh, refresh) || other.refresh == refresh)&&(identical(other.user, user) || other.user == user)&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.newDevice, newDevice) || other.newDevice == newDevice)&&(identical(other.requireTotp, requireTotp) || other.requireTotp == requireTotp)&&(identical(other.tempToken, tempToken) || other.tempToken == tempToken)&&(identical(other.requireOtp, requireOtp) || other.requireOtp == requireOtp)&&(identical(other.loginToken, loginToken) || other.loginToken == loginToken)&&(identical(other.maskedEmail, maskedEmail) || other.maskedEmail == maskedEmail)&&(identical(other.mfaEnrolmentPending, mfaEnrolmentPending) || other.mfaEnrolmentPending == mfaEnrolmentPending)&&(identical(other.requireAgeSetup, requireAgeSetup) || other.requireAgeSetup == requireAgeSetup)&&(identical(other.onboardingRequired, onboardingRequired) || other.onboardingRequired == onboardingRequired)&&(identical(other.requireActivation, requireActivation) || other.requireActivation == requireActivation)&&(identical(other.activationEmail, activationEmail) || other.activationEmail == activationEmail));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,access,refresh,user,profile,newDevice,requireTotp,tempToken,requireOtp,loginToken,maskedEmail,mfaEnrolmentPending,requireAgeSetup,onboardingRequired);
+int get hashCode => Object.hash(runtimeType,access,refresh,user,profile,newDevice,requireTotp,tempToken,requireOtp,loginToken,maskedEmail,mfaEnrolmentPending,requireAgeSetup,onboardingRequired,requireActivation,activationEmail);
 
 @override
 String toString() {
-  return 'LoginOTPResponse(access: $access, refresh: $refresh, user: $user, profile: $profile, newDevice: $newDevice, requireTotp: $requireTotp, tempToken: $tempToken, requireOtp: $requireOtp, loginToken: $loginToken, maskedEmail: $maskedEmail, mfaEnrolmentPending: $mfaEnrolmentPending, requireAgeSetup: $requireAgeSetup, onboardingRequired: $onboardingRequired)';
+  return 'LoginOTPResponse(access: $access, refresh: $refresh, user: $user, profile: $profile, newDevice: $newDevice, requireTotp: $requireTotp, tempToken: $tempToken, requireOtp: $requireOtp, loginToken: $loginToken, maskedEmail: $maskedEmail, mfaEnrolmentPending: $mfaEnrolmentPending, requireAgeSetup: $requireAgeSetup, onboardingRequired: $onboardingRequired, requireActivation: $requireActivation, activationEmail: $activationEmail)';
 }
 
 
@@ -1135,7 +1139,7 @@ abstract mixin class _$LoginOTPResponseCopyWith<$Res> implements $LoginOTPRespon
   factory _$LoginOTPResponseCopyWith(_LoginOTPResponse value, $Res Function(_LoginOTPResponse) _then) = __$LoginOTPResponseCopyWithImpl;
 @override @useResult
 $Res call({
- String? access, String? refresh, User? user, Profile? profile,@JsonKey(name: 'new_device') bool newDevice,@JsonKey(name: 'require_totp') bool requireTotp,@JsonKey(name: 'temp_token') String? tempToken,@JsonKey(name: 'require_otp') bool requireOtp,@JsonKey(name: 'login_token') String? loginToken,@JsonKey(name: 'masked_email') String? maskedEmail,@JsonKey(name: 'mfa_enrolment_pending') bool mfaEnrolmentPending,@JsonKey(name: 'require_age_setup') bool requireAgeSetup,@JsonKey(name: 'onboarding_required') bool onboardingRequired
+ String? access, String? refresh, User? user, Profile? profile,@JsonKey(name: 'new_device') bool newDevice,@JsonKey(name: 'require_totp') bool requireTotp,@JsonKey(name: 'temp_token') String? tempToken,@JsonKey(name: 'require_otp') bool requireOtp,@JsonKey(name: 'login_token') String? loginToken,@JsonKey(name: 'masked_email') String? maskedEmail,@JsonKey(name: 'mfa_enrolment_pending') bool mfaEnrolmentPending,@JsonKey(name: 'require_age_setup') bool requireAgeSetup,@JsonKey(name: 'onboarding_required') bool onboardingRequired,@JsonKey(name: 'require_activation') bool requireActivation,@JsonKey(name: 'email') String? activationEmail
 });
 
 
@@ -1152,7 +1156,7 @@ class __$LoginOTPResponseCopyWithImpl<$Res>
 
 /// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? access = freezed,Object? refresh = freezed,Object? user = freezed,Object? profile = freezed,Object? newDevice = null,Object? requireTotp = null,Object? tempToken = freezed,Object? requireOtp = null,Object? loginToken = freezed,Object? maskedEmail = freezed,Object? mfaEnrolmentPending = null,Object? requireAgeSetup = null,Object? onboardingRequired = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? access = freezed,Object? refresh = freezed,Object? user = freezed,Object? profile = freezed,Object? newDevice = null,Object? requireTotp = null,Object? tempToken = freezed,Object? requireOtp = null,Object? loginToken = freezed,Object? maskedEmail = freezed,Object? mfaEnrolmentPending = null,Object? requireAgeSetup = null,Object? onboardingRequired = null,Object? requireActivation = null,Object? activationEmail = freezed,}) {
   return _then(_LoginOTPResponse(
 access: freezed == access ? _self.access : access // ignore: cast_nullable_to_non_nullable
 as String?,refresh: freezed == refresh ? _self.refresh : refresh // ignore: cast_nullable_to_non_nullable
@@ -1167,7 +1171,9 @@ as String?,maskedEmail: freezed == maskedEmail ? _self.maskedEmail : maskedEmail
 as String?,mfaEnrolmentPending: null == mfaEnrolmentPending ? _self.mfaEnrolmentPending : mfaEnrolmentPending // ignore: cast_nullable_to_non_nullable
 as bool,requireAgeSetup: null == requireAgeSetup ? _self.requireAgeSetup : requireAgeSetup // ignore: cast_nullable_to_non_nullable
 as bool,onboardingRequired: null == onboardingRequired ? _self.onboardingRequired : onboardingRequired // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,requireActivation: null == requireActivation ? _self.requireActivation : requireActivation // ignore: cast_nullable_to_non_nullable
+as bool,activationEmail: freezed == activationEmail ? _self.activationEmail : activationEmail // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

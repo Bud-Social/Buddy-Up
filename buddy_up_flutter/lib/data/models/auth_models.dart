@@ -98,6 +98,11 @@ abstract class LoginOTPResponse with _$LoginOTPResponse {
     @JsonKey(name: 'mfa_enrolment_pending') @Default(false) bool mfaEnrolmentPending,
     @JsonKey(name: 'require_age_setup') @Default(false) bool requireAgeSetup,
     @JsonKey(name: 'onboarding_required') @Default(false) bool onboardingRequired,
+    // A brand-new Google/Apple account is created but must be activated from
+    // the email link before it can sign in. The backend answers 201 with this
+    // flag instead of tokens; it is not a failed login.
+    @JsonKey(name: 'require_activation') @Default(false) bool requireActivation,
+    @JsonKey(name: 'email') String? activationEmail,
   }) = _LoginOTPResponse;
 
   factory LoginOTPResponse.fromJson(Map<String, dynamic> json) =>

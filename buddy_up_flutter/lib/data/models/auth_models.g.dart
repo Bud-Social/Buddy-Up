@@ -89,6 +89,8 @@ _LoginOTPResponse _$LoginOTPResponseFromJson(Map<String, dynamic> json) =>
       mfaEnrolmentPending: json['mfa_enrolment_pending'] as bool? ?? false,
       requireAgeSetup: json['require_age_setup'] as bool? ?? false,
       onboardingRequired: json['onboarding_required'] as bool? ?? false,
+      requireActivation: json['require_activation'] as bool? ?? false,
+      activationEmail: json['email'] as String?,
     );
 
 Map<String, dynamic> _$LoginOTPResponseToJson(_LoginOTPResponse instance) =>
@@ -106,6 +108,8 @@ Map<String, dynamic> _$LoginOTPResponseToJson(_LoginOTPResponse instance) =>
       'mfa_enrolment_pending': instance.mfaEnrolmentPending,
       'require_age_setup': instance.requireAgeSetup,
       'onboarding_required': instance.onboardingRequired,
+      'require_activation': instance.requireActivation,
+      'email': instance.activationEmail,
     };
 
 _RegisterResponse _$RegisterResponseFromJson(Map<String, dynamic> json) =>
