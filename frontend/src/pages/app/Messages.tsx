@@ -470,6 +470,7 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
     remoteCallEvent, publishCallEvent, mediaSnapshot, setCameraEnabled,
     join: joinCall, leave: leaveCall,
     toggleMute: lkToggleMute, toggleCamera: lkToggleCamera, toggleScreenShare: lkToggleScreenShare,
+    switchCamera: lkSwitchCamera, listAudioOutputs, setAudioOutput,
   } = useLiveKitCall(activeConvo?.id ?? null);
   const handleChatEvent = useCallback((event: ChatEvent) => {
     if (event.type === 'message') {
@@ -1114,6 +1115,9 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
           onToggleMute={() => { void lkToggleMute(); }}
           onToggleCamera={() => { void lkToggleCamera(); }}
           onToggleScreenShare={lkToggleScreenShare}
+          onSwitchCamera={() => { void lkSwitchCamera(); }}
+          listAudioOutputs={listAudioOutputs}
+          onSelectAudioOutput={setAudioOutput}
           onAddBuddy={addBuddyToCall}
         />
       )}

@@ -1,9 +1,15 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:livekit_client/livekit_client.dart' show VideoTrackRenderer, VideoViewFit, AudioManager;
+import 'package:livekit_client/livekit_client.dart'
+    show VideoTrackRenderer, VideoViewFit, AudioManager, MediaDevice;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/audio/ringtone.dart';
 import '../../../shared/widgets/avatar.dart';
@@ -30,6 +36,8 @@ class CallRoomScreen extends ConsumerStatefulWidget {
 class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
   bool _chatOpen = false;
   final TextEditingController _chatDraft = TextEditingController();
+  /// The participant grid, captured for an in-call snapshot.
+  final GlobalKey _gridKey = GlobalKey();
   /// Display name of the remote person who asked for the video switch, if any.
   String? _switchRequestFrom;
   bool _switchPending = false;
@@ -132,6 +140,35 @@ class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
     if (ok) _chatDraft.clear();
   }
 
+  /// Capture the participant grid as a PNG and share it.
+  ///
+  /// Web offers a snapshot of the focused tile; on mobile the grid is the
+  /// equivalent. Voice calls get the same control as video calls.
+  Future<void> _snapshot() async {
+    try {
+      final boundary =
+          _gridKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      final image = await boundary.toImage(pixelRatio: 2);
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      if (data == null) return;
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        '${dir.path}/buddyup_call_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(data.buffer.asUint8List());
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], text: 'BuddyUp call'),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not capture this call')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(liveKitCallProvider);
@@ -163,7 +200,10 @@ class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: _ParticipantGrid(tiles: state.tiles),
+                  child: RepaintBoundary(
+                    key: _gridKey,
+                    child: _ParticipantGrid(tiles: state.tiles),
+                  ),
                 ),
               ),
               if (_chatOpen)
@@ -189,6 +229,7 @@ class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
               onRequestVideoSwitch: _requestVideoSwitch,
               chatOpen: _chatOpen,
               onToggleChat: () => setState(() => _chatOpen = !_chatOpen),
+              onSnapshot: _snapshot,
             ),
           ],
         ),
@@ -561,6 +602,7 @@ class _Controls extends ConsumerWidget {
   final VoidCallback onRequestVideoSwitch;
   final bool chatOpen;
   final VoidCallback onToggleChat;
+  final VoidCallback onSnapshot;
 
   const _Controls({
     required this.state,
@@ -568,6 +610,7 @@ class _Controls extends ConsumerWidget {
     required this.onRequestVideoSwitch,
     this.chatOpen = false,
     required this.onToggleChat,
+    required this.onSnapshot,
   });
 
   @override
@@ -588,6 +631,18 @@ class _Controls extends ConsumerWidget {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         builder: (_) => _BuddyPicker(conversationId: state.conversationId),
+      );
+    }
+
+    void openAudioPicker() {
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: BuddyColors.surface,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => const _AudioOutputSheet(),
       );
     }
 
@@ -624,6 +679,13 @@ class _Controls extends ConsumerWidget {
               color: isCameraOff ? BuddyColors.green : Colors.white24,
               onTap: controller.toggleCamera,
             ),
+          if (isVideo && inCall)
+            _ControlButton(
+              icon: Icons.cameraswitch_outlined,
+              label: 'Flip cam',
+              color: Colors.white24,
+              onTap: controller.switchCamera,
+            ),
           if (!isVideo && inCall)
             _ControlButton(
               icon: Icons.videocam,
@@ -631,7 +693,21 @@ class _Controls extends ConsumerWidget {
               color: switchPending ? Colors.white24 : Colors.white24,
               onTap: onRequestVideoSwitch,
             ),
+          if (inCall)
+            _ControlButton(
+              icon: Icons.graphic_eq,
+              label: 'Audio',
+              color: Colors.white24,
+              onTap: openAudioPicker,
+            ),
           if (inCall) const _SpeakerButton(),
+          if (inCall)
+            _ControlButton(
+              icon: Icons.camera_alt_outlined,
+              label: 'Snap',
+              color: Colors.white24,
+              onTap: onSnapshot,
+            ),
           if (inCall)
             _ControlButton(
               icon: Icons.person_add_outlined,
@@ -735,6 +811,158 @@ class _SpeakerButtonState extends State<_SpeakerButton> {
       label: _speakerOn ? 'Speaker' : 'Earpiece',
       color: _speakerOn ? BuddyColors.green : Colors.white24,
       onTap: _toggle,
+    );
+  }
+}
+
+/// Picks where call audio comes out.
+///
+/// Desktop/web expose real output devices (speaker, headset, Bluetooth).
+/// Mobile routes through the OS, so the sheet offers the two routes the app
+/// can force: speaker or earpiece.
+class _AudioOutputSheet extends ConsumerStatefulWidget {
+  const _AudioOutputSheet();
+
+  @override
+  ConsumerState<_AudioOutputSheet> createState() => _AudioOutputSheetState();
+}
+
+class _AudioOutputSheetState extends ConsumerState<_AudioOutputSheet> {
+  List<MediaDevice> _outputs = const [];
+  bool _loading = true;
+  String? _selectedId;
+  bool _speaker = AudioManager.instance.isSpeakerOutputPreferred;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final outputs =
+        await ref.read(liveKitCallProvider.notifier).audioOutputOptions();
+    if (!mounted) return;
+    setState(() {
+      _outputs = outputs;
+      _loading = false;
+    });
+  }
+
+  Future<void> _chooseDevice(MediaDevice device) async {
+    final ok =
+        await ref.read(liveKitCallProvider.notifier).setAudioOutput(device);
+    if (!mounted) return;
+    if (ok) setState(() => _selectedId = device.deviceId);
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _chooseRoute(bool speaker) async {
+    await ref.read(liveKitCallProvider.notifier).setSpeakerOutput(speaker);
+    if (!mounted) return;
+    setState(() => _speaker = speaker);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.graphic_eq, color: BuddyColors.green, size: 18),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Audio output',
+                    style: TextStyle(
+                      color: BuddyColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close, color: BuddyColors.textSecondary, size: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _routeTile('Speaker', Icons.volume_up, true),
+            _routeTile('Earpiece', Icons.phone_in_talk_outlined, false),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            else if (_outputs.isNotEmpty) ...[
+              const Divider(height: 24, color: BuddyColors.border),
+              const Text(
+                'Devices',
+                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 4),
+              ..._outputs.map((device) {
+                final selected = device.deviceId == _selectedId;
+                return ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    Icons.headphones,
+                    size: 18,
+                    color: selected ? BuddyColors.green : BuddyColors.textSecondary,
+                  ),
+                  title: Text(
+                    device.label.isEmpty ? 'Output' : device.label,
+                    style: TextStyle(
+                      color: selected ? BuddyColors.green : BuddyColors.textPrimary,
+                      fontSize: 13,
+                    ),
+                  ),
+                  trailing: selected
+                      ? const Icon(Icons.check, size: 16, color: BuddyColors.green)
+                      : null,
+                  onTap: () => _chooseDevice(device),
+                );
+              }),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _routeTile(String label, IconData icon, bool speaker) {
+    final selected = _speaker == speaker;
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        icon,
+        size: 18,
+        color: selected ? BuddyColors.green : BuddyColors.textSecondary,
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: selected ? BuddyColors.green : BuddyColors.textPrimary,
+          fontSize: 13,
+        ),
+      ),
+      trailing:
+          selected ? const Icon(Icons.check, size: 16, color: BuddyColors.green) : null,
+      onTap: () => _chooseRoute(speaker),
     );
   }
 }

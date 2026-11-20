@@ -10,6 +10,7 @@ import {
   Mic, MicOff, Video, VideoOff, PhoneOff, Users, X,
   Monitor, MonitorOff, UserPlus,
   MoreVertical, Circle, Camera, Type, Captions, Phone,
+  RefreshCw, Volume2,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
@@ -63,6 +64,12 @@ export interface CallRoomProps {
   onToggleMute: () => void;
   onToggleCamera: () => void;
   onToggleScreenShare: () => void;
+  /** Flip front/rear camera or cycle webcams on a multi-camera device. */
+  onSwitchCamera: () => void;
+  /** Audio outputs the device exposes, for the in-call picker. */
+  listAudioOutputs: () => Promise<MediaDeviceInfo[]>;
+  /** Route call audio to the chosen output. */
+  onSelectAudioOutput: (deviceId: string) => Promise<boolean>;
   onAddBuddy: (buddyUserId: string) => void;
 }
 
@@ -166,6 +173,7 @@ export function CallRoom({
   switchRequestFrom, switchPending,
   onRequestVideoSwitch, onAcceptSwitch, onDeclineSwitch,
   onAccept, onDecline, onHangUp, onToggleMute, onToggleCamera, onToggleScreenShare,
+  onSwitchCamera, listAudioOutputs, onSelectAudioOutput,
   onAddBuddy,
 }: CallRoomProps) {
   const { toast } = useToast();
@@ -175,6 +183,9 @@ export function CallRoom({
   const [buddies, setBuddies] = useState<Array<{ user_id: string; username: string; display_name: string; avatar_url: string }>>([]);
   const [buddiesLoading, setBuddiesLoading] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const [showAudio, setShowAudio] = useState(false);
+  const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
+  const [audioDeviceId, setAudioDeviceId] = useState('');
   const [durationSecs, setDurationSecs] = useState(0);
   const [textMode, setTextMode] = useState(false);
   const [textDraft, setTextDraft] = useState('');
@@ -194,6 +205,17 @@ export function CallRoom({
   const isCalling = callState === 'calling';
   const isInCall = callState === 'in_call';
   const localTile = useMemo(() => tiles.find((t) => t.isLocal), [tiles]);
+  // In-call text carries the sender's participant id; show their name.
+  const liveTextSender = useMemo(() => {
+    if (!liveText) return '';
+    const tile = tiles.find((t) => t.identity === liveText.from);
+    return tile?.name ?? liveText.from;
+  }, [liveText, tiles]);
+  const liveCaptionSender = useMemo(() => {
+    if (!liveCaption) return '';
+    const tile = tiles.find((t) => t.identity === liveCaption.from);
+    return tile?.name ?? liveCaption.from;
+  }, [liveCaption, tiles]);
   const localId = localTile?.identity ?? myUserId;
   const isMuted = localTile ? !localTile.isAudioEnabled : false;
   const isCameraOff = localTile ? !localTile.isVideoEnabled : true;
@@ -266,7 +288,7 @@ export function CallRoom({
       const latest = e.results[e.results.length - 1];
       const text = (latest[0]?.transcript ?? '').trim();
       if (!text) return;
-      publishCallEvent({ kind: 'caption', text: text.slice(0, 200), from: 'You', final: latest.isFinal });
+      publishCallEvent({ kind: 'caption', text: text.slice(0, 200), from: localTile?.name || 'You', final: latest.isFinal });
       setLiveCaption({ kind: 'caption', text, from: 'You', final: latest.isFinal, at: Date.now() });
     };
     rec.onend = () => setCaptionsOn(false);
@@ -356,7 +378,7 @@ export function CallRoom({
   const sendTextOnScreen = useCallback(() => {
     const text = textDraft.trim().slice(0, 140);
     if (!text) return;
-    publishCallEvent({ kind: 'text', text, from: 'You' });
+    publishCallEvent({ kind: 'text', text, from: localTile?.name || 'You' });
     setLiveText({ kind: 'text', text, from: 'You', at: Date.now() });
     setTextDraft('');
     setTextMode(false);
@@ -443,13 +465,13 @@ export function CallRoom({
           {/* On-screen text (remote or local) */}
           {liveText && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 max-w-[80%] text-center">
-              <span className="inline-block bg-black/80 backdrop-blur px-4 py-2 rounded-2xl text-white text-sm font-medium border border-white/10">{liveText.text}</span>
+              <span className="inline-block bg-black/80 backdrop-blur px-4 py-2 rounded-2xl text-white text-sm font-medium border border-white/10"><span className="text-white/50 mr-1.5">{liveTextSender}:</span>{liveText.text}</span>
             </div>
           )}
           {/* Captions */}
           {liveCaption && (
             <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-20 max-w-[85%]">
-              <span className="inline-block bg-black/80 backdrop-blur px-3 py-1.5 rounded-lg text-white text-xs border border-white/10"><span className="text-white/50 mr-1.5">{liveCaption.from}:</span>{liveCaption.text}</span>
+              <span className="inline-block bg-black/80 backdrop-blur px-3 py-1.5 rounded-lg text-white text-xs border border-white/10"><span className="text-white/50 mr-1.5">{liveCaptionSender}:</span>{liveCaption.text}</span>
             </div>
           )}
 
@@ -526,7 +548,7 @@ export function CallRoom({
           </div>
         )}
 
-        {/* More actions sheet (video calls) */}
+        {/* More actions sheet (every call — voice included) */}
         {showMore && (
           <div className="mb-3 grid grid-cols-4 gap-2 bg-gray-900 border border-gray-800 rounded-2xl p-3 animate-in fade-in">
             {([
@@ -534,6 +556,12 @@ export function CallRoom({
               { icon: Camera, label: 'Snapshot', active: false, onClick: () => { takeScreenshot(); setShowMore(false); } },
               { icon: Type, label: 'Text', active: textMode, onClick: () => { setTextMode((v) => !v); setShowMore(false); } },
               { icon: Captions, label: 'Captions', active: captionsOn, onClick: () => { toggleCaptions(); setShowMore(false); } },
+              ...(callType === 'video' && isInCall
+                ? [{ icon: RefreshCw, label: 'Flip cam', active: false, onClick: () => { onSwitchCamera(); setShowMore(false); } }]
+                : []),
+              ...(isInCall
+                ? [{ icon: Volume2, label: 'Audio', active: showAudio, onClick: () => { void listAudioOutputs().then((outs) => { setAudioOutputs(outs); setShowAudio(true); setShowMore(false); }); } }]
+                : []),
             ]).map(({ icon: Icon, label, active, onClick }) => (
               <button key={label} onClick={onClick}
                 className={`flex flex-col items-center gap-1.5 rounded-xl py-2.5 transition-colors ${active ? 'bg-buddy-green/15 text-buddy-green' : 'text-gray-300 hover:bg-gray-800'}`}>
@@ -541,6 +569,36 @@ export function CallRoom({
                 <span className="text-[10px]">{label}</span>
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Audio output picker (speaker / earpiece / headset / Bluetooth) */}
+        {showAudio && (
+          <div className="mb-3 bg-gray-900 border border-gray-800 rounded-2xl p-3 animate-in fade-in">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-semibold text-white flex items-center gap-1.5"><Volume2 size={14} /> Audio output</p>
+              <button onClick={() => setShowAudio(false)} className="text-gray-500 p-1"><X size={14} /></button>
+            </div>
+            {audioOutputs.length === 0 ? (
+              <p className="text-xs text-gray-500 py-2">No output devices reported. Use your phone's volume buttons to route audio.</p>
+            ) : (
+              <div className="space-y-1">
+                {audioOutputs.map((device, index) => {
+                  const selected = device.deviceId === audioDeviceId;
+                  return (
+                    <button
+                      key={device.deviceId || `output-${index}`}
+                      onClick={() => { void onSelectAudioOutput(device.deviceId).then((ok) => { if (ok) setAudioDeviceId(device.deviceId); setShowAudio(false); toast(ok ? 'success' : 'error', ok ? 'Audio output changed' : 'Could not switch audio output'); }); }}
+                      className={`w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs transition-colors ${selected ? 'bg-buddy-green/15 text-buddy-green' : 'text-gray-300 hover:bg-gray-800'}`}
+                    >
+                      <Volume2 size={14} />
+                      <span className="flex-1 truncate">{device.label || `Output ${index + 1}`}</span>
+                      {selected && <span className="text-[10px] font-semibold">Current</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -621,7 +679,7 @@ export function CallRoom({
               <Video size={20} />
             </button>
           )}
-          {callType === 'video' && isInCall && (
+          {isInCall && (
             <button onClick={() => setShowMore((v) => !v)}
               className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${showMore ? 'bg-buddy-green text-black' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
               title="More actions">

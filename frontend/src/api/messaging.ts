@@ -496,7 +496,7 @@ export const messagingApi = {
       .get<ApiResponse<CommunityPost[]>>(`/messaging/communities/${id}/posts/`, { params })
       .then((r) => r.data.data),
 
-  createCommunityPost: (id: string, data: { body?: string; media_url?: string; is_pinned?: boolean }) =>
+  createCommunityPost: (id: string, data: { body?: string; media_url?: string; media_mime?: string; is_pinned?: boolean }) =>
     apiClient.post<ApiResponse<CommunityPost>>(`/messaging/communities/${id}/posts/`, data).then((r) => r.data.data),
 
   getCommunityPost: (id: string, postId: string) =>

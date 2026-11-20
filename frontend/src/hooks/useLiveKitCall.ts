@@ -270,6 +270,58 @@ export function useLiveKitCall(conversationId: string | null) {
     rebuildTiles(roomRef.current);
   }, [rebuildTiles]);
 
+  /**
+   * Flip between the front and rear camera.
+   *
+   * Phones expose two cameras through `facingMode`. A desktop can have more
+   * than one webcam, so there we cycle the enumerated video inputs instead.
+   */
+  const switchCamera = useCallback(async () => {
+    const lp = roomRef.current?.localParticipant;
+    const pub = lp?.getTrackPublication?.('camera');
+    const track = pub?.track;
+    if (!track) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter((d) => d.kind === 'videoinput');
+      const settings = track.mediaStreamTrack?.getSettings?.() ?? {};
+      // A phone reports facingMode; a desktop reports a deviceId.
+      if (settings.facingMode) {
+        await track.restartTrack({
+          facingMode: settings.facingMode === 'environment' ? 'user' : 'environment',
+        });
+      } else if (cameras.length > 1) {
+        const currentId = settings.deviceId;
+        const index = cameras.findIndex((c) => c.deviceId === currentId);
+        const next = cameras[(index + 1) % cameras.length];
+        await track.restartTrack({ deviceId: next.deviceId });
+      }
+    } catch { /* device refused — keep the current camera */ }
+    rebuildTiles(roomRef.current);
+  }, [rebuildTiles]);
+
+  /** Audio outputs the browser/OS exposes (speaker, headset, Bluetooth). */
+  const listAudioOutputs = useCallback(async (): Promise<MediaDeviceInfo[]> => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter((d) => d.kind === 'audiooutput');
+    } catch {
+      return [];
+    }
+  }, []);
+
+  /** Route call audio to a chosen output device. */
+  const setAudioOutput = useCallback(async (deviceId: string) => {
+    const room = roomRef.current;
+    if (!room) return false;
+    try {
+      await room.switchActiveDevice('audiooutput', deviceId);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   /** Accept an invite that arrived while this conversation wasn't open yet. */
   const acceptRinging = useCallback(async (type: 'audio' | 'video') => {
     await join(type);
@@ -329,6 +381,9 @@ export function useLiveKitCall(conversationId: string | null) {
     toggleCamera,
     toggleScreenShare,
     setCameraEnabled,
+    switchCamera,
+    listAudioOutputs,
+    setAudioOutput,
   };
 }
 

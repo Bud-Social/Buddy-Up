@@ -358,6 +358,65 @@ class LiveKitCallController extends Notifier<LiveKitCallState> {
     try { await lp.setCameraEnabled(enabled); } catch (_) {}
     _rebuildTiles();
   }
+
+  /// Flip between the front and rear camera, or cycle webcams on a desktop
+  /// with more than one video input.
+  Future<void> switchCamera() async {
+    final room = _room;
+    if (room == null) return;
+    try {
+      final pub = room.localParticipant?.videoTrackPublications.firstOrNull;
+      final track = pub?.track;
+      if (track is lk.LocalVideoTrack) {
+        final options = track.currentOptions;
+        final position = options is lk.CameraCaptureOptions
+            ? options.cameraPosition
+            : lk.CameraPosition.front;
+        await track.setCameraPosition(position.switched());
+      } else {
+        final devices = await lk.Hardware.instance.videoInputs();
+        if (devices.length < 2) return;
+        final current = room.selectedVideoInputDeviceId;
+        final index = devices.indexWhere((d) => d.deviceId == current);
+        await room.setVideoInputDevice(
+          devices[(index + 1) % devices.length],
+        );
+      }
+    } catch (_) {
+      // Device refused the flip — keep the current camera.
+    }
+    _rebuildTiles();
+  }
+
+  /// Audio outputs the OS/browser exposes (speaker, earpiece, headset…).
+  Future<List<lk.MediaDevice>> audioOutputOptions() async {
+    try {
+      return await lk.Hardware.instance.audioOutputs();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Route call audio to the chosen output device.
+  Future<bool> setAudioOutput(lk.MediaDevice device) async {
+    final room = _room;
+    if (room == null) return false;
+    try {
+      await room.setAudioOutputDevice(device);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Speaker on/off for devices where the output list is not enumerable
+  /// (iOS/Android route audio through the OS, not a picker list).
+  Future<void> setSpeakerOutput(bool speaker) async {
+    try {
+      await lk.AudioManager.instance
+          .setSpeakerOutputPreferred(speaker, force: speaker);
+    } catch (_) {}
+  }
 }
 
 final liveKitCallProvider =
