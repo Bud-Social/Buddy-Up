@@ -6,6 +6,7 @@
  * live behind one overflow button so the control bar stays calm.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff, Users, X,
   Monitor, MonitorOff, UserPlus,
@@ -18,6 +19,7 @@ import { profilesApi } from '@/api/profiles';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/components/ui/Toast';
 import { playRingback, playRingtone, playFaintChime } from '@/lib/ringtone';
+import { callLayout } from '@/lib/callLayout';
 import type { RemoteCallEvent } from '@/hooks/useLiveKitCall';
 
 export type CallTile = {
@@ -84,12 +86,43 @@ function activeVideoTrack(tile: CallTile): { track: MediaStreamTrack | null; kin
   return { track: cam, kind: 'camera' };
 }
 
+/** Attach a remote participant's mic to a real DOM element.
+ *
+ * LiveKit does not play remote audio on the web until a track is attached to
+ * an element that is still in the document. Detached elements are muted on
+ * mobile browsers, which is why the far side can go silent in a video call —
+ * the voice grid used ParticipantTile but the video stage had no audio at all.
+ */
+function useRemoteMic(ref: RefObject<HTMLAudioElement | null>, tile: CallTile) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || tile.isLocal) return;
+    const p = tile.participant as {
+      getTrackPublication?: (src: string) => { track?: { mediaStreamTrack?: MediaStreamTrack } } | undefined;
+    } | null;
+    const mic = p?.getTrackPublication?.('microphone')?.track?.mediaStreamTrack ?? null;
+    if (!mic) return;
+    try {
+      el.srcObject = new MediaStream([mic]);
+      void el.play().catch(() => {});
+    } catch { /* noop */ }
+    return () => { el.srcObject = null; };
+  }, [ref, tile.participant, tile.isLocal, tile.isAudioEnabled]);
+}
+
+function RemoteMic({ tile }: { tile: CallTile }) {
+  const ref = useRef<HTMLAudioElement>(null);
+  useRemoteMic(ref, tile);
+  return <audio ref={ref} autoPlay playsInline className="hidden" />;
+}
+
 /** One participant tile. Voice = avatar card; video = live video + remote audio. */
 function ParticipantTile({ tile, big }: { tile: CallTile; big?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const { track } = activeVideoTrack(tile);
   const showVideo = !!track && (tile.isVideoEnabled || tile.isScreenSharing);
+  useRemoteMic(audioRef, tile);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -100,20 +133,8 @@ function ParticipantTile({ tile, big }: { tile: CallTile; big?: boolean }) {
     try { el.srcObject = new MediaStream([track]); void el.play().catch(() => {}); } catch { /* noop */ }
   }, [track]);
 
-  // Remote mic: attach to a real element in the DOM. Detached elements are
-  // muted on most mobile browsers — this is why the far side seemed inactive.
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el || tile.isLocal) return;
-    const p = tile.participant as {
-      getTrackPublication?: (src: string) => { track?: { mediaStreamTrack?: MediaStreamTrack } } | undefined;
-    } | null;
-    const mic = p?.getTrackPublication?.('microphone')?.track?.mediaStreamTrack ?? null;
-    if (!mic) return;
-    try { el.srcObject = new MediaStream([mic]); void el.play().catch(() => {}); } catch { /* noop */ }
-    return () => { el.srcObject = null; };
-  }, [tile.participant, tile.isLocal, tile.isAudioEnabled]);
-
+  // Remote mic playback lives in useRemoteMic so the video stage can use the
+  // exact same attachment path.
   return (
     <div className="relative bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 min-h-0 h-full w-full">
       {showVideo ? (
@@ -295,7 +316,9 @@ export function CallRoom({
     try { rec.start(); setCaptionsOn(true); } catch { toast('error', 'Could not start captions'); }
   }, [captionsOn, publishCallEvent, toast]);
 
-  // Screen record (screen or camera + mixed mic audio), saved locally as WebM.
+  // Screen record with the call audio mixed in. Local screenshot/snapshot never
+  // falls back to the other person's video stream: if a screen cannot be
+  // captured we record audio only instead. Works on voice calls too.
   const toggleRecording = useCallback(async () => {
     if (recording) {
       recorderRef.current?.stop();
@@ -305,46 +328,60 @@ export function CallRoom({
     }
     const snap = mediaSnapshot();
     const stream = new MediaStream();
-    let videoTrack = snap?.screen ?? null;
+    let videoTrack: MediaStreamTrack | null = snap?.screen ?? null;
+    let displayAudio: MediaStreamTrack[] = [];
     if (!videoTrack) {
       try {
         const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         videoTrack = display.getVideoTracks()[0] ?? null;
-        display.getAudioTracks().forEach((t) => stream.addTrack(t));
+        displayAudio = display.getAudioTracks();
       } catch {
-        videoTrack = snap?.camera ?? null;
+        // No screen capture here — an audio-only recording is still useful.
+        videoTrack = null;
       }
     }
     if (videoTrack) stream.addTrack(videoTrack);
+    displayAudio.forEach((t) => stream.addTrack(t));
+
     const actx = new AudioContext();
+    // A getUserMedia/getDisplayMedia prompt can consume the user gesture; make
+    // sure the graph is running before mixing mic and far-end audio.
+    void actx.resume().catch(() => {});
     const dest = actx.createMediaStreamDestination();
     const addAudio = (t: MediaStreamTrack | null | undefined) => {
-      if (!t) return;
+      if (!t || t.readyState !== 'live') return;
       try { actx.createMediaStreamSource(new MediaStream([t])).connect(dest); } catch { /* skip */ }
     };
     addAudio(snap?.mic);
     snap?.remoteTracks.filter((t) => t.kind === 'audio').forEach(addAudio);
-    if (dest.stream.getAudioTracks().length > 0) {
-      dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
+    dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
+
+    if (stream.getTracks().length === 0) {
+      toast('error', 'Nothing to record — allow microphone or screen capture');
+      actx.close().catch(() => {});
+      return;
     }
     recordAudioCtx.current = actx;
-    const mime = ['video/webm;codecs=vp9,opus', 'video/webm', 'video/mp4']
-      .find((m) => (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)));
+    const candidates = videoTrack
+      ? ['video/webm;codecs=vp9,opus', 'video/webm', 'video/mp4']
+      : ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+    const mime = candidates.find((m) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m));
+    const ext = mime?.includes('mp4') ? 'mp4' : 'webm';
     try {
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
       recordChunks.current = [];
       rec.ondataavailable = (e) => { if (e.data.size > 0) recordChunks.current.push(e.data); };
       rec.onstop = () => {
-        const blob = new Blob(recordChunks.current, { type: mime ?? 'video/webm' });
+        const blob = new Blob(recordChunks.current, { type: mime ?? (videoTrack ? 'video/webm' : 'audio/webm') });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `buddyup-call-${Date.now()}.webm`;
+        a.download = `buddyup-call-${Date.now()}.${ext}`;
         a.click();
         URL.revokeObjectURL(url);
         stream.getTracks().forEach((t) => t.stop());
         recordAudioCtx.current?.close().catch(() => {});
-        toast('success', 'Recording saved to this device');
+        toast('success', videoTrack ? 'Screen recording saved to this device' : 'Call audio saved to this device');
       };
       rec.start(250);
       recorderRef.current = rec;
@@ -409,9 +446,10 @@ export function CallRoom({
     : 'Call ended';
 
   const remoteTiles = others;
+  const stage = callLayout(tiles.length, callType);
   const focusTile = selfFocused ? localTile : remoteTiles[0];
   const overlayTile = selfFocused ? remoteTiles[0] : localTile;
-  const voiceFullScreen = callType === 'audio';
+  const voiceFullScreen = stage === 'voice';
 
   return (
     <div className="fixed inset-0 z-[100] bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col overflow-hidden"
@@ -475,8 +513,16 @@ export function CallRoom({
             </div>
           )}
 
-          {voiceFullScreen ? (
-            /* ── Voice: the remote person (or people) fills the screen; no self tile ── */
+          {stage === 'group-grid' ? (
+            /* ── Group call: no focus/overlay — all three (or more) equal ── */
+            <div
+              className="flex-1 min-h-0 grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+              style={{ gridAutoRows: '1fr' }}
+            >
+              {tiles.map((t) => <ParticipantTile key={t.identity} tile={t} />)}
+            </div>
+          ) : voiceFullScreen ? (
+            /* ── Voice: the remote person fills the screen; no self tile ── */
             <div className={`flex-1 min-h-0 grid gap-2 ${remoteTiles.length <= 1 ? 'grid-cols-1' : remoteTiles.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'}`}>
               {remoteTiles.length === 0 && (
                 <div className="col-span-full flex flex-col items-center justify-center gap-3 text-gray-500">
@@ -489,6 +535,9 @@ export function CallRoom({
           ) : (
             /* ── Video: remote in focus, self as a tappable overlay ── */
             <div className="flex-1 relative min-h-0 rounded-2xl overflow-hidden border border-gray-800 bg-gray-900">
+              {/* Remote speech must be attached to a live element here too —
+                  the focused video element only carries the video track. */}
+              {remoteTiles.map((t) => <RemoteMic key={t.identity} tile={t} />)}
               {focusTile ? (
                 <div className="absolute inset-0">
                   {activeVideoTrack(focusTile).track ? (
@@ -552,7 +601,7 @@ export function CallRoom({
         {showMore && (
           <div className="mb-3 grid grid-cols-4 gap-2 bg-gray-900 border border-gray-800 rounded-2xl p-3 animate-in fade-in">
             {([
-              { icon: recording ? Circle : Circle, label: recording ? 'Stop REC' : 'Record', active: recording, onClick: () => { void toggleRecording(); setShowMore(false); } },
+              { icon: recording ? Circle : Circle, label: recording ? 'Stop REC' : 'Record screen', active: recording, onClick: () => { void toggleRecording(); setShowMore(false); } },
               { icon: Camera, label: 'Snapshot', active: false, onClick: () => { takeScreenshot(); setShowMore(false); } },
               { icon: Type, label: 'Text', active: textMode, onClick: () => { setTextMode((v) => !v); setShowMore(false); } },
               { icon: Captions, label: 'Captions', active: captionsOn, onClick: () => { toggleCaptions(); setShowMore(false); } },

@@ -799,13 +799,17 @@ def _active_call_session(conv):
     )
 
 
-def _notify_call_members(conv, payload, exclude_user_id=None):
+def _notify_call_members(conv, payload, exclude_user_id=None, only_user_id=None):
     from asgiref.sync import async_to_sync
     from channels.layers import get_channel_layer
     try:
         layer = get_channel_layer()
         recipients = conv.participants.all()
-        if exclude_user_id:
+        if only_user_id:
+            # A ring invitation is aimed at one person — the added buddy —
+            # never at everyone already in the call.
+            recipients = recipients.filter(user_id=only_user_id)
+        elif exclude_user_id:
             recipients = recipients.exclude(user_id=exclude_user_id)
         for participant in recipients:
             async_to_sync(layer.group_send)(
@@ -2604,7 +2608,8 @@ class CallSessionAddView(views.APIView):
 
     If the buddy is not a member of this conversation they are added as one,
     and the ring they receive carries the two profiles already in the call
-    plus an is_buddies_call flag.
+    plus an is_buddies_call flag. Only the added buddy is notified — the
+    people already in the call keep talking.
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -2666,7 +2671,7 @@ class CallSessionAddView(views.APIView):
             'is_buddies_call': True,
             'participant_count': len(participants),
             'participants': participants,
-        }, exclude_user_id=requester.user_id)
+        }, only_user_id=buddy.user_id)
         return Response({
             'success': True,
             'data': {'participants': participants, 'conversation_id': str(conv.id)},

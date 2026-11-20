@@ -130,6 +130,30 @@ class ConversationCallSessionTests(TestCase):
         self.conv.refresh_from_db()
         self.assertFalse(self.conv.call_in_progress)
 
+    def test_adding_a_buddy_rings_only_that_buddy(self):
+        """The person already on the line must not be rung a second time."""
+        from unittest.mock import patch
+
+        BuddyRelationship.objects.create(
+            from_user=self.alice, to_user=self.eve, status='confirmed',
+        )
+        url = f'/api/v1/messaging/conversations/{self.conv.id}/calls/session/'
+        self.client_alice.post(url, {'call_type': 'audio'}, format='json')
+        self.client_bob.post(url, {'call_type': 'audio'}, format='json')
+
+        fake = _FakeChannelLayer()
+        with patch('channels.layers.get_channel_layer', return_value=fake):
+            resp = self.client_alice.post(
+                url + 'add/', {'buddy_user_id': str(self.eve.user_id)}, format='json',
+            )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+
+        rings = [(group, msg) for group, msg in fake.sent
+                 if msg['data'].get('type') == 'incoming_call']
+        self.assertEqual(len(rings), 1)
+        self.assertEqual(rings[0][0], f'user_{self.eve.user_id}')
+        self.assertTrue(rings[0][1]['data']['is_buddies_call'])
+
 
 class MessagingContractTests(TestCase):
     def setUp(self):
