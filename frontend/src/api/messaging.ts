@@ -402,7 +402,13 @@ export const messagingApi = {
   /** Mark a view-once message as opened by the recipient. */
   markViewOnceOpened: (messageId: string) =>
     apiClient
-      .post<ApiResponse<{ view_once: boolean; view_once_opened_at: string | null }>>(
+      .post<ApiResponse<{
+        view_once: boolean;
+        view_once_opened_at: string | null;
+        media_url: string;
+        media_mime?: string;
+        message_type?: string;
+      }>>(
         `/messaging/messages/${messageId}/view-once/`,
       )
       .then((r) => r.data),

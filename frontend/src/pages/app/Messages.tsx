@@ -363,6 +363,8 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   const [showEmojiInput, setShowEmojiInput] = useState(false);
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [viewOnceOpenId, setViewOnceOpenId] = useState<string | null>(null);
+  const [viewOnceUrl, setViewOnceUrl] = useState<string | null>(null);
+  const viewOnceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showConvoMenu, setShowConvoMenu] = useState(false);
   const [convoPrefBusy, setConvoPrefBusy] = useState(false);
 
@@ -389,12 +391,23 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
     }
   }, [activeConvo, basePath, navigate, toast]);
 
-  const openViewOnce = useCallback((msg: MsgType) => {
+  const openViewOnce = useCallback(async (msg: MsgType) => {
+    // Consume first: the server hands over the media URL only on the first open.
+    let url = msg.media_url;
+    try {
+      const res = await messagingApi.markViewOnceOpened(msg.id);
+      if (res.data?.media_url) url = res.data.media_url;
+    } catch { /* keep the optimistic URL if the API is unreachable */ }
+    setViewOnceUrl(url);
     setViewOnceOpenId(msg.id);
     setMessages((prev) => prev.map((m) => (
       m.id === msg.id ? { ...m, view_once_opened_at: new Date().toISOString() } : m
     )));
-    messagingApi.markViewOnceOpened(msg.id).catch(() => { /* best effort */ });
+    if (viewOnceTimer.current) clearTimeout(viewOnceTimer.current);
+    viewOnceTimer.current = setTimeout(() => {
+      setViewOnceOpenId(null);
+      setViewOnceUrl(null);
+    }, 15000);
   }, []);
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -2609,28 +2622,29 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
       {viewOnceOpenId && (() => {
         const m = messages.find((msg) => msg.id === viewOnceOpenId);
         if (!m) return null;
+        const onceUrl = viewOnceUrl ?? m.media_url;
         const body = (
           <>
             {m.message_type === 'photo' && (
-              <img src={m.media_url} alt="View-once photo" className="max-h-[85vh] max-w-[92vw] object-contain rounded-2xl shadow-2xl" />
+              <img src={onceUrl} alt="View-once photo" className="max-h-[85vh] max-w-[92vw] object-contain rounded-2xl shadow-2xl" />
             )}
             {m.message_type === 'video' && (
-              <video src={m.media_url} autoPlay controls playsInline className="max-h-[85vh] max-w-[92vw] bg-black rounded-2xl" />
+              <video src={onceUrl} autoPlay controls playsInline className="max-h-[85vh] max-w-[92vw] bg-black rounded-2xl" />
             )}
             {m.message_type === 'voice' && (
               <div className="bg-buddy-surface rounded-3xl p-6 w-72">
                 <p className="text-[10px] font-bold tracking-wide text-buddy-text-secondary mb-3 flex items-center gap-1.5"><Mic size={12} /> VOICE NOTE · VIEW ONCE</p>
-                <CustomAudioPlayer src={m.media_url} isMine={false} />
+                <CustomAudioPlayer src={onceUrl} isMine={false} />
               </div>
             )}
             {m.message_type !== 'photo' && m.message_type !== 'video' && m.message_type !== 'voice' && (
-              <a href={m.media_url} target="_blank" rel="noreferrer" className="text-buddy-green text-sm underline">Open attachment</a>
+              <a href={onceUrl} target="_blank" rel="noreferrer" className="text-buddy-green text-sm underline">Open attachment</a>
             )}
           </>
         );
         return (
-          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm" onClick={() => setViewOnceOpenId(null)}>
-            <button onClick={() => setViewOnceOpenId(null)} className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full bg-black/40 transition-all z-10">
+          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm" onClick={() => { if (viewOnceTimer.current) clearTimeout(viewOnceTimer.current); setViewOnceOpenId(null); setViewOnceUrl(null); }}>
+            <button onClick={() => { if (viewOnceTimer.current) clearTimeout(viewOnceTimer.current); setViewOnceOpenId(null); setViewOnceUrl(null); }} className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full bg-black/40 transition-all z-10">
               <X size={24} />
             </button>
             <p className="absolute top-4 left-1/2 -translate-x-1/2 text-[10px] font-bold tracking-widest text-white/50">VIEW ONCE</p>
