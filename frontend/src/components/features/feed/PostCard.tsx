@@ -63,21 +63,81 @@ function combinedFilterCss(page: MediaPage): string {
 }
 import type { Post, PostCaption, PostMedia } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
-import { parseWorkoutMetrics } from '@/lib/workoutMetrics';
+import { parseActivitySummary, parseWorkoutMetrics } from '@/lib/workoutMetrics';
+import { extractWorkoutRoute, projectRoute } from '@/lib/workoutRoute';
 import { PostMap } from './PostMap';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function WorkoutLogCard({ data }: { data: Record<string, unknown> }) {
-  const parsed = parseWorkoutMetrics(data);
+  // Activity shares carry the full session; strength logs keep the compact
+  // set/reps/weight summary.
+  const parsed = parseActivitySummary(data) ?? parseWorkoutMetrics(data);
   if (!parsed) return null;
+  const route = extractWorkoutRoute(data);
+  const projection = route.length ? projectRoute(route, 400, 144, 18) : null;
+  const path = projection?.points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+    .join(' ') ?? '';
+  const start = projection?.points[0];
+  const end = projection?.points[projection.points.length - 1];
+
   return (
     <div className="bg-buddy-surface-raised rounded-xl p-4 mt-3 border border-buddy-surface">
       <div className="flex items-center gap-2 mb-3">
         <Dumbbell size={15} className="text-buddy-green" />
         <span className="font-heading font-semibold text-sm">{parsed.title}</span>
+        {projection && (
+          <span className="ml-auto text-[10px] uppercase tracking-wider text-buddy-text-secondary">Route</span>
+        )}
       </div>
-      <div className="grid grid-cols-3 gap-3 text-center">
-        {parsed.metrics.slice(0, 3).map((metric) => (
+
+      {/* The GPS path, drawn as vector geometry so it works offline and can be
+          reproduced exactly in the downloadable share card. */}
+      {projection && path && start && end && (
+        <div className="relative rounded-lg overflow-hidden mb-3 border border-buddy-border/60 bg-[#0C1510]">
+          <svg
+            viewBox="0 0 400 144"
+            className="w-full h-32"
+            role="img"
+            aria-label={`${parsed.title} route map`}
+            preserveAspectRatio="none"
+          >
+            {[0, 1, 2, 3].map((row) => (
+              <line key={`h${row}`} x1="0" y1={row * 36} x2="400" y2={row * 36} stroke="rgba(34,197,94,0.09)" strokeWidth="1" />
+            ))}
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((col) => (
+              <line key={`v${col}`} x1={col * 40} y1="0" x2={col * 40} y2="144" stroke="rgba(34,197,94,0.09)" strokeWidth="1" />
+            ))}
+            {projection.isPoint ? (
+              <circle cx={start.x} cy={start.y} r="7" fill="#22C55E" />
+            ) : (
+              <>
+                <path
+                  d={path}
+                  fill="none"
+                  stroke="rgba(0,0,0,0.45)"
+                  strokeWidth="7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d={path}
+                  fill="none"
+                  stroke="#22C55E"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle cx={start.x} cy={start.y} r="5" fill="#0C1510" stroke="#22C55E" strokeWidth="2.5" />
+                <circle cx={end.x} cy={end.y} r="5" fill="#22C55E" />
+              </>
+            )}
+          </svg>
+        </div>
+      )}
+
+      <div className={`grid gap-3 text-center ${parsed.metrics.length > 3 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-3'}`}>
+        {parsed.metrics.slice(0, 6).map((metric) => (
           <div key={metric.label}>
             <p className={`font-mono font-bold text-lg ${metric.tone === 'orange' ? 'text-buddy-orange' : 'text-buddy-green'}`}>{metric.value}</p>
             <p className="text-xs text-buddy-text-secondary mt-0.5">{metric.label}</p>

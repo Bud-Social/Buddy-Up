@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Activity as ActivityIcon, Footprints, Navigation, Timer, Mountain,
-  Bike, Play, Square, Save, Trash2, MapPin, Loader2, Moon,
+  Bike, Play, Square, Save, Trash2, MapPin, Loader2, Moon, RotateCcw,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +10,10 @@ import { RouteMap } from '@/components/analytics/RouteMap';
 import { useToast } from '@/components/ui/Toast';
 import { useActivityTracker, type TrackerType } from '@/hooks/useActivityTracker';
 import { activityMetrics, activityLabel } from '@/lib/activityMetrics';
+import {
+  checkpointAgeLabel, clearActivityCheckpoint, loadActivityCheckpoint, saveActivityCheckpoint,
+  type ActivityCheckpoint,
+} from '@/lib/activityCheckpoint';
 import { analyticsApi } from '@/api/analytics';
 import { track } from '@/lib/analytics';
 import { enqueueActivity, isRetryableActivityError, newActivityClientId, removeQueuedActivity } from '@/lib/offlineActivities';
@@ -36,13 +40,81 @@ export default function NewActivity() {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const tracker = useActivityTracker('run');
-  const { state, setType, start, stop, reset, buildPayload, estimateSteps, wakeLockActive, wakeLockSupported } = tracker;
+  const { state, setType, start, stop, reset, resume, buildPayload, estimateSteps, wakeLockActive, wakeLockSupported } = tracker;
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<ActivityRecordInput | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [queuedId, setQueuedId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
+  const [resumePrompt, setResumePrompt] = useState<ActivityCheckpoint | null>(null);
+
+  // The live session, readable from the checkpoint interval without making
+  // it restart on every timer tick or GPS fix.
+  const latestRef = useRef({
+    type: state.type,
+    elapsed: state.elapsed,
+    distanceM: state.distanceM,
+    steps: state.steps,
+    points: state.points,
+  });
+  latestRef.current = {
+    type: state.type,
+    elapsed: state.elapsed,
+    distanceM: state.distanceM,
+    steps: state.steps,
+    points: state.points,
+  };
+  const startedAtRef = useRef(new Date().toISOString());
+
+  /** Persist the live session (route included) to localStorage. */
+  const persistCheckpoint = () => {
+    const ownerId = useAuthStore.getState().user?.id;
+    if (!ownerId) return;
+    const live = latestRef.current;
+    if (live.elapsed <= 0 && live.points.length === 0) return;
+    saveActivityCheckpoint({
+      version: 1,
+      ownerId,
+      type: live.type,
+      startedAt: startedAtRef.current,
+      elapsed: live.elapsed,
+      distanceM: live.distanceM,
+      steps: live.steps,
+      points: live.points,
+      lastUpdated: Date.now(),
+    });
+  };
+
+  // Offer to continue an interrupted session (dead battery, closed tab, OS
+  // freezing a background tab). Checkpoints belong to the signed-in account.
+  useEffect(() => {
+    const ownerId = useAuthStore.getState().user?.id;
+    if (!ownerId) return;
+    const checkpoint = loadActivityCheckpoint(ownerId);
+    if (checkpoint) setResumePrompt(checkpoint);
+  }, []);
+
+  // Checkpoint every 10s and whenever the page is hidden or unloaded. A
+  // locked phone freezes the tab without a chance to run cleanup code, so
+  // the periodic write is the one that matters.
+  useEffect(() => {
+    if (!state.tracking) return;
+    persistCheckpoint();
+    const id = window.setInterval(persistCheckpoint, 10_000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') persistCheckpoint();
+    };
+    window.addEventListener('pagehide', persistCheckpoint);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('pagehide', persistCheckpoint);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  // persistCheckpoint reads live values from latestRef by design.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.tracking]);
 
   // The kind and the target come from the page the user came from.
   const requestedType = searchParams.get('type');
@@ -94,15 +166,21 @@ export default function NewActivity() {
   }, [target, estimateSteps, state.distanceM]);
 
   const handleStopAndSave = async () => {
+    // Flush the final state before the tracker zeroes itself, so a failed
+    // save still leaves the full session resumable.
+    persistCheckpoint();
     stop();
     if (state.elapsed <= 0) {
+      clearActivityCheckpoint(useAuthStore.getState().user?.id);
       reset();
       return;
     }
     setSaving(true);
+    const ownerId = useAuthStore.getState().user?.id;
     const clientId = newActivityClientId();
     const payload: ActivityRecordInput = {
       ...buildPayload(),
+      started_at: startedAtRef.current,
       source_event_id: clientId,
       ...(notes.trim() ? { notes: notes.trim() } : {}),
     };
@@ -110,6 +188,7 @@ export default function NewActivity() {
       const res = await analyticsApi.createActivity(payload);
       setSaved(payload);
       setSavedId((res.data as { id?: string } | undefined)?.id ?? null);
+      clearActivityCheckpoint(ownerId);
       track('activity.saved', { surface: 'activities_new', properties: { activity_type: payload.activity_type } });
       toast('success', 'Activity saved.');
     } catch (error) {
@@ -117,13 +196,13 @@ export default function NewActivity() {
       // full session on the device and replay it when the connection returns.
       const unreachable = (typeof navigator !== 'undefined' && navigator.onLine === false)
         || isRetryableActivityError(error);
-      const ownerId = useAuthStore.getState().user?.id;
       if (unreachable && ownerId) {
         try {
           await enqueueActivity(payload, ownerId);
           setSaved(payload);
           setSavedId(null);
           setQueuedId(clientId);
+          clearActivityCheckpoint(ownerId);
           track('activity.queued_offline', { surface: 'activities_new', properties: { activity_type: payload.activity_type } });
           toast('info', 'Saved on this device. It will upload when you are back online.');
           return;
@@ -131,7 +210,9 @@ export default function NewActivity() {
           // Storage refused too — report the honest failure below.
         }
       }
-      toast('error', 'Could not save the activity.');
+      // Keep the checkpoint: tapping save again can upload it without
+      // re-walking the route.
+      toast('error', 'Could not save the activity. Your session is still here — try again.');
     } finally {
       setSaving(false);
     }
@@ -164,11 +245,40 @@ export default function NewActivity() {
   };
 
   const handleDiscard = () => {
+    clearActivityCheckpoint(useAuthStore.getState().user?.id);
     reset();
     setSaved(null);
     setSavedId(null);
     setQueuedId(null);
     setNotes('');
+  };
+
+  const handleStartFresh = () => {
+    if (resumePrompt) {
+      clearActivityCheckpoint(useAuthStore.getState().user?.id);
+      setResumePrompt(null);
+    }
+    startedAtRef.current = new Date().toISOString();
+    start();
+  };
+
+  const handleResumeCheckpoint = () => {
+    if (!resumePrompt) return;
+    startedAtRef.current = resumePrompt.startedAt;
+    resume({
+      type: resumePrompt.type,
+      elapsed: resumePrompt.elapsed,
+      distanceM: resumePrompt.distanceM,
+      steps: resumePrompt.steps,
+      points: resumePrompt.points,
+    });
+    setResumePrompt(null);
+    toast('info', 'Session resumed. Keep going.');
+  };
+
+  const handleDiscardCheckpoint = () => {
+    clearActivityCheckpoint(useAuthStore.getState().user?.id);
+    setResumePrompt(null);
   };
 
   // A saved session can be shared straight away.
@@ -217,6 +327,35 @@ export default function NewActivity() {
       </div>
 
       <ActivityQueueBanner />
+
+      {/* Interrupted session — resume the exact route instead of starting over. */}
+      {resumePrompt && !state.tracking && !saved && (
+        <Card className="p-4 border-buddy-green/40 bg-buddy-green/5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-buddy-green/15 text-buddy-green flex items-center justify-center shrink-0">
+              <RotateCcw size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-heading font-semibold">Resume your {activityLabel(resumePrompt.type).toLowerCase()}?</h2>
+              <p className="text-sm text-buddy-text-secondary mt-0.5">
+                {(resumePrompt.distanceM / 1000).toFixed(2)} km ·{' '}
+                {Math.floor(resumePrompt.elapsed / 60)} min · {resumePrompt.points.length} route points
+              </p>
+              <p className="text-[11px] text-buddy-text-secondary mt-0.5">
+                Last checkpoint {checkpointAgeLabel(resumePrompt)}. The route is stored on this device.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-3">
+            <Button size="sm" className="flex-1" onClick={handleResumeCheckpoint}>
+              <Play size={14} className="mr-1.5" /> Resume
+            </Button>
+            <Button size="sm" variant="outline" className="flex-1" onClick={handleDiscardCheckpoint}>
+              <Trash2 size={14} className="mr-1.5" /> Discard
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* The kind of activity — it decides which numbers matter. */}
       <Card className="p-4">
@@ -368,7 +507,7 @@ export default function NewActivity() {
       {/* Controls */}
       <div className="flex items-center gap-3 pb-4">
         {!state.tracking && !saved && (
-          <Button className="flex-1" onClick={start}>
+          <Button className="flex-1" onClick={handleStartFresh}>
             <Play size={16} className="mr-2" /> Start {activityLabel(state.type).toLowerCase()}
           </Button>
         )}

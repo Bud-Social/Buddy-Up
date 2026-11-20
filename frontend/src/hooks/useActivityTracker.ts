@@ -99,8 +99,12 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
   // ── Hybrid step counting ──────────────────────────────────────────────────
   // Real motion-sensor cadence when the browser offers it; otherwise a
   // stride-model estimate from the GPS distance.
-  const startMotionListener = useCallback(() => {
-    if (type !== 'walk') return;
+  //
+  // The activity kind is a parameter because resuming a checkpoint restores
+  // the type and starts the listener in the same tick — reading `type` here
+  // would still see the previous render's value.
+  const startMotionListener = useCallback((kind: TrackerType = type) => {
+    if (kind !== 'walk') return;
     interface MotionCtor {
       new(cb: (e: DeviceMotionEvent) => void): { start: () => void; stop?: () => void };
     }
@@ -154,6 +158,45 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
     releaseWakeLock();
   }, [releaseWakeLock]);
 
+  /**
+   * Open the GPS watch. Extracted so a fresh session and a resumed
+   * checkpoint share exactly the same tracking behaviour.
+   */
+  const beginWatch = useCallback(() => {
+    if (watchIdRef.current !== null) return;
+    if (!navigator.geolocation) {
+      setError('GPS is not supported by this browser.');
+      return;
+    }
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        setGpsFix(true);
+        setGpsAccuracy(Math.round(pos.coords.accuracy));
+        // Record the first fix immediately so a session with no movement
+        // still shows where the user was.
+        const p: TrackPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
+        // The dedupe lives outside the state updater: React may call an
+        // updater more than once, and a side effect inside one would then
+        // be applied twice — dropping the point it had just added.
+        const last = lastPosRef.current;
+        if (last && last.lat === p.lat && last.lng === p.lng) return;
+        lastPosRef.current = p;
+        setPoints((prev) => [...prev, p]);
+      },
+      (err) => setError(
+        err.code === err.PERMISSION_DENIED
+          ? 'Location access denied. The session is tracked without GPS.'
+          : 'Waiting for a GPS signal…',
+      ),
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 },
+    );
+  }, []);
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+  }, []);
+
   const start = useCallback(() => {
     setError(null);
     setDistanceM(0);
@@ -165,38 +208,46 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
     motionStepsRef.current = 0;
     lastPosRef.current = null;
 
-    if (navigator.geolocation) {
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (pos) => {
-          setGpsFix(true);
-          setGpsAccuracy(Math.round(pos.coords.accuracy));
-          // Record the first fix immediately so a session with no movement
-          // still shows where the user was.
-          const p: TrackPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
-          // The dedupe lives outside the state updater: React may call an
-          // updater more than once, and a side effect inside one would then
-          // be applied twice — dropping the point it had just added.
-          const last = lastPosRef.current;
-          if (last && last.lat === p.lat && last.lng === p.lng) return;
-          lastPosRef.current = p;
-          setPoints((prev) => [...prev, p]);
-        },
-        (err) => setError(
-          err.code === err.PERMISSION_DENIED
-            ? 'Location access denied. The session is tracked without GPS.'
-            : 'Waiting for a GPS signal…',
-        ),
-        { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 },
-      );
-    } else {
-      setError('GPS is not supported by this browser.');
-    }
-
-    if (type === 'walk') startMotionListener();
-    timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    beginWatch();
+    if (type === 'walk') startMotionListener(type);
+    startTimer();
     setTracking(true);
     void acquireWakeLock();
-  }, [acquireWakeLock, startMotionListener, type]);
+  }, [acquireWakeLock, beginWatch, startMotionListener, startTimer, type]);
+
+  /**
+   * Continue a checkpointed session.
+   *
+   * Restores the numbers and route first, then re-opens the GPS watch and
+   * timer without zeroing anything. Used when the tab died mid-session (or
+   * was frozen in the background) and the user chooses "Resume".
+   */
+  const resume = useCallback((checkpoint: {
+    type: TrackerType;
+    elapsed: number;
+    distanceM: number;
+    steps: number;
+    points: TrackPoint[];
+  }) => {
+    setError(null);
+    setType(checkpoint.type);
+    setElapsed(checkpoint.elapsed);
+    setDistanceM(checkpoint.distanceM);
+    setSteps(checkpoint.steps);
+    setPoints(checkpoint.points);
+    setGpsFix(false);
+    setGpsAccuracy(null);
+    motionStepsRef.current = checkpoint.steps;
+    lastPosRef.current = checkpoint.points.length
+      ? checkpoint.points[checkpoint.points.length - 1]
+      : null;
+
+    beginWatch();
+    if (checkpoint.type === 'walk') startMotionListener(checkpoint.type);
+    startTimer();
+    setTracking(true);
+    void acquireWakeLock();
+  }, [acquireWakeLock, beginWatch, startMotionListener, startTimer]);
 
   const stop = useCallback(() => {
     if (watchIdRef.current !== null) {
@@ -263,6 +314,7 @@ export function useActivityTracker(initialType: TrackerType = 'run') {
     start,
     stop,
     reset,
+    resume,
     buildPayload,
     estimateSteps,
     wakeLockActive,

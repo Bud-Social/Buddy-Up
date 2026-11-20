@@ -1,14 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MapPin, Timer, Share2, X, Smartphone, Image,
-  Activity,
+  Activity, Download, Users, Dumbbell, Loader2,
 } from 'lucide-react';
 import { analyticsApi } from '@/api/analytics';
+import { feedApi } from '@/api/feed';
+import { messagingApi, type Community } from '@/api/messaging';
+import { gymsApi } from '@/api/gyms';
+import type { Gym } from '@/types/gym';
 import { RouteMap } from '@/components/analytics/RouteMap';
 import { ActivityQueueBanner } from '@/components/analytics/ActivityQueueBanner';
 import { activityMetrics } from '@/lib/activityMetrics';
+import { createShareCard, downloadShareCard } from '@/lib/shareCard';
+import { ANALYTICS_PATH } from '@/lib/shareWorkout';
+import { useToast } from '@/components/ui/Toast';
+import { useAuthStore } from '@/store/authStore';
 import type { ActivityRecent } from '@/types/analytics';
+import type { Post } from '@/types';
 
 const ACTIVITY_ICONS: Record<string, React.ComponentType<any>> = {
   walk: MapPin,
@@ -59,6 +68,7 @@ const VISIBILITY_OPTIONS: { value: 'public' | 'buddies' | 'gym_members' | 'priva
 
 export default function ActivitiesPage() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activities, setActivities] = useState<ActivityRecent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<ActivityRecent | null>(null);
@@ -73,6 +83,14 @@ export default function ActivitiesPage() {
   const [shareDraftId, setShareDraftId] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [captionCorrected, setCaptionCorrected] = useState<string>('');
+  const [shareTarget, setShareTarget] = useState<'feed' | 'community' | 'gym'>('feed');
+  const [shareCommunityId, setShareCommunityId] = useState('');
+  const [shareGymId, setShareGymId] = useState('');
+  const [myCommunities, setMyCommunities] = useState<Community[]>([]);
+  const [myGyms, setMyGyms] = useState<Gym[]>([]);
+  const [targetsLoaded, setTargetsLoaded] = useState(false);
+  const [cardBusy, setCardBusy] = useState(false);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
 
   // Video download / watermark state
   const [videoDownloadState, setVideoDownloadState] = useState<{
@@ -137,8 +155,33 @@ export default function ActivitiesPage() {
     setShareVisibility('public');
     setShareDraftId(null);
     setCaptionCorrected('');
+    setShareTarget('feed');
+    setShareCommunityId('');
+    setShareGymId('');
+    setShareMedia([]);
     setShareOpen(true);
   };
+
+  // Load the places a share can go: the user's communities and gyms.
+  useEffect(() => {
+    if (!shareOpen || targetsLoaded) return;
+    let cancelled = false;
+    void Promise.allSettled([
+      messagingApi.getCommunities(),
+      gymsApi.list({ my: true }),
+    ]).then(([communities, gyms]) => {
+      if (cancelled) return;
+      if (communities.status === 'fulfilled') {
+        setMyCommunities(communities.value?.mine ?? []);
+      }
+      if (gyms.status === 'fulfilled') {
+        const list = gyms.value?.data;
+        setMyGyms(Array.isArray(list) ? list : []);
+      }
+      setTargetsLoaded(true);
+    });
+    return () => { cancelled = true; };
+  }, [shareOpen, targetsLoaded]);
 
   const handleCorrectCaption = async () => {
     if (!shareCaption.trim()) return;
@@ -172,22 +215,148 @@ export default function ActivitiesPage() {
     }
   };
 
+  /** Save attached media into the user's story highlights (24h reel). */
+  const saveSharedMediaToHighlights = async (mediaUrls: string[]) => {
+    if (!shareActivity || mediaUrls.length === 0) return;
+    const label = ACTIVITY_LABELS[shareActivity.activity_type] ?? shareActivity.activity_type;
+    const body = `${label} · ${shareActivity.distance_km?.toFixed(1) ?? 0} km`;
+    for (const url of mediaUrls.slice(0, 4)) {
+      try {
+        const form = new FormData();
+        form.append('post_type', 'moment');
+        form.append('body', body);
+        form.append('media_urls', JSON.stringify([url]));
+        form.append('visibility', shareVisibility === 'private' ? 'private' : 'public');
+        await feedApi.createPost(form);
+      } catch {
+        // A highlight is a bonus; never fail the share because of it.
+      }
+    }
+  };
+
   const handlePublishShare = async () => {
-    if (!shareDraftId) return;
+    if (!shareDraftId || !shareActivity) return;
     setShareLoading(true);
     try {
-      await analyticsApi.sharePublish(shareDraftId, {
+      const result = await analyticsApi.sharePublish(shareDraftId, {
         body: shareCaption,
         visibility: shareVisibility,
-        media_urls: shareMedia.map((f) => URL.createObjectURL(f)),
-        tags: ['activity', shareActivity?.activity_type ?? ''],
+        tags: ['activity', shareActivity.activity_type],
+        gym_id: shareTarget === 'gym' && shareGymId ? shareGymId : undefined,
+        files: shareMedia,
       });
+      // Media embedded in the share also lands in the highlights reel.
+      await saveSharedMediaToHighlights(result.media_urls ?? []);
       setShareOpen(false);
       setShareDraftId(null);
+      toast('success', 'Shared to the feed.');
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to publish share');
+      toast('error', err?.response?.data?.message || 'Failed to publish share');
     } finally {
       setShareLoading(false);
+    }
+  };
+
+  /** Community feeds take one media URL, so upload the first attachment. */
+  const handleCommunityShare = async () => {
+    if (!shareActivity) return;
+    if (!shareCommunityId) {
+      toast('error', 'Pick a community first.');
+      return;
+    }
+    setShareLoading(true);
+    try {
+      let mediaUrl = '';
+      const first = shareMedia[0];
+      if (first) {
+        const uploaded = await feedApi.uploadCommentMedia(first);
+        mediaUrl = uploaded.url;
+      }
+      await messagingApi.createCommunityPost(shareCommunityId, {
+        body: shareCaption,
+        media_url: mediaUrl || undefined,
+        media_mime: first?.type,
+      });
+      if (mediaUrl) await saveSharedMediaToHighlights([mediaUrl]);
+      setShareOpen(false);
+      toast('success', 'Shared to the community.');
+    } catch (err: any) {
+      toast('error', err?.response?.data?.message || 'Failed to share to the community');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  /** Build the branded activity card as a Post-shaped payload. */
+  const buildActivityCard = async (url: string): Promise<File> => {
+    const activity = shareActivity;
+    if (!activity) throw new Error('No activity selected');
+    const profile = useAuthStore.getState().profile;
+    const post = {
+      id: `activity-${activity.id}`,
+      post_type: 'workout_log',
+      body: shareCaption,
+      workout_log_data: {
+        activity_type: activity.activity_type,
+        distance_meters: activity.distance_meters,
+        distance_km: activity.distance_km,
+        duration_seconds: activity.duration_seconds,
+        duration_minutes: Math.round((activity.duration_seconds || 0) / 60),
+        calories: activity.calories_burned,
+        steps: activity.steps ?? null,
+        avg_pace: activity.avg_pace,
+        avg_speed_kmh: activity.avg_speed_kmh ?? null,
+        elevation_gain_m: activity.elevation_gain_m ?? null,
+        started_at: activity.started_at,
+        route: activity.route ?? [],
+      },
+      author_data: {
+        username: profile?.username ?? '',
+        display_name: profile?.display_name ?? 'BuddyUp member',
+        avatar_url: profile?.avatar_url ?? '',
+      },
+    } as unknown as Post;
+    return createShareCard(post, { url });
+  };
+
+  const handleDownloadCard = async () => {
+    setCardBusy(true);
+    try {
+      const url = `${window.location.origin}${ANALYTICS_PATH}`;
+      downloadShareCard(await buildActivityCard(url));
+      toast('success', 'Card downloaded — ready to post.');
+    } catch {
+      toast('error', 'Could not build the activity card.');
+    } finally {
+      setCardBusy(false);
+    }
+  };
+
+  const handleShareCard = async () => {
+    const nav = navigator as Navigator & {
+      share?: (d: ShareData) => Promise<void>;
+      canShare?: (d: ShareData) => boolean;
+    };
+    setCardBusy(true);
+    try {
+      const url = `${window.location.origin}${ANALYTICS_PATH}`;
+      const file = await buildActivityCard(url);
+      const payload: ShareData = {
+        files: [file],
+        title: 'BuddyUp Fit',
+        text: `${shareCaption}\n${url}`,
+      };
+      if (nav.share && (!nav.canShare || nav.canShare(payload))) {
+        await nav.share(payload);
+      } else {
+        downloadShareCard(file);
+        toast('info', 'Card saved — attach it in your social app.');
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      toast('error', 'Could not share the activity card.');
+    } finally {
+      setCardBusy(false);
     }
   };
 
@@ -654,9 +823,9 @@ export default function ActivitiesPage() {
 
       {/* Share Composer Modal */}
       {shareOpen && shareActivity && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShareOpen(false)} />
-          <div className="relative bg-buddy-surface rounded-2xl border border-buddy-border p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto z-10">
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center">
+          <div className="fixed inset-0 z-0 bg-black/60 backdrop-blur-sm" onClick={() => setShareOpen(false)} />
+          <div className="relative z-10 bg-buddy-surface rounded-2xl border border-buddy-border p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-buddy-text-primary">Share Activity</h3>
               <button onClick={() => setShareOpen(false)} className="text-buddy-text-secondary hover:text-buddy-text-primary">
@@ -686,6 +855,55 @@ export default function ActivitiesPage() {
                   </div>
                 </div>
               )}
+
+              {/* Where the share goes */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-buddy-text-secondary">Share to</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { key: 'feed' as const, label: 'My feed', icon: Activity },
+                    { key: 'community' as const, label: 'Community', icon: Users },
+                    { key: 'gym' as const, label: 'Gym feed', icon: Dumbbell },
+                  ]).map(({ key, label, icon: Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setShareTarget(key)}
+                      className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                        shareTarget === key
+                          ? 'bg-buddy-green text-white border-buddy-green'
+                          : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border hover:bg-buddy-surface/80'
+                      }`}
+                    >
+                      <Icon size={16} />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {shareTarget === 'community' && (
+                  <select
+                    value={shareCommunityId}
+                    onChange={(e) => setShareCommunityId(e.target.value)}
+                    className="w-full px-3 py-2 bg-buddy-bg border border-buddy-border rounded-lg text-sm"
+                  >
+                    <option value="">Pick a community…</option>
+                    {myCommunities.map((community) => (
+                      <option key={community.id} value={community.id}>{community.group_name}</option>
+                    ))}
+                  </select>
+                )}
+                {shareTarget === 'gym' && (
+                  <select
+                    value={shareGymId}
+                    onChange={(e) => setShareGymId(e.target.value)}
+                    className="w-full px-3 py-2 bg-buddy-bg border border-buddy-border rounded-lg text-sm"
+                  >
+                    <option value="">Pick a gym…</option>
+                    {myGyms.map((gym) => (
+                      <option key={gym.id} value={gym.id}>{gym.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
 
               {/* Caption editor */}
               <div className="space-y-2">
@@ -740,6 +958,7 @@ export default function ActivitiesPage() {
                 <label className="text-sm font-medium text-buddy-text-secondary">Attach media (optional)</label>
                 <div className="flex items-center gap-3">
                   <input
+                    ref={mediaInputRef}
                     type="file"
                     accept="image/*,video/*"
                     multiple
@@ -747,39 +966,64 @@ export default function ActivitiesPage() {
                     className="sr-only"
                   />
                   <button
-                    onClick={() => {
-                      const input = document.querySelector('input[type=file]') as HTMLInputElement | null;
-                      input?.click();
-                    }}
+                    onClick={() => mediaInputRef.current?.click()}
                     className="flex items-center gap-2 px-3 py-2 border border-buddy-border rounded-lg text-sm text-buddy-text-secondary hover:bg-buddy-surface/50"
                   >
                     <Image size={16} /> {shareMedia.length > 0 ? `${shareMedia.length} file(s)` : 'Add photo/video'}
                   </button>
                   {shareMedia.length > 0 && (
                     <span className="text-xs text-buddy-text-secondary bg-buddy-surface/50 px-2 py-1 rounded">
-                      {shareMedia.length} attached
+                      {shareMedia.length} attached · saved to highlights
                     </span>
                   )}
                 </div>
               </div>
 
+              {/* Card actions: the analytics card as a file, for socials. */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => void handleShareCard()}
+                  disabled={cardBusy}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 border border-buddy-border rounded-lg text-sm font-medium text-buddy-text-primary hover:bg-buddy-surface/60 disabled:opacity-50"
+                >
+                  {cardBusy ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
+                  Share card
+                </button>
+                <button
+                  onClick={() => void handleDownloadCard()}
+                  disabled={cardBusy}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 border border-buddy-border rounded-lg text-sm font-medium text-buddy-text-primary hover:bg-buddy-surface/60 disabled:opacity-50"
+                >
+                  {cardBusy ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  Download card
+                </button>
+              </div>
+
               {/* Draft vs Publish */}
-              {shareDraftId ? (
+              {shareTarget === 'community' ? (
+                <button
+                  onClick={() => void handleCommunityShare()}
+                  disabled={shareLoading || !shareCaption.trim() || !shareCommunityId}
+                  className="w-full py-3 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {shareLoading ? 'Sharing…' : 'Share to community'}
+                </button>
+              ) : shareDraftId ? (
                 <div className="bg-buddy-green/10 border border-buddy-green/20 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-sm text-buddy-green mb-2">
                     <Smartphone size={14} /> Draft ready — review and publish
                   </div>
                   <button
-                    onClick={handlePublishShare}
-                    disabled={shareLoading}
+                    onClick={() => void handlePublishShare()}
+                    disabled={shareLoading || (shareTarget === 'gym' && !shareGymId)}
                     className="w-full py-3 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-lg font-medium disabled:opacity-50 transition-colors"
                   >
-                    {shareLoading ? 'Publishing…' : 'Publish to Feed'}
+                    {shareLoading ? 'Publishing…' : shareTarget === 'gym' ? 'Publish to gym feed' : 'Publish to Feed'}
                   </button>
                 </div>
               ) : (
                 <button
-                  onClick={handlePrepareShare}
+                  onClick={() => void handlePrepareShare()}
                   disabled={shareLoading || !shareCaption.trim()}
                   className="w-full py-3 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >

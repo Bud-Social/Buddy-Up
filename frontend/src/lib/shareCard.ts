@@ -1,5 +1,6 @@
 import type { Post } from '@/types';
-import { parseWorkoutMetrics, type WorkoutMetrics } from './workoutMetrics';
+import { parseActivitySummary, parseWorkoutMetrics, type WorkoutMetrics } from './workoutMetrics';
+import { extractWorkoutRoute, projectRoute, type GeoPoint } from './workoutRoute';
 
 /**
  * Social share card: a 4:5 canvas with the post content inside a BuddyUp
@@ -56,6 +57,8 @@ interface CardLayout {
   mediaKind: 'image' | 'video' | null;
   bodyLines: string[];
   metrics: WorkoutMetrics | null;
+  /** GPS path for a shared activity, drawn as a map panel. */
+  route: GeoPoint[];
   hasCommunity: boolean;
   communityLabel: string;
   communityPillW: number;
@@ -344,6 +347,116 @@ function drawDumbbell(ctx: CanvasRenderingContext2D, x: number, y: number, color
   ctx.restore();
 }
 
+/**
+ * The activity map panel.
+ *
+ * Draws a gridded, dark map surface with the projected GPS path on top. It
+ * uses no tiles, so the card renders offline and the canvas stays untainted
+ * (a tainted canvas cannot be exported or shared).
+ */
+function drawRoutePanel(
+  ctx: CanvasRenderingContext2D,
+  route: GeoPoint[],
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  ctx.save();
+  roundedRect(ctx, x, y, w, h, 24);
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.save();
+  roundedRect(ctx, x, y, w, h, 24);
+  ctx.clip();
+
+  // Map grid.
+  ctx.strokeStyle = 'rgba(34,197,94,0.10)';
+  ctx.lineWidth = 1;
+  for (let gx = 0; gx <= w; gx += 40) {
+    ctx.beginPath();
+    ctx.moveTo(x + gx, y);
+    ctx.lineTo(x + gx, y + h);
+    ctx.stroke();
+  }
+  for (let gy = 0; gy <= h; gy += 36) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + gy);
+    ctx.lineTo(x + w, y + gy);
+    ctx.stroke();
+  }
+
+  const projected = projectRoute(route, w, h, 34);
+  const pts = projected.points;
+
+  if (projected.isPoint || pts.length === 1) {
+    ctx.beginPath();
+    ctx.arc(x + pts[0].x, y + pts[0].y, 9, 0, Math.PI * 2);
+    ctx.fillStyle = GREEN;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(34,197,94,0.35)';
+    ctx.lineWidth = 10;
+    ctx.stroke();
+  } else if (pts.length > 1) {
+    const trace = () => {
+      ctx.beginPath();
+      ctx.moveTo(x + pts[0].x, y + pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(x + pts[i].x, y + pts[i].y);
+    };
+    // Soft shadow under a bright stroke keeps the path readable on the grid.
+    trace();
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+    ctx.lineWidth = 11;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    trace();
+    ctx.strokeStyle = GREEN;
+    ctx.lineWidth = 5;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    const start = pts[0];
+    const end = pts[pts.length - 1];
+    ctx.beginPath();
+    ctx.arc(x + start.x, y + start.y, 7, 0, Math.PI * 2);
+    ctx.fillStyle = '#0E1712';
+    ctx.fill();
+    ctx.strokeStyle = GREEN;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(x + end.x, y + end.y, 7, 0, Math.PI * 2);
+    ctx.fillStyle = GREEN;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(11,15,13,0.6)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // "ROUTE" chip, kept clear of the path with a dark backing.
+  ctx.font = '700 16px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  const label = 'ROUTE';
+  const chipW = ctx.measureText(label).width + 24;
+  roundedRect(ctx, x + 16, y + 14, chipW, 30, 15);
+  ctx.fillStyle = 'rgba(11,15,13,0.72)';
+  ctx.fill();
+  ctx.fillStyle = 'rgba(34,197,94,0.95)';
+  ctx.fillText(label, x + 28, y + 29);
+
+  ctx.restore();
+  ctx.restore();
+}
+
 /** Header watermark: BuddyUp wordmark + FIT TOGETHER. */
 function drawHeader(ctx: CanvasRenderingContext2D) {
   ctx.save();
@@ -599,10 +712,18 @@ function computeLayout(ctx: CanvasRenderingContext2D, post: Post, plan: MediaPla
   const bodyLines = body ? wrapLines(ctx, body, frameW - padding * 2, 4) : [];
   const bodyH = bodyLines.length * 46;
 
-  const metrics = (post.post_type === 'workout_log' || post.post_type === 'countdown')
-    ? parseWorkoutMetrics(post.workout_log_data)
+  const summary = post.post_type === 'workout_log'
+    ? parseActivitySummary(post.workout_log_data)
     : null;
-  const metricsH = metrics ? 150 : 0;
+  const metrics = summary ?? ((post.post_type === 'workout_log' || post.post_type === 'countdown')
+    ? parseWorkoutMetrics(post.workout_log_data)
+    : null);
+  const metricRows = metrics ? (metrics.metrics.length > 3 ? 2 : 1) : 0;
+  const metricsH = metrics ? (metricRows === 2 ? 224 : 150) : 0;
+  const route = post.post_type === 'workout_log'
+    ? extractWorkoutRoute(post.workout_log_data)
+    : [];
+  const routeH = route.length ? 222 : 0;
 
   // Everything in the frame that is not the media block.
   const chromeH = 8
@@ -610,6 +731,7 @@ function computeLayout(ctx: CanvasRenderingContext2D, post: Post, plan: MediaPla
     + (hasCommunity ? pillH + 8 : 0)
     + bodyH
     + (metricsH ? metricsH + 10 : 0)
+    + routeH
     + 94;
 
   const topLabelH = 54;
@@ -642,6 +764,7 @@ function computeLayout(ctx: CanvasRenderingContext2D, post: Post, plan: MediaPla
     mediaKind: plan.kind,
     bodyLines,
     metrics,
+    route,
     hasCommunity,
     communityLabel,
     communityPillW,
@@ -735,11 +858,14 @@ function paintChrome(
   }
 
   // Workout metrics card inside the post frame.
+  let blockBottom = cursorY;
   if (layout.metrics) {
     const cardX = frameX + padding;
     const cardW = frameW - padding * 2;
     const cardY = cursorY + 4;
-    const cardH = 140;
+    const shown = layout.metrics.metrics.slice(0, 5);
+    const rows = shown.length > 3 ? 2 : 1;
+    const cardH = rows === 2 ? 214 : 140;
     roundedRect(ctx, cardX, cardY, cardW, cardH, 24);
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.fill();
@@ -754,19 +880,33 @@ function paintChrome(
     ctx.textBaseline = 'middle';
     ctx.fillText(layout.metrics.title, cardX + 60, cardY + 34, cardW - 84);
 
-    const shown = layout.metrics.metrics.slice(0, 3);
-    const colW = (cardW - 48) / Math.max(shown.length, 1);
+    const colW = (cardW - 48) / 3;
     shown.forEach((metric, index) => {
-      const cx = cardX + 24 + colW * index + colW / 2;
+      const row = Math.floor(index / 3);
+      const col = index % 3;
+      // A second row with fewer items stays centred under the first.
+      const inRow = row === 0 ? 3 : shown.length - 3;
+      const rowOffset = row === 0 ? 0 : (3 - inRow) * colW / 2;
+      const cx = cardX + 24 + rowOffset + colW * col + colW / 2;
+      const valueY = cardY + 92 + row * 74;
       ctx.textAlign = 'center';
-      ctx.font = '700 40px JetBrains Mono, Inter, monospace';
+      ctx.font = '700 36px JetBrains Mono, Inter, monospace';
       ctx.fillStyle = metric.tone === 'orange' ? '#F59E0B' : GREEN;
       ctx.textBaseline = 'alphabetic';
-      ctx.fillText(metric.value, cx, cardY + 96);
-      ctx.font = '500 19px Inter, sans-serif';
+      ctx.fillText(metric.value, cx, valueY);
+      ctx.font = '500 18px Inter, sans-serif';
       ctx.fillStyle = MUTED;
-      ctx.fillText(metric.label, cx, cardY + 122);
+      ctx.fillText(metric.label, cx, valueY + 24);
     });
+    blockBottom = cardY + cardH;
+  }
+
+  // The GPS path — the heart of a shared activity card.
+  if (layout.route.length) {
+    const cardX = frameX + padding;
+    const cardW = frameW - padding * 2;
+    drawRoutePanel(ctx, layout.route, cardX, blockBottom + 12, cardW, 210);
+    blockBottom += 222;
   }
 
   // Bottom-left watermark inside the post frame when there is no media.

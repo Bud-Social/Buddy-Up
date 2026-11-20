@@ -43,8 +43,32 @@ export const analyticsApi = {
     apiClient.post<ApiResponse<{ draft_id: string; body: string; visibility: string; source_kind: string; post_type: string; tags: string[] }>>('/analytics/share/prepare/', payload).then((r) => r.data.data),
 
   /** Publish a prepared share draft to the feed. */
-  sharePublish: (draftId: string, payload: { body?: string; visibility?: string; media_urls?: string[]; tags?: string[] }) =>
-    apiClient.post<ApiResponse<{ post_id: string; draft_id: string }>>(`/analytics/share/draft/${draftId}/publish/`, payload).then((r) => r.data.data),
+  sharePublish: (draftId: string, payload: { body?: string; visibility?: string; media_urls?: string[]; tags?: string[]; gym_id?: string; files?: File[] }) => {
+    const { files, ...fields } = payload;
+    if (files && files.length) {
+      // Multipart so the attached photos/videos reach storage, not the JSON.
+      const form = new FormData();
+      if (fields.body !== undefined) form.append('body', fields.body);
+      if (fields.visibility !== undefined) form.append('visibility', fields.visibility);
+      if (fields.gym_id !== undefined) form.append('gym_id', fields.gym_id);
+      if (fields.tags !== undefined) form.append('tags', JSON.stringify(fields.tags));
+      if (fields.media_urls !== undefined) form.append('media_urls', JSON.stringify(fields.media_urls));
+      for (const file of files) form.append('media', file);
+      return apiClient
+        .post<ApiResponse<{ post_id: string; draft_id: string; media_urls: string[] }>>(
+          `/analytics/share/draft/${draftId}/publish/`,
+          form,
+          { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120_000 },
+        )
+        .then((r) => r.data.data);
+    }
+    return apiClient
+      .post<ApiResponse<{ post_id: string; draft_id: string; media_urls: string[] }>>(
+        `/analytics/share/draft/${draftId}/publish/`,
+        fields,
+      )
+      .then((r) => r.data.data);
+  },
 
   /** Correct grammar in a caption before posting. */
   captionCorrect: (payload: { caption: string; context?: string }) =>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseWorkoutMetrics } from '../workoutMetrics';
+import { parseActivitySummary, parseWorkoutMetrics } from '../workoutMetrics';
 
 describe('parseWorkoutMetrics', () => {
   it('reads a shared countdown', () => {
@@ -99,5 +99,52 @@ describe('parseWorkoutMetrics', () => {
     expect(parseWorkoutMetrics(undefined)).toBeNull();
     expect(parseWorkoutMetrics({})).toBeNull();
     expect(parseWorkoutMetrics({ exercises: [] })).toBeNull();
+  });
+});
+
+describe('parseActivitySummary', () => {
+  it('reads the full activity card: distance, time, pace, steps and calories', () => {
+    const parsed = parseActivitySummary({
+      activity_type: 'run',
+      distance_meters: 5200,
+      duration_seconds: 1800,
+      avg_pace: 346,
+      steps: 6200,
+      calories: 410,
+    });
+    expect(parsed).not.toBeNull();
+    expect(parsed!.title).toBe('Run');
+    expect(parsed!.metrics.map((m) => m.label)).toEqual([
+      'Distance', 'Time', 'Pace', 'Steps', 'Calories',
+    ]);
+    expect(parsed!.metrics[0].value).toBe('5.2 km');
+    expect(parsed!.metrics[2].value).toBe('5:46/km');
+    expect(parsed!.metrics[3].value).toBe('6,200');
+  });
+
+  it('uses speed for a ride and derives it when it is missing', () => {
+    const parsed = parseActivitySummary({
+      activity_type: 'cycle',
+      distance_km: 20,
+      duration_minutes: 60,
+      calories_burned: 500,
+    });
+    expect(parsed!.metrics.map((m) => m.label)).toEqual([
+      'Distance', 'Time', 'Speed', 'Calories',
+    ]);
+    expect(parsed!.metrics[2].value).toBe('20 km/h');
+  });
+
+  it('derives pace when only distance and time are present', () => {
+    const parsed = parseActivitySummary({
+      activity_type: 'run',
+      distance_km: 5,
+      duration_minutes: 25,
+    });
+    expect(parsed!.metrics.find((m) => m.label === 'Pace')?.value).toBe('5:00/km');
+  });
+
+  it('does not treat a strength log as an activity', () => {
+    expect(parseActivitySummary({ exercise: 'OHP', sets: 4, reps: 8 })).toBeNull();
   });
 });

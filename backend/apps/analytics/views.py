@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 import logging
 from django.conf import settings
 
@@ -9,7 +10,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from rest_framework import views, permissions, status
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from .models import (
@@ -106,7 +107,18 @@ class ActivityRecordView(BaseOwnedView):
         if created:
             # The activity is what an automatic countdown waits for.
             self._advance_countdowns(obj)
+            self._detect_routine(obj)
         return Response({'success': True, 'data': ActivityRecordSerializer(obj).data, 'message': 'Activity recorded.', 'errors': None, 'pagination': None}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    @staticmethod
+    def _detect_routine(activity):
+        """Offer a routine when this activity completes a repeated pattern."""
+        from apps.countdowns.services import maybe_create_activity_routine
+
+        try:
+            maybe_create_activity_routine(activity)
+        except Exception:  # noqa: BLE001 — detection must never fail the save
+            logger.warning('could not auto-create a routine for %s', activity.id, exc_info=True)
 
     @staticmethod
     def _advance_countdowns(activity):
@@ -136,12 +148,18 @@ class WorkoutLogView(BaseOwnedView):
             defaults=serializer.validated_data,
         ) if event_id else (serializer.save(user=request.user.profile), True)
         if created:
-            from apps.countdowns.services import advance_matching_countdowns
+            from apps.countdowns.services import (
+                advance_matching_countdowns, maybe_create_workout_routine,
+            )
 
             try:
                 advance_matching_countdowns(obj.user, 'workout_logged')
             except Exception:  # noqa: BLE001 — a countdown must never fail the workout
                 logger.warning('could not advance countdowns for workout_logged', exc_info=True)
+            try:
+                maybe_create_workout_routine(obj)
+            except Exception:  # noqa: BLE001 — detection must never fail the save
+                logger.warning('could not auto-create a workout routine', exc_info=True)
         return Response({
             'success': True, 'data': WorkoutLogSerializer(obj).data,
             'message': 'Workout logged.', 'errors': None, 'pagination': None,
@@ -367,6 +385,47 @@ class AnalyticsReportDownloadView(views.APIView):
         })
 
 
+def _downsample_route(route, limit=500):
+    """Keep a route small enough to live in a post's JSON blob.
+
+    A long session can record thousands of GPS points; the feed card and the
+    share card only need the shape of the path. Sampling keeps the start and
+    end exactly and preserves the corners in between.
+    """
+    if not isinstance(route, list):
+        return []
+    points = [
+        list(point) for point in route
+        if isinstance(point, (list, tuple)) and len(point) >= 2
+    ]
+    if len(points) <= limit:
+        return points
+    step = len(points) / limit
+    sampled = [points[int(i * step)] for i in range(limit)]
+    sampled[-1] = points[-1]
+    return sampled
+
+
+def _activity_metrics(obj, source='activity_share'):
+    """The real numbers and route for an activity, ready for a feed post."""
+    return {
+        'source': source,
+        'source_kind': 'activity',
+        'activity_type': obj.activity_type,
+        'distance_km': round((obj.distance_meters or 0) / 1000, 2),
+        'distance_meters': obj.distance_meters or 0,
+        'duration_seconds': obj.duration_seconds or 0,
+        'duration_minutes': round((obj.duration_seconds or 0) / 60),
+        'calories': obj.calories_burned,
+        'steps': obj.steps,
+        'avg_pace': obj.avg_pace,
+        'avg_speed_kmh': obj.avg_speed_kmh,
+        'elevation_gain_m': obj.elevation_gain_m,
+        'started_at': obj.started_at.isoformat() if obj.started_at else None,
+        'route': _downsample_route(obj.route),
+    }
+
+
 class ActivityShareView(views.APIView):
     """Share one walk/run/hike/cycle or workout log as a feed post."""
     permission_classes = [permissions.IsAuthenticated]
@@ -391,14 +450,7 @@ class ActivityShareView(views.APIView):
             post = Post.objects.create(
                 author=profile, post_type='workout_log',
                 body=body,
-                workout_log_data={
-                    'activity_type': obj.activity_type,
-                    'distance_km': km,
-                    'duration_minutes': mins,
-                    'calories': obj.calories_burned,
-                    'steps': obj.steps,
-                    'source': 'activity_share',
-                },
+                workout_log_data=_activity_metrics(obj),
             )
         elif kind == 'workout':
             from .models import WorkoutLog
@@ -636,6 +688,7 @@ class PublishDraftView(views.APIView):
     This converts it into a real Post and clears the source link.
     """
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def post(self, request, draft_id):
         from apps.feed.models import Draft, Post
@@ -648,6 +701,49 @@ class PublishDraftView(views.APIView):
         media_urls = request.data.get('media_urls', draft.media_urls or [])
         tags = request.data.get('tags', draft.tags or [])
 
+        # A multipart client sends the list as JSON; a plain JSON client sends
+        # a real list. Normalise both before appending uploaded files.
+        if isinstance(media_urls, str):
+            try:
+                media_urls = json.loads(media_urls)
+            except (TypeError, ValueError):
+                media_urls = [media_urls] if media_urls else []
+        media_urls = list(media_urls or [])
+
+        # Photos/videos attached in the composer arrive as files, not URLs.
+        uploads = request.FILES.getlist('media')
+        if uploads:
+            from apps.feed.views import _handle_media_uploads
+
+            try:
+                media_urls.extend(_handle_media_uploads(uploads))
+            except RuntimeError:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Could not store the attached media.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if isinstance(tags, str):
+            try:
+                tags = json.loads(tags)
+            except (TypeError, ValueError):
+                tags = [tags] if tags else []
+
+        # Sharing to a gym feed is a tag, and only members may tag it.
+        gym_tag_id = None
+        gym_id = (request.data.get('gym_id') or '').strip()
+        if gym_id:
+            from apps.gyms.models import GymMembership
+
+            if not GymMembership.objects.filter(gym_id=gym_id, member=profile).exists():
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Join the gym before sharing to its feed.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_403_FORBIDDEN)
+            gym_tag_id = gym_id
+
         if visibility not in ('public', 'buddies', 'gym_members', 'private'):
             visibility = 'public'
 
@@ -658,6 +754,7 @@ class PublishDraftView(views.APIView):
             visibility=visibility,
             media_urls=media_urls,
             tags=tags,
+            gym_tag_id=gym_tag_id,
             workout_log_data=_source_metrics(draft),
             location_label=draft.location_label or '',
             location_lat=draft.location_lat,
@@ -677,7 +774,11 @@ class PublishDraftView(views.APIView):
 
         return Response({
             'success': True,
-            'data': {'post_id': str(post.id), 'draft_id': str(draft.id)},
+            'data': {
+                'post_id': str(post.id),
+                'draft_id': str(draft.id),
+                'media_urls': media_urls,
+            },
             'message': 'Published to feed.', 'errors': None, 'pagination': None,
         }, status=status.HTTP_201_CREATED)
 
@@ -689,19 +790,7 @@ def _source_metrics(draft):
     no metrics at all, so the card could not show what was actually done.
     """
     if draft.source_kind == 'activity' and draft.source_activity:
-        obj = draft.source_activity
-        return {
-            'source': 'share_draft',
-            'source_kind': 'activity',
-            'activity_type': obj.activity_type,
-            'distance_km': round((obj.distance_meters or 0) / 1000, 2),
-            'duration_minutes': round((obj.duration_seconds or 0) / 60),
-            'calories': obj.calories_burned,
-            'steps': obj.steps,
-            'avg_pace': obj.avg_pace,
-            'avg_speed_kmh': obj.avg_speed_kmh,
-            'elevation_gain_m': obj.elevation_gain_m,
-        }
+        return _activity_metrics(draft.source_activity, source='share_draft')
     if draft.source_kind == 'workout' and draft.source_workout:
         obj = draft.source_workout
         return {

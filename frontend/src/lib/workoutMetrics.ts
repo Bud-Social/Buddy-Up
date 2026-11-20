@@ -12,6 +12,10 @@
  * always show the same numbers.
  */
 
+import {
+  formatDurationShort, formatKm, formatPace,
+} from './activityMetrics';
+
 export interface WorkoutMetric {
   label: string;
   value: string;
@@ -32,6 +36,75 @@ function text(value: unknown): string | null {
   }
   const str = String(value).trim();
   return str || null;
+}
+
+/**
+ * The richer activity summary used by the feed card and the share card.
+ *
+ * `parseWorkoutMetrics` stops at three numbers so the compact feed badge
+ * stays balanced. A shared walk/run deserves the full story: distance, time,
+ * pace or speed, steps and calories — plus the route, which the map panel
+ * draws separately.
+ */
+export function parseActivitySummary(
+  data: Record<string, unknown> | null | undefined,
+): WorkoutMetrics | null {
+  if (!data || typeof data !== 'object') return null;
+  const activityType = text(data.activity_type);
+  const distanceRaw = Number(data.distance_meters ?? NaN);
+  const distanceKm = Number.isFinite(distanceRaw) && distanceRaw > 0
+    ? distanceRaw / 1000
+    : Number(data.distance_km ?? NaN);
+  if (!activityType && !Number.isFinite(distanceKm)) return null;
+
+  const type = (activityType || 'activity').toLowerCase();
+  const title = type.charAt(0).toUpperCase() + type.slice(1);
+
+  const secondsRaw = Number(data.duration_seconds ?? NaN);
+  const seconds = Number.isFinite(secondsRaw) && secondsRaw > 0
+    ? secondsRaw
+    : Number(data.duration_minutes ?? 0) * 60;
+
+  const metrics: WorkoutMetric[] = [];
+
+  const distance = formatKm(Number.isFinite(distanceKm) ? distanceKm * 1000 : null);
+  if (distance) metrics.push({ label: 'Distance', value: distance, tone: 'green' });
+
+  const duration = formatDurationShort(seconds);
+  if (duration) metrics.push({ label: 'Time', value: duration, tone: 'green' });
+
+  const isRide = type === 'cycle';
+  const paceRaw = Number(data.avg_pace ?? NaN);
+  const speedRaw = Number(data.avg_speed_kmh ?? NaN);
+  const derivedPace = seconds > 0 && Number.isFinite(distanceKm) && distanceKm > 0
+    ? seconds / distanceKm
+    : null;
+  const derivedSpeed = seconds > 0 && Number.isFinite(distanceKm) && distanceKm > 0
+    ? (distanceKm / (seconds / 3600))
+    : null;
+
+  if (isRide) {
+    const speed = Number.isFinite(speedRaw) && speedRaw > 0 ? speedRaw : derivedSpeed;
+    if (speed != null && Number.isFinite(speed)) {
+      metrics.push({ label: 'Speed', value: `${Math.round(speed * 10) / 10} km/h`, tone: 'green' });
+    }
+  } else {
+    const pace = Number.isFinite(paceRaw) && paceRaw > 0 ? paceRaw : derivedPace;
+    const formatted = formatPace(pace);
+    if (formatted) metrics.push({ label: 'Pace', value: `${formatted}/km`, tone: 'green' });
+  }
+
+  const steps = Number(data.steps ?? NaN);
+  if (Number.isFinite(steps) && steps > 0) {
+    metrics.push({ label: 'Steps', value: Math.round(steps).toLocaleString(), tone: 'green' });
+  }
+
+  const calories = Number(data.calories ?? data.calories_burned ?? NaN);
+  if (Number.isFinite(calories) && calories > 0) {
+    metrics.push({ label: 'Calories', value: String(Math.round(calories)), tone: 'orange' });
+  }
+
+  return metrics.length ? { title, metrics } : null;
 }
 
 /** Normalise a workout payload into a title + up to three metrics. */

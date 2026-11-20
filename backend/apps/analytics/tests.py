@@ -152,6 +152,94 @@ class SharedPostDraftTests(TestCase):
         self.assertEqual(post.workout_log_data['calories'], 300)
         self.assertEqual(post.workout_log_data['activity_type'], 'run')
 
+    def test_a_shared_activity_carries_a_downsampled_route(self):
+        """The share card draws the GPS path, so the route has to survive."""
+        route = [[-1.29 - i / 10000, 36.82 + i / 10000, i * 1000] for i in range(600)]
+        resp = self.client.post('/api/v1/analytics/activities/', {
+            'activity_type': 'walk',
+            'duration_seconds': 2400,
+            'distance_meters': 3200,
+            'route': route,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+
+        prepared = self.client.post('/api/v1/analytics/share/prepare/', {
+            'kind': 'activity',
+            'obj_id': resp.data['data']['id'],
+        }, format='json')
+        publish = self.client.post(
+            f"/api/v1/analytics/share/draft/{prepared.data['data']['draft_id']}/publish/",
+            {'body': 'Route check.'}, format='json',
+        )
+        self.assertEqual(publish.status_code, status.HTTP_201_CREATED)
+
+        from apps.feed.models import Post
+        post = Post.objects.get(id=publish.data['data']['post_id'])
+        stored = post.workout_log_data['route']
+        self.assertEqual(len(stored), 500)
+        self.assertEqual(stored[0], route[0])
+        self.assertEqual(stored[-1], route[-1])
+
+    def test_publishing_media_as_multipart_attaches_and_returns_it(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        resp = self.client.post('/api/v1/analytics/activities/', {
+            'activity_type': 'run',
+            'duration_seconds': 900,
+            'distance_meters': 2500,
+        }, format='json')
+        prepared = self.client.post('/api/v1/analytics/share/prepare/', {
+            'kind': 'activity',
+            'obj_id': resp.data['data']['id'],
+        }, format='json')
+        draft_id = prepared.data['data']['draft_id']
+
+        photo = SimpleUploadedFile('finish.png', b'\x89PNG\r\n\x1a\n' + b'\0' * 32, content_type='image/png')
+        publish = self.client.post(
+            f'/api/v1/analytics/share/draft/{draft_id}/publish/',
+            {'body': 'With a photo.', 'media': photo},
+            format='multipart',
+        )
+        self.assertEqual(publish.status_code, status.HTTP_201_CREATED, publish.data)
+        self.assertEqual(len(publish.data['data']['media_urls']), 1)
+
+        from apps.feed.models import Post
+        post = Post.objects.get(id=publish.data['data']['post_id'])
+        self.assertEqual(len(post.media_urls), 1)
+
+    def test_sharing_to_a_gym_requires_membership(self):
+        from apps.gyms.models import Gym
+
+        gym = Gym.objects.create(name='Share Gym', handle='share-gym', category='gym')
+        resp = self.client.post('/api/v1/analytics/activities/', {
+            'activity_type': 'run',
+            'duration_seconds': 900,
+            'distance_meters': 2500,
+        }, format='json')
+        prepared = self.client.post('/api/v1/analytics/share/prepare/', {
+            'kind': 'activity',
+            'obj_id': resp.data['data']['id'],
+        }, format='json')
+
+        denied = self.client.post(
+            f"/api/v1/analytics/share/draft/{prepared.data['data']['draft_id']}/publish/",
+            {'body': 'Gym share.', 'gym_id': str(gym.id)},
+            format='json',
+        )
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+        from apps.gyms.models import GymMembership
+        GymMembership.objects.create(gym=gym, member=self.profile, role='member')
+        allowed = self.client.post(
+            f"/api/v1/analytics/share/draft/{prepared.data['data']['draft_id']}/publish/",
+            {'body': 'Gym share.', 'gym_id': str(gym.id)},
+            format='json',
+        )
+        self.assertEqual(allowed.status_code, status.HTTP_201_CREATED, allowed.data)
+        from apps.feed.models import Post
+        post = Post.objects.get(id=allowed.data['data']['post_id'])
+        self.assertEqual(post.gym_tag_id, gym.id)
+
 
 class ActivityAnalyticsDetailTests(TestCase):
     """The activity summary carries more than totals."""

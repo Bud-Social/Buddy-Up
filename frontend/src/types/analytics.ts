@@ -35,7 +35,10 @@ export interface ActivityRecent {
   distance_meters: number;
   distance_km: number;
   avg_pace: number | null;
+  avg_speed_kmh?: number | null;
   calories_burned: number | null;
+  steps?: number | null;
+  elevation_gain_m?: number | null;
   route: number[][];
 }
 
