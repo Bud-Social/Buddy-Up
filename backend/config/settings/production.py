@@ -21,7 +21,9 @@ ALLOWED_HOSTS = [
     '.up.railway.app',
     '.vercel.app',
     '.containers.snapdeploy.app',
-    # Primary API host on Render
+    # Primary API hosts
+    'backend.buddyupfit.com',
+    # Legacy host (suspended) kept for old clients
     'backend-api.buddyupfit.com',
     # Frontend app hosts (Vercel) — needed for WebSocket Origin validation
     'buddyupfit.com',

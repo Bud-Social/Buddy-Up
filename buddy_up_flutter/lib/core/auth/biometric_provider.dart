@@ -63,7 +63,7 @@ class BiometricController extends Notifier<BiometricState> {
   Future<bool> unlock() async {
     if (!state.enabled) return true;
     if (!state.locked) return true;
-    final ok = await _authenticate('Unlock BuddyUp');
+    final ok = await _authenticate('Unlock BuddyUp Fit');
     if (ok) {
       state = state.copyWith(locked: false);
     }

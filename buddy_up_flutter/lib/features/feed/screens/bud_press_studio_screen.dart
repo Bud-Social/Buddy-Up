@@ -1755,7 +1755,7 @@ class _AudiencePanel extends StatelessWidget {
   }
 
   String _label(String k) => switch (k) {
-    'public' => 'Public — anyone on Buddy-Up',
+    'public' => 'Public — anyone on BuddyUp Fit',
     'buddies' => 'Buddies — your buddies only',
     'gym_members' => 'Gym members — your gyms',
     _ => 'Private — only you',

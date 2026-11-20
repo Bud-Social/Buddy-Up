@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
+import 'core/updates/update_prompt.dart';
 import 'core/auth/auth_provider.dart';
 import 'core/auth/biometric_provider.dart';
 import 'features/analytics/providers/analytics_provider.dart';
@@ -94,7 +95,7 @@ class _BuddyUpAppState extends ConsumerState<BuddyUpApp> with WidgetsBindingObse
 
     return CallHost(
       child: MaterialApp.router(
-        title: 'Buddy-Up',
+        title: 'BuddyUp Fit',
         debugShowCheckedModeBanner: false,
         theme: buildBuddyLightTheme(),
         darkTheme: buildBuddyTheme(),
@@ -111,7 +112,13 @@ class _BuddyUpAppState extends ConsumerState<BuddyUpApp> with WidgetsBindingObse
               ],
             );
           }
-          return AlarmRingHost(child: child ?? const SizedBox.shrink());
+          return Stack(
+            children: [
+              AlarmRingHost(child: child ?? const SizedBox.shrink()),
+              // Best-effort in-app updater for the sideloaded Android APK.
+              const UpdatePrompt(),
+            ],
+          );
         },
       ),
     );

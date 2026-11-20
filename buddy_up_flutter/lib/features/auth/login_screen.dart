@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -37,6 +38,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   LoginStep _step = LoginStep.credentials;
   late AuthRepository _authRepo;
+
+  // Apple sign-in is an iOS-only option. Android builds (and web) must not
+  // offer it: the Apple plugin flow fails on those platforms.
+  bool get _showAppleSignIn => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   void initState() {
@@ -269,6 +274,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleAppleSignIn() async {
+    if (!_showAppleSignIn) return;
     setState(() => _isLoading = true);
     try {
       final credential = await SignInWithApple.getAppleIDCredential(
@@ -324,7 +330,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Buddy-Up',
+                  'BuddyUp Fit',
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                         color: BuddyColors.green,
                         fontWeight: FontWeight.bold,
@@ -409,14 +415,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             fullWidth: true,
             icon: Icons.g_mobiledata,
           ),
-          const SizedBox(height: 8),
-          BuddyButton(
-            label: 'Continue with Apple',
-            onPressed: _handleAppleSignIn,
-            isLoading: _isLoading,
-            fullWidth: true,
-            icon: Icons.apple,
-          ),
+          if (_showAppleSignIn) ...[
+            const SizedBox(height: 8),
+            BuddyButton(
+              label: 'Continue with Apple',
+              onPressed: _handleAppleSignIn,
+              isLoading: _isLoading,
+              fullWidth: true,
+              icon: Icons.apple,
+            ),
+          ],
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

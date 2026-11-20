@@ -107,7 +107,7 @@ class AppNavDrawer extends StatelessWidget {
                   Icon(Icons.fitness_center, color: BuddyColors.green, size: 28),
                   SizedBox(width: 10),
                   Text(
-                    'Buddy-Up',
+                    'BuddyUp Fit',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,

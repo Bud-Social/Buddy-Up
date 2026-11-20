@@ -10,8 +10,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class Env {
   static const String _envOverride = String.fromEnvironment('APP_ENV');
 
-  static const String prodApiBaseUrl = 'https://api.buddyup.app/api/v1';
-  static const String prodWsBaseUrl = 'wss://api.buddyup.app';
+  static const String prodApiBaseUrl = 'https://backend.buddyupfit.com/api/v1';
+  static const String prodWsBaseUrl = 'wss://backend.buddyupfit.com';
   static const String prodLivekitUrl = 'wss://buddy-up-hf40obqn.livekit.cloud';
 
   static const String localApiBaseUrl = 'http://localhost:8002/api/v1';

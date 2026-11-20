@@ -44,7 +44,7 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
         'age': age,
       });
       if (age < 16) {
-        showToast(context, 'You must be 16 or older to use Buddy-Up.', type: ToastType.error);
+        showToast(context, 'You must be 16 or older to use BuddyUp Fit.', type: ToastType.error);
       }
     } catch (e) {
       // Never tell someone their birthday is the problem when the request may
@@ -54,7 +54,7 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
         showToast(
           context,
           _isUnderageRejection(e)
-              ? 'You must be 16 or older to use Buddy-Up.'
+              ? 'You must be 16 or older to use BuddyUp Fit.'
               : 'Could not verify your age just now. Please try again.',
           type: ToastType.error,
         );

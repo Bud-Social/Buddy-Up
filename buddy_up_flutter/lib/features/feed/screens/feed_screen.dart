@@ -173,7 +173,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           onPressed: () => AppNav.open(context),
         ),
         title: const Text(
-          'Buddy-Up',
+          'BuddyUp Fit',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [

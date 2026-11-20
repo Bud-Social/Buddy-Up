@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,6 +41,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _acceptedGuidelines = false;
   DateTime? _dob;
   late AuthRepository _authRepo;
+
+  // Apple sign-in is an iOS-only option; hide it on Android and web.
+  bool get _showAppleSignIn => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   void initState() {
@@ -91,7 +95,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
     final age = AgeGating.calculateAge(dob);
     if (age < 16) {
-      showToast(context, 'You must be at least 16 years old to join Buddy-Up.', type: ToastType.error);
+      showToast(context, 'You must be at least 16 years old to join BuddyUp Fit.', type: ToastType.error);
       return;
     }
     // 16-17 year olds need guardian details (at least one field), mirroring web.
@@ -200,6 +204,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _handleAppleSignIn() async {
+    if (!_showAppleSignIn) return;
     setState(() => _isLoading = true);
     try {
       final credential = await SignInWithApple.getAppleIDCredential(
@@ -346,7 +351,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: Text(
-                      'You must be at least 16 years old to join Buddy-Up.',
+                      'You must be at least 16 years old to join BuddyUp Fit.',
                       style: TextStyle(color: BuddyColors.red, fontSize: 12),
                     ),
                   ),
@@ -466,14 +471,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   fullWidth: true,
                   icon: Icons.g_mobiledata,
                 ),
-                const SizedBox(height: 8),
-                BuddyButton(
-                  label: 'Continue with Apple',
-                  onPressed: _handleAppleSignIn,
-                  isLoading: _isLoading,
-                  fullWidth: true,
-                  icon: Icons.apple,
-                ),
+                if (_showAppleSignIn) ...[
+                  const SizedBox(height: 8),
+                  BuddyButton(
+                    label: 'Continue with Apple',
+                    onPressed: _handleAppleSignIn,
+                    isLoading: _isLoading,
+                    fullWidth: true,
+                    icon: Icons.apple,
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

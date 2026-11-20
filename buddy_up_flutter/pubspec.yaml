@@ -1,7 +1,7 @@
 name: buddy_up_flutter
 description: Buddy-Up health & fitness social platform
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.5+2
 
 environment:
   sdk: ^3.8.0
@@ -49,6 +49,8 @@ dependencies:
   image: ^4.2.0
   # FFmpeg for video watermarking (burns BuddyUp branding into downloaded videos)
   ffmpeg_kit_flutter_new: ^4.6.8
+  package_info_plus: ^10.2.2
+  open_file: ^4.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
