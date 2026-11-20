@@ -595,3 +595,127 @@ class RoutineTests(TestCase):
         self.assertEqual(post.post_type, 'moment')
         self.assertEqual(post.workout_log_data['overlay_position'], 'bottom')
         self.assertEqual(post.workout_log_data['routine_name'], 'Gym')
+
+
+class RoutineAutoDetectionTests(TestCase):
+    """A repeated activity becomes a routine — without asking, but opt-out."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='auto@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(user=self.user, username='autouser', display_name='Auto User')
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+
+    def _activity(self, days_ago, **kwargs):
+        from apps.analytics.models import ActivityRecord
+
+        return ActivityRecord.objects.create(
+            user=self.profile,
+            activity_type=kwargs.pop('activity_type', 'walk'),
+            started_at=timezone.now() - timedelta(days=days_ago),
+            duration_seconds=kwargs.pop('duration_seconds', 1800),
+            distance_meters=kwargs.pop('distance_meters', 2400),
+            steps=kwargs.pop('steps', 3200),
+            **kwargs,
+        )
+
+    def test_three_separate_days_create_a_routine(self):
+        from apps.countdowns.models import Routine
+        from apps.countdowns.services import maybe_create_activity_routine
+
+        self._activity(1)
+        self._activity(3)
+        latest = self._activity(5)
+
+        routine = maybe_create_activity_routine(latest)
+
+        self.assertIsNotNone(routine)
+        self.assertTrue(routine.auto_generated)
+        self.assertEqual(routine.type, 'walk')
+        self.assertEqual(routine.unit, 'steps')
+        self.assertEqual(routine.target % 100, 0)
+        self.assertEqual(len(routine.days), 3)
+        self.assertTrue(routine.name.startswith(('Morning ', 'Afternoon ', 'Evening ', 'Late ')))
+
+    def test_three_sessions_on_one_day_is_not_a_habit(self):
+        from apps.countdowns.models import Routine
+        from apps.countdowns.services import maybe_create_activity_routine
+
+        self._activity(0)
+        self._activity(0)
+        latest = self._activity(0)
+
+        self.assertIsNone(maybe_create_activity_routine(latest))
+        self.assertEqual(Routine.objects.count(), 0)
+
+    def test_opt_out_stops_automatic_routines(self):
+        from apps.countdowns.models import Routine
+        from apps.countdowns.services import maybe_create_activity_routine
+
+        self.profile.auto_routines_enabled = False
+        self.profile.save(update_fields=['auto_routines_enabled'])
+        self._activity(1)
+        self._activity(2)
+        latest = self._activity(3)
+
+        self.assertIsNone(maybe_create_activity_routine(latest))
+        self.assertEqual(Routine.objects.count(), 0)
+
+    def test_an_existing_routine_is_not_duplicated(self):
+        from apps.countdowns.models import Routine
+        from apps.countdowns.services import maybe_create_activity_routine
+
+        Routine.objects.create(user=self.profile, type='walk', name='My walk')
+        self._activity(1)
+        self._activity(2)
+        latest = self._activity(3)
+
+        self.assertIsNone(maybe_create_activity_routine(latest))
+        self.assertEqual(Routine.objects.filter(type='walk').count(), 1)
+
+    def test_workout_logs_create_a_workout_routine(self):
+        from apps.analytics.models import WorkoutLog
+        from apps.countdowns.models import Routine
+        from apps.countdowns.services import maybe_create_workout_routine
+
+        for days in (1, 3, 5):
+            WorkoutLog.objects.create(
+                user=self.profile,
+                workout_type='strength',
+                duration_minutes=45,
+                performed_at=timezone.now() - timedelta(days=days),
+            )
+        latest = WorkoutLog.objects.order_by('-performed_at').first()
+
+        routine = maybe_create_workout_routine(latest)
+        self.assertIsNotNone(routine)
+        self.assertEqual(routine.type, 'workout')
+        self.assertEqual(routine.unit, 'min')
+        self.assertEqual(Routine.objects.filter(type='workout').count(), 1)
+
+    def test_logging_an_activity_through_the_api_triggers_detection(self):
+        from apps.countdowns.models import Routine
+
+        for days, distance in ((1, 2000), (3, 2600), (5, 3000)):
+            response = self.client.post('/api/v1/analytics/activities/', {
+                'activity_type': 'run',
+                'duration_seconds': 1800,
+                'distance_meters': distance,
+                'started_at': (timezone.now() - timedelta(days=days)).isoformat(),
+            }, format='json')
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+
+        routine = Routine.objects.filter(user=self.profile, type='run').first()
+        self.assertIsNotNone(routine)
+        self.assertTrue(routine.auto_generated)
+
+    def test_the_preference_round_trips_from_the_own_profile_endpoint(self):
+        response = self.client.patch('/api/v1/profiles/me/', {
+            'auto_routines_enabled': False,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['data']['auto_routines_enabled'])
+
+        fetched = self.client.get('/api/v1/profiles/me/')
+        self.assertEqual(fetched.status_code, status.HTTP_200_OK)
+        self.assertFalse(fetched.data['data']['auto_routines_enabled'])

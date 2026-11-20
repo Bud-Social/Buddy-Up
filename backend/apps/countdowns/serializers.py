@@ -114,11 +114,11 @@ class RoutineSerializer(serializers.ModelSerializer):
             'target', 'unit', 'days', 'target_day', 'time_of_day',
             'reminder_minutes', 'activation', 'tracking', 'sort_order',
             'streak', 'completed_today', 'last_checkin_at', 'is_active',
-            'checkin_count', 'highlights', 'created_at', 'updated_at',
+            'auto_generated', 'checkin_count', 'highlights', 'created_at', 'updated_at',
         ]
         read_only_fields = [
             'id', 'streak', 'completed_today', 'last_checkin_at',
-            'checkin_count', 'highlights', 'created_at', 'updated_at',
+            'auto_generated', 'checkin_count', 'highlights', 'created_at', 'updated_at',
         ]
 
     def get_type_label(self, obj):

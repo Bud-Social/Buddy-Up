@@ -423,6 +423,7 @@ export default function Routines() {
                           {routine.display_name}
                         </h4>
                         <Badge variant="silver" label={routine.activation} />
+                        {routine.auto_generated && <Badge variant="green" label="Auto" />}
                         {routine.tracking === 'manual' && <Badge variant="gold" label="Off-app" />}
                         {activeToday && <Badge variant="green" label="Today" />}
                       </div>

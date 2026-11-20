@@ -41,9 +41,12 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
+        data = dict(serializer.data)
+        # A private preference: only the owner's own endpoint returns it.
+        data['auto_routines_enabled'] = instance.auto_routines_enabled
         return Response({
             'success': True,
-            'data': serializer.data,
+            'data': data,
             'message': 'OK',
             'errors': None,
             'pagination': None,
@@ -54,9 +57,11 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        data = dict(ProfileSerializer(instance, context={'request': request}).data)
+        data['auto_routines_enabled'] = instance.auto_routines_enabled
         return Response({
             'success': True,
-            'data': ProfileSerializer(instance, context={'request': request}).data,
+            'data': data,
             'message': 'Profile updated',
             'errors': None,
             'pagination': None,

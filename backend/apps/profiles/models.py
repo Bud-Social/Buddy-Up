@@ -79,6 +79,11 @@ class Profile(TimestampedModel):
     marketing_consent = models.BooleanField(default=False)
     external_link = models.URLField(blank=True)
     location_consent = models.BooleanField(default=False)
+    # Opt-out for routine auto-detection: when the same activity repeats on
+    # three separate days the app offers a routine instead of making the user
+    # build one by hand. Turning this off stops new automatic routines; it
+    # never deletes existing ones.
+    auto_routines_enabled = models.BooleanField(default=True)
     device_name = models.CharField(max_length=200, blank=True)
     content_rating = models.CharField(
         max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,

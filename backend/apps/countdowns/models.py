@@ -359,6 +359,9 @@ class Routine(TimestampedModel):
     completed_today = models.BooleanField(default=False)
     last_checkin_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    # Set when the routine came from a repeated activity pattern rather than
+    # the user building it. The UI badges it and the user can remove it.
+    auto_generated = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'countdowns_routine'

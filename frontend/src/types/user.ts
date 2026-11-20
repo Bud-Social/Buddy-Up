@@ -56,4 +56,10 @@ export interface Profile {
   gym_count: number;
   post_count: number;
   show_active_status: boolean;
+  /**
+   * Private preference: when True (the default) the app offers a routine after
+   * the same activity repeats on three separate days. Only the owner's own
+   * `/profiles/me/` response includes it.
+   */
+  auto_routines_enabled?: boolean;
 }

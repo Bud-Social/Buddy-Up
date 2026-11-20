@@ -137,6 +137,8 @@ export interface Routine {
   completed_today: boolean;
   last_checkin_at: string | null;
   is_active: boolean;
+  /** True when the app created this routine from a repeated activity pattern. */
+  auto_generated: boolean;
   checkin_count: number;
   highlights: RoutineHighlight[];
   created_at: string;

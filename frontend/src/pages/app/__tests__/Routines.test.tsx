@@ -61,6 +61,18 @@ describe('Routines', () => {
     expect(screen.getByRole('button', { name: /Other/ })).toBeInTheDocument();
   });
 
+  it('badges a routine the app suggested itself', async () => {
+    api.listRoutines.mockResolvedValue([{ ...baseRoutine, auto_generated: true }]);
+    render(<Routines />);
+    expect(await screen.findByText('Auto')).toBeInTheDocument();
+  });
+
+  it('does not badge a routine the user built by hand', async () => {
+    render(<Routines />);
+    await screen.findByRole('button', { name: /Gym/ });
+    expect(screen.queryByText('Auto')).not.toBeInTheDocument();
+  });
+
   it('requires a custom name before creating an "other" routine', async () => {
     const user = userEvent.setup();
     api.createRoutine.mockResolvedValue({ ...baseRoutine, id: 'r2' });

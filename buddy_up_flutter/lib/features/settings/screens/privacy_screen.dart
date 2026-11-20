@@ -23,6 +23,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
   bool _loadedFromProfile = false;
   String _buddyVisibility = 'public';
   bool _incognito = false;
+  bool _autoRoutines = true;
 
   @override
   void initState() {
@@ -32,6 +33,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
       _loadedFromProfile = true;
       _privacyLevel = profile.privacyLevel;
       _showActiveStatus = profile.showActiveStatus;
+      _autoRoutines = profile.autoRoutinesEnabled;
     }
     Future.microtask(_loadSearchVisibility);
   }
@@ -63,6 +65,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
         // Only send when the user touched it, so we never overwrite the
         // server value with a default.
         isAnonymousPosting: _anonymousPosting,
+        autoRoutinesEnabled: _autoRoutines,
       ));
       await repo.updateSearchProfile({
         'visibility': _buddyVisibility,
@@ -130,6 +133,17 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                     ),
                     value: _anonymousPosting ?? false,
                     onChanged: _loadedFromProfile ? (v) => setState(() => _anonymousPosting = v) : null,
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Suggest routines automatically',
+                        style: TextStyle(fontSize: 14)),
+                    subtitle: const Text(
+                      'Offer a routine when the same activity repeats on three different days',
+                      style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                    ),
+                    value: _autoRoutines,
+                    onChanged: (v) => setState(() => _autoRoutines = v),
                   ),
                   const Divider(height: 24),
                   const Text('Buddy Search',

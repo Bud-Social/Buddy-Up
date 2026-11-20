@@ -32,6 +32,7 @@ abstract class Profile with _$Profile {
     @JsonKey(name: 'buddy_status') String? buddyStatus,
     @JsonKey(name: 'is_following') @Default(false) bool isFollowing,
     @JsonKey(name: 'show_active_status') @Default(true) bool showActiveStatus,
+    @JsonKey(name: 'auto_routines_enabled') @Default(true) bool autoRoutinesEnabled,
     Map<String, dynamic>? preferences,
     @JsonKey(name: 'created_at') String? createdAt,
     @JsonKey(name: 'updated_at') String? updatedAt,
@@ -54,6 +55,7 @@ abstract class ProfileUpdatePayload with _$ProfileUpdatePayload {
     @JsonKey(name: 'content_rating') @Default('general') String contentRating,
     bool? showActiveStatus,
     bool? isAnonymousPosting,
+    @JsonKey(name: 'auto_routines_enabled') bool? autoRoutinesEnabled,
     String? privacyLevel,
   }) = _ProfileUpdatePayload;
 

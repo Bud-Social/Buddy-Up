@@ -37,6 +37,7 @@ _Profile _$ProfileFromJson(Map<String, dynamic> json) => _Profile(
   buddyStatus: json['buddy_status'] as String?,
   isFollowing: json['is_following'] as bool? ?? false,
   showActiveStatus: json['show_active_status'] as bool? ?? true,
+  autoRoutinesEnabled: json['auto_routines_enabled'] as bool? ?? true,
   preferences: json['preferences'] as Map<String, dynamic>?,
   createdAt: json['created_at'] as String?,
   updatedAt: json['updated_at'] as String?,
@@ -69,6 +70,7 @@ Map<String, dynamic> _$ProfileToJson(_Profile instance) => <String, dynamic>{
   'buddy_status': instance.buddyStatus,
   'is_following': instance.isFollowing,
   'show_active_status': instance.showActiveStatus,
+  'auto_routines_enabled': instance.autoRoutinesEnabled,
   'preferences': instance.preferences,
   'created_at': instance.createdAt,
   'updated_at': instance.updatedAt,
@@ -87,6 +89,7 @@ _ProfileUpdatePayload _$ProfileUpdatePayloadFromJson(
   contentRating: json['content_rating'] as String? ?? 'general',
   showActiveStatus: json['showActiveStatus'] as bool?,
   isAnonymousPosting: json['isAnonymousPosting'] as bool?,
+  autoRoutinesEnabled: json['auto_routines_enabled'] as bool?,
   privacyLevel: json['privacyLevel'] as String?,
 );
 
@@ -103,5 +106,6 @@ Map<String, dynamic> _$ProfileUpdatePayloadToJson(
   'content_rating': instance.contentRating,
   'showActiveStatus': instance.showActiveStatus,
   'isAnonymousPosting': instance.isAnonymousPosting,
+  'auto_routines_enabled': instance.autoRoutinesEnabled,
   'privacyLevel': instance.privacyLevel,
 };

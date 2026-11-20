@@ -129,7 +129,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             'location_city', 'location_country', 'external_link',
             'content_rating',
             'workout_schedule', 'show_active_status', 'is_anonymous_posting',
-            'privacy_level', 'creator_display_name',
+            'privacy_level', 'creator_display_name', 'auto_routines_enabled',
         ]
 
 

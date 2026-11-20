@@ -31,6 +31,7 @@ export default function EditProfile() {
     privacy_level: profile?.privacy_level || 'public' as Profile['privacy_level'],
     show_active_status: profile?.show_active_status ?? true,
     is_anonymous_posting: profile?.is_anonymous_posting ?? false,
+    auto_routines_enabled: profile?.auto_routines_enabled ?? true,
   });
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -320,6 +321,17 @@ export default function EditProfile() {
           <Toggle checked={form.is_anonymous_posting}
             onCheckedChange={(v) => setForm(p => ({ ...p, is_anonymous_posting: v }))}
             label="Anonymous posting" />
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm">Suggest routines automatically</p>
+            <p className="text-xs text-buddy-text-secondary">
+              Offer a routine when the same activity repeats on three different days
+            </p>
+          </div>
+          <Toggle checked={form.auto_routines_enabled}
+            onCheckedChange={(v) => setForm(p => ({ ...p, auto_routines_enabled: v }))}
+            label="Suggest routines automatically" />
         </div>
         <BuddyVisibilityControls />
       </Card>
