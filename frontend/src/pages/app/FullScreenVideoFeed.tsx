@@ -199,6 +199,9 @@ export default function FullScreenVideoFeed() {
   const cursorRef = useRef<string | undefined>(undefined);
   const hasMoreRef = useRef(true);
   const loadingLockRef = useRef(false);
+  const activeIndexRef = useRef(0);
+  const itemsCountRef = useRef(0);
+  const emptyPagesRef = useRef(0);
   const touchOriginRef = useRef<{ x: number; y: number } | null>(null);
 
   // ── Bud Press: repost avatar pop, focus + interaction analytics ──
@@ -265,9 +268,23 @@ export default function FullScreenVideoFeed() {
         const fresh = list.filter((v) => !seen.has(v.post.id));
         return [...prev, ...fresh];
       });
+      // A page that adds nothing twice in a row means the cursor stopped
+      // advancing; stop rather than loop the API.
+      if (list.length === 0) {
+        emptyPagesRef.current += 1;
+        if (emptyPagesRef.current >= 2) hasMoreRef.current = false;
+      } else {
+        emptyPagesRef.current = 0;
+      }
     } catch {} finally {
       loadingLockRef.current = false;
       setIsLoading(false);
+      // The sentinel-style trigger only fires when the active index or item
+      // count changes. If the last page was short, neither changes and the
+      // feed would dead-end — keep filling while the last slide is on screen.
+      if (hasMoreRef.current && activeIndexRef.current >= itemsCountRef.current - 2) {
+        void loadVideos();
+      }
     }
   }, []);
 
@@ -330,6 +347,8 @@ export default function FullScreenVideoFeed() {
   const dwellIdxRef = useRef(0);
   const itemsRef = useRef(items);
   itemsRef.current = items;
+  itemsCountRef.current = items.length;
+  activeIndexRef.current = activeIndex;
   const reportDwell = useCallback((idx: number) => {
     const post = itemsRef.current[idx]?.post;
     if (!post) return;

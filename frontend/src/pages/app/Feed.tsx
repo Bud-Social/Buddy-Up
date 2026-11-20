@@ -99,6 +99,7 @@ export default function Feed() {
 
   const cursorRef = useRef<string | undefined>(undefined);
   const loadingPageRef = useRef(false);
+  const stalePagesRef = useRef(0);
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const knownIdsRef = useRef<Set<string>>(new Set());
@@ -271,6 +272,7 @@ export default function Feed() {
       const res = await feedApi.getFeed(tab, c);
       const newPosts = res.data || [];
       if (reset) {
+        stalePagesRef.current = 0;
         const seen = new Set<string>();
         const unique = newPosts.filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
         setPosts(unique);
@@ -279,6 +281,14 @@ export default function Feed() {
         const unseenPosts = newPosts.filter(p => !knownIdsRef.current.has(p.id));
         unseenPosts.forEach(p => knownIdsRef.current.add(p.id));
         setPosts((prev) => [...prev, ...unseenPosts]);
+        // Two pages in a row with nothing new means the cursor is stuck
+        // rather than the feed ending — stop instead of hammering the API.
+        if (unseenPosts.length === 0) {
+          stalePagesRef.current += 1;
+          if (stalePagesRef.current >= 2) setHasMore(false);
+        } else {
+          stalePagesRef.current = 0;
+        }
       }
       cursorRef.current = res.pagination?.next
         ? new URLSearchParams(res.pagination.next.split('?')[1]).get('cursor') || undefined
@@ -392,6 +402,22 @@ export default function Feed() {
     if (observerRef.current) obs.observe(observerRef.current);
     return () => obs.disconnect();
   }, [hasMore, isLoading, activeTab, isVideoTab, fetchPosts, fetchCommunityPosts, communitySubTab]);
+
+  // After a page lands the sentinel can still be on screen (the page did not
+  // fill the viewport). IntersectionObserver only fires on threshold
+  // transitions, so re-check here instead of dropping the request — otherwise
+  // a short page silently ends the feed.
+  useEffect(() => {
+    if (isLoading || !hasMore || isVideoTab || activeTab === 'communities') return;
+    const el = observerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.top > window.innerHeight + 80) return;
+    const timer = setTimeout(() => {
+      if (!loadingPageRef.current && hasMore) fetchPosts(activeTab, false);
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [isLoading, hasMore, activeTab, isVideoTab, posts.length, fetchPosts]);
 
   // ── Post impression tracking (50% visible for ≥1s, once per post) ──────────
   const activeTabRef = useRef(activeTab);
