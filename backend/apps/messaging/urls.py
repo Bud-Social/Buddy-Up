@@ -7,6 +7,7 @@ urlpatterns = [
     path('conversations/start/', views.StartConversationView.as_view(), name='start_conversation'),
     path('conversations/<uuid:conversation_id>/', views.ConversationDetailView.as_view(), name='conversation_detail'),
     path('conversations/<uuid:conversation_id>/messages/', views.MessageListView.as_view(), name='messages'),
+    path('conversations/<uuid:conversation_id>/preferences/', views.ConversationPreferenceView.as_view(), name='conversation_preferences'),
     path('conversations/<uuid:conversation_id>/read/', views.MarkReadView.as_view(), name='mark_read'),
     path('conversations/<uuid:conversation_id>/promote/', views.ConversationPromoteView.as_view(), name='conversation_promote'),
     path('conversations/promotions/<uuid:pk>/respond/', views.ConversationPromotionRespondView.as_view(), name='conversation_promotion_respond'),

@@ -107,6 +107,40 @@ class Conversation(TimestampedModel):
         return f'Conversation {self.id}'
 
 
+class ConversationPreference(TimestampedModel):
+    """Per-user view state for a conversation (archive/mute/pin).
+
+    Kept on its own model so a group thread can be archived for one member
+    without affecting anyone else.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.CASCADE, related_name='preferences'
+    )
+    profile = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='conversation_preferences'
+    )
+    is_archived = models.BooleanField(default=False, db_index=True)
+    is_muted = models.BooleanField(default=False)
+    is_pinned = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'messaging_conversation_preference'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['conversation', 'profile'],
+                name='unique_conversation_preference',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['profile', 'is_archived']),
+        ]
+
+    def __str__(self):
+        return f'{self.profile_id}:{self.conversation_id} archived={self.is_archived}'
+
+
 class ConversationPromotion(TimestampedModel):
     """A mutual-consent request to promote a DM into a buddy relationship.
 

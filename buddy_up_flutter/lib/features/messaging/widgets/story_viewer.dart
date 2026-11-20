@@ -140,19 +140,29 @@ class _StoryViewerState extends State<StoryViewer> with SingleTickerProviderStat
       body: SafeArea(
         child: Stack(
           children: [
-            // Media — image fills the frame, squarish bodies degrade to a caption card.
+            // Media sits in a 9:16 phone card and is contained, never cover-
+            // cropped. A portrait story taken on a phone therefore shows the
+            // whole frame instead of a zoomed centre slice.
             Positioned.fill(
-              child: mediaUrl.isEmpty
-                  ? _buildTextCard(story)
-                  : isVideo && _videoController != null
-                      ? Video(controller: _videoController!)
-                      : CachedNetworkImage(
-                          imageUrl: mediaUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (_, _) =>
-                              const Center(child: CircularProgressIndicator(color: BuddyColors.green)),
-                          errorWidget: (_, _, _) => _buildTextCard(story),
-                        ),
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: 9 / 16,
+                  child: ColoredBox(
+                    color: Colors.black,
+                    child: mediaUrl.isEmpty
+                        ? _buildTextCard(story)
+                        : isVideo && _videoController != null
+                            ? Video(controller: _videoController!)
+                            : CachedNetworkImage(
+                                imageUrl: mediaUrl,
+                                fit: BoxFit.contain,
+                                placeholder: (_, _) =>
+                                    const Center(child: CircularProgressIndicator(color: BuddyColors.green)),
+                                errorWidget: (_, _, _) => _buildTextCard(story),
+                              ),
+                  ),
+                ),
+              ),
             ),
             // Soft top/bottom scrims so chrome text stays legible.
             const Positioned(top: 0, left: 0, right: 0, height: 110, child: _TopScrim()),

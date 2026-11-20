@@ -20,6 +20,7 @@ import '../../../data/models/messaging.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../shared/widgets/toast.dart';
+import '../../feed/providers/feed_provider.dart' show profileRepositoryProvider;
 
 /// Flat strip above the thread explaining where this chat stands as a buddy
 /// relationship. Solid tint only — no gradient, no glow.
@@ -134,6 +135,139 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   StreamSubscription<ChatEvent>? _socketSub;
 
   String? get _myUserId => ref.read(authProvider).user?.id;
+
+  Future<void> _updatePreference(String key, bool value) async {
+    try {
+      final response = await ref.read(messagingRepositoryProvider)
+          .updateConversationPreferences(widget.conversationId, {key: value});
+      final data = response is Map && response['data'] is Map
+          ? response['data'] as Map<String, dynamic>
+          : null;
+      if (data != null) {
+        final updated = Conversation.fromJson(data);
+        ref.read(conversationsProvider.notifier).updateConversation(updated);
+        if (mounted) setState(() => _convo = updated);
+      }
+      if (mounted) {
+        showToast(
+          context,
+          value ? 'Conversation updated.' : 'Preference removed.',
+          type: ToastType.success,
+        );
+      }
+    } catch (e) {
+      if (mounted) showToast(context, 'Could not update conversation: $e', type: ToastType.error);
+    }
+  }
+
+  Future<void> _confirmBlock(String username) async {
+    final block = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Block this user?'),
+        content: Text(
+          'Block @$username? They will not be able to message you and this '
+          'conversation will be hidden from your inbox.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Block')),
+        ],
+      ),
+    );
+    if (block != true) return;
+    try {
+      await ref.read(profileRepositoryProvider).blockUser(username);
+      await _updatePreference('is_archived', true);
+      if (mounted) context.pop();
+    } catch (e) {
+      if (mounted) showToast(context, 'Could not block user: $e', type: ToastType.error);
+    }
+  }
+
+  Future<void> _reportConversation(String username) async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Report conversation'),
+        children: [
+          for (final option in const ['spam', 'harassment', 'hate_speech', 'nudity', 'other'])
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(ctx).pop(option),
+              child: Text(option.replaceAll('_', ' ')),
+            ),
+        ],
+      ),
+    );
+    if (reason == null) return;
+    try {
+      await ref.read(profileRepositoryProvider).submitModerationReport({
+        'target_user': username,
+        'reason': reason,
+        'description': 'Reported from a conversation in BuddyUp Fit.',
+        'content_url': '',
+      });
+      if (mounted) showToast(context, 'Report submitted. Thank you.', type: ToastType.success);
+    } catch (e) {
+      if (mounted) showToast(context, 'Could not submit report: $e', type: ToastType.error);
+    }
+  }
+
+  void _showConversationMenu(String? username, Conversation? convo) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(convo?.isPinned == true ? Icons.push_pin : Icons.push_pin_outlined),
+              title: Text(convo?.isPinned == true ? 'Unpin conversation' : 'Pin conversation'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _updatePreference('is_pinned', convo?.isPinned != true);
+              },
+            ),
+            ListTile(
+              leading: Icon(convo?.isMuted == true ? Icons.notifications_active_outlined : Icons.notifications_off_outlined),
+              title: Text(convo?.isMuted == true ? 'Unmute conversation' : 'Mute conversation'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _updatePreference('is_muted', convo?.isMuted != true);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.archive_outlined),
+              title: const Text('Archive conversation'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _updatePreference('is_archived', true);
+                context.pop();
+              },
+            ),
+            if (username != null && username.isNotEmpty) ...[
+              ListTile(
+                leading: const Icon(Icons.block_outlined),
+                title: Text('Block @$username'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _confirmBlock(username);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.flag_outlined),
+                title: const Text('Report conversation'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _reportConversation(username);
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
   // Chat theme
   Color? _bgColor;
@@ -273,27 +407,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// media URL is still in this in-memory message), fire the endpoint best
   /// effort, then open the fullscreen viewer — after the next fetch the
   /// server withholds the URL and the bubble becomes a tombstone.
-  void _openViewOnce(Message msg) {
+  Future<void> _openViewOnce(Message msg) async {
+    // Consume first: the server returns the media URL only on the first open.
+    dynamic response;
+    try {
+      response = await ref.read(messagingRepositoryProvider).markViewOnceOpened(msg.id);
+    } catch (_) {
+      response = null;
+    }
+    final data = response is Map && response['data'] is Map
+        ? response['data'] as Map<String, dynamic>
+        : null;
+    final mediaUrl = (data?['media_url'] as String?)?.isNotEmpty == true
+        ? data!['media_url'] as String
+        : msg.mediaUrl;
+    if (mediaUrl.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Media no longer available')),
+        );
+      }
+      return;
+    }
     ref.read(messagesProvider(widget.conversationId).notifier).markViewOnceOpened(msg.id);
-    ref.read(messagingRepositoryProvider).markViewOnceOpened(msg.id).catchError((_) => null);
-
-    final isAudio = msg.mediaMime.startsWith('audio/');
-    if (isAudio) {
-      // Voice notes play in the bubble itself — it is now a one-tap player.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tap the voice note to play it')),
-      );
-      return;
-    }
-    if (msg.mediaUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Media no longer available')),
-      );
-      return;
-    }
+    if (!mounted) return;
+    final isAudio = (data?['message_type'] as String?) == 'voice' ||
+        msg.mediaMime.startsWith('audio/');
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ViewOnceViewer(message: msg),
+        builder: (_) => ViewOnceViewer(
+          mediaUrl: mediaUrl,
+          mediaMime: (data?['media_mime'] as String?) ?? msg.mediaMime,
+          isAudio: isAudio,
+        ),
       ),
     );
   }
@@ -576,14 +722,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         titleSpacing: 0,
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: BuddyColors.surfaceRaised,
-              backgroundImage: identity.avatarUrl.isNotEmpty ? NetworkImage(identity.avatarUrl) : null,
-              child: identity.avatarUrl.isEmpty
-                  ? Text((title.isNotEmpty ? title[0] : '?').toUpperCase(),
-                      style: const TextStyle(color: BuddyColors.textPrimary))
-                  : null,
+            GestureDetector(
+              onTap: () {
+                final username = other?.username;
+                if (username != null && username.isNotEmpty) context.push('/$username');
+              },
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: BuddyColors.surfaceRaised,
+                backgroundImage: identity.avatarUrl.isNotEmpty ? NetworkImage(identity.avatarUrl) : null,
+                child: identity.avatarUrl.isEmpty
+                    ? Text((title.isNotEmpty ? title[0] : '?').toUpperCase(),
+                        style: const TextStyle(color: BuddyColors.textPrimary))
+                    : null,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -618,6 +770,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             icon: const Icon(Icons.palette_outlined),
             tooltip: 'Chat theme',
             onPressed: () => _showThemePicker(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Conversation options',
+            onPressed: () => _showConversationMenu(other?.username, convo),
           ),
         ],
       ),
@@ -668,6 +825,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             showSender: showSender,
                             senderBubbleColor: _senderColor,
                             receiverBubbleColor: _receiverColor,
+                            onOpenProfile: (username) => context.push('/$username'),
                             onReply: () => setState(() => _replyToMessage = msg),
                             onOpenViewOnce: _openViewOnce,
                             onCallAgain: _showCallAgainDialog,

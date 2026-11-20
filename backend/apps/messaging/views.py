@@ -187,6 +187,20 @@ class ConversationListView(views.APIView):
             conv for conv in conversations
             if not is_conversation_blocked(conv, profile)
         ]
+        from .models import ConversationPreference
+        prefs = {
+            p.conversation_id: p
+            for p in ConversationPreference.objects.filter(profile=profile)
+        }
+        if request.query_params.get('archived') != 'true':
+            visible = [c for c in visible if not (prefs.get(c.id) and prefs[c.id].is_archived)]
+        # Pinned threads stay at the top of the inbox.
+        visible.sort(
+            key=lambda c: (
+                not bool(prefs.get(c.id) and prefs[c.id].is_pinned),
+                -(c.last_message_at.timestamp() if c.last_message_at else 0),
+            )
+        )
         serializer = ConversationSerializer(visible, many=True, context={'request': request})
         return Response({
             'success': True, 'data': serializer.data, 'message': 'OK',
@@ -308,6 +322,32 @@ class ConversationDetailView(views.APIView):
         })
 
 
+class ConversationPreferenceView(views.APIView):
+    """Per-user archive/mute/pin state for one conversation."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, conversation_id):
+        conv = get_object_or_404(
+            Conversation, id=conversation_id, participants=request.user.profile
+        )
+        from .models import ConversationPreference
+
+        pref, _ = ConversationPreference.objects.get_or_create(
+            conversation=conv, profile=request.user.profile,
+        )
+        for field in ('is_archived', 'is_muted', 'is_pinned'):
+            if field in request.data:
+                setattr(pref, field, bool(request.data[field]))
+        pref.save()
+        serializer = ConversationSerializer(conv, context={'request': request})
+        return Response({
+            'success': True, 'data': serializer.data,
+            'message': 'Conversation preferences updated.',
+            'errors': None, 'pagination': None,
+        })
+
+
 class MessageListView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -383,23 +423,12 @@ class MessageListView(views.APIView):
         conv.last_message_at = timezone.now()
         conv.save(update_fields=['last_message_text', 'last_message_at'])
 
-        from asgiref.sync import async_to_sync
-        from channels.layers import get_channel_layer
-        channel_layer = get_channel_layer()
-
         serializer = MessageSerializer(msg, context={'request': request})
-        payload = serializer.data
-
-        # Push to conversation group and each participant's user channel
-        async_to_sync(channel_layer.group_send)(
-            f'conversation_{conversation_id}',
-            {'type': 'chat_message', 'data': payload},
+        # The write is already committed. A channel-layer outage must not turn
+        # this into a 500 or the client retries and sends the message twice.
+        _notify_conversation_participants(
+            conv, serializer.data, exclude_user_id=request.user.profile.user_id,
         )
-        for participant in conv.participants.exclude(user_id=request.user.profile.user_id):
-            async_to_sync(channel_layer.group_send)(
-                f'user_{participant.user_id}',
-                {'type': 'event_message', 'data': {'type': 'new_message', **payload}},
-            )
 
         return Response({
             'success': True,
@@ -703,7 +732,12 @@ class ServeMessageFileView(views.APIView):
         response['X-Content-Type-Options'] = 'nosniff'
         response['X-Frame-Options'] = 'DENY'
         response['Content-Security-Policy'] = "default-src 'none'; media-src 'self'; img-src 'self'"
-        response['Cache-Control'] = 'private, max-age=3600'
+        if msg.view_once:
+            if msg.view_once_opened_at and msg.sender_id != request.user.profile.pk:
+                raise Http404('This view-once message has already been opened.')
+            response['Cache-Control'] = 'no-store'
+        else:
+            response['Cache-Control'] = 'private, max-age=3600'
         return response
 
 
@@ -797,6 +831,37 @@ def _active_call_session(conv):
         .select_related('initiated_by')
         .first()
     )
+
+
+def _notify_conversation_participants(conv, payload, exclude_user_id=None):
+    """Best-effort realtime fan-out for a committed conversation event.
+
+    Never let a channel-layer failure turn a successful DB write into a 500:
+    clients already have the REST response and will show the message. Losing a
+    push is recoverable (the next poll/refetch picks it up); a false 500 makes
+    clients retry and duplicate messages.
+    """
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+
+    try:
+        layer = get_channel_layer()
+        if layer is None:
+            return
+        async_to_sync(layer.group_send)(
+            f'conversation_{conv.id}',
+            {'type': 'chat_message', 'data': payload},
+        )
+        recipients = conv.participants.all()
+        if exclude_user_id:
+            recipients = recipients.exclude(user_id=exclude_user_id)
+        for participant in recipients:
+            async_to_sync(layer.group_send)(
+                f'user_{participant.user_id}',
+                {'type': 'event_message', 'data': {'type': 'new_message', **payload}},
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception('realtime fan-out failed for conversation=%s', conv.id)
 
 
 def _notify_call_members(conv, payload, exclude_user_id=None, only_user_id=None):
@@ -2730,14 +2795,40 @@ class ViewOnceOpenedView(views.APIView):
         msg = get_object_or_404(
             Message, id=message_id, conversation__participants=request.user.profile,
         )
-        if msg.view_once and not msg.view_once_opened_at:
+        if not msg.view_once:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'This message is not view-once.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if msg.sender_id == request.user.profile.pk:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You cannot open your own view-once message.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        # The first open returns the media URL. It is deliberately not part of
+        # the normal message payload, so a recipient cannot keep a copy of it
+        # from the conversation feed.
+        media_url = msg.media_url if not msg.view_once_opened_at else ''
+        if not msg.view_once_opened_at:
             msg.view_once_opened_at = timezone.now()
             msg.save(update_fields=['view_once_opened_at', 'updated_at'])
+            _notify_conversation_participants(Conversation.objects.get(id=msg.conversation_id), {
+                'type': 'view_once_opened',
+                'conversation_id': str(msg.conversation_id),
+                'message_id': str(msg.id),
+                'view_once_opened_at': msg.view_once_opened_at.isoformat(),
+            })
         return Response({
             'success': True,
             'data': {
-                'view_once': msg.view_once,
+                'view_once': True,
                 'view_once_opened_at': msg.view_once_opened_at.isoformat() if msg.view_once_opened_at else None,
+                'media_url': media_url,
+                'media_mime': msg.media_mime,
+                'message_type': msg.message_type,
             },
             'message': 'Opened.',
             'errors': None, 'pagination': None,

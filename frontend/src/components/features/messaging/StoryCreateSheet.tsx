@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, ImagePlus, Video, Globe, Users, Lock } from 'lucide-react';
+import { X, ImagePlus, Video, Globe, Users, Lock, Dumbbell } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { messagingApi } from '@/api/messaging';
@@ -7,11 +7,12 @@ import { feedApi } from '@/api/feed';
 import { useToast } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store/authStore';
 
-type Visibility = 'public' | 'buddies' | 'private';
+type Visibility = 'public' | 'buddies' | 'gym_members' | 'private';
 
 const VIS_OPTIONS: { id: Visibility; label: string; icon: typeof Globe }[] = [
   { id: 'public', label: 'Public', icon: Globe },
   { id: 'buddies', label: 'Buddies', icon: Users },
+  { id: 'gym_members', label: 'Gym', icon: Dumbbell },
   { id: 'private', label: 'Only me', icon: Lock },
 ];
 

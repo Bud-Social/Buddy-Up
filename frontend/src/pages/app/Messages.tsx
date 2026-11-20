@@ -17,13 +17,15 @@ import {
   ArrowLeft, Send, Phone, Video, MoreVertical, Check, CheckCheck,
   X, FileText, Plus, MapPin, BarChart2, Smile, Mic, Search, Calendar, Clock, Download, Forward,
   ChevronLeft, ChevronRight, Palette, Menu, UserCheck, Eye, EyeOff,
-  ArrowUpRight, ArrowDownLeft, Camera, Globe,
+  ArrowUpRight, ArrowDownLeft, Camera, Globe, BellOff, Archive, Ban, Flag,
 } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/components/ui/Toast';
 import { apiClient } from '@/api/client';
 import { messagingApi } from '@/api/messaging';
+import { profilesApi } from '@/api/profiles';
+import { moderationApi } from '@/api/moderation';
 import { StoryCreateSheet } from '@/components/features/messaging/StoryCreateSheet';
 import type { Conversation, Message as MsgType, LinkPreviewData, CallHistoryEntry, StoryReel } from '@/api/messaging';
 import { useAuthStore } from '@/store/authStore';
@@ -361,6 +363,31 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   const [showEmojiInput, setShowEmojiInput] = useState(false);
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [viewOnceOpenId, setViewOnceOpenId] = useState<string | null>(null);
+  const [showConvoMenu, setShowConvoMenu] = useState(false);
+  const [convoPrefBusy, setConvoPrefBusy] = useState(false);
+
+  const updateConversationPreference = useCallback(async (
+    data: { is_archived?: boolean; is_muted?: boolean; is_pinned?: boolean },
+    message: string,
+  ) => {
+    if (!activeConvo) return;
+    setConvoPrefBusy(true);
+    try {
+      const res = await messagingApi.updateConversationPreferences(activeConvo.id, data);
+      if (res.data) {
+        const updated = res.data as Conversation;
+        setConversations((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+        setActiveConvo(updated);
+        if (data.is_archived) navigate(basePath);
+      }
+      toast('success', message);
+    } catch {
+      toast('error', 'Could not update the conversation.');
+    } finally {
+      setConvoPrefBusy(false);
+      setShowConvoMenu(false);
+    }
+  }, [activeConvo, basePath, navigate, toast]);
 
   const openViewOnce = useCallback((msg: MsgType) => {
     setViewOnceOpenId(msg.id);
@@ -1179,17 +1206,21 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
             {/* Story body */}
             <button className="absolute left-0 top-0 bottom-0 w-1/3 z-10" onClick={goPrev} aria-label="Previous story" />
             <button className="absolute right-0 top-0 bottom-0 w-1/3 z-10" onClick={goNext} aria-label="Next story" />
-            {story.media_urls[0] ? (
-              /\.(mp4|webm|mov)(\?|$)/i.test(story.media_urls[0]) ? (
-                <video src={story.media_urls[0]} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover" />
-              ) : (
-                <img src={story.media_urls[0]} alt="" className="absolute inset-0 w-full h-full object-cover" />
-              )
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-buddy-green/30 to-buddy-black px-8">
-                <p className="text-xl font-bold text-white text-center">{story.body}</p>
+            <div className="absolute inset-0 flex items-center justify-center bg-black">
+              <div className="h-full max-h-full aspect-[9/16] flex items-center justify-center bg-black">
+                {story.media_urls[0] ? (
+                  /\.(mp4|webm|mov)(\?|$)/i.test(story.media_urls[0]) ? (
+                    <video src={story.media_urls[0]} autoPlay playsInline className="w-full h-full object-contain" />
+                  ) : (
+                    <img src={story.media_urls[0]} alt="" className="w-full h-full object-contain" />
+                  )
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-buddy-green/30 to-buddy-black px-8">
+                    <p className="text-xl font-bold text-white text-center">{story.body}</p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
             {story.media_urls[0] && story.body && (
               <p className="absolute bottom-10 inset-x-4 text-sm text-white text-center bg-black/40 rounded-xl px-3 py-2">{story.body}</p>
             )}
@@ -1558,6 +1589,8 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                 alt={activeIdentity?.name ?? 'Conversation'}
                 size="md"
                 verificationStatus={activeIdentity?.verificationStatus || ''}
+                className={other?.username ? 'cursor-pointer' : ''}
+                onClick={() => { if (other?.username) navigate(`/${other.username}`); }}
               />
               {presenceInfo?.online && (
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-buddy-green rounded-full border-2 border-buddy-black" />
@@ -1620,6 +1653,79 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                   </button>
                 </>
               )}
+              <div className="relative">
+                <button
+                  onClick={() => setShowConvoMenu((v) => !v)}
+                  className="p-2 rounded-xl hover:bg-buddy-surface text-buddy-text-secondary hover:text-buddy-green transition-colors"
+                  title="Conversation options"
+                  aria-label="Conversation options"
+                >
+                  <MoreVertical size={18} />
+                </button>
+                {showConvoMenu && (
+                  <div className="absolute right-0 top-full z-40 mt-1 w-56 rounded-xl border border-buddy-border bg-buddy-surface p-1 shadow-xl">
+                    <button
+                      disabled={convoPrefBusy}
+                      onClick={() => void updateConversationPreference(
+                        { is_pinned: !activeConvo?.is_pinned },
+                        activeConvo?.is_pinned ? 'Conversation unpinned.' : 'Conversation pinned.',
+                      )}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-buddy-text-primary hover:bg-buddy-surface-raised disabled:opacity-50"
+                    >
+                      <Check size={14} /> {activeConvo?.is_pinned ? 'Unpin conversation' : 'Pin conversation'}
+                    </button>
+                    <button
+                      disabled={convoPrefBusy}
+                      onClick={() => void updateConversationPreference(
+                        { is_muted: !activeConvo?.is_muted },
+                        activeConvo?.is_muted ? 'Conversation unmuted.' : 'Conversation muted.',
+                      )}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-buddy-text-primary hover:bg-buddy-surface-raised disabled:opacity-50"
+                    >
+                      <BellOff size={14} /> {activeConvo?.is_muted ? 'Unmute conversation' : 'Mute conversation'}
+                    </button>
+                    <button
+                      disabled={convoPrefBusy}
+                      onClick={() => void updateConversationPreference(
+                        { is_archived: true }, 'Conversation archived.',
+                      )}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-buddy-text-primary hover:bg-buddy-surface-raised disabled:opacity-50"
+                    >
+                      <Archive size={14} /> Archive conversation
+                    </button>
+                    {other?.username && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setShowConvoMenu(false);
+                            void profilesApi.block(other.username).then(() => {
+                              toast('success', `@${other.username} blocked.`);
+                              navigate(basePath);
+                            }).catch(() => toast('error', 'Could not block this user.'));
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-buddy-text-primary hover:bg-buddy-surface-raised"
+                        >
+                          <Ban size={14} /> Block @{other.username}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowConvoMenu(false);
+                            void moderationApi.createReport({
+                              target_user: other.username,
+                              reason: 'other',
+                              description: 'Reported from a conversation in BuddyUp Fit.',
+                            }).then(() => toast('success', 'Report submitted. Thank you.'))
+                              .catch(() => toast('error', 'Could not submit the report.'));
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-buddy-text-primary hover:bg-buddy-surface-raised"
+                        >
+                          <Flag size={14} /> Report conversation
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => setShowThemePicker(true)}
                 className="p-2 rounded-xl hover:bg-buddy-surface text-buddy-text-secondary hover:text-buddy-green transition-colors"
@@ -1739,17 +1845,21 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                 return (
                   <div
                     key={msg.id}
-                    className={`flex ${isMine ? 'justify-end' : 'justify-start'} group relative animate-in fade-in duration-200 ${isTemp ? 'opacity-70' : ''}`}
+                    className={`flex ${isMine ? 'justify-end' : 'justify-start'} group relative animate-in fade-in duration-200 ${isTemp ? 'opacity-70' : ''} ${isSeq ? 'mt-0.5' : 'mt-3'}`}
                     onDoubleClick={() => setShowEmojiPickerId(showEmojiPickerId === msg.id ? null : msg.id)}
                   >
-                    {/* Avatar for other person (non-sequential) */}
+                    {/* Avatar for other person (non-sequential) — opens their profile */}
                     {!isMine && !isSeq && (
                       <Avatar
                         src={msg.sender_data?.avatar_url}
                         alt={msg.sender_data?.display_name ?? ''}
                         size="xs"
-                        className="self-end mr-2 mb-1 shrink-0"
+                        className="self-end mr-2 mb-1 shrink-0 cursor-pointer"
                         verificationStatus={msg.sender_data?.verification_status}
+                        onClick={() => {
+                          const username = msg.sender_data?.username;
+                          if (username) navigate(`/${username}`);
+                        }}
                       />
                     )}
                     {!isMine && isSeq && <div className="w-8 mr-2 shrink-0" />}
@@ -1757,9 +1867,16 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                     <div className={`max-w-[78%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
                       {/* Group sender name */}
                       {!isMine && isGroup && !isSeq && (
-                        <span className="text-[10px] text-buddy-text-secondary ml-2 mb-0.5 font-medium">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const username = msg.sender_data?.username;
+                            if (username) navigate(`/${username}`);
+                          }}
+                          className="text-[11px] text-buddy-green ml-2 mb-1 font-semibold hover:underline"
+                        >
                           {msg.sender_data?.display_name}
-                        </span>
+                        </button>
                       )}
 
                       {/* Reply context */}

@@ -69,6 +69,9 @@ export interface Conversation {
   post_count?: number;
   sub_channel: string;
   call_in_progress: boolean;
+  is_archived?: boolean;
+  is_muted?: boolean;
+  is_pinned?: boolean;
   participants_data: ParticipantData[];
   unread_count: number;
   last_message: {
@@ -346,6 +349,14 @@ export const messagingApi = {
   markRead: (conversationId: string) =>
     apiClient
       .post<ApiResponse<{ marked_read: number }>>(`/messaging/conversations/${conversationId}/read/`)
+      .then((r) => r.data),
+
+  updateConversationPreferences: (
+    conversationId: string,
+    data: { is_archived?: boolean; is_muted?: boolean; is_pinned?: boolean },
+  ) =>
+    apiClient
+      .patch<ApiResponse<Conversation>>(`/messaging/conversations/${conversationId}/preferences/`, data)
       .then((r) => r.data),
 
   reactToMessage: (messageId: string, emoji: string) =>

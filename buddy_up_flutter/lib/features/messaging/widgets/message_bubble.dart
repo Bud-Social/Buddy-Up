@@ -18,6 +18,8 @@ class MessageBubble extends StatelessWidget {
   final void Function()? onForward;
   final void Function(Message message)? onOpenViewOnce;
   final void Function(Message message)? onCallAgain;
+  /// Navigate to the sender's profile (DM participants and group members).
+  final void Function(String username)? onOpenProfile;
   final Color? senderBubbleColor;
   final Color? receiverBubbleColor;
 
@@ -32,23 +34,43 @@ class MessageBubble extends StatelessWidget {
     this.onForward,
     this.onOpenViewOnce,
     this.onCallAgain,
+    this.onOpenProfile,
     this.senderBubbleColor,
     this.receiverBubbleColor,
   });
 
+  void _openProfile() {
+    final username = message.senderData.username;
+    if (username.isNotEmpty) onOpenProfile?.call(username);
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Extra space above the first bubble of a run, tight space within it:
+    // consecutive messages read as one thought instead of separate cards.
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      padding: EdgeInsets.only(
+        left: 12,
+        right: 12,
+        top: showSender ? 12 : 2,
+        bottom: 2,
+      ),
       child: Column(
         crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           if (showSender && !isMine)
             Padding(
-              padding: const EdgeInsets.only(left: 44, bottom: 2),
-              child: Text(
-                message.senderData.displayName,
-                style: const TextStyle(color: BuddyColors.green, fontSize: 11, fontWeight: FontWeight.w500),
+              padding: const EdgeInsets.only(left: 44, bottom: 4),
+              child: GestureDetector(
+                onTap: _openProfile,
+                child: Text(
+                  message.senderData.displayName,
+                  style: const TextStyle(
+                    color: BuddyColors.green,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           Row(
@@ -59,26 +81,33 @@ class MessageBubble extends StatelessWidget {
               if (!isMine && showSender)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: Avatar(src: message.senderData.avatarUrl, alt: message.senderData.displayName, size: AvatarSize.xs),
+                  child: GestureDetector(
+                    onTap: _openProfile,
+                    child: Avatar(
+                      src: message.senderData.avatarUrl,
+                      alt: message.senderData.displayName,
+                      size: AvatarSize.xs,
+                    ),
+                  ),
                 ),
               if (!isMine && !showSender) const SizedBox(width: 36),
               Flexible(
                 child: GestureDetector(
                   onLongPress: () => _showActions(context),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
                     decoration: BoxDecoration(
                       color: isMine
                           ? (senderBubbleColor ?? BuddyColors.green.withValues(alpha: 0.15))
                           : (receiverBubbleColor ?? BuddyColors.surface),
                       borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: Radius.circular(isMine ? 16 : 4),
-                        bottomRight: Radius.circular(isMine ? 4 : 16),
+                        topLeft: const Radius.circular(18),
+                        topRight: const Radius.circular(18),
+                        bottomLeft: Radius.circular(isMine ? 18 : 5),
+                        bottomRight: Radius.circular(isMine ? 5 : 18),
                       ),
                     ),
-                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -86,13 +115,18 @@ class MessageBubble extends StatelessWidget {
                         if (message.replyToId != null && message.replyData != null)
                           _buildReplyPreview(),
                         _buildContent(),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               _formatTime(message.createdAt),
-                              style: TextStyle(color: isMine ? BuddyColors.textSecondary.withValues(alpha: 0.7) : BuddyColors.textSecondary, fontSize: 10),
+                              style: TextStyle(
+                                color: isMine
+                                    ? BuddyColors.textSecondary.withValues(alpha: 0.7)
+                                    : BuddyColors.textSecondary,
+                                fontSize: 10,
+                              ),
                             ),
                             if (isMine) ...[
                               const SizedBox(width: 4),
@@ -105,7 +139,7 @@ class MessageBubble extends StatelessWidget {
                           ],
                         ),
                         if (message.reactions.isNotEmpty) ...[
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                           Align(
                             alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
                             child: MessageReactionBar(reactions: message.reactions),
@@ -124,24 +158,45 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildReplyPreview() {
+    final reply = message.replyData!;
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       decoration: BoxDecoration(
         color: isMine ? BuddyColors.green.withValues(alpha: 0.1) : BuddyColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(10),
+          topRight: Radius.circular(10),
+          bottomRight: Radius.circular(10),
+          bottomLeft: Radius.circular(3),
+        ),
         border: const Border(left: BorderSide(color: BuddyColors.green, width: 3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            message.replyData!.senderName,
-            style: const TextStyle(color: BuddyColors.green, fontSize: 11, fontWeight: FontWeight.w600),
+          Row(
+            children: [
+              const Icon(Icons.reply, size: 12, color: BuddyColors.green),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  reply.senderName.isEmpty ? 'Original message' : reply.senderName,
+                  style: const TextStyle(
+                    color: BuddyColors.green,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 3),
           Text(
-            message.replyData!.body.isNotEmpty ? message.replyData!.body : '📎 ${message.replyData!.messageType}',
+            reply.body.isNotEmpty ? reply.body : '📎 ${reply.messageType}',
             style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,

@@ -32,6 +32,13 @@ abstract class MessagingRepository {
   @POST('/messaging/conversations/{id}/read/')
   Future<dynamic> markRead(@Path('id') String conversationId);
 
+  /// Per-user archive / mute / pin state for this conversation.
+  @PATCH('/messaging/conversations/{id}/preferences/')
+  Future<dynamic> updateConversationPreferences(
+    @Path('id') String conversationId,
+    @Body() Map<String, dynamic> body,
+  );
+
   @POST('/messaging/messages/{mid}/react/')
   Future<dynamic> reactToMessage(
     @Path('mid') String messageId,

@@ -931,3 +931,63 @@ class CallSessionAddAndSwitchTests(TestCase):
         self._start_call()
         resp = self.client_eve.post(self.switch_url, {'accept': True}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class ConversationPreferenceTests(TestCase):
+    """Per-user archive/mute/pin state must not leak between participants."""
+
+    def setUp(self):
+        self.alice_user = User.objects.create_user(email='pref-alice@example.com', password='TestPass123!')
+        self.bob_user = User.objects.create_user(email='pref-bob@example.com', password='TestPass123!')
+        self.alice = Profile.objects.create(user=self.alice_user, username='pref-alice', display_name='Alice')
+        self.bob = Profile.objects.create(user=self.bob_user, username='pref-bob', display_name='Bob')
+        self.conversation = Conversation.objects.create()
+        self.conversation.participants.add(self.alice, self.bob)
+        self.client = APIClient()
+        self.client.force_authenticate(self.alice_user)
+
+    def test_archive_mute_pin_are_per_user_and_filter_the_inbox(self):
+        response = self.client.patch(
+            f'/api/v1/messaging/conversations/{self.conversation.id}/preferences/',
+            {'is_archived': True, 'is_muted': True, 'is_pinned': True}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['data']['is_archived'])
+        self.assertTrue(response.data['data']['is_muted'])
+        self.assertTrue(response.data['data']['is_pinned'])
+
+        # Archived threads leave the default inbox but remain reachable.
+        listed = self.client.get('/api/v1/messaging/conversations/').data['data']
+        self.assertNotIn(str(self.conversation.id), [str(c['id']) for c in listed])
+        archived = self.client.get('/api/v1/messaging/conversations/?archived=true').data['data']
+        self.assertIn(str(self.conversation.id), [str(c['id']) for c in archived])
+
+        # Bob's view is unaffected.
+        self.client.force_authenticate(self.bob_user)
+        bob_list = self.client.get('/api/v1/messaging/conversations/').data['data']
+        self.assertIn(str(self.conversation.id), [str(c['id']) for c in bob_list])
+        bob_conv = self.client.get(f'/api/v1/messaging/conversations/{self.conversation.id}/').data['data']
+        self.assertFalse(bob_conv['is_archived'])
+
+    def test_view_once_open_rejects_sender_and_replays_media_url_once(self):
+        message = Message.objects.create(
+            conversation=self.conversation, sender=self.bob,
+            message_type='photo', media_url='/media/messaging/once.jpg',
+            body='', view_once=True,
+        )
+        # Sender cannot consume their own payload.
+        self.client.force_authenticate(self.bob_user)
+        denied = self.client.post(f'/api/v1/messaging/messages/{message.id}/view-once/')
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(self.alice_user)
+        first = self.client.post(f'/api/v1/messaging/messages/{message.id}/view-once/')
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(first.data['data']['media_url'], '/media/messaging/once.jpg')
+        second = self.client.post(f'/api/v1/messaging/messages/{message.id}/view-once/')
+        self.assertEqual(second.data['data']['media_url'], '')
+
+        listed = self.client.get(
+            f'/api/v1/messaging/conversations/{self.conversation.id}/messages/',
+        ).data['data']
+        self.assertEqual(listed[0]['media_url'], '')

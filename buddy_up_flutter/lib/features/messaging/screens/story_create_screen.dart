@@ -29,6 +29,14 @@ class _StoryCreateScreenState extends ConsumerState<StoryCreateScreen> {
   XFile? _media;
   bool _isUploading = false;
   String? _error;
+  String _visibility = 'public';
+
+  static const _visibilityOptions = <String, String>{
+    'public': 'Everyone',
+    'buddies': 'Buddies only',
+    'gym_members': 'Gym members',
+    'private': 'Only me',
+  };
 
   @override
   void dispose() {
@@ -76,7 +84,7 @@ class _StoryCreateScreenState extends ConsumerState<StoryCreateScreen> {
         'post_type': 'moment',
         'body': _caption.text.trim(),
         'media_urls': jsonEncode([url]),
-        'visibility': 'public',
+        'visibility': _visibility,
       });
 
       // 3. Refresh the story strip / rails.
@@ -97,6 +105,40 @@ class _StoryCreateScreenState extends ConsumerState<StoryCreateScreen> {
     }
   }
 
+  void _showVisibilityPicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: BuddyColors.surface,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Who can see this story?',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+            ),
+            for (final entry in _visibilityOptions.entries)
+              ListTile(
+                leading: Icon(
+                  entry.key == 'private' ? Icons.lock_outline : Icons.visibility_outlined,
+                  color: BuddyColors.green,
+                ),
+                title: Text(entry.value, style: const TextStyle(color: Colors.white)),
+                trailing: _visibility == entry.key
+                    ? const Icon(Icons.check, color: BuddyColors.green)
+                    : null,
+                onTap: () {
+                  setState(() => _visibility = entry.key);
+                  Navigator.of(ctx).pop();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(authProvider).profile;
@@ -108,9 +150,14 @@ class _StoryCreateScreenState extends ConsumerState<StoryCreateScreen> {
         children: [
           // Media preview or empty state
           if (media != null)
-            media.mimeType?.startsWith('video/') == true
-                ? _VideoPreview(path: media.path)
-                : Image.file(File(media.path), fit: BoxFit.cover, width: double.infinity, height: double.infinity)
+            Center(
+              child: AspectRatio(
+                aspectRatio: 9 / 16,
+                child: media.mimeType?.startsWith('video/') == true
+                    ? _VideoPreview(path: media.path)
+                    : Image.file(File(media.path), fit: BoxFit.contain, width: double.infinity, height: double.infinity),
+              ),
+            )
           else
             _EmptyState(onPickCamera: () => _pick(ImageSource.camera), onPickGallery: () => _pick(ImageSource.gallery)),
           // Top bar
@@ -137,7 +184,28 @@ class _StoryCreateScreenState extends ConsumerState<StoryCreateScreen> {
                 alignment: Alignment.bottomCenter,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                  child: Row(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.visibility_outlined, color: Colors.white70, size: 16),
+                          const SizedBox(width: 6),
+                          const Text('Who can see this story',
+                              style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: _showVisibilityPicker,
+                            child: Text(
+                              _visibilityOptions[_visibility] ?? 'Everyone',
+                              style: const TextStyle(color: BuddyColors.green, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
                     children: [
                       Avatar(src: profile?.avatarUrl, alt: profile?.displayName ?? 'You', size: AvatarSize.sm),
                       const SizedBox(width: 8),
@@ -166,6 +234,8 @@ class _StoryCreateScreenState extends ConsumerState<StoryCreateScreen> {
                       ),
                       const SizedBox(width: 8),
                       _PublishButton(busy: _isUploading, onTap: _postStory),
+                    ],
+                  ),
                     ],
                   ),
                 ),

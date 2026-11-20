@@ -99,6 +99,9 @@ class ConversationSerializer(serializers.ModelSerializer):
     promotion_status = serializers.SerializerMethodField()
     promotion_id = serializers.SerializerMethodField()
     promotion_requested_by = serializers.SerializerMethodField()
+    is_archived = serializers.SerializerMethodField()
+    is_muted = serializers.SerializerMethodField()
+    is_pinned = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
@@ -107,9 +110,32 @@ class ConversationSerializer(serializers.ModelSerializer):
             'group_gym_id', 'description', 'cover_url', 'invite_code', 'is_public',
             'sub_channel', 'call_in_progress',
             'origin', 'promoted_at', 'promotable', 'promotion_status', 'promotion_id', 'promotion_requested_by',
+            'is_archived', 'is_muted', 'is_pinned',
             'participants_data', 'member_count', 'unread_count', 'membership_role',
             'last_message', 'last_message_at', 'created_at',
         ]
+
+    def get_preference(self, obj):
+        from .models import ConversationPreference
+
+        profile = self._viewer()
+        if profile is None:
+            return None
+        return ConversationPreference.objects.filter(
+            conversation=obj, profile=profile,
+        ).first()
+
+    def get_is_archived(self, obj):
+        pref = self.get_preference(obj)
+        return pref.is_archived if pref else False
+
+    def get_is_muted(self, obj):
+        pref = self.get_preference(obj)
+        return pref.is_muted if pref else False
+
+    def get_is_pinned(self, obj):
+        pref = self.get_preference(obj)
+        return pref.is_pinned if pref else False
 
     def get_member_count(self, obj):
         """Roster size, always exposed — the only member signal non-members get.

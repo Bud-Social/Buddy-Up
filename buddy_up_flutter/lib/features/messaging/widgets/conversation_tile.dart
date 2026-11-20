@@ -58,6 +58,16 @@ class ConversationTile extends StatelessWidget {
                 children: [
                   Row(
                     children: [
+                      if (conversation.isPinned)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 4),
+                          child: Icon(Icons.push_pin, size: 12, color: BuddyColors.green),
+                        ),
+                      if (conversation.isMuted)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 4),
+                          child: Icon(Icons.notifications_off_outlined, size: 12, color: BuddyColors.textSecondary),
+                        ),
                       Expanded(
                         child: Text(
                           displayName,
