@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/app_theme.dart';
 
@@ -33,7 +35,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   static const LatLng _defaultCenter = LatLng(6.5244, 3.3792);
 
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
   LatLng? _center;
   String _label = '';
   List<Map<String, dynamic>> _results = [];
@@ -60,18 +62,18 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Future<void> _moveCamera(LatLng l) async {
-    final c = _mapController;
-    if (c == null) return;
-    await c.animateCamera(CameraUpdate.newLatLngZoom(l, 14));
+    // The map may not have attached yet when a search result is selected.
+    try {
+      _mapController.move(l, 14);
+    } catch (_) {}
   }
 
   Future<void> _reverseGeocode(double lat, double lng) async {
     try {
-      final res = await _dio.get('/reverse', queryParameters: {
-        'format': 'json',
-        'lat': lat,
-        'lon': lng,
-      });
+      final res = await _dio.get(
+        '/reverse',
+        queryParameters: {'format': 'json', 'lat': lat, 'lon': lng},
+      );
       final data = res.data;
       if (data is Map && data['display_name'] is String && mounted) {
         setState(() => _label = data['display_name'] as String);
@@ -82,11 +84,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   Future<void> _search(String query) async {
     if (query.trim().isEmpty) return;
     try {
-      final res = await _dio.get('/search', queryParameters: {
-        'format': 'json',
-        'q': query.trim(),
-        'limit': 6,
-      });
+      final res = await _dio.get(
+        '/search',
+        queryParameters: {'format': 'json', 'q': query.trim(), 'limit': 6},
+      );
       final list = res.data;
       if (!mounted) return;
       setState(() {
@@ -123,7 +124,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission != LocationPermission.whileInUse && permission != LocationPermission.always) {
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
         throw Exception('location permission denied');
       }
       final pos = await Geolocator.getCurrentPosition(
@@ -141,7 +143,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       if (!quiet && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not get your location. Search or tap the map instead.'),
+            content: Text(
+              'Could not get your location. Search or tap the map instead.',
+            ),
           ),
         );
       }
@@ -175,7 +179,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             onPressed: _center == null ? null : _confirm,
             child: const Text(
               'Confirm',
-              style: TextStyle(color: BuddyColors.green, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: BuddyColors.green,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -205,12 +212,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   final r = _results[i];
                   return ListTile(
                     dense: true,
-                    leading: const Icon(Icons.place_outlined, size: 18, color: BuddyColors.green),
+                    leading: const Icon(
+                      Icons.place_outlined,
+                      size: 18,
+                      color: BuddyColors.green,
+                    ),
                     title: Text(
                       r['display_name'] as String? ?? '',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
+                      style: const TextStyle(
+                        color: BuddyColors.textPrimary,
+                        fontSize: 13,
+                      ),
                     ),
                     onTap: () => _selectResult(r),
                   );
@@ -220,24 +234,35 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           Expanded(
             child: Stack(
               children: [
-                GoogleMap(
-                  initialCameraPosition: CameraPosition(target: _center ?? _defaultCenter, zoom: 14),
-                  onMapCreated: (c) => _mapController = c,
-                  onTap: _onMapTap,
-                  markers: {
-                    if (_center != null)
-                      Marker(
-                        markerId: const MarkerId('selected'),
-                        position: _center!,
-                        draggable: true,
-                        onDragEnd: (l) {
-                          setState(() => _center = l);
-                          _reverseGeocode(l.latitude, l.longitude);
-                        },
-                      ),
-                  },
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: false,
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: _center ?? _defaultCenter,
+                    initialZoom: 14,
+                    onTap: (_, point) => _onMapTap(point),
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.buddyup.buddy_up_flutter',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        if (_center != null)
+                          Marker(
+                            point: _center!,
+                            width: 40,
+                            height: 40,
+                            child: const Icon(
+                              LucideIcons.mapPin,
+                              color: BuddyColors.red,
+                              size: 36,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
                 Positioned(
                   right: 12,
@@ -250,9 +275,15 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2.5, color: BuddyColors.green),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: BuddyColors.green,
+                            ),
                           )
-                        : const Icon(Icons.my_location, color: BuddyColors.green),
+                        : const Icon(
+                            Icons.my_location,
+                            color: BuddyColors.green,
+                          ),
                   ),
                 ),
               ],
@@ -272,7 +303,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       _label,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
+                      style: const TextStyle(
+                        color: BuddyColors.textPrimary,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
