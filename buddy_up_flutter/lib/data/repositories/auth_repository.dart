@@ -81,6 +81,9 @@ abstract class AuthRepository {
   @POST('/auth/deactivate/')
   Future<void> deactivateAccount();
 
+  @POST('/auth/activate/')
+  Future<dynamic> activateAccount(@Body() Map<String, dynamic> payload);
+
   /// Backend contract: POST (not DELETE) with
   /// {confirm: 'delete my account', current_password} or {totp_code}.
   @POST('/auth/delete/')

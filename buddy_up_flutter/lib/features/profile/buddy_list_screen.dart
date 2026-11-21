@@ -8,7 +8,9 @@ import '../../shared/widgets/error_view.dart';
 
 class BuddyListScreen extends StatefulWidget {
   final String username;
-  const BuddyListScreen({super.key, required this.username});
+  final String? initialTab;
+
+  const BuddyListScreen({super.key, required this.username, this.initialTab});
 
   @override
   State<BuddyListScreen> createState() => _BuddyListScreenState();
@@ -27,7 +29,16 @@ class _BuddyListScreenState extends State<BuddyListScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    final initialIndex = switch (widget.initialTab) {
+      'followers' => 1,
+      'following' => 2,
+      _ => 0,
+    };
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: initialIndex,
+    );
     _profileRepo = ProfileRepository(ApiClient().dio);
     _load();
   }
@@ -45,9 +56,12 @@ class _BuddyListScreenState extends State<BuddyListScreen>
       final followers = await _profileRepo.getFollowers(widget.username, 1);
       final following = await _profileRepo.getFollowing(widget.username, 1);
       setState(() {
-        _buddies = buddies['data'] as List? ?? buddies['results'] as List? ?? [];
-        _followers = followers['data'] as List? ?? followers['results'] as List? ?? [];
-        _following = following['data'] as List? ?? following['results'] as List? ?? [];
+        _buddies =
+            buddies['data'] as List? ?? buddies['results'] as List? ?? [];
+        _followers =
+            followers['data'] as List? ?? followers['results'] as List? ?? [];
+        _following =
+            following['data'] as List? ?? following['results'] as List? ?? [];
         _isLoading = false;
       });
     } catch (e) {
@@ -78,15 +92,15 @@ class _BuddyListScreenState extends State<BuddyListScreen>
       body: _isLoading
           ? const PageLoader()
           : _error != null
-              ? ErrorView(message: _error!, onRetry: _load)
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildList(_buddies),
-                    _buildList(_followers),
-                    _buildList(_following),
-                  ],
-                ),
+          ? ErrorView(message: _error!, onRetry: _load)
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildList(_buddies),
+                _buildList(_followers),
+                _buildList(_following),
+              ],
+            ),
     );
   }
 
@@ -96,9 +110,16 @@ class _BuddyListScreenState extends State<BuddyListScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.people_outline, size: 48, color: BuddyColors.textSecondary.withValues(alpha: 0.3)),
+            Icon(
+              Icons.people_outline,
+              size: 48,
+              color: BuddyColors.textSecondary.withValues(alpha: 0.3),
+            ),
             const SizedBox(height: 8),
-            const Text('Nothing here yet', style: TextStyle(color: BuddyColors.textSecondary)),
+            const Text(
+              'Nothing here yet',
+              style: TextStyle(color: BuddyColors.textSecondary),
+            ),
           ],
         ),
       );
@@ -114,8 +135,20 @@ class _BuddyListScreenState extends State<BuddyListScreen>
         final avatarUrl = item['avatar_url'] as String?;
         return ListTile(
           leading: Avatar(src: avatarUrl, alt: name, size: AvatarSize.md),
-          title: Text(name, style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w500)),
-          subtitle: Text('@$username', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+          title: Text(
+            name,
+            style: const TextStyle(
+              color: BuddyColors.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          subtitle: Text(
+            '@$username',
+            style: const TextStyle(
+              color: BuddyColors.textSecondary,
+              fontSize: 13,
+            ),
+          ),
           onTap: () => Navigator.of(context).pushNamed('/$username'),
         );
       },

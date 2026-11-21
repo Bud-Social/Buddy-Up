@@ -89,7 +89,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (profileJson is Map<String, dynamic>) {
         await ref.read(authProvider.notifier).updateProfile(Profile.fromJson(profileJson));
       }
-      if (mounted) context.go('/feed');
+      if (mounted) context.go('/feed?walkthrough=1');
     } catch (e) {
       if (mounted) showToast(context, 'Something went wrong. Please try again.', type: ToastType.error);
     } finally {

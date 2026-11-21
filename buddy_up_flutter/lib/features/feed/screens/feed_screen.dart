@@ -16,6 +16,7 @@ import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/navigation/app_nav.dart';
 import '../../../data/models/post.dart';
+import '../../onboarding/walkthrough_overlay.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
   final String initialTab;
@@ -44,14 +45,38 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       if (mounted && next > (prev ?? 0)) {
         setState(() => _composerExpanded = true);
         if (_scrollController.hasClients) {
-          _scrollController.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+          _scrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          );
         }
       }
     });
     Future.microtask(() {
       ref.read(feedProvider.notifier).loadFeed(tab: widget.initialTab);
       _startNewPostsPolling();
+      _maybeShowWalkthrough();
     });
+  }
+
+  /// Web parity: onboarding lands on `/feed?walkthrough=1`, which shows the
+  /// three-step walkthrough once. The param is stripped immediately so a
+  /// rebuild or back-navigation never re-opens it.
+  Future<void> _maybeShowWalkthrough() async {
+    if (!mounted) return;
+    final params = GoRouterState.of(context).uri.queryParameters;
+    if (params['walkthrough'] != '1') return;
+    if (!await shouldShowWalkthrough()) return;
+    if (!mounted) return;
+    context.replace('/feed');
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      pageBuilder: (dialogContext, _, _) =>
+          WalkthroughOverlay(onClose: () => Navigator.of(dialogContext).pop()),
+    );
   }
 
   void _startNewPostsPolling() {
@@ -64,9 +89,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       if (tab == 'videos' || tab == 'communities') return;
       try {
         final repo = ref.read(feedRepositoryProvider);
-        final raw = await repo.getFeed(
-          tab: tab,
-        );
+        final raw = await repo.getFeed(tab: tab);
         final incoming = (raw['data'] as List? ?? [])
             .map((e) => Post.fromJson(e as Map<String, dynamic>))
             .where((p) => !_knownPostIds.contains(p.id))
@@ -152,7 +175,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         surface: 'feed',
         objectType: 'feed_tab',
         objectId: state.activeTab,
-        properties: {'feed_tab': state.activeTab, 'post_count': state.posts.length},
+        properties: {
+          'feed_tab': state.activeTab,
+          'post_count': state.posts.length,
+        },
       );
     }
     final communitiesAsync = ref.watch(communitiesListProvider);
@@ -176,12 +202,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           'BuddyUp Fit',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.search), onPressed: () {})],
       ),
       body: Column(
         children: [
@@ -216,12 +237,17 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         onPressed: () {
           setState(() => _composerExpanded = !_composerExpanded);
           if (_composerExpanded && _scrollController.hasClients) {
-            _scrollController.animateTo(0,
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOut);
+            _scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+            );
           }
         },
-        child: Icon(_composerExpanded ? Icons.close : Icons.edit, color: BuddyColors.black),
+        child: Icon(
+          _composerExpanded ? Icons.close : Icons.edit,
+          color: BuddyColors.black,
+        ),
       ),
     );
   }
@@ -233,11 +259,21 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.groups_outlined, size: 64, color: BuddyColors.textSecondary),
+            const Icon(
+              Icons.groups_outlined,
+              size: 64,
+              color: BuddyColors.textSecondary,
+            ),
             const SizedBox(height: 16),
-            const Text('No Communities Joined Yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'No Communities Joined Yet',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            const Text('Join a community to see posts and connect with peers.', style: TextStyle(color: BuddyColors.textSecondary)),
+            const Text(
+              'Join a community to see posts and connect with peers.',
+              style: TextStyle(color: BuddyColors.textSecondary),
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => context.push('/communities'),
@@ -254,44 +290,68 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Your Communities (${communities.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(
+              'Your Communities (${communities.length})',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             TextButton(
               onPressed: () => context.push('/communities'),
-              child: const Text('View All', style: TextStyle(color: BuddyColors.green)),
+              child: const Text(
+                'View All',
+                style: TextStyle(color: BuddyColors.green),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        ...communities.map((c) => Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          color: cs.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: cs.outlineVariant),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: CircleAvatar(
-              radius: 24,
-              backgroundColor: cs.surfaceContainerHighest,
-              backgroundImage: c.groupAvatarUrl.isNotEmpty ? NetworkImage(c.groupAvatarUrl) : null,
-              child: c.groupAvatarUrl.isEmpty ? const Icon(Icons.groups, color: BuddyColors.green) : null,
+        ...communities.map(
+          (c) => Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            color: cs.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: cs.outlineVariant),
             ),
-            title: Text(c.groupName.isEmpty ? 'Community' : c.groupName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(
-              c.description.isNotEmpty
-                  ? c.description
-                  : (c.lastMessage?.body.isNotEmpty == true
-                      ? c.lastMessage!.body
-                      : 'Tap to open community feed & chat'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6)),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              leading: CircleAvatar(
+                radius: 24,
+                backgroundColor: cs.surfaceContainerHighest,
+                backgroundImage: c.groupAvatarUrl.isNotEmpty
+                    ? NetworkImage(c.groupAvatarUrl)
+                    : null,
+                child: c.groupAvatarUrl.isEmpty
+                    ? const Icon(Icons.groups, color: BuddyColors.green)
+                    : null,
+              ),
+              title: Text(
+                c.groupName.isEmpty ? 'Community' : c.groupName,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                c.description.isNotEmpty
+                    ? c.description
+                    : (c.lastMessage?.body.isNotEmpty == true
+                          ? c.lastMessage!.body
+                          : 'Tap to open community feed & chat'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: cs.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: BuddyColors.green,
+              ),
+              onTap: () => context.push('/communities/${c.id}'),
             ),
-            trailing: const Icon(Icons.chevron_right, color: BuddyColors.green),
-            onTap: () => context.push('/communities/${c.id}'),
           ),
-        )),
+        ),
       ],
     );
   }
@@ -321,20 +381,31 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               child: TextButton.icon(
                 style: TextButton.styleFrom(
                   backgroundColor: BuddyColors.green.withValues(alpha: 0.15),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                 ),
                 onPressed: _showPendingNewPosts,
-                icon: const Icon(Icons.arrow_upward, size: 14, color: BuddyColors.green),
+                icon: const Icon(
+                  Icons.arrow_upward,
+                  size: 14,
+                  color: BuddyColors.green,
+                ),
                 label: Text(
                   '${_pendingNewPosts.length} new post${_pendingNewPosts.length == 1 ? '' : 's'}',
-                  style: const TextStyle(color: BuddyColors.green, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: BuddyColors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              itemCount: state.posts.length +
+              itemCount:
+                  state.posts.length +
                   (state.isLoadingMore ? 1 : 0) +
                   (!state.hasMore && state.posts.isNotEmpty ? 1 : 0),
               itemBuilder: (_, i) {
@@ -346,21 +417,44 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                 }
                 final tailIndex =
                     state.posts.length + (state.isLoadingMore ? 1 : 0);
-                if (!state.hasMore && state.posts.isNotEmpty && i == tailIndex) {
+                if (!state.hasMore &&
+                    state.posts.isNotEmpty &&
+                    i == tailIndex) {
                   return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 24,
+                      horizontal: 16,
+                    ),
                     child: Column(
                       children: [
-                        const Icon(Icons.check_circle, size: 26, color: BuddyColors.green),
+                        const Icon(
+                          Icons.check_circle,
+                          size: 26,
+                          color: BuddyColors.green,
+                        ),
                         const SizedBox(height: 6),
-                        const Text("You're all caught up",
-                            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+                        const Text(
+                          "You're all caught up",
+                          style: TextStyle(
+                            color: BuddyColors.textSecondary,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         TextButton.icon(
                           onPressed: () => notifier.refresh(),
-                          icon: const Icon(Icons.arrow_upward, size: 15, color: BuddyColors.green),
-                          label: const Text('Load latest posts',
-                              style: TextStyle(color: BuddyColors.green, fontWeight: FontWeight.bold)),
+                          icon: const Icon(
+                            Icons.arrow_upward,
+                            size: 15,
+                            color: BuddyColors.green,
+                          ),
+                          label: const Text(
+                            'Load latest posts',
+                            style: TextStyle(
+                              color: BuddyColors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -374,10 +468,14 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                   onSave: (id) => _handleSave(id),
                   onRepost: (id) => _handleRepost(id),
                   onShare: (id) {
-                    final matches = ref.read(feedProvider).posts
+                    final matches = ref
+                        .read(feedProvider)
+                        .posts
                         .where((p) => p.id == id)
                         .toList();
-                    if (matches.isNotEmpty) ShareSheet.show(context, matches.first);
+                    if (matches.isNotEmpty) {
+                      ShareSheet.show(context, matches.first);
+                    }
                   },
                   onProfileTap: (username) => _navigateToProfile(username),
                   onPollVote: (id, optionIds) => _handlePollVote(id, optionIds),
@@ -411,7 +509,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     if (reaction.isEmpty) return;
     final repo = ref.read(feedRepositoryProvider);
     try {
-      final raw = await repo.react(postId, ReactionInput(reactionType: reaction));
+      final raw = await repo.react(
+        postId,
+        ReactionInput(reactionType: reaction),
+      );
       final updated = Post.fromJson(raw['data'] as Map<String, dynamic>);
       ref.read(feedProvider.notifier).updatePostInList(updated);
     } catch (_) {}
@@ -427,9 +528,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       } else {
         await repo.save(postId, const SavePayload());
       }
-      ref.read(feedProvider.notifier).updatePostInList(
-        post.copyWith(isSaved: !post.isSaved),
-      );
+      ref
+          .read(feedProvider.notifier)
+          .updatePostInList(post.copyWith(isSaved: !post.isSaved));
     } catch (_) {}
   }
 

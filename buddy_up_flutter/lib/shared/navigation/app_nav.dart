@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/auth/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../features/notifications/providers/notification_provider.dart';
+import '../widgets/support_dialog.dart';
 import 'business_roles.dart';
 import 'business_roles_provider.dart';
 
@@ -30,17 +31,37 @@ class AppNav {
 const List<BuddyNavDestination> appNavDestinations = <BuddyNavDestination>[
   BuddyNavDestination('/feed', LucideIcons.home, 'Home', 'Main'),
   BuddyNavDestination('/discover', LucideIcons.search, 'Discover', 'Main'),
-  BuddyNavDestination('/buddies/find', LucideIcons.footprints, 'Find a Buddy', 'Main'),
+  BuddyNavDestination(
+    '/buddies/find',
+    LucideIcons.footprints,
+    'Find a Buddy',
+    'Main',
+  ),
   BuddyNavDestination('/analytics', LucideIcons.activity, 'Analytics', 'Main'),
   BuddyNavDestination('/countdowns', LucideIcons.timer, 'Countdowns', 'Main'),
   BuddyNavDestination('/activities', LucideIcons.map, 'Activities', 'Main'),
   BuddyNavDestination('/lives', LucideIcons.radio, 'Lives', 'Main'),
   BuddyNavDestination('/gyms', LucideIcons.dumbbell, 'Gyms', 'Main'),
   BuddyNavDestination('/trainers', LucideIcons.users, 'Trainers', 'Main'),
-  BuddyNavDestination('/marketplace', LucideIcons.shoppingBag, 'Marketplace', 'Main'),
-  BuddyNavDestination('/routines', LucideIcons.calendarDays, 'Routines', 'Main'),
+  BuddyNavDestination(
+    '/marketplace',
+    LucideIcons.shoppingBag,
+    'Marketplace',
+    'Main',
+  ),
+  BuddyNavDestination(
+    '/routines',
+    LucideIcons.calendarDays,
+    'Routines',
+    'Main',
+  ),
   BuddyNavDestination('/sessions', LucideIcons.calendar, 'Sessions', 'Main'),
-  BuddyNavDestination('/messages', LucideIcons.messageCircle, 'Messages', 'Main'),
+  BuddyNavDestination(
+    '/messages',
+    LucideIcons.messageCircle,
+    'Messages',
+    'Main',
+  ),
   BuddyNavDestination('/communities', LucideIcons.users, 'Communities', 'Main'),
   BuddyNavDestination('/wallet', LucideIcons.wallet, 'Wallet', 'Main'),
   BuddyNavDestination('/profile', LucideIcons.user, 'Profile', 'Main'),
@@ -62,6 +83,7 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
     final roles = ref.watch(businessRolesProvider).value;
+    final unreadCount = ref.watch(unreadCountProvider).value ?? 0;
     final location = GoRouterState.of(context).matchedLocation;
     final user = auth.profile;
 
@@ -80,9 +102,9 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
                   Text(
                     'BuddyUp Fit',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: BuddyColors.textPrimary,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      color: BuddyColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   Row(
                     children: [
@@ -97,14 +119,29 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
                                 ),
                               ),
                       ),
-                      IconButton(
-                        tooltip: 'Notifications',
-                        icon: const Icon(LucideIcons.bell,
-                            color: BuddyColors.green, size: 18),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          context.go('/notifications');
-                        },
+                      Badge(
+                        isLabelVisible: (unreadCount) > 0,
+                        label: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: const TextStyle(
+                            color: BuddyColors.black,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        backgroundColor: BuddyColors.green,
+                        child: IconButton(
+                          tooltip: 'Notifications',
+                          icon: const Icon(
+                            LucideIcons.bell,
+                            color: BuddyColors.green,
+                            size: 18,
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            context.go('/notifications');
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -129,17 +166,22 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
               _tile(LucideIcons.layoutDashboard, 'Admin', '/admin', location),
             ],
             const Divider(color: BuddyColors.border),
-            for (final d in appNavDestinations.where((d) => d.group == 'Footer'))
+            for (final d in appNavDestinations.where(
+              (d) => d.group == 'Footer',
+            ))
               _tile(d.icon, d.label, d.route, location),
             ListTile(
-              leading: const Icon(LucideIcons.heartHandshake,
-                  color: BuddyColors.green),
-              title: const Text('Fund Us',
-                  style: TextStyle(color: BuddyColors.textPrimary)),
+              leading: const Icon(
+                LucideIcons.heartHandshake,
+                color: BuddyColors.green,
+              ),
+              title: const Text(
+                'Fund Us',
+                style: TextStyle(color: BuddyColors.textPrimary),
+              ),
               onTap: () {
                 Navigator.of(context).pop();
-                launchUrl(Uri.parse('https://www.buddyupfit.com/help'),
-                    mode: LaunchMode.externalApplication);
+                showSupportDialog(context);
               },
             ),
           ],
@@ -149,23 +191,25 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
   }
 
   Widget _section(String label) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-        child: Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            color: BuddyColors.textSecondary,
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+    child: Text(
+      label.toUpperCase(),
+      style: const TextStyle(
+        color: BuddyColors.textSecondary,
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+      ),
+    ),
+  );
 
   Widget _tile(IconData icon, String label, String route, String location) {
     final selected = location.startsWith(route);
     return ListTile(
-      leading: Icon(icon,
-          color: selected ? BuddyColors.green : BuddyColors.textSecondary),
+      leading: Icon(
+        icon,
+        color: selected ? BuddyColors.green : BuddyColors.textSecondary,
+      ),
       title: Text(
         label,
         style: TextStyle(
@@ -183,11 +227,11 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
   }
 
   IconData _businessIcon(BusinessRoleKey key) => switch (key) {
-        BusinessRoleKey.creator => LucideIcons.barChart3,
-        BusinessRoleKey.shop => LucideIcons.store,
-        BusinessRoleKey.events => LucideIcons.calendarRange,
-        BusinessRoleKey.gym => LucideIcons.dumbbell,
-        BusinessRoleKey.stations => LucideIcons.mapPin,
-        BusinessRoleKey.courier => LucideIcons.bike,
-      };
+    BusinessRoleKey.creator => LucideIcons.barChart3,
+    BusinessRoleKey.shop => LucideIcons.store,
+    BusinessRoleKey.events => LucideIcons.calendarRange,
+    BusinessRoleKey.gym => LucideIcons.dumbbell,
+    BusinessRoleKey.stations => LucideIcons.mapPin,
+    BusinessRoleKey.courier => LucideIcons.bike,
+  };
 }

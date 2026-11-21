@@ -23,11 +23,11 @@ class BuddyColors {
 enum BuddyTheme { dark, light, highContrast, ambient }
 
 ThemeData buildBuddyThemeFor(BuddyTheme theme) => switch (theme) {
-      BuddyTheme.dark => buildBuddyTheme(),
-      BuddyTheme.light => buildBuddyLightTheme(),
-      BuddyTheme.highContrast => buildBuddyHighContrastTheme(),
-      BuddyTheme.ambient => buildBuddyAmbientTheme(),
-    };
+  BuddyTheme.dark => buildBuddyTheme(),
+  BuddyTheme.light => buildBuddyLightTheme(),
+  BuddyTheme.highContrast => buildBuddyHighContrastTheme(),
+  BuddyTheme.ambient => buildBuddyAmbientTheme(),
+};
 
 class BuddyLightColors {
   static const Color surface = Color(0xFFFFFFFF);
@@ -39,7 +39,7 @@ class BuddyLightColors {
 }
 
 ThemeData buildBuddyTheme() {
-  return ThemeData(
+  final base = ThemeData(
     brightness: Brightness.dark,
     scaffoldBackgroundColor: BuddyColors.black,
     colorScheme: const ColorScheme.dark(
@@ -81,30 +81,21 @@ ThemeData buildBuddyTheme() {
       style: ElevatedButton.styleFrom(
         backgroundColor: BuddyColors.green,
         foregroundColor: BuddyColors.black,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         padding: const EdgeInsets.symmetric(vertical: 16),
-        textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: BuddyColors.green,
         side: const BorderSide(color: BuddyColors.green),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         padding: const EdgeInsets.symmetric(vertical: 16),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: BuddyColors.green,
-      ),
+      style: TextButton.styleFrom(foregroundColor: BuddyColors.green),
     ),
     dividerTheme: const DividerThemeData(
       color: BuddyColors.surfaceRaised,
@@ -123,30 +114,26 @@ ThemeData buildBuddyTheme() {
       backgroundColor: BuddyColors.surface,
       selectedColor: BuddyColors.green.withValues(alpha: 0.2),
       labelStyle: const TextStyle(color: BuddyColors.textPrimary),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       side: const BorderSide(color: BuddyColors.surfaceRaised),
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: BuddyColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: BuddyColors.surfaceRaised,
       contentTextStyle: const TextStyle(color: BuddyColors.textPrimary),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       behavior: SnackBarBehavior.floating,
     ),
   );
+
+  return base.copyWith(textTheme: _applyWebFonts(base.textTheme));
 }
 
 ThemeData buildBuddyLightTheme() {
-  return ThemeData(
+  final base = ThemeData(
     brightness: Brightness.light,
     scaffoldBackgroundColor: BuddyLightColors.surfaceRaised,
     colorScheme: const ColorScheme.light(
@@ -193,30 +180,21 @@ ThemeData buildBuddyLightTheme() {
       style: ElevatedButton.styleFrom(
         backgroundColor: BuddyColors.green,
         foregroundColor: BuddyColors.black,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         padding: const EdgeInsets.symmetric(vertical: 16),
-        textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: BuddyColors.green,
         side: const BorderSide(color: BuddyColors.green),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         padding: const EdgeInsets.symmetric(vertical: 16),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: BuddyColors.green,
-      ),
+      style: TextButton.styleFrom(foregroundColor: BuddyColors.green),
     ),
     dividerTheme: const DividerThemeData(
       color: BuddyLightColors.border,
@@ -235,26 +213,22 @@ ThemeData buildBuddyLightTheme() {
       backgroundColor: BuddyLightColors.surface,
       selectedColor: BuddyColors.green.withValues(alpha: 0.2),
       labelStyle: const TextStyle(color: BuddyLightColors.textPrimary),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       side: const BorderSide(color: BuddyLightColors.border),
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: BuddyLightColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: BuddyColors.black,
       contentTextStyle: const TextStyle(color: BuddyColors.textPrimary),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       behavior: SnackBarBehavior.floating,
     ),
   );
+
+  return base.copyWith(textTheme: _applyWebFonts(base.textTheme));
 }
 
 ThemeData buildBuddyHighContrastTheme() {
@@ -277,6 +251,32 @@ ThemeData buildBuddyHighContrastTheme() {
       bodyColor: Colors.white,
       displayColor: Colors.white,
     ),
+  );
+}
+
+/// Maps the Material text roles onto the web's font stack: Syne for display /
+/// headline, Plus Jakarta Sans for titles/labels, Inter for body copy — the same
+/// trio the web loads from Google Fonts (`font-display`, `font-heading`,
+/// `font-body`).
+TextTheme _applyWebFonts(TextTheme base) {
+  TextStyle? withFont(TextStyle? style, String fontFamily) =>
+      style?.copyWith(fontFamily: fontFamily);
+  return base.copyWith(
+    displayLarge: withFont(base.displayLarge, 'Syne'),
+    displayMedium: withFont(base.displayMedium, 'Syne'),
+    displaySmall: withFont(base.displaySmall, 'Syne'),
+    headlineLarge: withFont(base.headlineLarge, 'Syne'),
+    headlineMedium: withFont(base.headlineMedium, 'Syne'),
+    headlineSmall: withFont(base.headlineSmall, 'Syne'),
+    titleLarge: withFont(base.titleLarge, 'Plus Jakarta Sans'),
+    titleMedium: withFont(base.titleMedium, 'Plus Jakarta Sans'),
+    titleSmall: withFont(base.titleSmall, 'Plus Jakarta Sans'),
+    bodyLarge: withFont(base.bodyLarge, 'Inter'),
+    bodyMedium: withFont(base.bodyMedium, 'Inter'),
+    bodySmall: withFont(base.bodySmall, 'Inter'),
+    labelLarge: withFont(base.labelLarge, 'Plus Jakarta Sans'),
+    labelMedium: withFont(base.labelMedium, 'Plus Jakarta Sans'),
+    labelSmall: withFont(base.labelSmall, 'Plus Jakarta Sans'),
   );
 }
 
