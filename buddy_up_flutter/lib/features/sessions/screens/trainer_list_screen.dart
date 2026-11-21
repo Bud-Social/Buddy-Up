@@ -80,14 +80,14 @@ class _TrainerListScreenState extends ConsumerState<TrainerListScreen> {
                                     children: [
                                       Text(t.displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
                                       if (t.specialties.isNotEmpty)
-                                        Text(t.specialties.join(', '), style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+                                        Text(t.specialties.join(', '), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                                       const SizedBox(height: 4),
                                       Row(children: [
                                         const Icon(Icons.star, size: 14, color: Colors.amber),
                                         const SizedBox(width: 4),
                                         Text('${t.averageRating.toStringAsFixed(1)} (${t.reviewCount})', style: const TextStyle(fontSize: 12)),
                                         const SizedBox(width: 12),
-                                        const Icon(Icons.fitness_center, size: 14, color: BuddyColors.textSecondary),
+                                        Icon(Icons.fitness_center, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                         const SizedBox(width: 4),
                                         Text('${t.sessionCount} sessions', style: const TextStyle(fontSize: 12)),
                                       ]),

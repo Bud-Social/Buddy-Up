@@ -159,7 +159,7 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                 leading: Icon(option.icon, color: BuddyColors.green),
                 title: Text(
                   option.label,
-                  style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 14),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
                 ),
                 onTap: () => Navigator.of(sheetContext).pop((
                   source: option.source,
@@ -332,9 +332,9 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'No typing needed — pick what you did and start recording.',
-            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
           ),
           const SizedBox(height: 12),
           _chipLabel('What are you doing?'),
@@ -354,7 +354,7 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                   labelStyle: TextStyle(
                     color: _workoutType == key
                         ? BuddyColors.green
-                        : BuddyColors.textPrimary,
+                        : Theme.of(context).colorScheme.onSurface,
                     fontSize: 12,
                   ),
                 ),
@@ -364,7 +364,7 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
             const SizedBox(height: 8),
             Text(
               measuredNotice(spec)!,
-              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
             ),
           ],
           if (spec.hasCategories) ...[
@@ -386,7 +386,7 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                     labelStyle: TextStyle(
                       color: _category == c.key
                           ? BuddyColors.green
-                          : BuddyColors.textPrimary,
+                          : Theme.of(context).colorScheme.onSurface,
                       fontSize: 12,
                     ),
                   ),
@@ -417,7 +417,7 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                   labelStyle: TextStyle(
                     color: _timerPresetMin == m
                         ? BuddyColors.green
-                        : BuddyColors.textPrimary,
+                        : Theme.of(context).colorScheme.onSurface,
                     fontSize: 12,
                   ),
                 ),
@@ -446,8 +446,8 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
           Center(
             child: Text(
               _timerText,
-              style: const TextStyle(
-                color: BuddyColors.textPrimary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 36,
                 fontWeight: FontWeight.w800,
                 fontFeatures: [FontFeature.tabularFigures()],
@@ -515,14 +515,14 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.auto_awesome, size: 18, color: BuddyColors.green),
               SizedBox(width: 8),
               Text(
                 'Form analysis',
                 style: TextStyle(
-                  color: BuddyColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
@@ -538,14 +538,14 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                   color: BuddyColors.surfaceRaised,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Center(
+                child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.videocam, color: BuddyColors.green, size: 40),
                       SizedBox(height: 8),
                       Text('Workout clip ready — analyze to count reps',
-                          style: TextStyle(color: BuddyColors.textSecondary)),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     ],
                   ),
                 ),
@@ -561,8 +561,8 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                   errorBuilder: (_, _, _) => Container(
                     height: 250,
                     color: BuddyColors.surface,
-                    child: const Center(
-                      child: Icon(Icons.broken_image, color: BuddyColors.textSecondary, size: 48),
+                    child: Center(
+                      child: Icon(Icons.broken_image, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 48),
                     ),
                   ),
                 ),
@@ -577,14 +577,14 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: BuddyColors.border, style: BorderStyle.solid),
                 ),
-                child: const Center(
+                child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.add_photo_alternate, color: BuddyColors.textSecondary, size: 48),
+                      Icon(Icons.add_photo_alternate, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 48),
                       SizedBox(height: 8),
                       Text('Tap for image, or pick a workout clip below',
-                          style: TextStyle(color: BuddyColors.textSecondary)),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     ],
                   ),
                 ),
@@ -600,10 +600,10 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
           const SizedBox(height: 12),
           TextField(
             controller: _exerciseController,
-            style: const TextStyle(color: BuddyColors.textPrimary),
-            decoration: const InputDecoration(
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            decoration: InputDecoration(
               hintText: 'Exercise name (optional)',
-              hintStyle: TextStyle(color: BuddyColors.textSecondary),
+              hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             onChanged: (v) => _exercise = v.isNotEmpty ? v : null,
           ),
@@ -628,10 +628,10 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Analysis Results',
             style: TextStyle(
-              color: BuddyColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -644,15 +644,15 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
               children: [
                 Text(
                   '${e.key.replaceAll('_', ' ')}: ',
-                  style: const TextStyle(
-                    color: BuddyColors.textSecondary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Expanded(
                   child: Text(
                     e.value?.toString() ?? '',
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                 ),
               ],
@@ -666,8 +666,8 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
   Widget _chipLabel(String text) {
     return Text(
       text,
-      style: const TextStyle(
-        color: BuddyColors.textSecondary,
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
         fontSize: 12,
         fontWeight: FontWeight.w600,
       ),

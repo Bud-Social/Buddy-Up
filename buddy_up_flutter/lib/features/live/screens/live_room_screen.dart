@@ -220,13 +220,13 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: BuddyColors.surface,
-        title: const Text(
+        title: Text(
           'Co-host invite',
-          style: TextStyle(color: BuddyColors.textPrimary),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
-        content: const Text(
+        content: Text(
           'The host invited you to co-host this live.',
-          style: TextStyle(color: BuddyColors.textSecondary),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
@@ -258,7 +258,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
             },
             style: FilledButton.styleFrom(
               backgroundColor: BuddyColors.green,
-              foregroundColor: BuddyColors.black,
+              foregroundColor: Theme.of(context).colorScheme.surface,
             ),
             child: const Text('Accept'),
           ),
@@ -451,8 +451,8 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
             Expanded(
               child: Text(
                 'Scheduled${live.scheduledFor != null ? ' for ${live.scheduledFor}' : ''} — only you can see this until you go live.',
-                style: const TextStyle(
-                  color: BuddyColors.textSecondary,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
                 ),
               ),
@@ -472,7 +472,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
       return Stack(
         children: [
           Container(
-            color: BuddyColors.black,
+            color: Theme.of(context).colorScheme.surface,
             child: const Center(
               child: Text(
                 'LiveKit Stream',
@@ -485,7 +485,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
     }
 
     return Container(
-      color: BuddyColors.black,
+      color: Theme.of(context).colorScheme.surface,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -507,7 +507,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
             const SizedBox(height: 8),
             Text(
               '@${live.host.displayName}',
-              style: const TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -659,10 +659,10 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'Replay visibility',
                 style: TextStyle(
-                  color: BuddyColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
@@ -677,16 +677,16 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                         : Icons.radio_button_unchecked,
                     color: live.access == value
                         ? BuddyColors.green
-                        : BuddyColors.textSecondary,
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   title: Text(
                     label,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   subtitle: Text(
                     hint,
-                    style: const TextStyle(
-                      color: BuddyColors.textSecondary,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 12,
                     ),
                   ),
@@ -830,13 +830,13 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
             children: [
               if (!_isHost) ...[
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.person_add_outlined,
-                    color: BuddyColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Follow host',
-                    style: TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   onTap: () async {
                     Navigator.of(ctx).pop();
@@ -851,13 +851,13 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.flag_outlined,
-                    color: BuddyColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Report host',
-                    style: TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -865,13 +865,13 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.visibility_off_outlined,
-                    color: BuddyColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Not interested',
-                    style: TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   onTap: () async {
                     Navigator.of(ctx).pop();
@@ -886,13 +886,13 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.block,
-                    color: BuddyColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Never recommend this host',
-                    style: TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   onTap: () async {
                     Navigator.of(ctx).pop();
@@ -908,13 +908,13 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                 ),
               ] else ...[
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.bar_chart,
-                    color: BuddyColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Feedback summary',
-                    style: TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -922,13 +922,13 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.campaign_outlined,
-                    color: BuddyColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Ask audience to rate',
-                    style: TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -939,13 +939,13 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.add_circle_outline,
-                    color: BuddyColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Create a poll',
-                    style: TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -1015,13 +1015,13 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: BuddyColors.surface,
-        title: const Text(
+        title: Text(
           'End this live?',
-          style: TextStyle(color: BuddyColors.textPrimary),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
-        content: const Text(
+        content: Text(
           'The recording is always kept by moderation. Choose what goes public.',
-          style: TextStyle(color: BuddyColors.textSecondary),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
@@ -1045,7 +1045,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
             label: const Text('Publish replay'),
             style: FilledButton.styleFrom(
               backgroundColor: BuddyColors.green,
-              foregroundColor: BuddyColors.black,
+              foregroundColor: Theme.of(context).colorScheme.surface,
             ),
           ),
         ],
@@ -1068,12 +1068,12 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   'Report host',
                   style: TextStyle(
-                    color: BuddyColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -1081,9 +1081,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
               ),
               for (final reason in reasons)
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.flag_outlined,
-                    color: BuddyColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   title: Text(reason[0].toUpperCase() + reason.substring(1)),
                   onTap: () async {
@@ -1152,8 +1152,8 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
               children: [
                 Text(
                   hostMode ? 'Audience feedback' : 'Rate this live',
-                  style: const TextStyle(
-                    color: BuddyColors.textPrimary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
@@ -1170,8 +1170,8 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                       const SizedBox(width: 6),
                       Text(
                         '${(aggregate!['average'] as num? ?? 0).toStringAsFixed(1)} · ${aggregate!['count'] ?? 0} ratings',
-                        style: const TextStyle(
-                          color: BuddyColors.textPrimary,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 15,
                         ),
                       ),
@@ -1198,10 +1198,10 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                   TextField(
                     controller: comment,
                     maxLines: 2,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    decoration: InputDecoration(
                       hintText: 'What did you think? (optional)',
-                      hintStyle: TextStyle(color: BuddyColors.textSecondary),
+                      hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ),
                 ],
@@ -1228,7 +1228,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                     label: const Text('Submit'),
                     style: FilledButton.styleFrom(
                       backgroundColor: BuddyColors.green,
-                      foregroundColor: BuddyColors.black,
+                      foregroundColor: Theme.of(context).colorScheme.surface,
                     ),
                   ),
               ],
@@ -1280,8 +1280,8 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                   poll.question,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: BuddyColors.textPrimary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -1352,10 +1352,10 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'Ask the audience',
                 style: TextStyle(
-                  color: BuddyColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
@@ -1363,7 +1363,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
               const SizedBox(height: 10),
               TextField(
                 controller: question,
-                style: const TextStyle(color: BuddyColors.textPrimary),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 decoration: const InputDecoration(hintText: 'Question'),
               ),
               for (var i = 0; i < optionControllers.length; i++)
@@ -1374,8 +1374,8 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                       Expanded(
                         child: TextField(
                           controller: optionControllers[i],
-                          style: const TextStyle(
-                            color: BuddyColors.textPrimary,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           decoration: InputDecoration(
                             hintText: 'Option ${i + 1}',
@@ -1384,9 +1384,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                       ),
                       if (optionControllers.length > 2)
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.remove_circle_outline,
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           onPressed: () => setSheetState(
                             () => optionControllers.removeAt(i),
@@ -1409,9 +1409,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Text(
+                  Text(
                     'Lasts',
-                    style: TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   const SizedBox(width: 8),
                   DropdownButton<int>(
@@ -1423,8 +1423,8 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                             value: d,
                             child: Text(
                               '${d}s',
-                              style: const TextStyle(
-                                color: BuddyColors.textPrimary,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                           ),
@@ -1465,7 +1465,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                 label: const Text('Send to audience'),
                 style: FilledButton.styleFrom(
                   backgroundColor: BuddyColors.green,
-                  foregroundColor: BuddyColors.black,
+                  foregroundColor: Theme.of(context).colorScheme.surface,
                 ),
               ),
             ],
@@ -1608,7 +1608,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
                   ? BuddyColors.green
                   : BuddyColors.surfaceRaised,
               foregroundColor: _hasRequestedToSpeak
-                  ? BuddyColors.black
+                  ? Theme.of(context).colorScheme.surface
                   : Colors.white,
               onPressed: _askToCoHost,
               tooltip: _hasRequestedToSpeak
@@ -1623,7 +1623,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
           FloatingActionButton.small(
             heroTag: 'rate',
             backgroundColor: BuddyColors.gold,
-            foregroundColor: BuddyColors.black,
+            foregroundColor: Theme.of(context).colorScheme.surface,
             onPressed: () => _showFeedbackSheet(hostMode: _isHost),
             tooltip: _isHost ? 'Feedback summary' : 'Rate this live',
             child: const Icon(Icons.star_rounded),
@@ -1632,7 +1632,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
           FloatingActionButton.small(
             heroTag: 'gift',
             backgroundColor: BuddyColors.green,
-            foregroundColor: BuddyColors.black,
+            foregroundColor: Theme.of(context).colorScheme.surface,
             onPressed: () {
               showModalBottomSheet<void>(
                 context: context,
@@ -1706,13 +1706,13 @@ class _PollCountdownState extends State<_PollCountdown> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: BuddyColors.black.withValues(alpha: 0.55),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}',
-        style: const TextStyle(
-          color: BuddyColors.textPrimary,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
@@ -1773,8 +1773,8 @@ class _PollOption extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: const TextStyle(
-                      color: BuddyColors.textPrimary,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 13,
                     ),
                   ),
@@ -1820,7 +1820,7 @@ class _CrownFab extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.workspace_premium,
                 color: BuddyColors.black,
                 size: 20,

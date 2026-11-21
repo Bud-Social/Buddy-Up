@@ -182,13 +182,13 @@ class _BuddyFindProfileScreenState
         backgroundColor: BuddyColors.surface,
         title: Text(
           'Block @${widget.username}?',
-          style: const TextStyle(color: BuddyColors.textPrimary),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
-        content: const Text(
+        content: Text(
           'They will not be able to message or like you, and you will stop '
           'seeing each other in Find a Buddy. They are not told that you '
           'blocked them.',
-          style: TextStyle(color: BuddyColors.textSecondary),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
@@ -392,8 +392,8 @@ class _BuddyFindProfileScreenState
         const SizedBox(height: 14),
         Text(
           name,
-          style: const TextStyle(
-            color: BuddyColors.textPrimary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 22,
             fontWeight: FontWeight.w700,
           ),
@@ -403,8 +403,8 @@ class _BuddyFindProfileScreenState
           children: [
             Text(
               '@${widget.username}',
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
               ),
             ),
@@ -412,8 +412,8 @@ class _BuddyFindProfileScreenState
               const SizedBox(width: 8),
               Text(
                 _text('age_band'),
-                style: const TextStyle(
-                  color: BuddyColors.textSecondary,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 13,
                 ),
               ),
@@ -464,7 +464,7 @@ class _BuddyFindProfileScreenState
                 variant: liked
                     ? BuddyButtonVariant.primary
                     : BuddyButtonVariant.outline,
-                color: liked ? BuddyColors.green : BuddyColors.textSecondary,
+                color: liked ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                 onPressed: _liking ? null : _toggleLike,
               ),
             ),
@@ -476,8 +476,8 @@ class _BuddyFindProfileScreenState
             title: 'About',
             child: Text(
               _text('bio'),
-              style: const TextStyle(
-                color: BuddyColors.textPrimary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 14,
                 height: 1.4,
               ),
@@ -603,8 +603,8 @@ class _BuddyFindProfileScreenState
       child: Center(
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: const TextStyle(
-            color: BuddyColors.textSecondary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 48,
             fontWeight: FontWeight.w600,
           ),
@@ -637,8 +637,8 @@ class _Section extends StatelessWidget {
       children: [
         Text(
           title.toUpperCase(),
-          style: const TextStyle(
-            color: BuddyColors.textSecondary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
@@ -691,7 +691,7 @@ class _MetaRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = highlight ? BuddyColors.green : BuddyColors.textSecondary;
+    final color = highlight ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -736,8 +736,8 @@ class _Notice extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                color: BuddyColors.textPrimary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 12,
               ),
             ),
@@ -776,7 +776,7 @@ class _ReportSheetState extends State<_ReportSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: BuddyColors.textSecondary.withValues(alpha: 0.3),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -784,16 +784,16 @@ class _ReportSheetState extends State<_ReportSheet> {
             const SizedBox(height: 14),
             Text(
               'Report @${widget.username}',
-              style: const TextStyle(
-                color: BuddyColors.textPrimary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Why are you reporting this profile?',
-              style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
             ),
             const SizedBox(height: 8),
             Flexible(
@@ -809,8 +809,8 @@ class _ReportSheetState extends State<_ReportSheet> {
                           value: reason,
                           title: Text(
                             _reportReasonLabels[reason] ?? reason,
-                            style: const TextStyle(
-                              color: BuddyColors.textPrimary,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontSize: 14,
                             ),
                           ),

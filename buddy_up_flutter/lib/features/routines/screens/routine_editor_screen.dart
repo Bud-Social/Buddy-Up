@@ -248,7 +248,7 @@ class _RoutineEditorScreenState extends ConsumerState<RoutineEditorScreen> {
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: _daysSelected.contains(i)
-                                ? BuddyColors.black
+                                ? Theme.of(context).colorScheme.surface
                                 : cs.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
@@ -348,7 +348,7 @@ class _RoutineEditorScreenState extends ConsumerState<RoutineEditorScreen> {
             label: Text(_isEditing ? 'Save changes' : 'Create routine'),
             style: FilledButton.styleFrom(
               backgroundColor: BuddyColors.green,
-              foregroundColor: BuddyColors.black,
+              foregroundColor: Theme.of(context).colorScheme.surface,
               minimumSize: const Size.fromHeight(52),
             ),
           ),
@@ -386,11 +386,11 @@ class _ReminderPicker extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
+        Text(
           'Reminder',
           style: TextStyle(
             fontSize: 13,
-            color: BuddyColors.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w500,
           ),
         ),

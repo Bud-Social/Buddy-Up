@@ -277,7 +277,7 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
   Widget build(BuildContext context) {
     const stepLabels = ['Basics', 'Schedule', 'Activities', 'Pricing', 'Review'];
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: BuddyColors.surface,
         title: Text('Programme — ${stepLabels[_currentStep]}'),
@@ -335,12 +335,12 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
             clipBehavior: Clip.antiAlias,
             child: _coverFile != null
                 ? Image.file(File(_coverFile!.path), fit: BoxFit.cover)
-                : const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(Icons.add_photo_alternate_outlined,
-                        size: 36, color: BuddyColors.textSecondary),
+                        size: 36, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     SizedBox(height: 6),
                     Text('Upload cover image',
-                        style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
                   ]),
           ),
         ),
@@ -390,8 +390,8 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Weekly Schedule', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('Set morning/evening/rest for each day.',
-            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+        Text('Set morning/evening/rest for each day.',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
         const SizedBox(height: 20),
         ...List.generate(_durationWeeks.clamp(1, 6), (weekIdx) {
           return Card(
@@ -409,8 +409,8 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
                     SizedBox(
                         width: 90,
                         child: Text(day,
-                            style: const TextStyle(
-                                fontSize: 12, color: BuddyColors.textSecondary))),
+                            style: TextStyle(
+                                fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant))),
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: current,
@@ -452,8 +452,8 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
             decoration: BoxDecoration(
                 color: BuddyColors.surfaceRaised,
                 borderRadius: BorderRadius.circular(12)),
-            child: const Text('Showing first 6 weeks. Remaining weeks repeat the pattern.',
-                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+            child: Text('Showing first 6 weeks. Remaining weeks repeat the pattern.',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
           ),
       ]),
     );
@@ -474,12 +474,12 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Activity Details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('Add exercises for each training day.',
-            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+        Text('Add exercises for each training day.',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
         const SizedBox(height: 8),
         Text(
           'Total training time: $_totalMins min (${(_totalMins / 60).toStringAsFixed(1)} hrs) · $_activityCount activities',
-          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
         if (trainingDays.isEmpty)
@@ -487,9 +487,9 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
                 color: BuddyColors.surface, borderRadius: BorderRadius.circular(12)),
-            child: const Text(
+            child: Text(
                 'Set your schedule in the previous step to see training days here.',
-                style: TextStyle(color: BuddyColors.textSecondary)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
         ...trainingDays.map((dk) {
           final acts = _activities[dk.week]?[dk.day] ?? [];
@@ -501,7 +501,7 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
               title: Text('Week ${dk.week + 1} · ${dk.day}',
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
               subtitle: Text('${acts.length} activities',
-                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
               children: [
                 ...acts.asMap().entries.map((entry) {
                   final idx = entry.key;
@@ -651,7 +651,7 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
                 color: BuddyColors.surfaceRaised, borderRadius: BorderRadius.circular(12)),
             child: Text(
               'Schedule covers $_weeksCovered of $_durationWeeks weeks — add blocks for the remaining weeks or shorten the duration.',
-              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
             ),
           ),
         const SizedBox(height: 16),
@@ -664,8 +664,8 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
           Expanded(
             child: GestureDetector(
               onTap: () => setState(() => _disclaimerAccepted = !_disclaimerAccepted),
-              child: const Text(_disclaimerText,
-                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+              child: Text(_disclaimerText,
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
             ),
           ),
         ]),
@@ -682,8 +682,8 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
           SizedBox(
               width: 100,
               child: Text(label,
-                  style: const TextStyle(
-                      color: BuddyColors.textSecondary, fontSize: 13))),
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13))),
           Expanded(
               child: Text(value,
                   style: const TextStyle(

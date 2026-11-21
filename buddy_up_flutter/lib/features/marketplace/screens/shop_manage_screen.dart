@@ -184,16 +184,16 @@ class _ShopManageScreenState extends ConsumerState<ShopManageScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: BuddyColors.surface,
-        title: const Text('Remove member',
+        title: Text('Remove member',
             style: TextStyle(color: BuddyColors.textPrimary)),
         content: Text(
           'Remove @$username from this shop? They lose access immediately.',
-          style: const TextStyle(color: BuddyColors.textSecondary),
+          style: TextStyle(color: BuddyColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel',
+            child: Text('Cancel',
                 style: TextStyle(color: BuddyColors.textSecondary)),
           ),
           TextButton(
@@ -258,7 +258,7 @@ class _OverviewTab extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        const Row(
+        Row(
           children: [
             Icon(Icons.info_outline, size: 14, color: BuddyColors.textSecondary),
             SizedBox(width: 6),
@@ -305,7 +305,7 @@ class _StatTile extends StatelessWidget {
           Text(stat.value,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
           Text(stat.label,
-              style: const TextStyle(fontSize: 9, color: BuddyColors.textSecondary)),
+              style: TextStyle(fontSize: 9, color: BuddyColors.textSecondary)),
         ],
       ),
     );
@@ -395,7 +395,7 @@ class _TeamTab extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         if (members.isEmpty)
-          const Text('Just you so far.',
+          Text('Just you so far.',
               style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
         for (final member in members) _memberRow(member),
       ],
@@ -434,7 +434,7 @@ class _TeamTab extends StatelessWidget {
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   if (username.isNotEmpty)
                     Text('@$username',
-                        style: const TextStyle(fontSize: 10, color: BuddyColors.textSecondary)),
+                        style: TextStyle(fontSize: 10, color: BuddyColors.textSecondary)),
                 ],
               ),
             ),

@@ -114,10 +114,10 @@ class _CreatorInsightsScreenState
           : _error != null
               ? ErrorView(message: _error!, onRetry: _load)
               : _items.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'No posts yet — publish something to see performance.',
-                        style: TextStyle(color: BuddyColors.textSecondary),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                     )
                   : RefreshIndicator(
@@ -148,8 +148,8 @@ class _CreatorInsightsScreenState
                               child: ListTile(
                                 title: Text(
                                   'Post ${(item['post_id'] as String? ?? '').substring(0, 8)}…',
-                                  style: const TextStyle(
-                                    color: BuddyColors.textPrimary,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14,
                                   ),
@@ -160,14 +160,14 @@ class _CreatorInsightsScreenState
                                   '${item['saves'] ?? 0} saves · ${item['shares'] ?? 0} shares\n'
                                   'Focus ${_formatDuration((item['avg_focus_ms'] as num?) ?? 0)} · '
                                   'Watch ${_formatDuration((item['watch_ms'] as num?) ?? 0)}',
-                                  style: const TextStyle(
-                                    color: BuddyColors.textSecondary,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                                     fontSize: 12,
                                   ),
                                 ),
-                                trailing: const Icon(
+                                trailing: Icon(
                                   Icons.chevron_right,
-                                  color: BuddyColors.textSecondary,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                                 onTap: () => context.push(
                                   '/feed/${item['post_id']}',
@@ -221,15 +221,15 @@ class _Total extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             duration ? _duration(value) : _count(value),
-            style: const TextStyle(
-              color: BuddyColors.textPrimary,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w700,
               fontSize: 15,
             ),
           ),
           Text(
             label,
-            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
           ),
         ],
       ),

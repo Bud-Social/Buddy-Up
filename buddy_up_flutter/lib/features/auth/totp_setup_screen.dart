@@ -88,10 +88,10 @@ class _TotpSetupScreenState extends ConsumerState<TotpSetupScreen> {
           const SizedBox(height: 16),
           const Icon(Icons.security, size: 64, color: BuddyColors.green),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Scan this QR code with your authenticator app\n(Google Authenticator, Authy, etc.)',
             textAlign: TextAlign.center,
-            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
           ),
           const SizedBox(height: 24),
           if (_qrCode.isNotEmpty)
@@ -117,15 +117,15 @@ class _TotpSetupScreenState extends ConsumerState<TotpSetupScreen> {
             ),
             child: Column(
               children: [
-                const Text(
+                Text(
                   'Or enter this code manually:',
-                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                 ),
                 const SizedBox(height: 8),
                 SelectableText(
                   _secret,
-                  style: const TextStyle(
-                    color: BuddyColors.textPrimary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 2,
@@ -135,9 +135,9 @@ class _TotpSetupScreenState extends ConsumerState<TotpSetupScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          const Text(
+          Text(
             'Enter the 6-digit code from your app to verify:',
-            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
           ),
           const SizedBox(height: 16),
           OtpInput(length: 6, enabled: !_isLoading, onCompleted: _verifyTotp),
@@ -155,16 +155,16 @@ class _TotpSetupScreenState extends ConsumerState<TotpSetupScreen> {
           children: [
             const Icon(Icons.check_circle, size: 64, color: BuddyColors.green),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Two-factor authentication is now enabled.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: BuddyColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'You\'ll need a code from your authenticator app each time you sign in.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
             ),
             const SizedBox(height: 32),
             BuddyButton(

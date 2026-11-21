@@ -69,7 +69,7 @@ class _EventTicketsScreenState extends ConsumerState<EventTicketsScreen> {
                                 color:
                                     BuddyColors.textSecondary.withValues(alpha: 0.3)),
                             const SizedBox(height: 16),
-                            const Text('No tickets yet',
+                            Text('No tickets yet',
                                 style: TextStyle(color: BuddyColors.textSecondary)),
                           ],
                         ),
@@ -79,7 +79,7 @@ class _EventTicketsScreenState extends ConsumerState<EventTicketsScreen> {
                             child: Text(
                               'No ${_tab.name} tickets.',
                               style:
-                                  const TextStyle(color: BuddyColors.textSecondary),
+                                  TextStyle(color: BuddyColors.textSecondary),
                             ),
                           )
                         : RefreshIndicator(
@@ -129,14 +129,14 @@ class _TicketCard extends StatelessWidget {
             ]),
             const SizedBox(height: 8),
             Text('Code: ${ticket.ticketCode.substring(0, 8)}...',
-                style: const TextStyle(
+                style: TextStyle(
                     color: BuddyColors.textSecondary, fontSize: 13)),
             if (ticket.tier.isNotEmpty)
               Text('Tier: ${ticket.tier}',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: BuddyColors.textSecondary, fontSize: 13)),
             Text('Purchased: ${_formatDate(ticket.createdAt)}',
-                style: const TextStyle(
+                style: TextStyle(
                     color: BuddyColors.textSecondary, fontSize: 13)),
             // A spent or refunded ticket must not carry a scannable QR: the
             // code would still open the gate, which is exactly what the
@@ -159,7 +159,7 @@ class _TicketCard extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   ticket.status == 'used' ? 'Already scanned' : 'Not valid for entry',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: BuddyColors.textSecondary, fontSize: 12),
                 ),
               ),

@@ -54,12 +54,12 @@ Future<String?> _pickRole(BuildContext context, String current) {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
               'Change role',
               style: TextStyle(
-                color: BuddyColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
               ),
@@ -79,7 +79,7 @@ Future<String?> _pickRole(BuildContext context, String current) {
                   : null,
               title: Text(
                 role.replaceAll('_', ' '),
-                style: const TextStyle(color: BuddyColors.textPrimary),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               ),
               onTap: () => Navigator.of(sheetContext).pop(role),
             ),
@@ -95,20 +95,20 @@ Future<bool?> _confirmRemove(BuildContext context, String userId) {
     context: context,
     builder: (dialogContext) => AlertDialog(
       backgroundColor: BuddyColors.surface,
-      title: const Text(
+      title: Text(
         'Remove member',
-        style: TextStyle(color: BuddyColors.textPrimary),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       ),
-      content: const Text(
+      content: Text(
         'They lose access to this gym immediately and are notified.',
-        style: TextStyle(color: BuddyColors.textSecondary),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text(
+          child: Text(
             'Cancel',
-            style: TextStyle(color: BuddyColors.textSecondary),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),
         TextButton(
@@ -309,10 +309,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
   Widget _coverPlaceholder() {
     return Container(
       color: BuddyColors.surfaceRaised,
-      child: const Center(
+      child: Center(
         child: Icon(
           LucideIcons.dumbbell,
-          color: BuddyColors.textSecondary,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           size: 64,
         ),
       ),
@@ -342,8 +342,8 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                         Expanded(
                           child: Text(
                             gym.name,
-                            style: const TextStyle(
-                              color: BuddyColors.textPrimary,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
@@ -368,8 +368,8 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                     const SizedBox(height: 4),
                     Text(
                       '@${gym.handle}',
-                      style: const TextStyle(
-                        color: BuddyColors.textSecondary,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 13,
                       ),
                     ),
@@ -396,8 +396,8 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
             const SizedBox(height: 12),
             Text(
               gym.description,
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 14,
               ),
             ),
@@ -414,8 +414,8 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                 const SizedBox(width: 4),
                 Text(
                   '${gym.locationCity}${gym.locationCountry.isNotEmpty ? ', ${gym.locationCountry}' : ''}',
-                  style: const TextStyle(
-                    color: BuddyColors.textSecondary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 13,
                   ),
                 ),
@@ -479,16 +479,16 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
       children: [
         Text(
           value,
-          style: const TextStyle(
-            color: BuddyColors.textPrimary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(
-            color: BuddyColors.textSecondary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 11,
           ),
         ),
@@ -536,10 +536,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
         }
         final posts = _gymFeedPosts ?? snap.data ?? const <Post>[];
         if (posts.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No gym posts yet',
-              style: TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           );
         }
@@ -578,10 +578,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
       ),
       data: (posts) {
         if (posts.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No schedule posts',
-              style: TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           );
         }
@@ -611,10 +611,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
       ),
       data: (lives) {
         if (lives.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No scheduled lives',
-              style: TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           );
         }
@@ -628,11 +628,11 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
             ),
             title: Text(
               lives[i].title,
-              style: const TextStyle(color: BuddyColors.textPrimary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             subtitle: Text(
               lives[i].status,
-              style: const TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             onTap: () => context.push('/lives/${lives[i].id}'),
           ),
@@ -751,10 +751,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
             ),
             data: (list) {
               if (list.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
                     'No reviews',
-                    style: TextStyle(color: BuddyColors.textSecondary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 );
               }
@@ -769,8 +769,8 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
         if (gym.isReviewsEnabled)
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: BuddyColors.black,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
               border: Border(top: BorderSide(color: BuddyColors.border)),
             ),
             child: Row(
@@ -822,10 +822,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
         // rendered only when the server actually sent them — an absent list is
         // never rendered as "no owners" / "no reviews".
         if (gym.ownerData.isNotEmpty) ...[
-          const Text(
+          Text(
             'Ownership',
             style: TextStyle(
-              color: BuddyColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w600,
               fontSize: 16,
             ),
@@ -849,15 +849,15 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                           owner.displayName.isEmpty
                               ? owner.username
                               : owner.displayName,
-                          style: const TextStyle(
-                            color: BuddyColors.textPrimary,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 14,
                           ),
                         ),
                         Text(
                           '@${owner.username} · ${owner.role.replaceAll('_', ' ')}',
-                          style: const TextStyle(
-                            color: BuddyColors.textSecondary,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -871,10 +871,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
           const SizedBox(height: 16),
         ],
         if (gym.recentReviewers.isNotEmpty) ...[
-          const Text(
+          Text(
             'Reviewed by',
             style: TextStyle(
-              color: BuddyColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w600,
               fontSize: 16,
             ),
@@ -902,8 +902,8 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                               : reviewer.displayName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: BuddyColors.textSecondary,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 11,
                           ),
                         ),
@@ -916,10 +916,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
           const SizedBox(height: 16),
         ],
         if (gym.rules.isNotEmpty) ...[
-          const Text(
+          Text(
             'Rules',
             style: TextStyle(
-              color: BuddyColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w600,
               fontSize: 16,
             ),
@@ -935,7 +935,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                   Expanded(
                     child: Text(
                       r,
-                      style: const TextStyle(color: BuddyColors.textSecondary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ),
                 ],
@@ -945,10 +945,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
           const SizedBox(height: 16),
         ],
         if (gym.tags.isNotEmpty) ...[
-          const Text(
+          Text(
             'Tags',
             style: TextStyle(
-              color: BuddyColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w600,
               fontSize: 16,
             ),
@@ -962,8 +962,8 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                   (t) => Chip(
                     label: Text(
                       t,
-                      style: const TextStyle(
-                        color: BuddyColors.textPrimary,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 12,
                       ),
                     ),
@@ -988,8 +988,8 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: BuddyColors.textSecondary)),
-          Text(value, style: const TextStyle(color: BuddyColors.textPrimary)),
+          Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Text(value, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         ],
       ),
     );
@@ -1005,10 +1005,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
       ),
       data: (list) {
         if (list.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No events',
-              style: TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           );
         }
@@ -1057,10 +1057,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                               height: 110,
                               color: BuddyColors.surfaceRaised,
                               alignment: Alignment.center,
-                              child: const Icon(
+                              child: Icon(
                                 LucideIcons.image,
                                 size: 22,
-                                color: BuddyColors.textSecondary,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ),
@@ -1068,7 +1068,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Row(
+                    Row(
                       children: [
                         Icon(
                           LucideIcons.badgeCheck,
@@ -1081,7 +1081,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                             'Members-only roll — visible because you\'re an active member.',
                             style: TextStyle(
                               fontSize: 10,
-                              color: BuddyColors.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -1104,9 +1104,9 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: BuddyColors.surface,
-        title: const Text(
+        title: Text(
           'Donate',
-          style: TextStyle(color: BuddyColors.textPrimary),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
         content: BuddyInput(
           controller: controller,
@@ -1207,10 +1207,10 @@ class _GymEventCard extends StatelessWidget {
                 alignment: Alignment.center,
                 child: event.coverImageUrl.isNotEmpty
                     ? null
-                    : const Icon(
+                    : Icon(
                         LucideIcons.calendarDays,
                         size: 28,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
               ),
               Expanded(
@@ -1237,7 +1237,7 @@ class _GymEventCard extends StatelessWidget {
                           if (event.category.isNotEmpty)
                             BuddyBadge(
                               label: event.category,
-                              color: BuddyColors.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                         ],
                       ),
@@ -1258,9 +1258,9 @@ class _GymEventCard extends StatelessWidget {
                             event.description,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
-                              color: BuddyColors.textSecondary,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -1276,9 +1276,9 @@ class _GymEventCard extends StatelessWidget {
                             const SizedBox(width: 4),
                             Text(
                               formatter.format(start),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
-                                color: BuddyColors.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                           ],
@@ -1313,7 +1313,7 @@ class _GymEventCard extends StatelessWidget {
                                         event.locationLat != null &&
                                             event.locationLng != null
                                         ? BuddyColors.blue
-                                        : BuddyColors.textSecondary,
+                                        : Theme.of(context).colorScheme.onSurfaceVariant,
                                     decoration:
                                         event.locationLat != null &&
                                             event.locationLng != null
@@ -1348,9 +1348,9 @@ class _GymEventCard extends StatelessWidget {
                             const SizedBox(width: 6),
                             Text(
                               '$attending/$capacity · $spotsLeft left',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 9,
-                                color: BuddyColors.textSecondary,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -1373,9 +1373,9 @@ class _GymEventCard extends StatelessWidget {
                             ),
                             Text(
                               'Others: ${_fmtSplit(nonMemberSplit)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
-                                color: BuddyColors.textSecondary,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -1423,7 +1423,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: BuddyColors.black,
+      color: Theme.of(context).colorScheme.surface,
       child: GymTabBar(activeIndex: tabIndex, onTabChanged: onTabChanged),
     );
   }

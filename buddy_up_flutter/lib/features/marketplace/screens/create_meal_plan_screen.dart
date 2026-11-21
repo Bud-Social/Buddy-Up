@@ -301,7 +301,7 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
   Widget build(BuildContext context) {
     const stepLabels = ['Basics', 'Schedule', 'Nutrition', 'Pricing', 'Reminders'];
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: BuddyColors.surface,
         title: Text('Meal Plan — ${stepLabels[_currentStep]}'),
@@ -357,10 +357,10 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
             clipBehavior: Clip.antiAlias,
             child: _coverFile != null
                 ? Image.file(File(_coverFile!.path), fit: BoxFit.cover)
-                : const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.add_photo_alternate_outlined, size: 36, color: BuddyColors.textSecondary),
+                : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.add_photo_alternate_outlined, size: 36, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     SizedBox(height: 6),
-                    Text('Upload cover image', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+                    Text('Upload cover image', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
                   ]),
           ),
         ),
@@ -422,13 +422,13 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Meal Blocks', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text(
+        Text(
             'Add each meal with a week, day, slot and timing. Every block becomes part of the weekly plan.',
-            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
         const SizedBox(height: 12),
         Text(
           '${_mealBlocks.length} meals · $_mealTotalMins min total prep (${(_mealTotalMins / 60).toStringAsFixed(1)} hrs)',
-          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
         ..._mealBlocks.asMap().entries.map((entry) {
@@ -473,8 +473,8 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Pricing', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('Set artifact pricing for subscribers.',
-            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+        Text('Set artifact pricing for subscribers.',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
         const SizedBox(height: 20),
         ..._priceArtifacts.entries.map((e) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -519,8 +519,8 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Subscriber Reminders', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('Keep subscribers on track with push notifications.',
-            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+        Text('Keep subscribers on track with push notifications.',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
         const SizedBox(height: 20),
         SwitchListTile(
           value: _reminderEnabled,
@@ -573,8 +573,8 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
             onChanged: (v) => setState(() => _reminderFrequency = v ?? '1h'),
           ),
           const SizedBox(height: 6),
-          const Text('Each meal block also carries its own timing.',
-              style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+          Text('Each meal block also carries its own timing.',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
           const SizedBox(height: 14),
           WizardTextField('Message Template', _reminderMessageController,
               hint: 'Motivational reminder message...', maxLines: 3),
@@ -591,8 +591,8 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
           Expanded(
             child: GestureDetector(
               onTap: () => setState(() => _disclaimerAccepted = !_disclaimerAccepted),
-              child: const Text(_disclaimerText,
-                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+              child: Text(_disclaimerText,
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
             ),
           ),
         ]),
@@ -682,7 +682,7 @@ class _MealBlockEditor extends StatelessWidget {
             const Spacer(),
             if (onRemove != null)
               IconButton(
-                icon: const Icon(Icons.close, size: 18, color: BuddyColors.textSecondary),
+                icon: Icon(Icons.close, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 onPressed: onRemove,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),

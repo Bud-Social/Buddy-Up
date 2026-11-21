@@ -31,11 +31,11 @@ class MealPlanDetailScreen extends ConsumerWidget {
                   errorBuilder: (_, _, _) => Container(
                     height: 200,
                     color: BuddyColors.surfaceRaised,
-                    child: const Center(
+                    child: Center(
                       child: Icon(
                         LucideIcons.utensils,
                         size: 48,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -108,8 +108,8 @@ class MealPlanDetailScreen extends ConsumerWidget {
                         if (plan.shopData != null)
                           Text(
                             'by ${plan.shopData!.name}',
-                            style: const TextStyle(
-                              color: BuddyColors.textSecondary,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 12,
                             ),
                           ),
@@ -121,37 +121,37 @@ class MealPlanDetailScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     LucideIcons.utensils,
                     size: 16,
-                    color: BuddyColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     plan.dietType,
-                    style: const TextStyle(color: BuddyColors.textSecondary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(width: 16),
-                  const Icon(
+                  Icon(
                     LucideIcons.calendarDays,
                     size: 16,
-                    color: BuddyColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '${plan.durationWeeks} weeks',
-                    style: const TextStyle(color: BuddyColors.textSecondary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(width: 16),
-                  const Icon(
+                  Icon(
                     LucideIcons.flame,
                     size: 16,
-                    color: BuddyColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     plan.calorieRange,
-                    style: const TextStyle(color: BuddyColors.textSecondary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -168,7 +168,7 @@ class MealPlanDetailScreen extends ConsumerWidget {
                   const Spacer(),
                   Text(
                     '${plan.purchaseCount} purchased',
-                    style: const TextStyle(color: BuddyColors.textSecondary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -269,7 +269,7 @@ class _FullPlanSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: BuddyColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

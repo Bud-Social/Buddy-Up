@@ -49,8 +49,8 @@ class _HealthInsightsScreenState extends ConsumerState<HealthInsightsScreen> {
               _load();
             },
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'weekly', child: Text('Weekly', style: TextStyle(color: BuddyColors.textPrimary))),
-              const PopupMenuItem(value: 'monthly', child: Text('Monthly', style: TextStyle(color: BuddyColors.textPrimary))),
+              PopupMenuItem(value: 'weekly', child: Text('Weekly', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+              PopupMenuItem(value: 'monthly', child: Text('Monthly', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
             ],
           ),
         ],
@@ -61,7 +61,7 @@ class _HealthInsightsScreenState extends ConsumerState<HealthInsightsScreen> {
               ? ErrorView(message: _error!, onRetry: _load)
               : _data != null
                   ? _buildContent()
-                  : const Center(child: Text('No data available', style: TextStyle(color: BuddyColors.textSecondary))),
+                  : Center(child: Text('No data available', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))),
     );
   }
 
@@ -101,14 +101,14 @@ class _HealthInsightsScreenState extends ConsumerState<HealthInsightsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(value,
-                  style: const TextStyle(
-                    color: BuddyColors.textPrimary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(title,
-                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
                 ),
               ],
             ),

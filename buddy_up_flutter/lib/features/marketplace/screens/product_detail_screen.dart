@@ -53,11 +53,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 errorBuilder: (_, _, _) => Container(
                   height: 250,
                   color: BuddyColors.surfaceRaised,
-                  child: const Center(
+                  child: Center(
                     child: Icon(
                       LucideIcons.shoppingBag,
                       size: 48,
-                      color: BuddyColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -72,8 +72,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               const SizedBox(height: 4),
               Text(
                 product.brand,
-                style: const TextStyle(
-                  color: BuddyColors.textSecondary,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 16,
                 ),
               ),
@@ -133,8 +133,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             const SizedBox(height: 8),
             Text(
               '${product.clickCount} clicks',
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
               ),
             ),
@@ -379,8 +379,8 @@ class _QtyButton extends StatelessWidget {
         onPressed: onPressed,
         padding: EdgeInsets.zero,
         color: onPressed == null
-            ? BuddyColors.textSecondary
-            : BuddyColors.textPrimary,
+            ? Theme.of(context).colorScheme.onSurfaceVariant
+            : Theme.of(context).colorScheme.onSurface,
       ),
     );
   }

@@ -173,7 +173,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                   children: [
                     TextFormField(
                       controller: _nameController,
-                      style: const TextStyle(color: BuddyColors.textPrimary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: const InputDecoration(labelText: 'Product name *'),
                       validator: (v) =>
                           (v == null || v.trim().length < 2) ? 'Name is required.' : null,
@@ -181,7 +181,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _brandController,
-                      style: const TextStyle(color: BuddyColors.textPrimary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: const InputDecoration(labelText: 'Brand *'),
                       validator: (v) =>
                           (v == null || v.trim().isEmpty) ? 'Brand is required.' : null,
@@ -189,7 +189,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _descriptionController,
-                      style: const TextStyle(color: BuddyColors.textPrimary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       maxLines: 3,
                       decoration: const InputDecoration(labelText: 'Description'),
                     ),
@@ -197,7 +197,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                     DropdownButtonFormField<String>(
                       initialValue: _category,
                       dropdownColor: BuddyColors.surface,
-                      style: const TextStyle(color: BuddyColors.textPrimary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: const InputDecoration(labelText: 'Category'),
                       items: const [
                         DropdownMenuItem(value: 'supplement', child: Text('Supplement')),
@@ -213,7 +213,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _affiliateUrlController,
-                      style: const TextStyle(color: BuddyColors.textPrimary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       keyboardType: TextInputType.url,
                       decoration: const InputDecoration(
                         labelText: 'Purchase / affiliate URL *',
@@ -230,22 +230,22 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _imageUrlController,
-                      style: const TextStyle(color: BuddyColors.textPrimary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       keyboardType: TextInputType.url,
                       decoration: const InputDecoration(labelText: 'Image URL (optional)'),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _priceController,
-                      style: const TextStyle(color: BuddyColors.textPrimary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                       decoration: const InputDecoration(
                         labelText: 'Price display (optional)',
                         hintText: 'KSh 2,500',
                       ),
                     ),
                     const SizedBox(height: 14),
-                    const Text('How is it delivered?',
-                        style: TextStyle(color: BuddyColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('How is it delivered?',
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
@@ -270,7 +270,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                       const SizedBox(height: 10),
                       TextFormField(
                         controller: _pickupController,
-                        style: const TextStyle(color: BuddyColors.textPrimary),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                         decoration: const InputDecoration(
                           labelText: 'Pickup location (in-house: gym or store)',
                           hintText: 'Iron Works Gym front desk, Nairobi',
@@ -281,7 +281,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                       const SizedBox(height: 10),
                       TextFormField(
                         controller: _coverageController,
-                        style: const TextStyle(color: BuddyColors.textPrimary),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                         decoration: const InputDecoration(
                           labelText: 'Delivery coverage',
                           hintText: 'Nairobi + Kiambu; countrywide via courier',
@@ -292,7 +292,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                       const SizedBox(height: 10),
                       TextFormField(
                         controller: _digitalInfoController,
-                        style: const TextStyle(color: BuddyColors.textPrimary),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                         decoration: const InputDecoration(
                           labelText: 'Digital delivery note (optional)',
                           hintText: 'Download link sent after purchase',
@@ -310,8 +310,8 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                         padding: const EdgeInsets.only(top: 12),
                         child: Text(
                           'Product ID: ${_existing!['id']}',
-                          style: const TextStyle(
-                            color: BuddyColors.textSecondary,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 11,
                           ),
                           textAlign: TextAlign.center,

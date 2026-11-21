@@ -48,7 +48,7 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: BuddyColors.green,
         onPressed: () => context.push('/routines/create'),
-        child: const Icon(Icons.add, color: BuddyColors.black),
+        child: Icon(Icons.add, color: Theme.of(context).colorScheme.surface),
       ),
       body: state.isLoading && state.routines.isEmpty
           ? const PageLoader()
@@ -359,9 +359,9 @@ class _RoutineCard extends ConsumerWidget {
                       : () => _checkIn(context, ref, routine.id),
                   style: FilledButton.styleFrom(
                     backgroundColor: BuddyColors.green,
-                    foregroundColor: BuddyColors.black,
+                    foregroundColor: Theme.of(context).colorScheme.surface,
                     disabledBackgroundColor: BuddyColors.green.withValues(alpha: 0.25),
-                    disabledForegroundColor: BuddyColors.black.withValues(alpha: 0.6),
+                    disabledForegroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
                     minimumSize: const Size(88, 40),
                   ),
                   icon: Icon(

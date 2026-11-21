@@ -80,13 +80,13 @@ class AppearanceScreen extends ConsumerWidget {
       ),
       child: ListTile(
         onTap: () => ref.read(themeModeProvider.notifier).setTheme(value),
-        leading: Icon(icon, color: selected ? BuddyColors.green : BuddyColors.textSecondary),
+        leading: Icon(icon, color: selected ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         subtitle: Text(subtitle,
-            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
         trailing: selected
             ? const Icon(Icons.check_circle, color: BuddyColors.green)
-            : const Icon(Icons.circle_outlined, color: BuddyColors.textSecondary),
+            : Icon(Icons.circle_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     );
   }
@@ -106,7 +106,7 @@ class _AccessibilityCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -118,7 +118,7 @@ class _AccessibilityCard extends ConsumerWidget {
                         'Mirror post interaction buttons so they sit under a '
                         'left thumb.',
                         style: TextStyle(
-                            color: BuddyColors.textSecondary, fontSize: 12),
+                            color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                       ),
                     ],
                   ),
@@ -130,11 +130,11 @@ class _AccessibilityCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Text('Post interaction preview',
+            SizedBox(height: 12),
+            Text('Post interaction preview',
                 style: TextStyle(
-                    fontSize: 11, color: BuddyColors.textSecondary)),
-            const SizedBox(height: 6),
+                    fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
@@ -144,21 +144,21 @@ class _AccessibilityCard extends ConsumerWidget {
               child: Row(
                 textDirection:
                     leftHanded ? TextDirection.rtl : TextDirection.ltr,
-                children: const [
+                children: [
                   Icon(Icons.favorite_border,
-                      size: 18, color: BuddyColors.textSecondary),
+                      size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   SizedBox(width: 18),
                   Icon(Icons.chat_bubble_outline,
-                      size: 18, color: BuddyColors.textSecondary),
+                      size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   SizedBox(width: 18),
                   Icon(Icons.repeat,
-                      size: 18, color: BuddyColors.textSecondary),
+                      size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   SizedBox(width: 18),
                   Icon(Icons.bookmark_border,
-                      size: 18, color: BuddyColors.textSecondary),
+                      size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   Spacer(),
                   Icon(Icons.share_outlined,
-                      size: 18, color: BuddyColors.textSecondary),
+                      size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ],
               ),
             ),

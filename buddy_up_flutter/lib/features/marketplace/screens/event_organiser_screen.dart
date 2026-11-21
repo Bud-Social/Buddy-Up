@@ -213,9 +213,9 @@ class _ForbiddenNotice extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 message,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: BuddyColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.4,
                 ),
               ),
@@ -245,8 +245,8 @@ class _NoEvents extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              const Icon(Icons.calendar_month_outlined,
-                  color: BuddyColors.textSecondary, size: 28),
+              Icon(Icons.calendar_month_outlined,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant, size: 28),
               const SizedBox(height: 10),
               const Text(
                 'You have not created any events yet.',
@@ -322,17 +322,17 @@ class _OrganiserBody extends ConsumerWidget {
               if (selected.isCancelled)
                 const BuddyBadge(label: 'Cancelled', color: BuddyColors.red),
               if (!selected.isPublished && !selected.isCancelled)
-                const BuddyBadge(
-                    label: 'Draft', color: BuddyColors.textSecondary),
+                BuddyBadge(
+                    label: 'Draft', color: Theme.of(context).colorScheme.onSurfaceVariant),
               if (selected.startDatetime.isNotEmpty)
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: Text(
                       selected.startDatetime.split('T').first,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -421,17 +421,17 @@ class _OrganiserBody extends ConsumerWidget {
               isError: true,
             ),
             data: (attendees) => attendees.isEmpty
-                ? const RoleCard(
+                ? RoleCard(
                     padding: EdgeInsets.all(24),
                     child: Column(
                       children: [
                         Icon(Icons.groups_outlined,
-                            color: BuddyColors.textSecondary, size: 28),
+                            color: Theme.of(context).colorScheme.onSurfaceVariant, size: 28),
                         SizedBox(height: 8),
                         Text(
                           'No attendees match these filters.',
                           style: TextStyle(
-                              fontSize: 13, color: BuddyColors.textSecondary),
+                              fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -499,13 +499,13 @@ class _StatsBlock extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'SOLD BY TIER',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.6,
-                    color: BuddyColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -522,9 +522,9 @@ class _StatsBlock extends ConsumerWidget {
                         ),
                         Text(
                           '${row.count} sold',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -551,13 +551,13 @@ class _AttendeeFilters extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'CHECK-IN',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.6,
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 8),
@@ -638,8 +638,8 @@ class _AttendeeCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          const Icon(Icons.confirmation_number_outlined,
-              size: 16, color: BuddyColors.textSecondary),
+          Icon(Icons.confirmation_number_outlined,
+              size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -657,22 +657,22 @@ class _AttendeeCard extends StatelessWidget {
                       : attendee.ticketCode,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: BuddyColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
           ),
           if (attendee.tier.isNotEmpty)
-            BuddyBadge(label: attendee.tier, color: BuddyColors.textSecondary),
+            BuddyBadge(label: attendee.tier, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(width: 8),
           BuddyBadge(
             label: attendee.isCheckedIn ? 'In' : 'Not in',
             color: attendee.isCheckedIn
                 ? BuddyColors.green
-                : BuddyColors.textSecondary,
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 4),
           if (attendee.isCheckedIn)

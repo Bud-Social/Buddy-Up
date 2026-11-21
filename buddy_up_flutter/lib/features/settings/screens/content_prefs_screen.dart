@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_provider.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../data/models/profile.dart';
 import '../../../shared/widgets/toast.dart';
 import '../providers/settings_providers.dart';
@@ -74,14 +73,14 @@ class _ContentPrefsScreenState extends ConsumerState<ContentPrefsScreen> {
                   ),
                 ),
                 if (!isAdult)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Text(
                       'Mature content is disabled for under-18 accounts. '
                       'Confirm your age with an ID or passport in Settings → '
                       'Verifications if this is incorrect.',
                       style: TextStyle(
-                          fontSize: 11, color: BuddyColors.textSecondary),
+                          fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ),
                 const Divider(height: 1),
@@ -101,10 +100,10 @@ class _ContentPrefsScreenState extends ConsumerState<ContentPrefsScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'The mature-content rating syncs to your account. The profanity '
             'filter applies to this device only.',
-            style: TextStyle(fontSize: 11, color: BuddyColors.textSecondary),
+            style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),

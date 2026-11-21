@@ -140,7 +140,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           content: Text(
             'You have an unfinished ${latest.postType == 'poll' ? 'poll' : latest.postType} post'
             '${latest.body.isNotEmpty ? ': "${latest.body.characters.take(60)}"' : '.'}',
-            style: const TextStyle(color: BuddyColors.textSecondary),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           actions: [
             TextButton(
@@ -150,7 +150,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: BuddyColors.green,
-                foregroundColor: BuddyColors.black,
+                foregroundColor: Theme.of(context).colorScheme.surface,
               ),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Restore'),
@@ -517,7 +517,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           return ListTile(
             title: Text(
               opt,
-              style: const TextStyle(color: BuddyColors.textPrimary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             trailing: _visibility == opt
                 ? const Icon(Icons.check, color: BuddyColors.green)
@@ -981,7 +981,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               }),
               selectedColor: BuddyColors.green.withValues(alpha: 0.2),
               labelStyle: TextStyle(
-                color: isActive ? BuddyColors.green : BuddyColors.textSecondary,
+                color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           );
@@ -1005,15 +1005,15 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                 controller: _bodyController,
                 maxLines: 8,
                 maxLength: maxPostBodyLength,
-                style: const TextStyle(
-                  color: BuddyColors.textPrimary,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 16,
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: "What's on your mind?",
-                  hintStyle: TextStyle(color: BuddyColors.textSecondary),
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   border: InputBorder.none,
-                  counterStyle: TextStyle(color: BuddyColors.textSecondary),
+                  counterStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ),
             ),
@@ -1098,14 +1098,14 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           avatar: Icon(
             k.$2,
             size: 16,
-            color: isActive ? BuddyColors.green : BuddyColors.textSecondary,
+            color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           label: Text(k.$3),
           selected: isActive,
           onSelected: (_) => setState(() => _mediaKind = k.$1),
           selectedColor: BuddyColors.green.withValues(alpha: 0.2),
           labelStyle: TextStyle(
-            color: isActive ? BuddyColors.green : BuddyColors.textPrimary,
+            color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurface,
             fontSize: 12,
           ),
           backgroundColor: BuddyColors.surfaceRaised,
@@ -1140,7 +1140,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       children: [
         TextField(
           controller: _pollQuestionController,
-          style: const TextStyle(color: BuddyColors.textPrimary),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: const InputDecoration(hintText: 'Ask a question...'),
         ),
         const SizedBox(height: 12),
@@ -1152,7 +1152,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                 Expanded(
                   child: TextField(
                     controller: _pollOptionControllers[i],
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(hintText: 'Option ${i + 1}'),
                   ),
                 ),
@@ -1188,9 +1188,9 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           contentPadding: EdgeInsets.zero,
           controlAffinity: ListTileControlAffinity.leading,
           dense: true,
-          title: const Text(
+          title: Text(
             'Allow multiple selections',
-            style: TextStyle(color: BuddyColors.textPrimary, fontSize: 14),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
           ),
           onChanged: (on) {
             setState(() {
@@ -1247,21 +1247,21 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
-              color: BuddyColors.textPrimary,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 13,
             ),
           ),
         ),
         IconButton(
           icon: const Icon(Icons.remove_circle_outline, size: 20),
-          color: value <= floor ? BuddyColors.textSecondary : BuddyColors.green,
+          color: value <= floor ? Theme.of(context).colorScheme.onSurfaceVariant : BuddyColors.green,
           onPressed: value <= floor ? null : () => onChanged(value - 1),
         ),
         Text(
           '$value',
-          style: const TextStyle(
-            color: BuddyColors.textPrimary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),
@@ -1269,7 +1269,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         IconButton(
           icon: const Icon(Icons.add_circle_outline, size: 20),
           color: value >= ceiling
-              ? BuddyColors.textSecondary
+              ? Theme.of(context).colorScheme.onSurfaceVariant
               : BuddyColors.green,
           onPressed: value >= ceiling ? null : () => onChanged(value + 1),
         ),
@@ -1340,8 +1340,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                   _uploadStatus,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: BuddyColors.textSecondary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 12,
                   ),
                 ),
@@ -1375,10 +1375,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         width: 100,
         height: 100,
         color: BuddyColors.surfaceRaised,
-        child: const Center(
+        child: Center(
           child: Icon(
             Icons.play_circle_outline,
-            color: BuddyColors.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             size: 36,
           ),
         ),
@@ -1444,7 +1444,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             m.type == 'document'
                 ? Icons.description_outlined
                 : Icons.insert_drive_file_outlined,
-            color: BuddyColors.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             size: 28,
           ),
           const SizedBox(height: 6),
@@ -1453,8 +1453,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: BuddyColors.textSecondary,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 10,
             ),
           ),
@@ -1471,14 +1471,14 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   ) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: BuddyColors.textSecondary, size: 22),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 22),
       title: Text(
         label,
-        style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 14),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
       ),
       trailing: Icon(
         trailingIcon ?? Icons.chevron_right,
-        color: BuddyColors.textSecondary,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
         size: 20,
       ),
       onTap: onTap,

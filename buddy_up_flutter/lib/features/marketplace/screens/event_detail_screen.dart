@@ -105,8 +105,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           if (event.shopData != null)
                             Text(
                               'by ${event.shopData!.name}',
-                              style: const TextStyle(
-                                color: BuddyColors.textSecondary,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 fontSize: 12,
                               ),
                             ),
@@ -256,9 +256,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                                 if ((item['description'] ?? '').isNotEmpty)
                                   Text(
                                     '${item['description']}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: BuddyColors.textSecondary,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                                     ),
                                   ),
                               ],
@@ -407,10 +407,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         errorBuilder: (_, _, _) => Container(
                           height: 220,
                           color: BuddyColors.surfaceRaised,
-                          child: const Icon(
+                          child: Icon(
                             LucideIcons.video,
                             size: 48,
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -437,10 +437,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     errorBuilder: (_, _, _) => Container(
                       height: 220,
                       color: BuddyColors.surfaceRaised,
-                      child: const Icon(
+                      child: Icon(
                         LucideIcons.calendarDays,
                         size: 48,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -571,12 +571,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: BuddyColors.textSecondary),
+          Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(width: 4),
           Flexible(
             child: Text(
               text,
-              style: const TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
         ],
@@ -595,8 +595,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           children: [
             Text(
               'Capacity: ${event.attendeeCount}/${event.capacity}',
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
               ),
             ),
@@ -701,8 +701,8 @@ class _QtyButton extends StatelessWidget {
         onPressed: onPressed,
         padding: EdgeInsets.zero,
         color: onPressed == null
-            ? BuddyColors.textSecondary
-            : BuddyColors.textPrimary,
+            ? Theme.of(context).colorScheme.onSurfaceVariant
+            : Theme.of(context).colorScheme.onSurface,
       ),
     );
   }

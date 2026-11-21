@@ -172,7 +172,7 @@ class _GridCard extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => Container(
                       color: BuddyColors.surfaceRaised,
-                      child: const Center(
+                      child: Center(
                         child: Icon(Icons.image, color: BuddyColors.textSecondary, size: 32),
                       ),
                     ),
@@ -201,7 +201,7 @@ class _GridCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(priceLabel!,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 color: BuddyColors.black)),
@@ -239,7 +239,7 @@ class _GridCard extends StatelessWidget {
                   if (subtitle != null) ...[
                     const SizedBox(height: 4),
                     Text(subtitle!,
-                        style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   ],
@@ -260,7 +260,7 @@ class _GridCard extends StatelessWidget {
                   if (usd > 0) ...[
                     const SizedBox(height: 2),
                     Text('~USD ${usd.toStringAsFixed(2)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 11, color: BuddyColors.textSecondary)),
                   ],
                   if (ratingLabel != null) ...[
@@ -294,7 +294,7 @@ class _GridCard extends StatelessWidget {
                           shape:
                               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.check_circle_outline, size: 14, color: BuddyColors.green),
@@ -476,7 +476,7 @@ class _EventsTabState extends ConsumerState<_EventsTab> {
                       ),
                       const SizedBox(height: 2),
                       Text(geo.message!,
-                          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
+                          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -749,7 +749,7 @@ Widget _emptyState(String message) {
         Icon(Icons.storefront_outlined,
             size: 64, color: BuddyColors.textSecondary.withValues(alpha: 0.3)),
         const SizedBox(height: 16),
-        Text(message, style: const TextStyle(color: BuddyColors.textSecondary)),
+        Text(message, style: TextStyle(color: BuddyColors.textSecondary)),
       ],
     ),
   );

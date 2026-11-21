@@ -139,7 +139,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                           duration: const Duration(milliseconds: 160),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: _listTab == key ? BuddyColors.black : Colors.transparent,
+                            color: _listTab == key ? Theme.of(context).colorScheme.surface : Colors.transparent,
                             borderRadius: const BorderRadius.all(Radius.circular(12)),
                           ),
                           child: Text(
@@ -148,7 +148,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: _listTab == key ? BuddyColors.green : BuddyColors.textSecondary,
+                              color: _listTab == key ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -170,7 +170,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                       : _listTab == 'communities'
                           ? 'Search communities...'
                           : 'Search conversations...',
-                  prefixIcon: const Icon(Icons.search, size: 20, color: BuddyColors.textSecondary),
+                  prefixIcon: Icon(Icons.search, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear, size: 18),
@@ -233,14 +233,14 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
             Container(
               width: 40, height: 4,
               decoration: BoxDecoration(
-                color: BuddyColors.textSecondary.withValues(alpha: 0.3),
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'New Conversation',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: BuddyColors.textPrimary),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
             ),
             const SizedBox(height: 20),
             TextField(
@@ -300,10 +300,10 @@ class _MessagesTab extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: BuddyColors.textSecondary),
+            Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(state.error!, textAlign: TextAlign.center,
-                style: const TextStyle(color: BuddyColors.textSecondary)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 16),
             TextButton(
               onPressed: () => ref.read(conversationsProvider.notifier).load(clearFilter: true),
@@ -318,11 +318,11 @@ class _MessagesTab extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.chat_bubble_outline, size: 64, color: BuddyColors.textSecondary.withValues(alpha: 0.3)),
+            Icon(Icons.chat_bubble_outline, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text(
               query.isEmpty ? 'No conversations yet' : 'No conversations found',
-              style: const TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             if (query.isEmpty) ...[
               const SizedBox(height: 8),
@@ -381,12 +381,12 @@ class _CommunityTab extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.forum_outlined, size: 56, color: BuddyColors.textSecondary.withValues(alpha: 0.35)),
+            Icon(Icons.forum_outlined, size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.35)),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'No communities yet. Join one from the Communities page.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -442,10 +442,10 @@ class _CallsTab extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.phone_outlined, size: 56, color: BuddyColors.textSecondary.withValues(alpha: 0.35)),
+            Icon(Icons.phone_outlined, size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.35)),
             const SizedBox(height: 12),
-            const Text('No calls yet. Start one from any chat.',
-                style: TextStyle(color: BuddyColors.textSecondary)),
+            Text('No calls yet. Start one from any chat.',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),
       );
@@ -520,8 +520,8 @@ class _CallRow extends StatelessWidget {
                               : entry.conversationLabel,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: BuddyColors.textPrimary,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
@@ -539,14 +539,14 @@ class _CallRow extends StatelessWidget {
                               color: BuddyColors.green,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.phone, size: 11, color: BuddyColors.black),
+                                Icon(Icons.phone, size: 11, color: Theme.of(context).colorScheme.surface),
                                 SizedBox(width: 3),
                                 Text('Rejoin',
                                     style: TextStyle(
-                                        color: BuddyColors.black,
+                                        color: Theme.of(context).colorScheme.surface,
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold)),
                               ],
@@ -555,7 +555,7 @@ class _CallRow extends StatelessWidget {
                         ),
                       const SizedBox(width: 6),
                       Text(whenLabel,
-                          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
                     ],
                   ),
                   const SizedBox(height: 2),
@@ -564,12 +564,12 @@ class _CallRow extends StatelessWidget {
                       Icon(
                         entry.isOutgoing ? Icons.call_made : Icons.call_received,
                         size: 11,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 3),
                       Text(
                         '${missed ? (entry.status == 'declined' ? 'Declined' : 'Missed') : 'Answered'} · $dur',
-                        style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
@@ -578,7 +578,7 @@ class _CallRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.end,
-                          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 10),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10),
                         ),
                       ),
                     ],
@@ -618,13 +618,13 @@ class _StoriesTab extends ConsumerWidget {
               width: 72,
               height: 72,
               decoration: const BoxDecoration(color: BuddyColors.surface, shape: BoxShape.circle),
-              child: const Icon(Icons.camera_alt_outlined, size: 26, color: BuddyColors.textSecondary),
+              child: Icon(Icons.camera_alt_outlined, size: 26, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 14),
-            const Text(
+            Text(
               'No stories right now.\nBuddies and people you follow show up here.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: BuddyColors.textSecondary, height: 1.4),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.4),
             ),
           ],
         ),
@@ -666,7 +666,7 @@ class _StoriesTab extends ConsumerWidget {
                               child: const Icon(Icons.add, size: 28, color: Colors.green),
                             ),
                             const SizedBox(height: 8),
-                            const Text('Add story', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                            Text('Add story', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
                           ],
                         ),
                       ),

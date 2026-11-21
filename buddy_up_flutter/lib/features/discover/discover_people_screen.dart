@@ -268,7 +268,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
                           selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                           backgroundColor: BuddyColors.surface,
                           side: BorderSide(color: selected ? BuddyColors.green : BuddyColors.surfaceRaised),
-                          labelStyle: TextStyle(color: selected ? BuddyColors.green : BuddyColors.textSecondary),
+                          labelStyle: TextStyle(color: selected ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant),
                         ),
                       );
                     }).toList(),
@@ -308,7 +308,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
                 : !_hasSearched
                     ? _buildTrending()
                     : _results.isEmpty
-                        ? const Center(child: Text('No results found', style: TextStyle(color: BuddyColors.textSecondary)))
+                        ? Center(child: Text('No results found', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)))
                         : ListView.separated(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemCount: _results.length,
@@ -330,7 +330,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
                                   children: [
                                     Flexible(
                                       child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w500)),
+                                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w500)),
                                     ),
                                     if (badgeColor != null) ...[
                                       const SizedBox(width: 6),
@@ -348,7 +348,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
                                     ],
                                   ],
                                 ),
-                                subtitle: Text('@$username', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+                                subtitle: Text('@$username', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.person_add, color: BuddyColors.green),
                                   onPressed: () => _sendBuddyRequest(username),
@@ -391,9 +391,9 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search, size: 48, color: BuddyColors.textSecondary.withValues(alpha: 0.3)),
+            Icon(Icons.search, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
             const SizedBox(height: 8),
-            const Text('Search for people to connect with', style: TextStyle(color: BuddyColors.textSecondary)),
+            Text('Search for people to connect with', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),
       );
@@ -430,7 +430,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
                     children: [
                       TextSpan(
                         text: '$count',
-                        style: const TextStyle(color: BuddyColors.textSecondary, fontWeight: FontWeight.normal),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: FontWeight.normal),
                       ),
                     ],
                   ),
@@ -463,7 +463,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(name,
-                      style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13)),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
                 ),
               );
             }).toList(),
@@ -494,15 +494,15 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
       ),
       title: Text(
         author['display_name'] as String? ?? '',
-        style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 14),
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (body.isNotEmpty)
-            Text(body, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+            Text(body, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
           const SizedBox(height: 2),
-          Text('$reactions reactions', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+          Text('$reactions reactions', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
         ],
       ),
     );
@@ -531,7 +531,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
           children: [
             Flexible(
               child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 14)),
             ),
             if (badgeColor != null) ...[
               const SizedBox(width: 6),
@@ -552,12 +552,12 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('@$username', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+            Text('@$username', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
             if (bio.isNotEmpty)
-              Text(bio, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+              Text(bio, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
             Text(
               [if (followers > 0) '$followers followers', if (buddies > 0) '$buddies buddies', if (city.isNotEmpty) city].join(' · '),
-              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
             ),
           ],
         ),
@@ -584,10 +584,10 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
           leading: const Icon(Icons.confirmation_number, color: BuddyColors.gold),
           title: Text(
             '$discount  "$code"',
-            style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 14),
           ),
           subtitle: desc.isNotEmpty
-              ? Text(desc, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13))
+              ? Text(desc, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13))
               : null,
           trailing: const Text('Use offer', style: TextStyle(color: BuddyColors.green, fontSize: 12)),
         ),
@@ -599,8 +599,8 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
       color: BuddyColors.surface,
       child: ListTile(
         leading: const Icon(Icons.event_available, color: BuddyColors.green),
-        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-        subtitle: const Text('Free event', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 14)),
+        subtitle: Text('Free event', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
         trailing: const Text('View', style: TextStyle(color: BuddyColors.green, fontSize: 12)),
       ),
     );
@@ -619,7 +619,7 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Icon(icon, size: 16, color: BuddyColors.green),
         const SizedBox(width: 6),
-        Text(title, style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+        Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 14)),
       ],
     );
   }
@@ -651,7 +651,7 @@ class _SuggestionChip extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12),
               ),
             ],
           ),

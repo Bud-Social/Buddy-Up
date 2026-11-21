@@ -165,7 +165,7 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
     // rather than tinted as one. Without this a lifted ban keeps looking like
     // an active ban on the account's record.
     final tint = notice.reversed
-        ? BuddyColors.textSecondary
+        ? Theme.of(context).colorScheme.onSurfaceVariant
         : notice.restrictsAccess
             ? BuddyColors.red
             : BuddyColors.gold;
@@ -402,7 +402,7 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
                 tooltip: 'Remove from my profile',
                 onPressed: () => _deleteCommendation(commendation),
                 icon: const Icon(Icons.delete_outline, size: 18),
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 visualDensity: VisualDensity.compact,
               ),
             ],
@@ -700,7 +700,7 @@ class _AppealSheetState extends State<_AppealSheet> {
               onPressed: !_ready ? null : () => Navigator.pop(context, _controller.text),
               style: FilledButton.styleFrom(
                 backgroundColor: BuddyColors.green,
-                foregroundColor: BuddyColors.black,
+                foregroundColor: Theme.of(context).colorScheme.surface,
               ),
               icon: const Icon(Icons.send, size: 16),
               label: const Text('Submit appeal', style: TextStyle(fontSize: 13)),

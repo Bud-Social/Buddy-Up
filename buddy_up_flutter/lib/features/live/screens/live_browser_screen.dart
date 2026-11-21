@@ -102,7 +102,7 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
         label[0].toUpperCase() + label.substring(1),
         style: TextStyle(
           fontSize: 12,
-          color: isActive ? BuddyColors.black : BuddyColors.textSecondary,
+          color: isActive ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.onSurfaceVariant,
           fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
@@ -138,7 +138,7 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
                   labels[i],
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: isActive ? BuddyColors.textPrimary : BuddyColors.textSecondary,
+                    color: isActive ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                     fontSize: 13,
                   ),
@@ -157,13 +157,13 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
       return ErrorView(message: state.error!, onRetry: () => ref.read(liveBrowserProvider.notifier).browse());
     }
     if (state.lives.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.videocam_off, size: 48, color: BuddyColors.textSecondary),
+            Icon(Icons.videocam_off, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
             SizedBox(height: 12),
-            Text('No lives found', style: TextStyle(color: BuddyColors.textSecondary)),
+            Text('No lives found', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),
       );

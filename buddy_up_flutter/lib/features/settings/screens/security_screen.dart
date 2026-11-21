@@ -174,7 +174,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                     totpEnabled
                         ? 'Your account is protected with an authenticator app.'
                         : 'Add an extra layer of security to your account.',
-                    style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                   ),
                   const SizedBox(height: 12),
                   if (totpEnabled) ...[
@@ -211,9 +211,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                   secondary: const Icon(Icons.fingerprint, size: 22, color: BuddyColors.green),
                   title: const Text('Biometric App Lock',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'Require fingerprint or face unlock when opening BuddyUp.',
-                    style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                   ),
                   value: biometric.enabled,
                   onChanged: (on) async {
@@ -253,8 +253,8 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
               Text('Could not load sessions: $_sessionsError',
                   style: const TextStyle(color: BuddyColors.red, fontSize: 13))
             else if (_sessions.isEmpty)
-              const Text('No other sessions found.',
-                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13))
+              Text('No other sessions found.',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13))
             else
               ..._sessions.map(_sessionTile),
             const SizedBox(height: 12),
@@ -285,7 +285,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
           Icon(
             session.isCurrent ? Icons.phone_android : Icons.devices_other,
             size: 22,
-            color: session.isCurrent ? BuddyColors.green : BuddyColors.textSecondary,
+            color: session.isCurrent ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -303,7 +303,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                     if (session.ipAddress.isNotEmpty) session.ipAddress,
                     if (session.lastActive.isNotEmpty) 'Last active ${_formatDate(session.lastActive)}',
                   ].join(' · '),
-                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),

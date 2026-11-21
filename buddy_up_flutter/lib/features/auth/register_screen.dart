@@ -465,7 +465,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             : _usernameStatus == 'taken' ||
                                   _usernameStatus == 'invalid'
                             ? Colors.red
-                            : BuddyColors.textSecondary,
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -490,12 +490,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   keyboardType: TextInputType.phone,
                   prefixIcon: Icons.phone_outlined,
                 ),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(top: 4, left: 4),
                   child: Text(
                     'Optional. Leave it blank if you prefer.',
                     style: TextStyle(
-                      color: BuddyColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 11,
                     ),
                   ),
@@ -533,13 +533,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   child: InputDecorator(
                     decoration: InputDecoration(
                       labelText: 'Date of Birth',
-                      labelStyle: const TextStyle(
-                        color: BuddyColors.textSecondary,
+                      labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Icons.cake_outlined,
                         size: 18,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       filled: true,
                       fillColor: BuddyColors.surface,
@@ -555,8 +555,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       style: TextStyle(
                         fontSize: 15,
                         color: _dob == null
-                            ? BuddyColors.textSecondary
-                            : BuddyColors.textPrimary,
+                            ? Theme.of(context).colorScheme.onSurfaceVariant
+                            : Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -588,11 +588,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
+                        Text(
                           'Because you are 16 or 17, we need a parent or guardian. '
                           'Provide at least one contact (name, email or phone).',
                           style: TextStyle(
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -687,7 +687,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   fullWidth: true,
                 ),
                 const SizedBox(height: 16),
-                const Row(
+                Row(
                   children: [
                     Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
                     Padding(
@@ -695,7 +695,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       child: Text(
                         'OR',
                         style: TextStyle(
-                          color: BuddyColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
                         ),
                       ),
@@ -725,10 +725,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'Already have an account? ',
                       style: TextStyle(
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 14,
                       ),
                     ),
@@ -776,7 +776,7 @@ class _RoleApplyNotice extends StatelessWidget {
           BorderSide(color: BuddyColors.surfaceRaised),
         ),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -792,7 +792,7 @@ class _RoleApplyNotice extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: BuddyColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -805,7 +805,7 @@ class _RoleApplyNotice extends StatelessWidget {
             'members of staff to approve before it takes effect.',
             style: TextStyle(
               fontSize: 11,
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               height: 1.4,
             ),
           ),

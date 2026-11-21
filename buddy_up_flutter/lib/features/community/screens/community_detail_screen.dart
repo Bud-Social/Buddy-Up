@@ -450,7 +450,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
           asyncState.value?.detail?.myRole != null && _tab == 0
           ? FloatingActionButton(
               backgroundColor: BuddyColors.green,
-              foregroundColor: BuddyColors.black,
+              foregroundColor: Theme.of(context).colorScheme.surface,
               onPressed: () => _openPostComposer(
                 asyncState.value?.detail?.groupName ?? 'Community',
               ),

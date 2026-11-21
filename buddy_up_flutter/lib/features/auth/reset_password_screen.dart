@@ -114,9 +114,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       children: [
         const Icon(Icons.check_circle, size: 64, color: BuddyColors.green),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'Password reset successful!',
-          style: TextStyle(color: BuddyColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 24),
         BuddyButton(

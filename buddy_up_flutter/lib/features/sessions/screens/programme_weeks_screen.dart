@@ -44,7 +44,7 @@ class ProgrammeWeeksScreen extends ConsumerWidget {
                       const SizedBox(width: 16),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         const Text('Progress', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text('$completed/${weeks.length} weeks completed', style: const TextStyle(color: BuddyColors.textSecondary)),
+                        Text('$completed/${weeks.length} weeks completed', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                       ])),
                     ]),
                   ),
@@ -59,7 +59,7 @@ class ProgrammeWeeksScreen extends ConsumerWidget {
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: w.isCompleted ? BuddyColors.green.withValues(alpha: 0.2) : BuddyColors.surfaceRaised,
-                        child: Icon(w.isCompleted ? Icons.check_circle : Icons.lock_outline, color: w.isCompleted ? BuddyColors.green : BuddyColors.textSecondary, size: 20),
+                        child: Icon(w.isCompleted ? Icons.check_circle : Icons.lock_outline, color: w.isCompleted ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
                       ),
                       title: Text('Week ${w.weekNumber}: ${w.title}'),
                       subtitle: Text(w.description, maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -100,7 +100,7 @@ class MyEnrollmentsScreen extends ConsumerWidget {
       body: enrollmentsAsync.when(
         data: (enrollments) {
           if (enrollments.isEmpty) {
-            return const Center(child: Text('No enrolled programmes', style: TextStyle(color: BuddyColors.textSecondary)));
+            return Center(child: Text('No enrolled programmes', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)));
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -135,7 +135,7 @@ class MyEnrollmentsScreen extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Text('${e.completedWeeks}/${e.totalWeeks}', style: const TextStyle(fontSize: 13, color: BuddyColors.textSecondary)),
+                          Text('${e.completedWeeks}/${e.totalWeeks}', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                         ]),
                       ],
                     ),

@@ -107,21 +107,21 @@ class _FamilyAcceptScreenState extends ConsumerState<FamilyAcceptScreen> {
                     color: BuddyColors.green,
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Sign in to accept this invite',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: BuddyColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'You will be brought straight back here after signing in.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: BuddyColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 13,
                     ),
                   ),
@@ -179,10 +179,10 @@ class _FamilyAcceptScreenState extends ConsumerState<FamilyAcceptScreen> {
                                 ),
                               )
                             else ...[
-                              const Text(
+                              Text(
                                 'Welcome to BuddyUp Fit! Set a password to activate the account linked to your guardian.',
                                 style: TextStyle(
-                                  color: BuddyColors.textSecondary,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                   fontSize: 13,
                                   height: 1.5,
                                 ),

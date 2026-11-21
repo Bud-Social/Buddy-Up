@@ -115,13 +115,13 @@ class _NotRegistered extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'This page needs a courier record: the vehicle you use, the '
                 'areas you deliver in, and whether you are accepting work. '
                 'Register once and every delivery assigned to you appears here.',
                 style: TextStyle(
                   fontSize: 13,
-                  color: BuddyColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.4,
                 ),
               ),
@@ -263,15 +263,15 @@ class _ProfileCardState extends ConsumerState<_ProfileCard> {
             ),
           ]),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'Service zones',
-            style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 6),
           if (zones.isEmpty)
-            const Text(
+            Text(
               'No zones assigned yet',
-              style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary),
+              style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
             )
           else
             Wrap(
@@ -293,8 +293,8 @@ class _ProfileCardState extends ConsumerState<_ProfileCard> {
               profile.active
                   ? 'You have an order in progress right now.'
                   : 'Pause when you are unavailable.',
-              style: const TextStyle(
-                  fontSize: 11, color: BuddyColors.textSecondary),
+              style: TextStyle(
+                  fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
           if (_busy)
@@ -360,12 +360,12 @@ class _NoOrders extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const RoleCard(
+    return RoleCard(
       padding: EdgeInsets.all(24),
       child: Column(
         children: [
           Icon(Icons.inventory_2_outlined,
-              color: BuddyColors.textSecondary, size: 28),
+              color: Theme.of(context).colorScheme.onSurfaceVariant, size: 28),
           SizedBox(height: 10),
           Text(
             'No assigned orders.',
@@ -375,7 +375,7 @@ class _NoOrders extends StatelessWidget {
           Text(
             'New deliveries appear here as soon as a shop assigns one to you.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -410,8 +410,8 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
         children: [
           Row(
             children: [
-              const Icon(Icons.inventory_2_outlined,
-                  size: 15, color: BuddyColors.textSecondary),
+              Icon(Icons.inventory_2_outlined,
+                  size: 15, color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -459,9 +459,9 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                     Text(
                       '×${item.quantity}'
                       '${item.creatorName.isEmpty ? '' : ' · ${item.creatorName}'}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -472,20 +472,20 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
             const SizedBox(height: 10),
             Text(
               'Commission on this order ≈ \$${commission.toStringAsFixed(2)}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
           const Divider(height: 20),
           if (order.allowedTransitions.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(top: 2),
               child: Text(
                 'No status changes available from here.',
                 style: TextStyle(
-                    fontSize: 12, color: BuddyColors.textSecondary),
+                    fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             )
           else
@@ -630,10 +630,10 @@ class _EarningsCard extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Estimated commission',
                           style: TextStyle(
-                              fontSize: 12, color: BuddyColors.textSecondary),
+                              fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -670,9 +670,9 @@ class _EarningsCard extends ConsumerWidget {
               const SizedBox(height: 12),
               Text(
                 courierEarningsNote(data),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
-                  color: BuddyColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.4,
                 ),
               ),
@@ -681,9 +681,9 @@ class _EarningsCard extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     'Window: $window',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: BuddyColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -706,7 +706,7 @@ class _MetaRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 13, color: BuddyColors.textSecondary),
+        Icon(icon, size: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
         const SizedBox(width: 6),
         Expanded(
           child: Text(

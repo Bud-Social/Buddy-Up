@@ -93,10 +93,10 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Choose a reason',
                   style: TextStyle(
-                    color: BuddyColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 14,
                   ),
                 ),
@@ -123,7 +123,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                         labelStyle: TextStyle(
                           color: _creatingTemplateId == t.id
                               ? _colorFor(t)
-                              : BuddyColors.textSecondary,
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
                         ),
                         shape: RoundedRectangleBorder(
@@ -147,11 +147,11 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Target (optional)',
                         style: TextStyle(
-                          color: BuddyColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 14,
                         ),
                       ),
@@ -166,7 +166,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                         decoration: InputDecoration(
                           hintText: '0 = no target',
                           hintStyle: TextStyle(
-                            color: BuddyColors.textSecondary.withValues(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(
                               alpha: 0.5,
                             ),
                           ),
@@ -206,7 +206,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                       child: OutlinedButton(
                         onPressed: isLoading ? null : () => Navigator.pop(ctx),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: BuddyColors.textSecondary,
+                          foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
                           side: const BorderSide(color: BuddyColors.border),
                           minimumSize: const Size(double.infinity, 44),
                         ),
@@ -252,7 +252,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                             },
                         style: FilledButton.styleFrom(
                           backgroundColor: BuddyColors.green,
-                          foregroundColor: BuddyColors.black,
+                          foregroundColor: Theme.of(context).colorScheme.surface,
                           minimumSize: const Size(double.infinity, 44),
                         ),
                         child: isLoading
@@ -285,7 +285,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
       decoration: InputDecoration(
         hintText: 'e.g. Days without coffee',
         hintStyle: TextStyle(
-          color: BuddyColors.textSecondary.withValues(alpha: 0.5),
+          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -307,7 +307,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
     final state = ref.watch(countdownsProvider);
 
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Countdowns & Streaks'),
         centerTitle: false,
@@ -335,7 +335,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: ref.watch(countdownsProvider).isLoading ? null : _showCreateSheet,
         backgroundColor: BuddyColors.green,
-        foregroundColor: BuddyColors.black,
+        foregroundColor: Theme.of(context).colorScheme.surface,
         child: const Icon(Icons.add),
       ),
     );
@@ -370,10 +370,10 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
       children: [
         // Active countdowns section
         if (active.isNotEmpty) ...[
-          const Text(
+          Text(
             'Active',
             style: TextStyle(
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -384,10 +384,10 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
         ],
         // Completed countdowns section
         if (completed.isNotEmpty) ...[
-          const Text(
+          Text(
             'Completed',
             style: TextStyle(
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -396,24 +396,24 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
           ...completed.map((c) => _countdownCard(c, isCompleted: true)),
         ],
         if (state.countdowns.isEmpty)
-          const Center(
+          Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.timer_outlined,
-                    size: 64, color: BuddyColors.textSecondary),
+                    size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 SizedBox(height: 16),
                 Text(
                   'No countdowns yet',
                   style: TextStyle(
-                    color: BuddyColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 18,
                   ),
                 ),
                 SizedBox(height: 8),
                 Text(
                   'Track sobriety, gym attendance, walking days and more.',
-                  style: TextStyle(color: BuddyColors.textSecondary),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -475,8 +475,8 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                           c.templateDetail!.description.isNotEmpty)
                         Text(
                           c.templateDetail!.description,
-                          style: const TextStyle(
-                            color: BuddyColors.textSecondary,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                           maxLines: 1,
@@ -532,15 +532,15 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                 if (c.targetCount > 0)
                   Text(
                     'of ${c.targetCount}',
-                    style: const TextStyle(
-                      color: BuddyColors.textSecondary,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 13,
                     ),
                   ),
                 Text(
                   'Day ${c.daysSinceStart}',
-                  style: const TextStyle(
-                    color: BuddyColors.textSecondary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 13,
                   ),
                 ),
@@ -571,7 +571,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                     icon: const Icon(Icons.edit, size: 16),
                     label: const Text('Edit'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: BuddyColors.textSecondary,
+                      foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
                       side: const BorderSide(color: BuddyColors.border),
                       minimumSize: const Size(double.infinity, 36),
                       padding: EdgeInsets.zero,
@@ -598,7 +598,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
             Text(
               'Started ${_formatDate(c.startDate)}',
               style: TextStyle(
-                color: BuddyColors.textSecondary.withValues(alpha: 0.7),
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                 fontSize: 11,
               ),
             ),
@@ -629,9 +629,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: BuddyColors.surface,
         title: const Text('Reset countdown?'),
-        content: const Text(
+        content: Text(
           'This will set your progress back to zero.',
-          style: TextStyle(color: BuddyColors.textSecondary),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
@@ -642,7 +642,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: BuddyColors.black,
+              foregroundColor: Theme.of(context).colorScheme.surface,
             ),
             child: const Text('Reset'),
           ),
@@ -686,10 +686,10 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Reason',
               style: TextStyle(
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 14,
               ),
             ),
@@ -700,7 +700,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
               decoration: InputDecoration(
                 hintText: c.displayReason,
                 hintStyle: TextStyle(
-                  color: BuddyColors.textSecondary.withValues(alpha: 0.5),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -718,11 +718,11 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Target',
                     style: TextStyle(
-                      color: BuddyColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 14,
                     ),
                   ),
@@ -739,7 +739,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                     decoration: InputDecoration(
                       hintText: '0 = no target',
                       hintStyle: TextStyle(
-                        color: BuddyColors.textSecondary.withValues(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(
                           alpha: 0.5,
                         ),
                       ),
@@ -777,7 +777,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(ctx),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: BuddyColors.textSecondary,
+                      foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
                       side: const BorderSide(color: BuddyColors.border),
                       minimumSize: const Size(double.infinity, 44),
                     ),
@@ -811,7 +811,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                         },
                     style: FilledButton.styleFrom(
                       backgroundColor: BuddyColors.green,
-                      foregroundColor: BuddyColors.black,
+                      foregroundColor: Theme.of(context).colorScheme.surface,
                       minimumSize: const Size(double.infinity, 44),
                     ),
                     child: const Text('Save'),

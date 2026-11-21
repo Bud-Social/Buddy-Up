@@ -112,7 +112,7 @@ class _AvailabilityScreenState extends ConsumerState<AvailabilityScreen> {
             availAsync.when(
               data: (slots) {
                 if (slots.isEmpty) {
-                  return const Text('No availability set', style: TextStyle(color: BuddyColors.textSecondary));
+                  return Text('No availability set', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant));
                 }
                 return Column(
                   children: slots.map((s) => Card(

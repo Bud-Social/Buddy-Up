@@ -485,7 +485,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         label: 'Pending',
         icon: LucideIcons.hourglass,
         bg: BuddyColors.surfaceRaised,
-        fg: BuddyColors.textSecondary,
+        fg: Theme.of(context).colorScheme.onSurfaceVariant,
         border: BuddyColors.border,
         isHighlighted: false,
       );
@@ -495,7 +495,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         label: 'Accept Buddy',
         icon: LucideIcons.circleCheck,
         bg: BuddyColors.green,
-        fg: BuddyColors.black,
+        fg: Theme.of(context).colorScheme.surface,
         border: null,
         isHighlighted: true,
       );
@@ -504,7 +504,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       label: 'Buddy Up',
       icon: LucideIcons.userRoundPlus,
       bg: BuddyColors.green,
-      fg: BuddyColors.black,
+      fg: Theme.of(context).colorScheme.surface,
       border: null,
       isHighlighted: false,
     );
@@ -512,11 +512,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
 
   Widget _buildLockedCard(Profile p) {
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: BuddyColors.black,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        foregroundColor: BuddyColors.textPrimary,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
       ),
       body: Center(
         child: Column(
@@ -540,8 +540,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             const SizedBox(height: 14),
             Text(
               p.displayName,
-              style: const TextStyle(
-                color: BuddyColors.textPrimary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -549,8 +549,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             const SizedBox(height: 2),
             Text(
               '@${p.username}',
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
               ),
             ),
@@ -578,18 +578,20 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'This account is private',
                           style: TextStyle(
-                            color: BuddyColors.textPrimary,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontWeight: FontWeight.w700,
                             fontSize: 13,
                           ),
                         ),
                         Text(
                           'Only buddies can see @${p.username}\'s posts and stories.',
-                          style: const TextStyle(
-                            color: BuddyColors.textSecondary,
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -626,7 +628,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     final p = _profile!;
 
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxScrolled) => [
           _buildSliverAppBar(p),
@@ -642,7 +644,9 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
               TabBar(
                 controller: _tabController,
                 labelColor: BuddyColors.green,
-                unselectedLabelColor: BuddyColors.textSecondary,
+                unselectedLabelColor: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant,
                 indicatorColor: BuddyColors.green,
                 indicatorSize: TabBarIndicatorSize.label,
                 tabs: [
@@ -672,7 +676,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     return SliverAppBar(
       expandedHeight: _kCoverHeight,
       pinned: true,
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       leading: IconButton(
         icon: const Icon(LucideIcons.arrowLeft, size: 20),
         onPressed: () => context.pop(),
@@ -713,9 +717,12 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   }
 
   Widget _coverGradient() => Container(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       gradient: LinearGradient(
-        colors: [Color(0xFF1a3a2a), BuddyColors.black],
+        colors: [
+          const Color(0xFF1a3a2a),
+          Theme.of(context).colorScheme.surface,
+        ],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -735,7 +742,10 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: BuddyColors.black, width: 4),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.surface,
+                  width: 4,
+                ),
               ),
               child: Avatar(
                 src: p.avatarUrl.isNotEmpty ? p.avatarUrl : null,
@@ -757,10 +767,10 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                       Flexible(
                         child: Text(
                           p.displayName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: BuddyColors.textPrimary,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -773,16 +783,16 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   ),
                   Text(
                     '@${p.username}',
-                    style: const TextStyle(
-                      color: BuddyColors.textSecondary,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 13,
                     ),
                   ),
                   if (p.pronouns.isNotEmpty)
                     Text(
                       p.pronouns,
-                      style: const TextStyle(
-                        color: BuddyColors.textSecondary,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -864,16 +874,16 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       children: [
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.bold,
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(
-            color: BuddyColors.textSecondary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 11,
           ),
         ),
@@ -949,8 +959,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   ? BuddyColors.surfaceRaised
                   : BuddyColors.green,
               foregroundColor: p.isFollowing
-                  ? BuddyColors.textPrimary
-                  : BuddyColors.black,
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).colorScheme.surface,
               borderColor: p.isFollowing ? BuddyColors.border : null,
               onPressed: _handleFollow,
               isLoading: _followLoading,
@@ -976,7 +986,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             label: 'Message',
             icon: LucideIcons.messageCircle,
             backgroundColor: BuddyColors.surfaceRaised,
-            foregroundColor: BuddyColors.textPrimary,
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
             borderColor: BuddyColors.border,
             onPressed: _openMessage,
           ),
@@ -1036,8 +1046,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
       child: Text(
         p.bio,
-        style: const TextStyle(
-          color: BuddyColors.textSecondary,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 14,
           height: 1.5,
         ),
@@ -1130,7 +1140,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     VoidCallback? onTap,
     Color? color,
   }) {
-    final fg = color ?? BuddyColors.textSecondary;
+    final fg = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
     final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -1193,13 +1203,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             _sheetTile(
               LucideIcons.flag,
               'Report profile',
-              BuddyColors.textSecondary,
+              Theme.of(context).colorScheme.onSurfaceVariant,
               () => Navigator.pop(context),
             ),
             _sheetTile(
               LucideIcons.share2,
               'Share profile',
-              BuddyColors.textSecondary,
+              Theme.of(context).colorScheme.onSurfaceVariant,
               () {
                 Navigator.pop(context);
                 Clipboard.setData(
@@ -1250,13 +1260,17 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             Icon(
               isReposts ? LucideIcons.repeat2 : LucideIcons.rss,
               size: 48,
-              color: BuddyColors.textSecondary.withValues(alpha: 0.25),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.25),
             ),
             const SizedBox(height: 12),
             Text(
               isReposts ? 'No reposts yet' : 'No posts yet',
               style: TextStyle(
-                color: BuddyColors.textSecondary.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                 fontSize: 15,
               ),
             ),
@@ -1317,13 +1331,17 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             Icon(
               LucideIcons.puzzle,
               size: 48,
-              color: BuddyColors.textSecondary.withValues(alpha: 0.25),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.25),
             ),
             const SizedBox(height: 12),
             Text(
               'No fitness interests or tags found yet',
               style: TextStyle(
-                color: BuddyColors.textSecondary.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -1383,7 +1401,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   (t) => _interestPill(
                     LucideIcons.tag,
                     t,
-                    BuddyColors.textSecondary,
+                    Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 )
                 .toList(),
@@ -1399,8 +1417,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: BuddyColors.textPrimary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
@@ -1518,7 +1536,7 @@ class _StickyTabBar extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: BuddyColors.black,
+      color: Theme.of(context).colorScheme.surface,
       child: Column(
         children: [
           tabBar,

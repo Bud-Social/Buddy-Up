@@ -57,14 +57,14 @@ class _GymListScreenState extends ConsumerState<GymListScreen> {
             padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _searchController,
-              style: const TextStyle(color: BuddyColors.textPrimary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: 'Search gyms...',
-                hintStyle: const TextStyle(color: BuddyColors.textSecondary),
-                prefixIcon: const Icon(Icons.search, color: BuddyColors.textSecondary, size: 20),
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, color: BuddyColors.textSecondary, size: 18),
+                        icon: Icon(Icons.clear, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 18),
                         onPressed: () {
                           _searchController.clear();
                           _debounce?.cancel();
@@ -112,7 +112,7 @@ class _GymListScreenState extends ConsumerState<GymListScreen> {
                       },
                       selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                       labelStyle: TextStyle(
-                        color: isActive ? BuddyColors.green : BuddyColors.textSecondary,
+                        color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -134,7 +134,7 @@ class _GymListScreenState extends ConsumerState<GymListScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: BuddyColors.green,
         onPressed: () => context.push('/gyms/create'),
-        child: const Icon(Icons.add, color: BuddyColors.black),
+        child: Icon(Icons.add, color: Theme.of(context).colorScheme.surface),
       ),
     );
   }
@@ -145,8 +145,8 @@ class _GymListScreenState extends ConsumerState<GymListScreen> {
       return ErrorView(message: state.error!, onRetry: () => ref.read(gymListProvider.notifier).loadGyms());
     }
     if (state.gyms.isEmpty) {
-      return const Center(
-        child: Text('No gyms found', style: TextStyle(color: BuddyColors.textSecondary)),
+      return Center(
+        child: Text('No gyms found', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
       );
     }
     return ListView.builder(
@@ -179,7 +179,7 @@ class _FormatTabs extends ConsumerWidget {
                   onSelected: (_) => notifier.loadGyms(format: f),
                   selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                   labelStyle: TextStyle(
-                    color: state.formatFilter == f ? BuddyColors.green : BuddyColors.textSecondary,
+                    color: state.formatFilter == f ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 12,
                   ),
                 ),
@@ -188,7 +188,7 @@ class _FormatTabs extends ConsumerWidget {
           IconButton(
             icon: Icon(
               Icons.near_me,
-              color: state.lat != null ? BuddyColors.green : BuddyColors.textSecondary,
+              color: state.lat != null ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             tooltip: state.lat != null ? 'Using your location' : 'Use my location',
             onPressed: () async {
@@ -270,12 +270,12 @@ class _NearbyNotice extends ConsumerWidget {
               children: [
                 Text(
                   'Nearby: ${geo.radiusKm.toStringAsFixed(0)} km · ${geo.density == 'dense' ? 'lots around you' : 'fewer around you'}',
-                  style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   geo.message!,
-                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
                 ),
               ],
             ),

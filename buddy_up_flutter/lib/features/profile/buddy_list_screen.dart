@@ -81,7 +81,7 @@ class _BuddyListScreenState extends State<BuddyListScreen>
           controller: _tabController,
           indicatorColor: BuddyColors.green,
           labelColor: BuddyColors.green,
-          unselectedLabelColor: BuddyColors.textSecondary,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
           tabs: const [
             Tab(text: 'Buddies'),
             Tab(text: 'Followers'),
@@ -113,12 +113,12 @@ class _BuddyListScreenState extends State<BuddyListScreen>
             Icon(
               Icons.people_outline,
               size: 48,
-              color: BuddyColors.textSecondary.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Nothing here yet',
-              style: TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -137,15 +137,15 @@ class _BuddyListScreenState extends State<BuddyListScreen>
           leading: Avatar(src: avatarUrl, alt: name, size: AvatarSize.md),
           title: Text(
             name,
-            style: const TextStyle(
-              color: BuddyColors.textPrimary,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w500,
             ),
           ),
           subtitle: Text(
             '@$username',
-            style: const TextStyle(
-              color: BuddyColors.textSecondary,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 13,
             ),
           ),

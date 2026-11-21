@@ -84,12 +84,12 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
               const SizedBox(height: 32),
               const Icon(Icons.calendar_today, size: 64, color: BuddyColors.green),
               const SizedBox(height: 24),
-              const Text(
+              Text(
                 'Please enter your date of birth to continue. If your age is '
                 'challenged, you can confirm it with a photo of your ID or '
                 'passport in Settings → Verifications after sign-up.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -126,7 +126,7 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
                             ? '${_selectedDate!.month}/${_selectedDate!.day}/${_selectedDate!.year}'
                             : 'Tap to select date of birth',
                         style: TextStyle(
-                          color: _selectedDate != null ? BuddyColors.textPrimary : BuddyColors.textSecondary,
+                          color: _selectedDate != null ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 16,
                         ),
                       ),
@@ -136,13 +136,13 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'ID and passport photos are used only to confirm your age. '
                 'They are deleted automatically after an admin decision '
                 '(usually within 30 days) and only non-identifying metadata '
                 'is kept.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
               ),
               const SizedBox(height: 20),
               BuddyButton(

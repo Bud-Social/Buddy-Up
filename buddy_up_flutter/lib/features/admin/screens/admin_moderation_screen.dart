@@ -516,7 +516,7 @@ class _AdminModerationScreenState extends ConsumerState<AdminModerationScreen> {
           onPressed: () => _openIssueActionSheet(context),
           style: FilledButton.styleFrom(
             backgroundColor: BuddyColors.green,
-            foregroundColor: BuddyColors.black,
+            foregroundColor: Theme.of(context).colorScheme.surface,
           ),
           icon: const Icon(Icons.gavel, size: 16),
           label: const Text('Issue a warning, suspension or ban',
@@ -1191,7 +1191,7 @@ class _IssueActionSheetState extends State<_IssueActionSheet> {
                       ),
               style: FilledButton.styleFrom(
                 backgroundColor: BuddyColors.green,
-                foregroundColor: BuddyColors.black,
+                foregroundColor: Theme.of(context).colorScheme.surface,
               ),
               icon: const Icon(Icons.gavel, size: 16),
               label: Text(
@@ -1323,7 +1323,7 @@ class _CommendationSheetState extends State<_CommendationSheet> {
                               ),
                       style: FilledButton.styleFrom(
                         backgroundColor: BuddyColors.green,
-                        foregroundColor: BuddyColors.black,
+                        foregroundColor: Theme.of(context).colorScheme.surface,
                       ),
                       icon: const Icon(Icons.workspace_premium_outlined, size: 16),
                       label: const Text('Issue commendation',

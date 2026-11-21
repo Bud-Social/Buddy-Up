@@ -59,14 +59,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               Icon(
                 _sent ? Icons.check_circle : Icons.lock_reset,
                 size: 64,
-                color: _sent ? BuddyColors.green : BuddyColors.textSecondary,
+                color: _sent ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(height: 24),
               if (!_sent) ...[
-                const Text(
+                Text(
                   'Enter your email address and we\'ll send you a reset link.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
                 ),
                 const SizedBox(height: 24),
                 BuddyInput(
@@ -83,10 +83,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   fullWidth: true,
                 ),
               ] else ...[
-                const Text(
+                Text(
                   'Check your email for the reset link. If you don\'t see it, check your spam folder.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
                 ),
                 const SizedBox(height: 24),
                 BuddyButton(

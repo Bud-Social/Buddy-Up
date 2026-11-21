@@ -18,7 +18,7 @@ class ProgrammeDetailScreen extends ConsumerWidget {
 
     return programmeAsync.when(
       data: (programme) => Scaffold(
-        backgroundColor: BuddyColors.black,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         body: CustomScrollView(
           slivers: [
             // Hero cover
@@ -35,11 +35,11 @@ class ProgrammeDetailScreen extends ConsumerWidget {
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => Container(
                         color: BuddyColors.surfaceRaised,
-                        child: const Center(
+                        child: Center(
                           child: Icon(
                             LucideIcons.dumbbell,
                             size: 64,
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -153,8 +153,8 @@ class ProgrammeDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Text(
                       programme.description,
-                      style: const TextStyle(
-                        color: BuddyColors.textSecondary,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
@@ -219,8 +219,8 @@ class ProgrammeDetailScreen extends ConsumerWidget {
                           ),
                           Text(
                             '${programme.durationWeeks} weeks',
-                            style: const TextStyle(
-                              color: BuddyColors.textSecondary,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 12,
                             ),
                           ),
@@ -241,8 +241,8 @@ class ProgrammeDetailScreen extends ConsumerWidget {
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
                             '+ ${programme.durationWeeks - 6} more weeks...',
-                            style: const TextStyle(
-                              color: BuddyColors.textSecondary,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 12,
                             ),
                           ),
@@ -328,9 +328,9 @@ class _CreatorRow extends StatelessWidget {
             ),
             Text(
               '@${creator.username}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -416,9 +416,9 @@ class _WeekScheduleCard extends ConsumerWidget {
                     children: [
                       Text(
                         _days[dayIdx],
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
-                          color: BuddyColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -446,16 +446,16 @@ class _WeekScheduleCard extends ConsumerWidget {
                             size: 14,
                             color: isActive
                                 ? const Color(0xFF60A5FA)
-                                : BuddyColors.textSecondary,
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         isActive ? 'Train' : 'Rest',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 9,
-                          color: BuddyColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],

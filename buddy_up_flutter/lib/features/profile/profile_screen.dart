@@ -122,7 +122,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     // that is only right on first build.
     final savedAsync = ref.watch(savedPostsProvider);
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxScrolled) => [
           _buildAppBar(p),
@@ -137,7 +137,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               TabBar(
                 controller: _tabController,
                 labelColor: BuddyColors.green,
-                unselectedLabelColor: BuddyColors.textSecondary,
+                unselectedLabelColor: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant,
                 indicatorColor: BuddyColors.green,
                 indicatorSize: TabBarIndicatorSize.label,
                 tabs: [
@@ -169,7 +171,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     return SliverAppBar(
       expandedHeight: _kCoverHeight,
       pinned: true,
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       leading: IconButton(
         icon: const Icon(LucideIcons.menu),
         tooltip: 'Menu',
@@ -212,9 +214,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Widget _coverGradient() => Container(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       gradient: LinearGradient(
-        colors: [Color(0xFF132e20), BuddyColors.black],
+        colors: [
+          const Color(0xFF132e20),
+          Theme.of(context).colorScheme.surface,
+        ],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -231,7 +236,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: BuddyColors.black, width: 4),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.surface,
+                  width: 4,
+                ),
               ),
               child: Avatar(
                 src: p.avatarUrl.isNotEmpty ? p.avatarUrl : null,
@@ -251,10 +259,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     Flexible(
                       child: Text(
                         p.displayName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: BuddyColors.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -268,16 +276,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 if (p.pronouns.isNotEmpty)
                   Text(
                     p.pronouns,
-                    style: const TextStyle(
-                      color: BuddyColors.textSecondary,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 13,
                     ),
                   ),
                 const SizedBox(height: 2),
                 Text(
                   '@${p.username}',
-                  style: const TextStyle(
-                    color: BuddyColors.textSecondary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 14,
                   ),
                 ),
@@ -409,17 +417,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       children: [
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
-            color: BuddyColors.textSecondary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
           ),
         ),
@@ -442,8 +450,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       child: Text(
         p.bio,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: BuddyColors.textSecondary,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 14,
           height: 1.4,
         ),
@@ -515,7 +523,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     VoidCallback? onTap,
     Color? color,
   }) {
-    final fg = color ?? BuddyColors.textSecondary;
+    final fg = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
     final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -552,7 +560,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             Icon(
               isReposts ? LucideIcons.repeat2 : LucideIcons.rss,
               size: 48,
-              color: BuddyColors.textSecondary.withValues(alpha: 0.25),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.25),
             ),
             const SizedBox(height: 12),
             Text(
@@ -560,7 +570,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   ? 'You haven\'t reposted anything yet'
                   : 'You haven\'t posted anything yet',
               style: TextStyle(
-                color: BuddyColors.textSecondary.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                 fontSize: 15,
               ),
             ),
@@ -572,7 +584,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 label: const Text('Create First Post'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: BuddyColors.green,
-                  foregroundColor: BuddyColors.black,
+                  foregroundColor: Theme.of(context).colorScheme.surface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -673,7 +685,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   (t) => _interestBadge(
                     LucideIcons.tag,
                     t,
-                    BuddyColors.textSecondary,
+                    Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 )
                 .toList(),
@@ -684,12 +696,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           _interestBadge(
             LucideIcons.shield,
             'Privacy: ${p.privacyLevel.toUpperCase()}',
-            BuddyColors.textSecondary,
+            Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           _interestBadge(
             LucideIcons.eye,
             'Content Rating: ${p.contentRating.toUpperCase()}',
-            BuddyColors.textSecondary,
+            Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ]),
       ],
@@ -702,8 +714,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: BuddyColors.textPrimary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
@@ -758,28 +770,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       ),
       data: (posts) {
         if (posts.isEmpty) {
-          return const Center(
+          return Center(
             child: Padding(
-              padding: EdgeInsets.all(32),
+              padding: const EdgeInsets.all(32),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     LucideIcons.bookmark,
                     size: 40,
-                    color: BuddyColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   Text(
                     'No saved posts yet',
-                    style: TextStyle(color: BuddyColors.textSecondary),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Tap the bookmark on any post to keep it here.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: BuddyColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 12,
                     ),
                   ),
@@ -874,21 +888,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         ),
         title: Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
-            color: BuddyColors.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
-        trailing: const Icon(
+        trailing: Icon(
           LucideIcons.chevronRight,
-          color: BuddyColors.textSecondary,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
         onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -913,7 +927,7 @@ class _ProfileStickyTabBar extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: BuddyColors.black,
+      color: Theme.of(context).colorScheme.surface,
       child: Column(
         children: [
           tabBar,

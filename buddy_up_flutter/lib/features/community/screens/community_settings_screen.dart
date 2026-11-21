@@ -214,7 +214,7 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: const BoxDecoration(color: BuddyColors.green, shape: BoxShape.circle),
-                      child: const Icon(Icons.camera_alt, size: 16, color: BuddyColors.black),
+                      child: Icon(Icons.camera_alt, size: 16, color: Theme.of(context).colorScheme.surface),
                     ),
                   ),
                 ],
@@ -378,8 +378,8 @@ class _GymLinkRequestsSectionState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Gym Requests',
-            style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
+        Text('Gym Requests',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 2),
         Text(
           'Gyms asking to link with this community. Approve to connect them; decline to turn the ask down.',
@@ -470,12 +470,12 @@ class _GymLinkRequestTile extends StatelessWidget {
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(0, 30),
                         backgroundColor: BuddyColors.green,
-                        foregroundColor: BuddyColors.black,
+                        foregroundColor: Theme.of(context).colorScheme.surface,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                       ),
                       icon: busy
-                          ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, color: BuddyColors.black))
+                          ? SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, color: Theme.of(context).colorScheme.surface))
                           : const Icon(Icons.check, size: 14),
                       label: const Text('Approve'),
                     ),

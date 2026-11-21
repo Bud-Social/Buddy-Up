@@ -44,7 +44,7 @@ class _ProgrammeActivityFocusScreenState
         }
 
         return Scaffold(
-          backgroundColor: BuddyColors.black,
+          backgroundColor: Theme.of(context).colorScheme.surface,
           body: CustomScrollView(
             slivers: [
               _buildAppBar(activity),
@@ -115,7 +115,7 @@ class _ProgrammeActivityFocusScreenState
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: isSelected ? Colors.black : BuddyColors.textSecondary,
+                                      color: isSelected ? Colors.black : Theme.of(context).colorScheme.onSurfaceVariant,
                                     ),
                                   ),
                                 ),
@@ -141,7 +141,7 @@ class _ProgrammeActivityFocusScreenState
                             backgroundColor:
                                 _isCompleted ? BuddyColors.surfaceRaised : BuddyColors.green,
                             foregroundColor:
-                                _isCompleted ? BuddyColors.textSecondary : Colors.black,
+                                _isCompleted ? Theme.of(context).colorScheme.onSurfaceVariant : Colors.black,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14)),
@@ -184,13 +184,13 @@ class _ProgrammeActivityFocusScreenState
             ? Stack(fit: StackFit.expand, children: [
                 Container(
                   color: BuddyColors.surfaceRaised,
-                  child: const Column(
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.play_circle_outline, size: 56, color: BuddyColors.green),
                       SizedBox(height: 8),
                       Text('Tap to play video',
-                          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
                     ],
                   ),
                 ),
@@ -215,8 +215,8 @@ class _ProgrammeActivityFocusScreenState
                     ],
                   ),
                 ),
-                child: const Center(
-                  child: Icon(Icons.fitness_center, size: 48, color: BuddyColors.textSecondary),
+                child: Center(
+                  child: Icon(Icons.fitness_center, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ),
       ),
@@ -245,7 +245,7 @@ class _ProgrammeActivityFocusScreenState
               (activity['description'] as String?)?.isNotEmpty == true
                   ? activity['description'] as String
                   : 'No description provided.',
-              style: const TextStyle(color: BuddyColors.textSecondary, height: 1.6),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.6),
             ),
             if ((activity['relevance'] as String?)?.isNotEmpty == true) ...[
               const SizedBox(height: 16),
@@ -277,8 +277,8 @@ class _ProgrammeActivityFocusScreenState
                     style: const TextStyle(height: 1.7, fontSize: 14)),
               )
             else
-              const Text('Detailed instructions not provided.',
-                  style: TextStyle(color: BuddyColors.textSecondary)),
+              Text('Detailed instructions not provided.',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
             if ((activity['diy'] as String?)?.isNotEmpty == true) ...[
               const SizedBox(height: 16),
               _InfoBlock('DIY Modification', activity['diy'] as String,
@@ -302,8 +302,8 @@ class _ProgrammeActivityFocusScreenState
             ],
             if ((activity['tips'] == null || (activity['tips'] as String).isEmpty) &&
                 (activity['cautions'] == null || (activity['cautions'] as String).isEmpty))
-              const Text('No tips or cautions provided.',
-                  style: TextStyle(color: BuddyColors.textSecondary)),
+              Text('No tips or cautions provided.',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ]),
         );
 
@@ -363,9 +363,9 @@ class _StatChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(children: [
-        Icon(icon, size: 14, color: BuddyColors.textSecondary),
+        Icon(icon, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
         const SizedBox(width: 5),
-        Text(label, style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+        Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ]),
     );
   }

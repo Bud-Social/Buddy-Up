@@ -475,12 +475,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget _buildProfileStep() {
     return ListView(
       children: [
-        const Text(
+        Text(
           'Set up your profile',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
@@ -510,7 +510,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ? BuddyColors.red
                 : _usernameStatus == 'available'
                 ? BuddyColors.green
-                : BuddyColors.textSecondary,
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 12),
@@ -539,18 +539,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         .toList();
     return ListView(
       children: [
-        const Text(
+        Text(
           'Preview your profile',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'This is how other Buddies will see you. You can change any of it later in Settings.',
-          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
         ),
         const SizedBox(height: 16),
         Container(
@@ -588,16 +588,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           _displayName.text.trim().isEmpty
                               ? 'Your Name'
                               : _displayName.text.trim(),
-                          style: const TextStyle(
-                            color: BuddyColors.textPrimary,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
                           '@${_username.text.trim()}',
-                          style: const TextStyle(
-                            color: BuddyColors.textSecondary,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -610,8 +610,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 const SizedBox(height: 12),
                 Text(
                   _bio.text.trim(),
-                  style: const TextStyle(
-                    color: BuddyColors.textPrimary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 13,
                   ),
                 ),
@@ -646,7 +646,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     ),
     child: Text(
       label,
-      style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
     ),
   );
 
@@ -666,10 +666,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ),
         const SizedBox(height: 16),
         if (plan.suggestedWorkoutPlan != null) ...[
-          const Text(
+          Text(
             'RECOMMENDED WORKOUT PLAN',
             style: TextStyle(
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -677,8 +677,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           const SizedBox(height: 6),
           Text(
             '${plan.suggestedWorkoutPlan!.frequency} — ${plan.suggestedWorkoutPlan!.focus}',
-            style: const TextStyle(
-              color: BuddyColors.textPrimary,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -702,8 +702,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           if (item.$2 != null && item.$2!.isNotEmpty) ...[
             Text(
               item.$1,
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),
@@ -711,8 +711,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             const SizedBox(height: 4),
             Text(
               item.$2!,
-              style: const TextStyle(
-                color: BuddyColors.textPrimary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 13,
               ),
             ),
@@ -720,10 +720,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ],
         ],
         if (plan.recommendedTrainerSpecialties.isNotEmpty) ...[
-          const Text(
+          Text(
             'TRAINERS TO LOOK FOR',
             style: TextStyle(
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -744,18 +744,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget _buildAgeStep() {
     return ListView(
       children: [
-        const Text(
+        Text(
           'Confirm your date of birth',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Used only for age-appropriate content. We store a secure hash, never the date itself.',
-          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
         ),
         const SizedBox(height: 16),
         Container(
@@ -790,8 +790,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         : '${_dob!.day}/${_dob!.month}/${_dob!.year}',
                     style: TextStyle(
                       color: _dob == null
-                          ? BuddyColors.textSecondary
-                          : BuddyColors.textPrimary,
+                          ? Theme.of(context).colorScheme.onSurfaceVariant
+                          : Theme.of(context).colorScheme.onSurface,
                       fontSize: 15,
                     ),
                   ),
@@ -814,18 +814,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget _buildConsentStep() {
     return ListView(
       children: [
-        const Text(
+        Text(
           'Stay safe out there',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Please review and accept our policies to set up your account.',
-          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
         ),
         const SizedBox(height: 16),
         _consentRow(
@@ -877,8 +877,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     onTap: () => context.push(route),
                     child: Text(
                       label,
-                      style: const TextStyle(
-                        color: BuddyColors.textSecondary,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 14,
                         decoration: TextDecoration.underline,
                       ),
@@ -886,8 +886,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   )
                 : Text(
                     label,
-                    style: const TextStyle(
-                      color: BuddyColors.textSecondary,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 14,
                     ),
                   ),
@@ -907,16 +907,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Select all that apply',
-          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
         ),
         const SizedBox(height: 16),
         Expanded(
@@ -947,7 +947,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 labelStyle: TextStyle(
                   color: isSelected
                       ? BuddyColors.green
-                      : BuddyColors.textSecondary,
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               );
             }).toList(),
@@ -968,10 +968,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
@@ -999,7 +999,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   style: TextStyle(
                     color: isSelected
                         ? BuddyColors.green
-                        : BuddyColors.textPrimary,
+                        : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 trailing: isSelected

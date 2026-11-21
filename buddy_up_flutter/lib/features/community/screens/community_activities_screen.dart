@@ -40,7 +40,7 @@ class CommunityActivitiesScreen extends ConsumerWidget {
             ? Builder(
                 builder: (context) => FloatingActionButton(
                       backgroundColor: BuddyColors.green,
-                      foregroundColor: BuddyColors.black,
+                      foregroundColor: Theme.of(context).colorScheme.surface,
                       onPressed: () => _openCreate(context, ref),
                       child: const Icon(Icons.add),
                     ),
@@ -161,7 +161,7 @@ class CommunityActivitiesScreen extends ConsumerWidget {
         onSelected: (_) => onTap(),
         selectedColor: BuddyColors.green.withValues(alpha: 0.25),
         labelStyle: TextStyle(
-          color: selected ? BuddyColors.green : BuddyColors.textSecondary,
+          color: selected ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 11,
         ),
       );
@@ -265,7 +265,7 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: BuddyColors.green,
-                            foregroundColor: BuddyColors.black,
+                            foregroundColor: Theme.of(context).colorScheme.surface,
                           ),
                           onPressed: (titleC.text.trim().isEmpty || start == null || end == null)
                               ? null
@@ -407,7 +407,7 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: BuddyColors.green,
-                            foregroundColor: BuddyColors.black,
+                            foregroundColor: Theme.of(context).colorScheme.surface,
                           ),
                           onPressed: titleC.text.trim().isEmpty
                               ? null
@@ -597,7 +597,7 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: BuddyColors.green,
-                            foregroundColor: BuddyColors.black,
+                            foregroundColor: Theme.of(context).colorScheme.surface,
                           ),
                           onPressed: () async {
                             final notifier = ref.read(
@@ -938,9 +938,9 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 42, color: BuddyColors.textSecondary),
+          Icon(icon, size: 42, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 10),
-          Text(text, style: const TextStyle(color: BuddyColors.textSecondary)),
+          Text(text, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ],
       ),
     );

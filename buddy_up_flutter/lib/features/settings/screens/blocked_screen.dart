@@ -90,17 +90,17 @@ class _BlockedScreenState extends ConsumerState<BlockedScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('Could not load blocked accounts.',
-                              style: TextStyle(color: BuddyColors.textSecondary)),
+                          Text('Could not load blocked accounts.',
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                           TextButton(onPressed: _load, child: const Text('Retry')),
                         ],
                       ),
                 )
               : _blocked.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'You have not blocked anyone.',
-                        style: TextStyle(color: BuddyColors.textSecondary),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                     )
                   : RefreshIndicator(

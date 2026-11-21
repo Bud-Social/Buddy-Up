@@ -428,8 +428,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       : _step == LoginStep.otp
                       ? 'Enter the code sent to $_maskedEmail'
                       : 'Enter your authenticator code',
-                  style: const TextStyle(
-                    color: BuddyColors.textSecondary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 14,
                   ),
                 ),
@@ -485,7 +485,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             fullWidth: true,
           ),
           const SizedBox(height: 16),
-          const Row(
+          Row(
             children: [
               Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
               Padding(
@@ -493,7 +493,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Text(
                   'OR',
                   style: TextStyle(
-                    color: BuddyColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 12,
                   ),
                 ),
@@ -523,10 +523,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
+              Text(
                 "Don't have an account? ",
                 style: TextStyle(
-                  color: BuddyColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 14,
                 ),
               ),

@@ -113,13 +113,13 @@ class _BalanceHeader extends ConsumerWidget {
               ),
               Text(
                 '$headlineLabel · spendable',
-                style: const TextStyle(color: BuddyColors.textSecondary),
+                style: TextStyle(color: BuddyColors.textSecondary),
               ),
               if (earningsLabel.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
                   '$earningsLabel earnings',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: BuddyColors.textSecondary,
                     fontSize: 12,
                   ),
@@ -258,7 +258,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                   if (balance.regularBalance
                       .where((i) => i.quantity > 0)
                       .isEmpty)
-                    const Text(
+                    Text(
                       'No tokens in wallet.',
                       style: TextStyle(
                         color: BuddyColors.textSecondary,
@@ -269,7 +269,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                     '\$${balance.regularTotalFiat.toStringAsFixed(2)}'
                     '${balance.regularTotalLabel.isEmpty ? '' : ' · ${balance.regularTotalLabel}'}'
                     ' — spendable',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: BuddyColors.textSecondary,
                     ),
@@ -297,7 +297,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.edit,
                             size: 16,
                             color: BuddyColors.textSecondary,
@@ -360,7 +360,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                     if (balance.creatorBalance
                         .where((i) => i.quantity > 0)
                         .isEmpty)
-                      const Text(
+                      Text(
                         'No marketplace earnings yet.',
                         style: TextStyle(
                           color: BuddyColors.textSecondary,
@@ -371,7 +371,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                       '\$${balance.creatorTotalFiat.toStringAsFixed(2)}'
                       '${balance.creatorTotalLabel.isEmpty ? '' : ' · ${balance.creatorTotalLabel}'}'
                       ' — earnings',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: BuddyColors.textSecondary,
                       ),
@@ -693,7 +693,7 @@ class _SendTabState extends ConsumerState<_SendTab> {
             _selectedUsername != null
                 ? 'To: @$_selectedUsername'
                 : 'Search for a recipient or type a @username',
-            style: const TextStyle(
+            style: TextStyle(
               color: BuddyColors.textSecondary,
               fontSize: 12,
             ),
@@ -733,7 +733,7 @@ class _SendTabState extends ConsumerState<_SendTab> {
                     ),
                     title: Text(
                       name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: BuddyColors.textPrimary,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -741,7 +741,7 @@ class _SendTabState extends ConsumerState<_SendTab> {
                     ),
                     subtitle: Text(
                       '@$username',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: BuddyColors.textSecondary,
                         fontSize: 12,
                       ),
@@ -880,7 +880,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                         color: BuddyColors.textSecondary.withValues(alpha: 0.3),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
+                      Text(
                         'No transactions yet',
                         style: TextStyle(color: BuddyColors.textSecondary),
                       ),
@@ -926,7 +926,7 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                             if (tx.fiatAmount != null)
                               Text(
                                 '\$${tx.fiatAmount}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   color: BuddyColors.textSecondary,
                                 ),
@@ -1030,7 +1030,7 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Withdraw from',
             style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary),
           ),
@@ -1062,7 +1062,7 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
             keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Payout method',
             style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary),
           ),
@@ -1100,7 +1100,7 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Bank',
                       style: TextStyle(
                         fontSize: 13,
@@ -1151,7 +1151,7 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
             onPressed: _withdraw,
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Note: Withdrawals are processed via Flutterwave within 24-48 hours. Creator wallet funds require clearance before withdrawal.',
             style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
           ),

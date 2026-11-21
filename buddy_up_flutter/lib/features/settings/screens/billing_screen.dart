@@ -60,18 +60,18 @@ class BillingScreen extends ConsumerWidget {
                           Text(
                             'Spendable: ${data.fiatCurrency} '
                             '${data.regularTotalFiat.toStringAsFixed(2)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 12,
-                                color: BuddyColors.textSecondary),
+                                color: Theme.of(context).colorScheme.onSurfaceVariant),
                           ),
                           if (data.creatorTotalFiat > 0) ...[
                             const SizedBox(height: 4),
                             Text(
                               'Creator earnings: ${data.fiatCurrency} '
                               '${data.creatorTotalFiat.toStringAsFixed(2)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 12,
-                                  color: BuddyColors.textSecondary),
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant),
                             ),
                           ],
                           const SizedBox(height: 12),
@@ -101,12 +101,12 @@ class BillingScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Payments are processed through the wallet. Your '
                     'transaction history, top-ups and withdrawals all live in '
                     'the wallet screen.',
                     style: TextStyle(
-                        fontSize: 11, color: BuddyColors.textSecondary),
+                        fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),

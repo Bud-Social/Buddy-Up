@@ -132,7 +132,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: BuddyColors.surface,
         title: const Text('Create Shop'),
@@ -236,8 +236,8 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
           const Text('Basic Information',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text('Start with your shop name and handle.',
-              style: TextStyle(color: BuddyColors.textSecondary)),
+          Text('Start with your shop name and handle.',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           const SizedBox(height: 28),
           _buildField('Shop Name', _nameController, hint: 'e.g. FitLife by Coach John'),
           const SizedBox(height: 16),
@@ -268,8 +268,8 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
         children: [
           const Text('Branding', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text('Upload your shop logo and cover image.',
-              style: TextStyle(color: BuddyColors.textSecondary)),
+          Text('Upload your shop logo and cover image.',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           const SizedBox(height: 28),
           // Cover preview
           GestureDetector(
@@ -287,14 +287,14 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
               clipBehavior: Clip.antiAlias,
               child: _coverFile != null
                   ? Image.file(File(_coverFile!.path), fit: BoxFit.cover)
-                  : const Column(
+                  : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.add_photo_alternate_outlined,
-                            size: 40, color: BuddyColors.textSecondary),
+                            size: 40, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         SizedBox(height: 8),
                         Text('Tap to upload cover image',
-                            style: TextStyle(color: BuddyColors.textSecondary)),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                       ],
                     ),
             ),
@@ -317,13 +317,13 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
               clipBehavior: Clip.antiAlias,
               child: _logoFile != null
                   ? Image.file(File(_logoFile!.path), fit: BoxFit.cover)
-                  : const Icon(Icons.storefront_outlined,
-                      size: 36, color: BuddyColors.textSecondary),
+                  : Icon(Icons.storefront_outlined,
+                      size: 36, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
           const SizedBox(height: 8),
-          const Text('Tap to upload logo',
-              style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+          Text('Tap to upload logo',
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ],
       ),
     );
@@ -337,8 +337,8 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
         children: [
           const Text('Shop Type', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text('What kind of services does your shop offer?',
-              style: TextStyle(color: BuddyColors.textSecondary)),
+          Text('What kind of services does your shop offer?',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           const SizedBox(height: 28),
           ..._shopTypes.map((type) => _ShopTypeOption(
                 type: type,
@@ -358,8 +358,8 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
         children: [
           const Text('Review & Create', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text('Check your shop details before creating.',
-              style: TextStyle(color: BuddyColors.textSecondary)),
+          Text('Check your shop details before creating.',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           const SizedBox(height: 24),
           Card(
             color: BuddyColors.surface,
@@ -390,14 +390,14 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: BuddyColors.green.withValues(alpha: 0.3)),
             ),
-            child: const Row(
+            child: Row(
               children: [
                 Icon(Icons.info_outline, color: BuddyColors.green, size: 18),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'You can apply for certification after creating your shop to unlock more features.',
-                    style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+                    style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ),
               ],
@@ -417,7 +417,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
           SizedBox(
             width: 90,
             child: Text(label,
-                style: const TextStyle(fontSize: 13, color: BuddyColors.textSecondary)),
+                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           Expanded(
             child: Text(value,
@@ -529,7 +529,7 @@ class _ShopTypeOption extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon,
-                  color: isSelected ? BuddyColors.green : BuddyColors.textSecondary),
+                  color: isSelected ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -541,8 +541,8 @@ class _ShopTypeOption extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           color: isSelected ? BuddyColors.green : null)),
                   Text(description,
-                      style: const TextStyle(
-                          fontSize: 12, color: BuddyColors.textSecondary)),
+                      style: TextStyle(
+                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 ],
               ),
             ),

@@ -152,7 +152,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   color: done ? BuddyColors.green : BuddyColors.surfaceRaised,
                 ),
                 child: done
-                    ? const Icon(
+                    ? Icon(
                         LucideIcons.check,
                         size: 14,
                         color: BuddyColors.black,
@@ -165,7 +165,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 style: TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.w600,
-                  color: done ? BuddyColors.green : BuddyColors.textSecondary,
+                  color: done ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -205,7 +205,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: BuddyColors.green,
-              foregroundColor: BuddyColors.black,
+              foregroundColor: Theme.of(context).colorScheme.surface,
             ),
             onPressed: _confirming ? null : () => _confirmDelivery(order.id),
             child: _confirming
@@ -256,9 +256,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 ),
                 Text(
                   'Order ${order.orderNumber}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: BuddyColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -276,9 +276,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
       ),
       const SizedBox(height: 8),
-      const Text(
+      Text(
         'Nothing ships. Your purchases are unlocked and stay in My Activity.',
-        style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
       const SizedBox(height: 6),
       Align(
@@ -315,9 +315,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         children: [
           Text(
             fulfillmentLabel,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           if (f != null && f.carrier.isNotEmpty)
@@ -331,18 +331,18 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         const SizedBox(height: 6),
         Row(
           children: [
-            const Icon(
+            Icon(
               LucideIcons.store,
               size: 13,
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 f.pickupLocation,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: BuddyColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
@@ -353,18 +353,18 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         const SizedBox(height: 6),
         Row(
           children: [
-            const Icon(
+            Icon(
               LucideIcons.truck,
               size: 13,
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 'Tracking: ${f.trackingNumber}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: BuddyColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
@@ -375,10 +375,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         const SizedBox(height: 6),
         Row(
           children: [
-            const Icon(
+            Icon(
               LucideIcons.mapPin,
               size: 13,
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -387,9 +387,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     .where((v) => v != null && '$v'.isNotEmpty)
                     .map((v) => '$v')
                     .join(', '),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: BuddyColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
@@ -471,9 +471,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         ),
                         Text(
                           '${it.itemType.replaceAll('_', ' ')}${it.creatorName != null && it.creatorName!.isNotEmpty ? ' · by ${it.creatorName}' : ''}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -491,10 +491,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   ),
                   if (openable) ...[
                     const SizedBox(width: 4),
-                    const Icon(
+                    Icon(
                       LucideIcons.chevronRight,
                       size: 18,
-                      color: BuddyColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ],
                 ],
@@ -528,15 +528,15 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Value (USD)',
-              style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             Text(
               '\$${order.spentUsd.toStringAsFixed(2)}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -600,9 +600,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         const SizedBox(height: 2),
                         Text(
                           _formatDate(entry.at),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -610,9 +610,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         const SizedBox(height: 2),
                         Text(
                           entry.note,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -657,7 +657,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       case 'cancelled':
         return BuddyColors.red;
       default:
-        return BuddyColors.textSecondary;
+        return Theme.of(context).colorScheme.onSurfaceVariant;
     }
   }
 

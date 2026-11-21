@@ -105,10 +105,10 @@ class _BudPressFeedScreenState extends ConsumerState<BudPressFeedScreen> {
           backgroundColor: Colors.black,
           title: const Text('Bud Press'),
         ),
-        body: const Center(
+        body: Center(
           child: Text(
             'No videos yet',
-            style: TextStyle(color: BuddyColors.textSecondary),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),
       );

@@ -467,10 +467,10 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
                 onSeek: (ms) => setState(() => _previewPositionMs = ms),
               )
             else
-              const Center(
+              Center(
                 child: Icon(
                   Icons.add_a_photo,
-                  color: BuddyColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             // Captions overlay (active at preview position).
@@ -538,8 +538,8 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: selected
-                          ? BuddyColors.black
-                          : BuddyColors.textPrimary,
+                          ? Theme.of(context).colorScheme.surface
+                          : Theme.of(context).colorScheme.onSurface,
                       fontSize: 10,
                       fontWeight: selected
                           ? FontWeight.bold
@@ -558,7 +558,7 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
                       IconButton(
                         icon: const Icon(Icons.move_up, size: 14),
                         onPressed: i > 0 ? () => _moveLayer(i, i - 1) : null,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
@@ -567,21 +567,21 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
                         onPressed: i < _layers.length - 1
                             ? () => _moveLayer(i, i + 1)
                             : null,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
                       IconButton(
                         icon: const Icon(Icons.content_copy, size: 14),
                         onPressed: () => _duplicateLayer(i),
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close, size: 14),
                         onPressed: () => _deleteLayer(i),
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
@@ -634,19 +634,19 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
       );
     }
     if (m.type == 'audio') {
-      return const Center(
+      return Center(
         child: Icon(
           Icons.audiotrack,
           size: 24,
-          color: BuddyColors.textSecondary,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       );
     }
-    return const Center(
+    return Center(
       child: Icon(
         Icons.image_outlined,
         size: 24,
-        color: BuddyColors.textSecondary,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }
@@ -700,13 +700,13 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
             Icon(
               tab.icon,
               size: 14,
-              color: selected ? BuddyColors.black : BuddyColors.textSecondary,
+              color: selected ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: 4),
             Text(
               tab.label,
               style: TextStyle(
-                color: selected ? BuddyColors.black : BuddyColors.textPrimary,
+                color: selected ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.onSurface,
                 fontSize: 11,
                 fontWeight: selected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -860,7 +860,7 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: BuddyColors.green,
-              foregroundColor: BuddyColors.black,
+              foregroundColor: Theme.of(context).colorScheme.surface,
             ),
             onPressed: _done,
             child: const Text('Done'),
@@ -872,8 +872,8 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
           const SizedBox(height: 8),
           Text(
             '${_layers.length} layer${_layers.length == 1 ? '' : 's'}',
-            style: const TextStyle(
-              color: BuddyColors.textSecondary,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 11,
             ),
           ),
@@ -905,8 +905,8 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
                       children: [
                         Text(
                           '${_fmtMs(_previewPositionMs)} / ${_fmtMs(_durationMs)}',
-                          style: const TextStyle(
-                            color: BuddyColors.textSecondary,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 11,
                           ),
                         ),
@@ -974,10 +974,10 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Add layer',
                 style: TextStyle(
-                  color: BuddyColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                   fontSize: 16,
                 ),
@@ -990,10 +990,10 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
                 ('text', Icons.text_fields, 'Styled text'),
               ].map((entry) {
                 return ListTile(
-                  leading: Icon(entry.$2, color: BuddyColors.textSecondary),
+                  leading: Icon(entry.$2, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   title: Text(
                     entry.$3,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   onTap: () {
                     Navigator.of(context).pop();
@@ -1032,10 +1032,10 @@ class _TrimPanel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Trim video',
           style: TextStyle(
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
@@ -1076,10 +1076,10 @@ class _CropPanel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Aspect ratio',
           style: TextStyle(
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
@@ -1112,10 +1112,10 @@ class _FilterPanel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Filter',
           style: TextStyle(
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
@@ -1157,10 +1157,10 @@ class _SoundPanel extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Sound',
           style: TextStyle(
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
@@ -1190,9 +1190,9 @@ class _SoundPanel extends ConsumerWidget {
                   title: Text(s.name, style: const TextStyle(fontSize: 13)),
                   subtitle: Text(
                     '${s.artist} · ${s.usageCount} uses',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: BuddyColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   trailing: selectedSoundId == s.id
@@ -1245,10 +1245,10 @@ class _CaptionsPanel extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               'Captions',
               style: TextStyle(
-                color: BuddyColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
               ),
@@ -1263,9 +1263,9 @@ class _CaptionsPanel extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         if (captions.isEmpty)
-          const Text(
+          Text(
             'Generate or add captions — they publish with the video.',
-            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
           )
         else
           ...List.generate(captions.length, (i) {
@@ -1470,10 +1470,10 @@ class _OverlaysPanel extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               'Overlays',
               style: TextStyle(
-                color: BuddyColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
               ),
@@ -1488,9 +1488,9 @@ class _OverlaysPanel extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         if (overlays.isEmpty && stickers.isEmpty)
-          const Text(
+          Text(
             'Add text overlays or stickers — they render relative to the video frame.',
-            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
           )
         else ...[
           for (final o in overlays)
@@ -1501,9 +1501,9 @@ class _OverlaysPanel extends StatelessWidget {
               ),
               subtitle: Text(
                 'size=${o['size']} · ${o['placement'] ?? 'bottom'}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
-                  color: BuddyColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               trailing: IconButton(
@@ -1551,10 +1551,10 @@ class _TextStylePanel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Text style',
           style: TextStyle(
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
@@ -1636,9 +1636,9 @@ class _TextStylePanel extends StatelessWidget {
           onChanged: (v) => onChange({...style, 'alignment': v}),
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Preview',
-          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
         ),
         const SizedBox(height: 4),
         _TextPreview(text: 'Hello world', style: {...style, 'size': size}),
@@ -1662,10 +1662,10 @@ class _CoverPanel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Cover frame',
           style: TextStyle(
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
@@ -1683,15 +1683,15 @@ class _CoverPanel extends StatelessWidget {
         ),
         Text(
           'Cover at ${_CoverPanelFmt.fmt(offsetSec.round())} / ${_CoverPanelFmt.fmt(durationMs)}',
-          style: const TextStyle(
-            color: BuddyColors.textSecondary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 11,
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Sent with the post as the cover hint (Cloudinary ``so_N``).',
-          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
         ),
       ],
     );
@@ -1721,10 +1721,10 @@ class _AudiencePanel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Audience',
           style: TextStyle(
-            color: BuddyColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
@@ -1772,10 +1772,10 @@ class _Tab {
 class _EmptyPanel extends StatelessWidget {
   const _EmptyPanel();
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
     child: Text(
       'Pick a tool to edit this layer.',
-      style: TextStyle(color: BuddyColors.textSecondary),
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
     ),
   );
 }
@@ -1841,16 +1841,16 @@ class _AudioPreview extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.audiotrack,
             size: 48,
-            color: BuddyColors.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 10),
           Text(
             title,
-            style: const TextStyle(
-              color: BuddyColors.textPrimary,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -1867,8 +1867,8 @@ class _AudioPreview extends StatelessWidget {
           ),
           Text(
             '${_fmtMs(positionMs)} / ${_fmtMs(durationMs)}',
-            style: const TextStyle(
-              color: BuddyColors.textSecondary,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 11,
             ),
           ),

@@ -128,7 +128,7 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
+                    style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: Theme.of(context).colorScheme.surface),
                     onPressed: () {
                       if (name.text.trim().isEmpty) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
@@ -183,7 +183,7 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
+                style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: Theme.of(context).colorScheme.surface),
                 onPressed: () => Navigator.pop(ctx, _inviteCode.text.trim()),
                 child: const Text('Join'),
               ),
@@ -244,7 +244,7 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
           c.description.isEmpty ? '${c.memberCount} members' : c.description,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
         ),
         onTap: () => context.push('/communities/${c.id}'),
       ),
@@ -277,9 +277,9 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: BuddyColors.textSecondary),
+              Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(height: 12),
-              Text('$e', style: const TextStyle(color: BuddyColors.textSecondary)),
+              Text('$e', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () => ref.read(communitiesListProvider.notifier).refresh(),
@@ -296,23 +296,23 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const Text('MY COMMUNITIES',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: BuddyColors.textSecondary, letterSpacing: 0.5)),
+                Text('MY COMMUNITIES',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant, letterSpacing: 0.5)),
                 const SizedBox(height: 10),
                 if (mine.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
                     child: Center(
                       child: Text('No communities yet — create one or join with a code',
-                          style: TextStyle(color: BuddyColors.textSecondary)),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     ),
                   )
                 else
                   ...mine.map(_communityCard),
                 if (discover.isNotEmpty) ...[
                   const SizedBox(height: 24),
-                  const Text('DISCOVER',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: BuddyColors.textSecondary, letterSpacing: 0.5)),
+                  Text('DISCOVER',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant, letterSpacing: 0.5)),
                   const SizedBox(height: 10),
                   ...discover.map(_communityCard),
                 ],

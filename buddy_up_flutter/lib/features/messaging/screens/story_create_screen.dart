@@ -144,7 +144,7 @@ class _StoryCreateScreenState extends ConsumerState<StoryCreateScreen> {
     final profile = ref.watch(authProvider).profile;
     final media = _media;
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -290,7 +290,7 @@ class _EmptyState extends StatelessWidget {
             label: const Text('Take photo / video'),
             style: ElevatedButton.styleFrom(
               backgroundColor: BuddyColors.green,
-              foregroundColor: BuddyColors.black,
+              foregroundColor: Theme.of(context).colorScheme.surface,
               minimumSize: const Size(0, 48),
             ),
           ),
@@ -300,7 +300,7 @@ class _EmptyState extends StatelessWidget {
             icon: const Icon(Icons.photo_library),
             label: const Text('Pick from gallery'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: BuddyColors.textPrimary,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               minimumSize: const Size(0, 48),
             ),
           ),
@@ -353,8 +353,8 @@ class _PublishButton extends StatelessWidget {
         backgroundColor: BuddyColors.green,
         onPressed: busy ? null : onTap,
         child: busy
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: BuddyColors.black))
-            : const Icon(Icons.check, color: BuddyColors.black),
+            ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.surface))
+            : Icon(Icons.check, color: Theme.of(context).colorScheme.surface),
       ),
     );
   }

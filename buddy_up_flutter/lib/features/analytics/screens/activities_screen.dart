@@ -32,7 +32,7 @@ class ActivitiesScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: BuddyColors.green,
-        foregroundColor: BuddyColors.black,
+        foregroundColor: Theme.of(context).colorScheme.surface,
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const GpsTrackerScreen()),
         ),

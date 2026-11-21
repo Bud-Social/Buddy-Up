@@ -139,7 +139,7 @@ class _ScreenRecordButtonState extends State<ScreenRecordButton> {
         Text(
           _recording ? 'REC' : 'Record',
           style: TextStyle(
-            color: _recording ? Colors.redAccent : BuddyColors.textSecondary,
+            color: _recording ? Colors.redAccent : Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
             fontWeight: _recording ? FontWeight.bold : FontWeight.normal,
           ),

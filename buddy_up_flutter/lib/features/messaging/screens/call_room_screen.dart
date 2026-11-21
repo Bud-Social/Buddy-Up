@@ -181,7 +181,7 @@ class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
     final identity = ConversationIdentity.of(convo, myUserId);
 
     return Material(
-      color: BuddyColors.black,
+      color: Theme.of(context).colorScheme.surface,
       child: SafeArea(
         child: Column(
           children: [
@@ -264,12 +264,12 @@ class _SwitchRequestBanner extends StatelessWidget {
           Expanded(
             child: Text(
               '$fromName wants to switch to video',
-              style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
             ),
           ),
           TextButton(
             onPressed: onDecline,
-            child: const Text('Decline', style: TextStyle(color: BuddyColors.textSecondary)),
+            child: Text('Decline', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           FilledButton.icon(
             onPressed: onAccept,
@@ -277,7 +277,7 @@ class _SwitchRequestBanner extends StatelessWidget {
             label: const Text('Accept'),
             style: FilledButton.styleFrom(
               backgroundColor: BuddyColors.green,
-              foregroundColor: BuddyColors.black,
+              foregroundColor: Theme.of(context).colorScheme.surface,
               minimumSize: const Size(0, 36),
             ),
           ),
@@ -316,7 +316,7 @@ class _PreCall extends StatelessWidget {
             style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 14)),
+          Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
         ],
       ),
     );
@@ -440,8 +440,8 @@ class _BuddyPickerState extends ConsumerState<_BuddyPicker> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Add a buddy to the call',
-                style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 17)),
+            Text('Add a buddy to the call',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 17)),
             const SizedBox(height: 12),
             if (_loading)
               const Padding(
@@ -449,10 +449,10 @@ class _BuddyPickerState extends ConsumerState<_BuddyPicker> {
                 child: Center(child: CircularProgressIndicator(color: BuddyColors.green)),
               )
             else if (_buddies == null || _buddies!.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.all(16),
                 child: Text('No buddies yet — add some from Find a Buddy.',
-                    style: TextStyle(color: BuddyColors.textSecondary)),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               )
             else
               ConstrainedBox(
@@ -470,7 +470,7 @@ class _BuddyPickerState extends ConsumerState<_BuddyPicker> {
                       title: Text(name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: BuddyColors.textPrimary)),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                       trailing: const Icon(Icons.call_outlined, color: BuddyColors.green, size: 20),
                       onTap: () => _add(userId),
                     );
@@ -767,7 +767,7 @@ class _ControlButton extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           label,
-          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
         ),
       ],
     );
@@ -877,18 +877,18 @@ class _AudioOutputSheetState extends ConsumerState<_AudioOutputSheet> {
               children: [
                 const Icon(Icons.graphic_eq, color: BuddyColors.green, size: 18),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Audio output',
                     style: TextStyle(
-                      color: BuddyColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close, color: BuddyColors.textSecondary, size: 18),
+                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 18),
                 ),
               ],
             ),
@@ -908,9 +908,9 @@ class _AudioOutputSheetState extends ConsumerState<_AudioOutputSheet> {
               )
             else if (_outputs.isNotEmpty) ...[
               const Divider(height: 24, color: BuddyColors.border),
-              const Text(
+              Text(
                 'Devices',
-                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
               ),
               const SizedBox(height: 4),
               ..._outputs.map((device) {
@@ -921,12 +921,12 @@ class _AudioOutputSheetState extends ConsumerState<_AudioOutputSheet> {
                   leading: Icon(
                     Icons.headphones,
                     size: 18,
-                    color: selected ? BuddyColors.green : BuddyColors.textSecondary,
+                    color: selected ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   title: Text(
                     device.label.isEmpty ? 'Output' : device.label,
                     style: TextStyle(
-                      color: selected ? BuddyColors.green : BuddyColors.textPrimary,
+                      color: selected ? BuddyColors.green : Theme.of(context).colorScheme.onSurface,
                       fontSize: 13,
                     ),
                   ),
@@ -951,12 +951,12 @@ class _AudioOutputSheetState extends ConsumerState<_AudioOutputSheet> {
       leading: Icon(
         icon,
         size: 18,
-        color: selected ? BuddyColors.green : BuddyColors.textSecondary,
+        color: selected ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
       ),
       title: Text(
         label,
         style: TextStyle(
-          color: selected ? BuddyColors.green : BuddyColors.textPrimary,
+          color: selected ? BuddyColors.green : Theme.of(context).colorScheme.onSurface,
           fontSize: 13,
         ),
       ),

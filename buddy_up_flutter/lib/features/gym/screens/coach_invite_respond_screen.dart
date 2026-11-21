@@ -157,7 +157,7 @@ class _CoachInviteRespondScreenState
                     label: const Text('Accept invite'),
                     style: FilledButton.styleFrom(
                       backgroundColor: BuddyColors.green,
-                      foregroundColor: BuddyColors.black,
+                      foregroundColor: Theme.of(context).colorScheme.surface,
                       minimumSize: const Size.fromHeight(52),
                     ),
                     onPressed:

@@ -57,10 +57,10 @@ class _TotpChallengeScreenState extends State<TotpChallengeScreen> {
               const SizedBox(height: 32),
               const Icon(Icons.security, size: 64, color: BuddyColors.green),
               const SizedBox(height: 24),
-              const Text(
+              Text(
                 'Enter the code from your authenticator app.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
               ),
               const SizedBox(height: 32),
               OtpInput(length: 6, enabled: !_isLoading, onCompleted: _verify),

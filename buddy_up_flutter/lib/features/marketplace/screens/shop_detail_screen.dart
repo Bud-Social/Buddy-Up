@@ -159,7 +159,7 @@ class ShopDetailScreen extends ConsumerWidget {
                       if (shop.description.isNotEmpty) ...[
                         Text(
                           shop.description,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: BuddyColors.textSecondary,
                             height: 1.5,
                           ),
@@ -260,7 +260,7 @@ class ShopDetailScreen extends ConsumerWidget {
                       if (!hasItems)
                         Container(
                           padding: const EdgeInsets.all(24),
-                          child: const Column(
+                          child: Column(
                             children: [
                               Icon(
                                 LucideIcons.store,
@@ -299,7 +299,7 @@ class ShopDetailScreen extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: BuddyColors.textSecondary,
@@ -332,7 +332,7 @@ class ShopDetailScreen extends ConsumerWidget {
                     width: 48,
                     height: 48,
                     color: BuddyColors.surfaceRaised,
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.image,
                       size: 20,
                       color: BuddyColors.textSecondary,
@@ -343,7 +343,7 @@ class ShopDetailScreen extends ConsumerWidget {
                   width: 48,
                   height: 48,
                   color: BuddyColors.surfaceRaised,
-                  child: const Icon(
+                  child: Icon(
                     LucideIcons.image,
                     size: 20,
                     color: BuddyColors.textSecondary,

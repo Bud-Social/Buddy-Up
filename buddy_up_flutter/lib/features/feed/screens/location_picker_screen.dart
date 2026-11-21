@@ -193,7 +193,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: TextField(
               controller: _searchController,
-              style: const TextStyle(color: BuddyColors.textPrimary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               textInputAction: TextInputAction.search,
               onSubmitted: _search,
               decoration: const InputDecoration(
@@ -221,8 +221,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       r['display_name'] as String? ?? '',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: BuddyColors.textPrimary,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 13,
                       ),
                     ),
@@ -293,7 +293,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),
-              color: BuddyColors.black,
+              color: Theme.of(context).colorScheme.surface,
               child: Row(
                 children: [
                   const Icon(Icons.place, color: BuddyColors.green, size: 20),
@@ -303,8 +303,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       _label,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: BuddyColors.textPrimary,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 13,
                       ),
                     ),

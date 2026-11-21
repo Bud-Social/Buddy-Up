@@ -120,12 +120,12 @@ class _RandomDropScreenState extends ConsumerState<RandomDropScreen>
             children: [
               const Icon(Icons.shuffle, size: 64, color: BuddyColors.green),
               const SizedBox(height: 16),
-              const Text('Find a Random Workout Buddy', style: TextStyle(color: BuddyColors.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+              Text('Find a Random Workout Buddy', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              const Text('Match with someone for an impromptu session', style: TextStyle(color: BuddyColors.textSecondary), textAlign: TextAlign.center),
+              Text('Match with someone for an impromptu session', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant), textAlign: TextAlign.center),
               const SizedBox(height: 32),
               if (!_isSearching) ...[
-                const Text('Select activity', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
+                Text('Select activity', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -137,12 +137,12 @@ class _RandomDropScreenState extends ConsumerState<RandomDropScreen>
                       selected: isActive,
                       onSelected: (_) => setState(() => _activityType = a),
                       selectedColor: BuddyColors.green.withValues(alpha: 0.2),
-                      labelStyle: TextStyle(color: isActive ? BuddyColors.green : BuddyColors.textSecondary),
+                      labelStyle: TextStyle(color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant),
                     );
                   }).toList(),
                 ),
                 const SizedBox(height: 20),
-                const Text('Duration (minutes)', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
+                Text('Duration (minutes)', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 8),
                 Slider(
                   value: _duration.toDouble(),
@@ -153,7 +153,7 @@ class _RandomDropScreenState extends ConsumerState<RandomDropScreen>
                   activeColor: BuddyColors.green,
                   onChanged: (v) => setState(() => _duration = v.toInt()),
                 ),
-                Text('$_duration minutes', style: const TextStyle(color: BuddyColors.textPrimary)),
+                Text('$_duration minutes', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                 const SizedBox(height: 32),
                 ElevatedButton.icon(
                   onPressed: _activityType != null ? _startSearch : null,
@@ -182,7 +182,7 @@ class _RandomDropScreenState extends ConsumerState<RandomDropScreen>
                   },
                 ),
                 const SizedBox(height: 24),
-                Text(_statusMessage ?? 'Searching...', style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 16)),
+                Text(_statusMessage ?? 'Searching...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16)),
                 const SizedBox(height: 24),
                 TextButton(
                   onPressed: _cancelSearch,

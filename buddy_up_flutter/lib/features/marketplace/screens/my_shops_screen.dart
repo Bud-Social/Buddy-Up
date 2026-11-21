@@ -32,7 +32,7 @@ class _MyShopsScreenState extends ConsumerState<MyShopsScreen> {
     final linksAsync = ref.watch(shopGymLinksProvider(null));
 
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: BuddyColors.surface,
         title: const Text('My Shops', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -94,11 +94,11 @@ class _MyShopsScreenState extends ConsumerState<MyShopsScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.error_outline, size: 48,
-                              color: BuddyColors.textSecondary),
+                          Icon(Icons.error_outline, size: 48,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant),
                           const SizedBox(height: 12),
-                          const Text('Failed to load shops',
-                              style: TextStyle(color: BuddyColors.textSecondary)),
+                          Text('Failed to load shops',
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                           const SizedBox(height: 8),
                           ElevatedButton(
                             onPressed: () => ref.invalidate(myShopsProvider),
@@ -168,7 +168,7 @@ class _ConsoleTab extends StatelessWidget {
               style: TextStyle(
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 fontSize: 12,
-                color: selected ? BuddyColors.green : BuddyColors.textSecondary,
+                color: selected ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             if (badge > 0) ...[
@@ -218,8 +218,8 @@ class _ShopCard extends StatelessWidget {
                 clipBehavior: Clip.antiAlias,
                 child: shop.logoUrl != null && shop.logoUrl!.isNotEmpty
                     ? Image.network(shop.logoUrl!, fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const Icon(Icons.storefront, color: BuddyColors.textSecondary))
-                    : const Icon(Icons.storefront, color: BuddyColors.textSecondary),
+                        errorBuilder: (_, _, _) => Icon(Icons.storefront, color: Theme.of(context).colorScheme.onSurfaceVariant))
+                    : Icon(Icons.storefront, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -256,12 +256,12 @@ class _ShopCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text('@${shop.handle}',
-                        style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+                        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 4),
                     Text(shop.description,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+                        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   ],
                 ),
               ),
@@ -269,11 +269,11 @@ class _ShopCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.settings_outlined, size: 18, color: BuddyColors.textSecondary),
+                    icon: Icon(Icons.settings_outlined, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     tooltip: 'Manage shop',
                     onPressed: () => context.push('/marketplace/shops/${shop.handle}/manage'),
                   ),
-                  const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+                  Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ],
               ),
             ],
@@ -310,10 +310,10 @@ class _EmptyShopsState extends StatelessWidget {
             const Text('No Shops Yet',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Create your first shop to start selling\nmeal plans, programmes, products, and events.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: BuddyColors.textSecondary, height: 1.5),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.5),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(

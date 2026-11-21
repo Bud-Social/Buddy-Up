@@ -129,7 +129,7 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Category Sales', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: BuddyColors.textSecondary)),
+            Text('Category Sales', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 12),
             ...analytics.categorySales.entries.map((entry) {
               final count = entry.value;
@@ -147,7 +147,7 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
                   children: [
                     Row(
                       children: [
-                        Text(_formatCategory(entry.key), style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+                        Text(_formatCategory(entry.key), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                         const Spacer(),
                         Text('$count sales ($pct%)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       ],
@@ -180,7 +180,7 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Top Services', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: BuddyColors.textSecondary)),
+            Text('Top Services', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 12),
             ...analytics.topServices.map((s) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -191,7 +191,7 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
                   Expanded(
                     child: Text(s.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
                   ),
-                  Text('${s.sales} sales', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: BuddyColors.textSecondary)),
+                  Text('${s.sales} sales', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 ],
               ),
             )),
@@ -214,7 +214,7 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Product performance', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: BuddyColors.textSecondary)),
+            Text('Product performance', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 12),
             ...analytics.productPerformance.map((p) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -235,7 +235,7 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
                   ),
                   const SizedBox(height: 4),
                   Text('${p.clicks} clicks · ${p.unitsSold} sold · ${p.conversionRate.toStringAsFixed(1)}% conversion',
-                      style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
+                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   // An unrated product shows nothing rather than "0.0 stars" —
                   // and a product nobody has reviewed yet has no reputation to
                   // defend, so the row stays out of the way.
@@ -281,14 +281,14 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Revenue Over Time', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: BuddyColors.textSecondary)),
+            Text('Revenue Over Time', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 12),
             ...analytics.revenueOverTime.map((r) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(r.month, style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+                  Text(r.month, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   Text('\$${r.total.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -343,9 +343,9 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
               ],
             ),
             if (services.discountCodes.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 8),
-                child: Text('No discount codes created.', style: TextStyle(color: BuddyColors.textSecondary)),
+                child: Text('No discount codes created.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               )
             else
               ...services.discountCodes.map((c) => _discountCodeTile(c)),
@@ -372,7 +372,7 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('${c.timesUsed}/${c.usageLimit == 0 ? '∞' : c.usageLimit.toString()}',
-                style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             IconButton(
               icon: Icon(c.isActive ? Icons.pause_circle_outline : Icons.play_circle_outline,
                   size: 22, color: c.isActive ? Colors.orange : BuddyColors.green),

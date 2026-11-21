@@ -68,12 +68,12 @@ class SettingsScreen extends ConsumerWidget {
               leading: const Icon(Icons.gavel_outlined, color: BuddyColors.green),
               title: const Text('Moderation & appeals',
                   style: TextStyle(color: BuddyColors.green)),
-              subtitle: const Text(
+              subtitle: Text(
                 'Warnings, suspensions and bans on your account — and how to '
                 'appeal one',
-                style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
-              trailing: const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+              trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
               onTap: () {
                 Navigator.pop(sheetCtx);
                 context.push('/settings/moderation');
@@ -83,7 +83,7 @@ class SettingsScreen extends ConsumerWidget {
             for (final (label, route) in links)
               ListTile(
                 title: Text(label, style: const TextStyle(color: BuddyColors.green)),
-                trailing: const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+                trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 onTap: () {
                   Navigator.pop(sheetCtx);
                   context.push(route);
@@ -128,10 +128,10 @@ class SettingsScreen extends ConsumerWidget {
                 title: Text(entry.label,
                     style: const TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(entry.subtitle,
-                    style: const TextStyle(
-                        fontSize: 11, color: BuddyColors.textSecondary)),
-                trailing: const Icon(Icons.chevron_right,
-                    color: BuddyColors.textSecondary, size: 20),
+                    style: TextStyle(
+                        fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                trailing: Icon(Icons.chevron_right,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
                 onTap: () {
                   Navigator.pop(sheetCtx);
                   context.push(entry.route);
@@ -184,7 +184,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               title: Text(displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
               subtitle: subtitle.isNotEmpty ? Text(subtitle) : null,
-              trailing: const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+              trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
               onTap: () => context.push('/profile'),
             ),
           ),
@@ -284,11 +284,11 @@ class SettingsScreen extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.6,
-          color: BuddyColors.textSecondary,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -320,9 +320,9 @@ class SettingsScreen extends ConsumerWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
         ),
-        trailing: const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+        trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
         onTap: onTap,
       ),
     );

@@ -294,7 +294,7 @@ class _NotificationPrefsScreenState extends ConsumerState<NotificationPrefsScree
                   : value.split(':').take(2).join(':'),
               style: TextStyle(
                 fontSize: 14,
-                color: value == null ? BuddyColors.textSecondary : null,
+                color: value == null ? Theme.of(context).colorScheme.onSurfaceVariant : null,
               ),
             ),
           ),
@@ -306,7 +306,7 @@ class _NotificationPrefsScreenState extends ConsumerState<NotificationPrefsScree
           if (value != null)
             IconButton(
               tooltip: 'Clear',
-              icon: const Icon(Icons.close, size: 20, color: BuddyColors.textSecondary),
+              icon: Icon(Icons.close, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
               onPressed: onClear,
             ),
         ],

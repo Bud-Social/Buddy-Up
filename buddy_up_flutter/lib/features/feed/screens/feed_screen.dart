@@ -266,10 +266,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.groups_outlined,
               size: 64,
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
             const Text(
@@ -277,9 +277,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Join a community to see posts and connect with peers.',
-              style: TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
@@ -440,10 +440,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                           color: BuddyColors.green,
                         ),
                         const SizedBox(height: 6),
-                        const Text(
+                        Text(
                           "You're all caught up",
                           style: TextStyle(
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 13,
                           ),
                         ),

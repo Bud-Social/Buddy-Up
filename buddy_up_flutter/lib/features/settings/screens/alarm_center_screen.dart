@@ -42,7 +42,7 @@ class AlarmCenterScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             _SuggestionsCard(suggestions: suggestions),
             const SizedBox(height: 12),
-            const Card(
+            Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Column(
@@ -59,7 +59,7 @@ class AlarmCenterScreen extends ConsumerWidget {
                       'up, and keep a backup alarm on your phone clock for '
                       'mission-critical wake-ups.',
                       style: TextStyle(
-                          fontSize: 12, color: BuddyColors.textSecondary),
+                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -99,8 +99,8 @@ class _AlarmsCard extends ConsumerWidget {
               ),
               error: (e, _) => Text(
                 apiErrorMessage(e, fallback: 'Could not load your alarms.'),
-                style: const TextStyle(
-                    fontSize: 12, color: BuddyColors.textSecondary),
+                style: TextStyle(
+                    fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               data: (rows) => rows.isEmpty
                   ? const EmptyState(
@@ -409,28 +409,28 @@ class _SoundsCardState extends ConsumerState<_SoundsCard> {
             const Text('My sounds',
                 style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Upload a short clip (max 30s, 2 MB). Buddies can also send you theirs.',
               style:
-                  TextStyle(fontSize: 11, color: BuddyColors.textSecondary),
+                  TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             widget.sounds.when(
               loading: () => const SizedBox.shrink(),
               error: (e, _) => Text(
                 apiErrorMessage(e, fallback: 'Could not load your sounds.'),
-                style: const TextStyle(
-                    fontSize: 12, color: BuddyColors.textSecondary),
+                style: TextStyle(
+                    fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               data: (rows) {
                 final mine = rows.where((s) => s.isMine).toList();
                 if (mine.isEmpty) {
-                  return const Padding(
+                  return Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: Text(
                       'No custom sounds yet — upload your wake-up anthem.',
                       style: TextStyle(
-                          fontSize: 12, color: BuddyColors.textSecondary),
+                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   );
                 }
@@ -517,14 +517,14 @@ class _SharesCard extends ConsumerWidget {
               loading: () => const SizedBox.shrink(),
               error: (e, _) => Text(
                 apiErrorMessage(e, fallback: 'Could not load shares.'),
-                style: const TextStyle(
-                    fontSize: 12, color: BuddyColors.textSecondary),
+                style: TextStyle(
+                    fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               data: (rows) => rows.isEmpty
-                  ? const Text(
+                  ? Text(
                       'Nothing shared yet — your buddies are holding out on you.',
                       style: TextStyle(
-                          fontSize: 12, color: BuddyColors.textSecondary),
+                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     )
                   : Column(
                       children: [
@@ -660,13 +660,13 @@ class _SuggestionsCardState extends ConsumerState<_SuggestionsCard> {
               loading: () => const SizedBox.shrink(),
               error: (e, _) => Text(
                 apiErrorMessage(e, fallback: 'Could not load suggestions.'),
-                style: const TextStyle(
-                    fontSize: 12, color: BuddyColors.textSecondary),
+                style: TextStyle(
+                    fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               data: (rows) => rows.isEmpty
-                  ? const Text('No suggestions right now.',
+                  ? Text('No suggestions right now.',
                       style: TextStyle(
-                          fontSize: 12, color: BuddyColors.textSecondary))
+                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant))
                   : Column(
                       children: [
                         for (final suggestion in rows)

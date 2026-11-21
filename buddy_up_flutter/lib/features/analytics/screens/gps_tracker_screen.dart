@@ -397,10 +397,10 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
     }
     final isCycle = _activityType == 'cycle';
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Track Activity'),
-        backgroundColor: BuddyColors.black,
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       body: SafeArea(
         child: Padding(
@@ -464,7 +464,7 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
                         ? 'Lock the screen and GPS keeps working — allow "Always" location for best results.'
                         : 'Screen can lock — GPS keeps running in a pinned notification.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 10.5),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10.5),
                   ),
                 ),
               const SizedBox(height: 20),
@@ -475,7 +475,7 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.displayMedium?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: BuddyColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
               ),
@@ -579,14 +579,14 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
         child: Column(
           children: [
             Text(value,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: BuddyColors.textPrimary)),
+                    color: Theme.of(context).colorScheme.onSurface)),
             const SizedBox(height: 2),
             Text(label,
-                style: const TextStyle(
-                    fontSize: 11, color: BuddyColors.textSecondary)),
+                style: TextStyle(
+                    fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),
       );

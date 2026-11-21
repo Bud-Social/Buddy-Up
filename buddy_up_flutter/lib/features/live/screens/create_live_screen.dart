@@ -132,10 +132,10 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
               hint: 'Give your live a title...',
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Live Type',
               style: TextStyle(
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -154,10 +154,10 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Category',
               style: TextStyle(
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -179,17 +179,17 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
                       labelStyle: TextStyle(
                         color: _category == c
                             ? BuddyColors.green
-                            : BuddyColors.textSecondary,
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   )
                   .toList(),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Access',
               style: TextStyle(
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -209,7 +209,7 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
                       labelStyle: TextStyle(
                         color: isActive
                             ? BuddyColors.green
-                            : BuddyColors.textSecondary,
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -217,10 +217,10 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
               }).toList(),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Entry Fee (optional)',
               style: TextStyle(
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -232,14 +232,14 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
                   child: TextField(
                     controller: _feeController,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(
-                      color: BuddyColors.textPrimary,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 13,
                     ),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: '0',
-                      hintStyle: TextStyle(color: BuddyColors.textSecondary),
-                      labelStyle: TextStyle(color: BuddyColors.textSecondary),
+                      hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                       ),
@@ -247,20 +247,20 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Dumbbells',
                   style: TextStyle(
-                    color: BuddyColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 13,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Recording Consent',
               style: TextStyle(
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -307,7 +307,7 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
             Text(
               title,
               style: TextStyle(
-                color: isActive ? BuddyColors.green : BuddyColors.textPrimary,
+                color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -315,8 +315,8 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
             const SizedBox(height: 2),
             Text(
               subtitle,
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
               ),
             ),
@@ -334,7 +334,7 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
       onSelected: (_) => setState(() => _liveType = value),
       selectedColor: BuddyColors.green.withValues(alpha: 0.2),
       labelStyle: TextStyle(
-        color: isActive ? BuddyColors.green : BuddyColors.textSecondary,
+        color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }

@@ -119,17 +119,17 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Show Active Status', style: TextStyle(fontSize: 14)),
-                    subtitle: const Text('Display when you are online',
-                        style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                    subtitle: Text('Display when you are online',
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
                     value: _showActiveStatus,
                     onChanged: (v) => setState(() => _showActiveStatus = v),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Anonymous Posting', style: TextStyle(fontSize: 14)),
-                    subtitle: const Text(
+                    subtitle: Text(
                       'Post to the feed without showing your name',
-                      style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                     ),
                     value: _anonymousPosting ?? false,
                     onChanged: _loadedFromProfile ? (v) => setState(() => _anonymousPosting = v) : null,
@@ -138,9 +138,9 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Suggest routines automatically',
                         style: TextStyle(fontSize: 14)),
-                    subtitle: const Text(
+                    subtitle: Text(
                       'Offer a routine when the same activity repeats on three different days',
-                      style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                     ),
                     value: _autoRoutines,
                     onChanged: (v) => setState(() => _autoRoutines = v),
@@ -162,9 +162,9 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Incognito Browsing', style: TextStyle(fontSize: 14)),
-                    subtitle: const Text(
+                    subtitle: Text(
                       'Browse unseen — hides your online status and last seen',
-                      style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                     ),
                     value: _incognito,
                     onChanged: (v) => setState(() => _incognito = v),

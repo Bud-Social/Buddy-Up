@@ -42,10 +42,10 @@ class OrdersScreen extends ConsumerWidget {
                         size: 64,
                         color: BuddyColors.textSecondary.withValues(alpha: 0.3)),
                     const SizedBox(height: 16),
-                    const Text('No orders yet',
+                    Text('No orders yet',
                         style: TextStyle(color: BuddyColors.textSecondary)),
                     const SizedBox(height: 8),
-                    const Text('Your purchases and tracking will appear here',
+                    Text('Your purchases and tracking will appear here',
                         style: TextStyle(
                             color: BuddyColors.textSecondary, fontSize: 13)),
                   ],
@@ -156,7 +156,7 @@ class _OrderCard extends StatelessWidget {
                     children: [
                       Text(
                         '${order.items.length} item${order.items.length == 1 ? '' : 's'} · ${_date(order.createdAt)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 12, color: BuddyColors.textSecondary),
                       ),
                       const SizedBox(height: 2),
@@ -187,7 +187,7 @@ class _OrderCard extends StatelessWidget {
                           style: TextStyle(fontSize: 11),
                         ),
                       ),
-                      const Icon(Icons.chevron_right,
+                      Icon(Icons.chevron_right,
                           color: BuddyColors.textSecondary),
                     ],
                   ),

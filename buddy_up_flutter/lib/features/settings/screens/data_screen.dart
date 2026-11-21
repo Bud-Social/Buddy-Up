@@ -216,12 +216,12 @@ class _DataScreenState extends ConsumerState<DataScreen> {
                     exportReady
                         ? 'Your export is ready: $exportFilename${exportCreated.isNotEmpty ? ' (generated $exportCreated)' : ''}'
                         : 'No export ready yet. Request one and it will be emailed to you.',
-                    style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                   )
                 else
-                  const Text(
+                  Text(
                     'Request a copy of your data. It will be emailed to you.',
-                    style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                   ),
                 const SizedBox(height: 12),
                 BuddyButton(

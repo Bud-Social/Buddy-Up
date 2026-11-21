@@ -202,9 +202,9 @@ class _DeliveryPersonnelScreenState extends ConsumerState<DeliveryPersonnelScree
         const Text('What do you ride or drive?',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'This is the vehicle a seller sees when they assign you an order.',
-          style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary),
+          style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 20),
         for (final entry in kDeliveryVehicleTypes)
@@ -238,7 +238,7 @@ class _DeliveryPersonnelScreenState extends ConsumerState<DeliveryPersonnelScree
                       size: 18,
                       color: _vehicleType == entry.value
                           ? BuddyColors.green
-                          : BuddyColors.textSecondary,
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 12),
                     Text(entry.label,
@@ -268,9 +268,9 @@ class _DeliveryPersonnelScreenState extends ConsumerState<DeliveryPersonnelScree
           hint: 'Westlands, Kilimani, Parklands',
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Comma-separated area names. Sellers pick couriers partly on this.',
-          style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 16),
         BuddyInput(
@@ -312,10 +312,10 @@ class _DeliveryPersonnelScreenState extends ConsumerState<DeliveryPersonnelScree
         const Text('Review & submit',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Two separate things: your courier record is what dispatch reads, the '
           'application is what staff approve.',
-          style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary, height: 1.35),
+          style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.35),
         ),
         const SizedBox(height: 20),
         Container(
@@ -436,17 +436,17 @@ class _ReviewRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(
-                  fontSize: 12, color: BuddyColors.textSecondary),
+              style: TextStyle(
+                  fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: BuddyColors.textPrimary),
+                  color: Theme.of(context).colorScheme.onSurface),
             ),
           ),
         ],
@@ -500,9 +500,9 @@ class _ActionTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 12,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         height: 1.35),
                   ),
                 ],

@@ -135,7 +135,7 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
             const SizedBox(height: 12),
             BuddyInput(label: 'Description', controller: _descriptionController, hint: 'Tell us about your gym', maxLines: 3),
             const SizedBox(height: 16),
-            const Text('Category', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
+            Text('Category', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             categoriesAsync.when(
               data: (categories) => Wrap(
@@ -147,11 +147,11 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
                   onSelected: (_) => setState(() => _category = c.name),
                   selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                   labelStyle: TextStyle(
-                    color: _category == c.name ? BuddyColors.green : BuddyColors.textSecondary,
+                    color: _category == c.name ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 )).toList(),
               ),
-              loading: () => const Text('Loading...', style: TextStyle(color: BuddyColors.textSecondary)),
+              loading: () => Text('Loading...', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               error: (e, _) => Text('$e', style: const TextStyle(color: BuddyColors.red)),
             ),
             const SizedBox(height: 8),
@@ -161,7 +161,7 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
               hint: 'e.g. calisthenics — overrides the selection above',
             ),
             const SizedBox(height: 16),
-            const Text('Access Type', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
+            Text('Access Type', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             Row(
               children: ['public', 'private', 'secret'].map((t) {
@@ -175,7 +175,7 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
                       onSelected: (_) => setState(() => _accessType = t),
                       selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                       labelStyle: TextStyle(
-                        color: isActive ? BuddyColors.green : BuddyColors.textSecondary,
+                        color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -184,7 +184,7 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
               }).toList(),
             ),
             const SizedBox(height: 16),
-            const Text('Subscription', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
+            Text('Subscription', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             Row(
               children: ['free', 'members_free', 'paid', 'tiered'].map((t) {
@@ -198,7 +198,7 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
                       onSelected: (_) => setState(() => _subscriptionType = t),
                       selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                       labelStyle: TextStyle(
-                        color: isActive ? BuddyColors.green : BuddyColors.textSecondary,
+                        color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -206,7 +206,7 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
               }).toList(),
             ),
             const SizedBox(height: 16),
-            const Text('Level & capacity', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
+            Text('Level & capacity', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -220,7 +220,7 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
                         onSelected: (_) => setState(() => _tier = t),
                         selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                         labelStyle: TextStyle(
-                          color: _tier == t ? BuddyColors.green : BuddyColors.textSecondary,
+                          color: _tier == t ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),

@@ -360,7 +360,7 @@ class _AdminAuditScreenState extends ConsumerState<AdminAuditScreen> {
                 onPressed: () => _setFilter(() {}),
                 style: FilledButton.styleFrom(
                   backgroundColor: BuddyColors.green,
-                  foregroundColor: BuddyColors.black,
+                  foregroundColor: Theme.of(context).colorScheme.surface,
                 ),
                 child: const Text('Apply', style: TextStyle(fontSize: 12)),
               ),
@@ -514,10 +514,10 @@ class _AdminAuditScreenState extends ConsumerState<AdminAuditScreen> {
                       decorationColor: BuddyColors.red),
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 6),
                 child: Icon(Icons.arrow_forward,
-                    size: 12, color: BuddyColors.textSecondary),
+                    size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               Expanded(
                 child: Text(after.isEmpty ? '—' : after,

@@ -320,7 +320,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('I’m looking for', style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600)),
+                Text('I’m looking for', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -339,7 +339,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                         },
                         selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                         labelStyle: TextStyle(
-                          color: state.intent == i ? BuddyColors.green : BuddyColors.textSecondary,
+                          color: state.intent == i ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
                         ),
                       ),
@@ -350,10 +350,10 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                     padding: const EdgeInsets.only(top: 8),
                     child: TextField(
                       controller: _customIntent,
-                      style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
-                      decoration: const InputDecoration(
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+                      decoration: InputDecoration(
                         hintText: 'Describe what you’re looking for…',
-                        hintStyle: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                        hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                       ),
                     ),
                   ),
@@ -375,7 +375,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                         },
                         selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                         labelStyle: TextStyle(
-                          color: state.mode == m ? BuddyColors.green : BuddyColors.textSecondary,
+                          color: state.mode == m ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
                         ),
                       ),
@@ -388,7 +388,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                       },
                       selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                       labelStyle: TextStyle(
-                        color: state.nowOnly ? BuddyColors.green : BuddyColors.textSecondary,
+                        color: state.nowOnly ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -396,7 +396,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                       avatar: Icon(
                         Icons.near_me,
                         size: 14,
-                        color: state.lat != null ? BuddyColors.green : BuddyColors.textSecondary,
+                        color: state.lat != null ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       label: Text(state.lat != null ? 'Near me ✓' : 'Near me'),
                       onPressed: () {
@@ -411,8 +411,8 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                     if (state.lat != null)
                       DropdownButton<double?>(
                         value: state.radiusKm,
-                        hint: const Text('Auto (5–10 km)',
-                            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                        hint: Text('Auto (5–10 km)',
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
                         underline: const SizedBox.shrink(),
                         items: const [
                           DropdownMenuItem(value: null, child: Text('Auto (5–10 km)')),
@@ -459,10 +459,10 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                       children: [
                         Text(
                           'Nearby: ${state.geo!.radiusKm.toStringAsFixed(0)} km · ${state.geo!.density == 'dense' ? 'lots around you' : 'fewer around you'}',
-                          style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 2),
-                        Text(state.geo!.message!, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
+                        Text(state.geo!.message!, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
                       ],
                     ),
                   ),
@@ -484,7 +484,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                   const SizedBox(width: 8),
                   Text(
                     '${state.matchCount} ${state.matchCount == 1 ? 'buddy' : 'buddies'} nearby',
-                    style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -496,13 +496,13 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                 : state.error != null
                     ? ErrorView(message: state.error!, onRetry: () => notifier.load())
                     : state.buddies.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Padding(
                               padding: EdgeInsets.all(24),
                               child: Text(
                                 'No buddies found yet.\nPick an intent above and tap "Near me" to find buddies around you.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: BuddyColors.textSecondary),
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                               ),
                             ),
                           )
@@ -554,13 +554,13 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                     children: [
                       Text(
                           mine.displayName.isNotEmpty ? mine.displayName : 'Your buddy profile',
-                          style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 13)),
                       if (mine.bio.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(mine.bio,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
                       ],
                     ],
                   ),
@@ -596,13 +596,13 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
               runSpacing: 4,
               children: [
                 if (mine.ageBand.isNotEmpty)
-                  Text(mine.ageBand, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
+                  Text(mine.ageBand, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
                 Text(
                   mine.visibility == 'buddies' ? 'Buddies only' : mine.visibility[0].toUpperCase() + mine.visibility.substring(1),
-                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
                 ),
                 if (mine.incognito)
-                  const Text('Incognito', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
+                  Text('Incognito', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
                 Text(
                   mine.availableNow ? 'Looking now ✓' : 'Not looking',
                   style: const TextStyle(color: BuddyColors.green, fontSize: 11, fontWeight: FontWeight.w600),
@@ -622,11 +622,11 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.lock_outline, size: 12, color: BuddyColors.textSecondary),
+                    Icon(Icons.lock_outline, size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     const SizedBox(width: 4),
                     Text(
                       '${mine.visibility == 'buddies' ? 'Buddies only' : mine.visibility.isNotEmpty ? mine.visibility[0].toUpperCase() + mine.visibility.substring(1) : 'Public'}${mine.incognito ? ' · Incognito' : ''}',
-                      style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
                     ),
                   ],
                 ),
@@ -645,11 +645,11 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
         TextField(
           controller: _displayName,
           maxLength: 50,
-          style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
-          decoration: const InputDecoration(
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+          decoration: InputDecoration(
             labelText: 'Display name (shown on buddy search)',
             hintText: 'e.g. Dawn Runner',
-            hintStyle: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
           ),
         ),
         const SizedBox(height: 8),
@@ -657,14 +657,14 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
           controller: _bio,
           maxLength: 140,
           maxLines: 2,
-          style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
-          decoration: const InputDecoration(
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+          decoration: InputDecoration(
             hintText: 'Find-buddy bio — e.g. easy 5k at 6am, all paces welcome…',
-            hintStyle: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
           ),
         ),
         const SizedBox(height: 8),
-        const Text('What I want to achieve (up to 5)', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+        Text('What I want to achieve (up to 5)', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
         const SizedBox(height: 6),
         Wrap(
           spacing: 8,
@@ -685,7 +685,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                 },
                 selectedColor: BuddyColors.green.withValues(alpha: 0.2),
                 labelStyle: TextStyle(
-                  color: _goals.contains(g) ? BuddyColors.green : BuddyColors.textSecondary,
+                  color: _goals.contains(g) ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
                 ),
               ),
@@ -697,11 +697,11 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
             Expanded(
               child: TextField(
                 controller: _dob,
-                style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+                decoration: InputDecoration(
                   labelText: 'Birth date (for age band)',
                   hintText: 'YYYY-MM-DD',
-                  hintStyle: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                 ),
               ),
             ),
@@ -709,11 +709,11 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
             Expanded(
               child: TextField(
                 controller: _pace,
-                style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
-                decoration: const InputDecoration(
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+                decoration: InputDecoration(
                   labelText: 'Pace',
                   hintText: 'Easy / steady / brisk',
-                  hintStyle: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                 ),
               ),
             ),
@@ -758,7 +758,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
         ),
         Row(
           children: [
-            const Text('Visible to ', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+            Text('Visible to ', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
             DropdownButton<String>(
               value: _visibility,
               underline: const SizedBox.shrink(),
@@ -771,7 +771,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
               },
             ),
             const SizedBox(width: 12),
-            const Text('Incognito', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+            Text('Incognito', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
             Switch(
               value: _incognito,
               onChanged: (v) => setState(() => _incognito = v),

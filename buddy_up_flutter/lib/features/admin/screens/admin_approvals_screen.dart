@@ -609,7 +609,7 @@ class _RequestApprovalSheetState extends State<_RequestApprovalSheet> {
                         ),
                 style: FilledButton.styleFrom(
                   backgroundColor: BuddyColors.green,
-                  foregroundColor: BuddyColors.black,
+                  foregroundColor: Theme.of(context).colorScheme.surface,
                 ),
                 icon: const Icon(Icons.how_to_reg, size: 16),
                 label: const Text('Raise request', style: TextStyle(fontSize: 13)),

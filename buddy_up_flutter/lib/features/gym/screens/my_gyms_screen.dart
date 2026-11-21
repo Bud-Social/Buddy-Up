@@ -74,7 +74,7 @@ class _MyGymsScreenState extends ConsumerState<MyGymsScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_error!, style: const TextStyle(color: BuddyColors.textSecondary)),
+                      Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                       const SizedBox(height: 8),
                       TextButton(onPressed: _load, child: const Text('Retry')),
                     ],
@@ -85,9 +85,9 @@ class _MyGymsScreenState extends ConsumerState<MyGymsScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.fitness_center, size: 48, color: BuddyColors.textSecondary),
+                          Icon(Icons.fitness_center, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
                           const SizedBox(height: 8),
-                          const Text("You don't own any gyms yet", style: TextStyle(color: BuddyColors.textSecondary)),
+                          Text("You don't own any gyms yet", style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                           const SizedBox(height: 12),
                           ElevatedButton.icon(
                             onPressed: () => context.push('/gyms/create'),
@@ -157,22 +157,22 @@ class _MyGymsScreenState extends ConsumerState<MyGymsScreen> {
                                         const SizedBox(height: 2),
                                         Text(
                                           '@${gym.handle} · ${gym.tier} · ${gym.membershipRole == 'owner' ? 'owner' : 'co-owner'}',
-                                          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                                         ),
                                         const SizedBox(height: 4),
                                         Wrap(
                                           spacing: 12,
                                           children: [
-                                            Text('${gym.memberCount} members', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
-                                            if (gym.onlineCapacity > 0) Text('${gym.onlineCapacity} online seats', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
-                                            if (gym.physicalCapacity > 0) Text('${gym.physicalCapacity} seats', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
-                                            if (gym.currentlyServing > 0) Text('${gym.currentlyServing} serving', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
+                                            Text('${gym.memberCount} members', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
+                                            if (gym.onlineCapacity > 0) Text('${gym.onlineCapacity} online seats', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
+                                            if (gym.physicalCapacity > 0) Text('${gym.physicalCapacity} seats', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
+                                            if (gym.currentlyServing > 0) Text('${gym.currentlyServing} serving', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
                                           ],
                                         ),
                                       ],
                                     ),
                                   ),
-                                  const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+                                  Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                 ],
                               ),
                             ),

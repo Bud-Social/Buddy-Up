@@ -56,7 +56,7 @@ class _BuddyMessagesScreenState extends ConsumerState<BuddyMessagesScreen> {
                     pending > 0
                         ? 'You asked $pending ${pending == 1 ? 'buddy' : 'buddies'} to make it official — waiting on them.'
                         : 'Chats you started from Find a Buddy. Promote one to become buddies.',
-                    style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                   ),
                 ),
               ],
@@ -139,9 +139,9 @@ class _PromotionStrip extends StatelessWidget {
       );
     }
     if (status == 'declined') {
-      return const _Strip(
+      return _Strip(
         icon: Icons.remove_circle_outline,
-        color: BuddyColors.textSecondary,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
         label: 'Buddy request declined',
       );
     }
@@ -153,9 +153,9 @@ class _PromotionStrip extends StatelessWidget {
       );
     }
     if (!conversation.promotable) return const SizedBox.shrink();
-    return const _Strip(
+    return _Strip(
       icon: Icons.handshake_outlined,
-      color: BuddyColors.textSecondary,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
       label: 'Tap to promote to buddies',
     );
   }
@@ -199,17 +199,17 @@ class _Empty extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.forum_outlined, size: 56, color: BuddyColors.textSecondary.withValues(alpha: 0.4)),
+            Icon(Icons.forum_outlined, size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'No buddy chats yet',
-              style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Message someone from Find a Buddy and the conversation lands here.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
             ),
             const SizedBox(height: 16),
             TextButton(

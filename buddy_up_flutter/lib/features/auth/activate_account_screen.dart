@@ -103,11 +103,11 @@ class _ActivateAccountScreenState extends State<ActivateAccountScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Activate your account'),
-        backgroundColor: BuddyColors.black,
-        foregroundColor: BuddyColors.textPrimary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
       ),
       body: SafeArea(
@@ -121,14 +121,14 @@ class _ActivateAccountScreenState extends State<ActivateAccountScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (_loading)
-                    const Column(
+                    Column(
                       children: [
                         CircularProgressIndicator(color: BuddyColors.green),
                         SizedBox(height: 18),
                         Text(
                           'Activating your account…',
                           style: TextStyle(
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 14,
                           ),
                         ),
@@ -194,8 +194,8 @@ class _ActivationState extends StatelessWidget {
         Text(
           title,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: BuddyColors.textPrimary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
@@ -204,8 +204,8 @@ class _ActivationState extends StatelessWidget {
         Text(
           body,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: BuddyColors.textSecondary,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 14,
             height: 1.55,
           ),

@@ -86,13 +86,15 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         ),
                         data: (comments) {
                           if (comments.isEmpty) {
-                            return const Center(
+                            return Center(
                               child: Padding(
-                                padding: EdgeInsets.all(32),
+                                padding: const EdgeInsets.all(32),
                                 child: Text(
                                   'No comments yet. Be the first!',
                                   style: TextStyle(
-                                    color: BuddyColors.textSecondary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ),
@@ -146,23 +148,29 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             ),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                color: BuddyColors.black,
-                border: Border(top: BorderSide(color: BuddyColors.border)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                border: const Border(
+                  top: BorderSide(color: BuddyColors.border),
+                ),
               ),
               child: post.commentsDisabled
-                  ? const Row(
+                  ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           LucideIcons.messagesSquare,
-                          color: BuddyColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           size: 18,
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
                           'Comments are turned off for this post',
-                          style: TextStyle(color: BuddyColors.textSecondary),
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     )
@@ -199,10 +207,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                           _replyToCommentId = null;
                                           _replyToDisplayName = null;
                                         }),
-                                        child: const Icon(
+                                        child: Icon(
                                           LucideIcons.x,
                                           size: 16,
-                                          color: BuddyColors.textSecondary,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
                                         ),
                                       ),
                                     ],
@@ -231,17 +241,21 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             ),
                             const SizedBox(width: 6),
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 LucideIcons.smile,
-                                color: BuddyColors.textSecondary,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                               onPressed: () => _showCommentMediaSheet(post.id),
                             ),
                             const SizedBox(width: 6),
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 LucideIcons.image,
-                                color: BuddyColors.textSecondary,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                               onPressed: () => _pickImageComment(post.id),
                             ),
@@ -375,10 +389,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             const SizedBox(height: 12),
             GestureDetector(
               onTap: () => Navigator.of(context).pop(),
-              child: const Text(
+              child: Text(
                 'Cancel',
                 style: TextStyle(
-                  color: BuddyColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 14,
                 ),
               ),
@@ -480,8 +494,8 @@ class _TombstoneBanner extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'Reason: ${tombstone.reason.replaceAll('_', ' ')}',
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
               ),
             ),
@@ -490,8 +504,8 @@ class _TombstoneBanner extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               tombstone.note,
-              style: const TextStyle(
-                color: BuddyColors.textPrimary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 12,
               ),
             ),
@@ -502,8 +516,8 @@ class _TombstoneBanner extends StatelessWidget {
               days > 0
                   ? 'You can appeal this for another $days days.'
                   : 'The appeal window has closed.',
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 11,
               ),
             ),
@@ -570,8 +584,8 @@ class _TopReactions extends StatelessWidget {
             child: Text(
               '$total reaction${total == 1 ? '' : 's'}'
               '${remaining > 0 ? ' (+$remaining more)' : ''}',
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -616,9 +630,9 @@ class _MediaSheetOption extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: BuddyColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/session_provider.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/input.dart' show BuddyInput;
 import '../../../shared/widgets/shimmer_loader.dart';
@@ -104,7 +103,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             const SizedBox(height: 12),
             availAsync.when(
               data: (slots) {
-                if (slots.isEmpty) return const Text('No availability set', style: TextStyle(color: BuddyColors.textSecondary));
+                if (slots.isEmpty) return Text('No availability set', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant));
                 final dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
                 return Column(
                   children: slots.map((s) => Padding(

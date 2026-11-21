@@ -49,13 +49,13 @@ class ScheduleScreen extends ConsumerWidget {
                 trailing: '${data.ownedPlanCount} owned',
               ),
               if (data.ownedPlanCount == 0)
-                const Card(
+                Card(
                   color: BuddyColors.surface,
                   child: Padding(
                     padding: EdgeInsets.all(16),
                     child: Text(
                       'Programmes and meal plans you buy stay here, ready to follow.',
-                      style: TextStyle(color: BuddyColors.textSecondary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ),
                 )
@@ -100,19 +100,19 @@ class _SectionHeader extends StatelessWidget {
           Expanded(
             child: Text(
               label.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.8,
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ),
           Text(
             trailing,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -175,18 +175,18 @@ class _EntryCard extends StatelessWidget {
                       ].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right,
                 size: 18,
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ],
           ),
@@ -236,18 +236,18 @@ class _PlanCard extends StatelessWidget {
                     ),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right,
                 size: 18,
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ],
           ),

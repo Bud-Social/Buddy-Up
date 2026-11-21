@@ -79,8 +79,8 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
                   child: Text(
                     apiErrorMessage(e,
                         fallback: 'Could not load your activity.'),
-                    style: const TextStyle(
-                        fontSize: 12, color: BuddyColors.textSecondary),
+                    style: TextStyle(
+                        fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ),
               ),

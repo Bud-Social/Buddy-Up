@@ -197,9 +197,9 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                     const SizedBox(height: 8),
                     ..._asGuardian.map(_guardianLinkCard),
                     if (_asGuardian.isEmpty && _dashboard.isEmpty)
-                      const Text(
+                      Text(
                         'No linked teens yet. Send an invite to get started.',
-                        style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                       ),
                   ] else ...[
                     const Text('Guardian Links',
@@ -207,9 +207,9 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                     const SizedBox(height: 8),
                     ..._asTeen.map(_teenLinkCard),
                     if (_asTeen.isEmpty)
-                      const Text(
+                      Text(
                         'No guardians linked to your account. A parent or guardian can invite you by email.',
-                        style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                       ),
                   ],
                 ],
@@ -240,8 +240,8 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Text('Date of birth (optional)',
-                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+              Text('Date of birth (optional)',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
               const Spacer(),
               TextButton(
                 onPressed: _pickTeenDob,
@@ -300,7 +300,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             'Last active: ${entry.lastActive.isEmpty ? '—' : entry.lastActive}\n'
             'Posts (7d): ${entry.postsLast7d} · Workouts (7d): ${entry.workoutsLast7d} · '
             'Upcoming sessions: ${entry.upcomingSessions}',
-            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
           ),
         ],
       ),
@@ -373,7 +373,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
           const SizedBox(height: 4),
           Text(
             pending ? 'Pending invite' : 'Linked since ${link.acceptedAt ?? link.createdAt}',
-            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
           ),
           if (pending) ...[
             const SizedBox(height: 12),

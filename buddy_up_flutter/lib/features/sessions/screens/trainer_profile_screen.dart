@@ -44,8 +44,8 @@ class TrainerProfileScreen extends ConsumerWidget {
                     if (trainer.location.isNotEmpty)
                       Text(
                         trainer.location,
-                        style: const TextStyle(
-                          color: BuddyColors.textSecondary,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     const SizedBox(height: 8),
@@ -62,10 +62,10 @@ class TrainerProfileScreen extends ConsumerWidget {
                           '${trainer.averageRating.toStringAsFixed(1)} (${trainer.reviewCount} reviews)',
                         ),
                         const SizedBox(width: 16),
-                        const Icon(
+                        Icon(
                           LucideIcons.dumbbell,
                           size: 18,
-                          color: BuddyColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(width: 4),
                         Text('${trainer.sessionCount} sessions'),
@@ -132,9 +132,9 @@ class TrainerProfileScreen extends ConsumerWidget {
               ],
               Row(
                 children: [
-                  const Text(
+                  Text(
                     'Experience: ',
-                    style: TextStyle(color: BuddyColors.textSecondary),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   Text('${trainer.experienceYears} years'),
                   const Spacer(),
@@ -165,9 +165,9 @@ class TrainerProfileScreen extends ConsumerWidget {
               reviewsAsync.when(
                 data: (reviews) {
                   if (reviews.isEmpty) {
-                    return const Text(
+                    return Text(
                       'No reviews yet',
-                      style: TextStyle(color: BuddyColors.textSecondary),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                     );
                   }
                   return Column(
@@ -206,9 +206,9 @@ class TrainerProfileScreen extends ConsumerWidget {
                                   : null,
                               trailing: Text(
                                 _formatDate(r.createdAt),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 11,
-                                  color: BuddyColors.textSecondary,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ),

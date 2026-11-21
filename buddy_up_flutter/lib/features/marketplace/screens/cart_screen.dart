@@ -51,10 +51,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 children: [
                   Icon(Icons.shopping_cart_outlined,
                       size: 64,
-                      color: BuddyColors.textSecondary.withValues(alpha: 0.3)),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
                   const SizedBox(height: 16),
-                  const Text('Your cart is empty',
-                      style: TextStyle(color: BuddyColors.textSecondary)),
+                  Text('Your cart is empty',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   const SizedBox(height: 24),
                   BuddyButton(
                     label: 'Browse Marketplace',
@@ -155,7 +155,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   ),
                   InkWell(
                     onTap: () => _discountController.clear(),
-                    child: const Icon(Icons.close, size: 16, color: BuddyColors.textSecondary),
+                    child: Icon(Icons.close, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -242,8 +242,8 @@ class _TotalsSummary extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(e.key,
-                                style: const TextStyle(
-                                    color: BuddyColors.textSecondary, fontSize: 13)),
+                                style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
                             Text('${e.value}',
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w600, fontSize: 13)),
@@ -268,8 +268,8 @@ class _TotalsSummary extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('$localCur Equivalent',
-                        style: const TextStyle(
-                            color: BuddyColors.textSecondary, fontSize: 13)),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
                     Text('$localCur ${local.toStringAsFixed(2)}',
                         style: const TextStyle(
                             fontWeight: FontWeight.w600, fontSize: 13)),
@@ -342,8 +342,8 @@ class _CartItemCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => Container(
                     color: BuddyColors.surfaceRaised,
-                    child: const Icon(Icons.image,
-                        color: BuddyColors.textSecondary, size: 24),
+                    child: Icon(Icons.image,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant, size: 24),
                   ),
                 ),
               ),
@@ -359,8 +359,8 @@ class _CartItemCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
                   Text(_subtitle,
-                      style: const TextStyle(
-                          fontSize: 12, color: BuddyColors.textSecondary)),
+                      style: TextStyle(
+                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   if (hasArtifacts) ...[
                     const SizedBox(height: 4),
                     ...totalArt.entries.where((e) => e.value > 0).map((e) => Text(
@@ -372,8 +372,8 @@ class _CartItemCard extends StatelessWidget {
                         )),
                     if (totalUsd > 0)
                       Text('~USD ${totalUsd.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                              fontSize: 11, color: BuddyColors.textSecondary)),
+                          style: TextStyle(
+                              fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   ],
                   const SizedBox(height: 6),
                   Row(
@@ -420,7 +420,7 @@ class _MiniQtyButton extends StatelessWidget {
           border: Border.all(color: BuddyColors.border),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Icon(icon, size: 14, color: BuddyColors.textPrimary),
+        child: Icon(icon, size: 14, color: Theme.of(context).colorScheme.onSurface),
       ),
     );
   }

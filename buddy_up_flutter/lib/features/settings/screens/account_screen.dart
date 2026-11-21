@@ -146,7 +146,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                       Icon(
                         verificationStatus == 'none' ? Icons.verified_outlined : Icons.verified,
                         size: 20,
-                        color: verificationStatus == 'none' ? BuddyColors.textSecondary : BuddyColors.green,
+                        color: verificationStatus == 'none' ? Theme.of(context).colorScheme.onSurfaceVariant : BuddyColors.green,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -174,11 +174,11 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                   const Text('Password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 12),
                   if (_hasPassword == false)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(bottom: 12),
                       child: Text(
                         'You signed up with a social account — set a password to also log in with your email.',
-                        style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                       ),
                     ),
                   if (_hasPassword != false)
@@ -224,7 +224,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           SizedBox(
             width: 120,
             child: Text(label,
-                style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
           ),
           Expanded(
             child: Text(value.isEmpty ? '—' : value,

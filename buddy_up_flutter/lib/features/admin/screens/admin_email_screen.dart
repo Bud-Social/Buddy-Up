@@ -85,7 +85,7 @@ class _AdminEmailScreenState extends ConsumerState<AdminEmailScreen> {
               onPressed: () => setState(() => _composing = !_composing),
               style: FilledButton.styleFrom(
                 backgroundColor: BuddyColors.green,
-                foregroundColor: BuddyColors.black,
+                foregroundColor: Theme.of(context).colorScheme.surface,
               ),
               icon: const Icon(Icons.edit_outlined, size: 16),
               label: Text(
@@ -419,7 +419,7 @@ class _EmailComposerState extends ConsumerState<_EmailComposer> {
               onPressed: !_ready || _sending ? null : _send,
               style: FilledButton.styleFrom(
                 backgroundColor: BuddyColors.green,
-                foregroundColor: BuddyColors.black,
+                foregroundColor: Theme.of(context).colorScheme.surface,
               ),
               icon: _sending
                   ? const SizedBox(

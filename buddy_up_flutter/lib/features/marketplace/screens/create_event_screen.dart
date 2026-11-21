@@ -139,7 +139,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   Widget build(BuildContext context) {
     final stepLabels = ['Details', 'Date & Time', 'Location', 'Tickets', 'Review'];
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: BuddyColors.surface,
         title: Text('Create Event — ${stepLabels[_currentStep]}'),
@@ -196,12 +196,12 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             clipBehavior: Clip.antiAlias,
             child: _coverFile != null
                 ? Image.file(File(_coverFile!.path), fit: BoxFit.cover)
-                : const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(Icons.add_photo_alternate_outlined,
-                        size: 36, color: BuddyColors.textSecondary),
+                        size: 36, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     SizedBox(height: 6),
                     Text('Upload event cover',
-                        style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
                   ]),
           ),
         ),
@@ -218,7 +218,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           runSpacing: 8,
           children: kEventCategories
               .map((c) => ChoiceChip(
-                    avatar: Icon(c.icon, size: 16, color: _category == c.key ? BuddyColors.black : BuddyColors.green),
+                    avatar: Icon(c.icon, size: 16, color: _category == c.key ? Theme.of(context).colorScheme.surface : BuddyColors.green),
                     label: Text(c.label),
                     selected: _category == c.key,
                     onSelected: (_) => setState(() => _category = c.key),
@@ -406,7 +406,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         children: [
           SizedBox(
               width: 80,
-              child: Text(label, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13))),
+              child: Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13))),
           Expanded(
               child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
         ],
@@ -503,7 +503,7 @@ class _DateTimePicker extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(children: [
-                  const Icon(Icons.calendar_today, size: 16, color: BuddyColors.textSecondary),
+                  Icon(Icons.calendar_today, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   const SizedBox(width: 8),
                   Text('${date.day}/${date.month}/${date.year}'),
                 ]),
@@ -520,7 +520,7 @@ class _DateTimePicker extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(children: [
-                const Icon(Icons.access_time, size: 16, color: BuddyColors.textSecondary),
+                Icon(Icons.access_time, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 const SizedBox(width: 8),
                 Text(time.format(context)),
               ]),

@@ -85,8 +85,8 @@ class ManageStationsScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
-                        const Icon(Icons.storefront_outlined,
-                            color: BuddyColors.textSecondary, size: 28),
+                        Icon(Icons.storefront_outlined,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant, size: 28),
                         const SizedBox(height: 10),
                         Text(
                           all.isEmpty
@@ -94,9 +94,9 @@ class ManageStationsScreen extends ConsumerWidget {
                               : 'You do not own any of the stations on this '
                                   'server yet.',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -160,12 +160,12 @@ class _ApplicationCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Own a shop or gym but need a collection point somewhere else? '
               'Apply to run one — an admin reviews each application.',
               style: TextStyle(
                 fontSize: 12,
-                color: BuddyColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 height: 1.4,
               ),
             ),
@@ -209,9 +209,9 @@ class _ApplicationCard extends ConsumerWidget {
               status: app.status,
               rejectionReason: app.rejectionReason,
             ),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: BuddyColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               height: 1.4,
             ),
           ),
@@ -284,20 +284,20 @@ class _StationCard extends StatelessWidget {
                   children: [
                     Text(
                       station.ownerType == 'gym' ? 'Gym owned' : 'Shop owned',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: BuddyColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     if ((station.phone ?? '').trim().isNotEmpty) ...[
-                      const Text(' · ',
+                      Text(' · ',
                           style: TextStyle(
-                              fontSize: 11, color: BuddyColors.textSecondary)),
+                              fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                       Text(
                         station.phone!.trim(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: BuddyColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -306,7 +306,7 @@ class _StationCard extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.edit_outlined, size: 16, color: BuddyColors.textSecondary),
+          Icon(Icons.edit_outlined, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
         ],
       ),
     );
@@ -646,9 +646,9 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         if (!hasOwner)
-          const Text(
+          Text(
             'You need a shop or a gym before you can own a pickup station.',
-            style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
           )
         else
           Wrap(

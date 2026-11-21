@@ -533,7 +533,7 @@ class _GrantPanelState extends ConsumerState<_GrantPanel> {
               onPressed: _ready ? _submit : null,
               style: FilledButton.styleFrom(
                 backgroundColor: BuddyColors.green,
-                foregroundColor: BuddyColors.black,
+                foregroundColor: Theme.of(context).colorScheme.surface,
               ),
               icon: widget.busy
                   ? const SizedBox(

@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_error.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../data/models/admin_portal.dart';
 import '../../../features/marketplace/utils/checkout.dart' show artifactDisplay;
 import '../../../features/marketplace/utils/order_transitions.dart';
@@ -352,8 +351,8 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
                       item.creatorDisplayName ??
                           item.creatorUsername ??
                           item.itemType.replaceAll('_', ' '),
-                      style: const TextStyle(
-                          fontSize: 11, color: BuddyColors.textSecondary),
+                      style: TextStyle(
+                          fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -366,8 +365,8 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
                   child: Text(
                     'Case ${itemCase.caseType} · ${itemCase.status}'
                     '${itemCase.affectsLedger ? '' : ' (ledger unaffected)'}',
-                    style: const TextStyle(
-                        fontSize: 11, color: BuddyColors.textSecondary),
+                    style: TextStyle(
+                        fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ),
             ],
@@ -375,9 +374,9 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> {
           if (acting) ...[
             const SizedBox(height: 10),
             if (actions.isEmpty)
-              const Text(
+              Text(
                 'No further transitions are legal from here.',
-                style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               )
             else
               Wrap(

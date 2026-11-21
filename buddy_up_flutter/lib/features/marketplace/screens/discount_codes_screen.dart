@@ -402,7 +402,7 @@ class _DiscountCodesScreenState extends ConsumerState<DiscountCodesScreen> {
           ),
           if (a.repeatUsageDistribution.isNotEmpty) ...[
             const SizedBox(height: 8),
-            const Text('Repeat Usage', style: TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
+            Text('Repeat Usage', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 4),
             ...a.repeatUsageDistribution.map((row) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 1),
@@ -414,7 +414,7 @@ class _DiscountCodesScreenState extends ConsumerState<DiscountCodesScreen> {
           ],
           if (a.topUsers.isNotEmpty) ...[
             const SizedBox(height: 8),
-            const Text('Top Users', style: TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
+            Text('Top Users', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 4),
             ...a.topUsers.map((row) {
               final display = row['user__display_name'] ?? row['user__username'] ?? 'user';
@@ -437,7 +437,7 @@ class _DiscountCodesScreenState extends ConsumerState<DiscountCodesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
+        Text(label, style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
         Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
     );
@@ -469,18 +469,18 @@ class _DiscountCodesScreenState extends ConsumerState<DiscountCodesScreen> {
             const SizedBox(height: 4),
             Text(
               code.discountType == 'percentage' ? '${code.discountPct}% off' : 'Fixed artifact discount',
-              style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
-            if (code.description.isNotEmpty) Text(code.description, style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+            if (code.description.isNotEmpty) Text(code.description, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 4),
               Row(
                 children: [
-                  Text('${code.timesUsed}/${code.usageLimit == 0 ? '∞' : code.usageLimit.toString()} uses', style: TextStyle(fontSize: 11, color: BuddyColors.textSecondary.withValues(alpha: 0.7))),
+                  Text('${code.timesUsed}/${code.usageLimit == 0 ? '∞' : code.usageLimit.toString()} uses', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7))),
                   const SizedBox(width: 12),
-                  Text('${code.shareCount} shares', style: TextStyle(fontSize: 11, color: BuddyColors.textSecondary.withValues(alpha: 0.7))),
+                  Text('${code.shareCount} shares', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7))),
                   if (code.validUntil != null) ...[
                     const SizedBox(width: 12),
-                    Text('Expires ${code.validUntil}', style: TextStyle(fontSize: 11, color: BuddyColors.textSecondary.withValues(alpha: 0.7))),
+                    Text('Expires ${code.validUntil}', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7))),
                   ],
                 ],
               ),

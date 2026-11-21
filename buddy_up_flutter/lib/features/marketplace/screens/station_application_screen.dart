@@ -233,18 +233,18 @@ class _StationApplicationScreenState
         const Text('Who owns this station?',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'A pickup station belongs to exactly one shop or one gym.',
-          style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary),
+          style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 20),
         const Text('Your shops',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         if (shops.isEmpty)
-          const Text(
+          Text(
             'You do not own a shop yet, so pick a gym below instead.',
-            style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
           )
         else
           for (final shop in shops)
@@ -315,11 +315,11 @@ class _StationApplicationScreenState
                 color: BuddyColors.green),
           )
         else
-          const Text(
+          Text(
             'There is no "my gyms" endpoint, so a gym is picked by handle and '
             'resolved to its id here.',
             style: TextStyle(
-                fontSize: 11, color: BuddyColors.textSecondary, height: 1.35),
+                fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.35),
           ),
       ],
     );
@@ -367,9 +367,9 @@ class _StationApplicationScreenState
         const Text('Opening hours',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Buyers see these on the station picker, so keep them accurate.',
-          style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary),
+          style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 16),
         for (final day in stationDayKeys)

@@ -109,11 +109,11 @@ class _StaffInviteScreenState extends ConsumerState<StaffInviteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Staff invitation'),
-        backgroundColor: BuddyColors.black,
-        foregroundColor: BuddyColors.textPrimary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
       ),
       body: SafeArea(
         child: Center(
@@ -138,11 +138,11 @@ class _StaffInviteScreenState extends ConsumerState<StaffInviteScreen> {
                       color: BuddyColors.green,
                     ),
                     const SizedBox(height: 14),
-                    const Text(
+                    Text(
                       'Staff invitation',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: BuddyColors.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
@@ -177,16 +177,16 @@ class _StaffInviteScreenState extends ConsumerState<StaffInviteScreen> {
                     else if (_wrongAccount) ...[
                       Text(
                         'You are signed in as $_signedInAs, but this invitation was sent to ${_invite?['email']}.',
-                        style: const TextStyle(
-                          color: BuddyColors.textSecondary,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 13,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Sign out and sign back in with the invited address to accept it. This check stops a forwarded link from granting access to the wrong person.',
                         style: TextStyle(
-                          color: BuddyColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
                         ),
                       ),
@@ -199,8 +199,8 @@ class _StaffInviteScreenState extends ConsumerState<StaffInviteScreen> {
                     ] else if (_invite != null) ...[
                       Text(
                         'You have been invited to join the BuddyUp Fit staff as ${_invite?['role_display'] ?? _invite?['role']}.',
-                        style: const TextStyle(
-                          color: BuddyColors.textSecondary,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 13,
                           height: 1.5,
                         ),
@@ -208,17 +208,17 @@ class _StaffInviteScreenState extends ConsumerState<StaffInviteScreen> {
                       const SizedBox(height: 8),
                       Text(
                         'Invitation for ${_invite?['email']}',
-                        style: const TextStyle(
-                          color: BuddyColors.textPrimary,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 13,
                         ),
                       ),
                       if (_signedInAs == null || _signedInAs!.isEmpty) ...[
                         const SizedBox(height: 12),
-                        const Text(
+                        Text(
                           'Sign in with the invited address to claim this invitation.',
                           style: TextStyle(
-                            color: BuddyColors.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),

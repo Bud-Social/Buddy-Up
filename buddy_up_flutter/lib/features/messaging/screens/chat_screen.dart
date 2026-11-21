@@ -50,8 +50,8 @@ class _BuddyBanner extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
-                color: BuddyColors.textPrimary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -376,10 +376,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: BuddyColors.surface,
-        title: const Text('Call again?', style: TextStyle(color: BuddyColors.textPrimary)),
+        title: Text('Call again?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           isVideo ? 'Start a video call in this chat?' : 'Start a voice call in this chat?',
-          style: const TextStyle(color: BuddyColors.textSecondary),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
@@ -395,7 +395,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             label: Text(isVideo ? 'Video' : 'Voice'),
             style: FilledButton.styleFrom(
               backgroundColor: BuddyColors.green,
-              foregroundColor: BuddyColors.black,
+              foregroundColor: Theme.of(context).colorScheme.surface,
             ),
           ),
         ],
@@ -680,9 +680,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       );
     }
     if (status == 'declined') {
-      return const _BuddyBanner(
+      return _BuddyBanner(
         icon: Icons.remove_circle_outline,
-        color: BuddyColors.textSecondary,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
         label: 'Buddy request declined',
       );
     }
@@ -733,7 +733,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 backgroundImage: identity.avatarUrl.isNotEmpty ? NetworkImage(identity.avatarUrl) : null,
                 child: identity.avatarUrl.isEmpty
                     ? Text((title.isNotEmpty ? title[0] : '?').toUpperCase(),
-                        style: const TextStyle(color: BuddyColors.textPrimary))
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface))
                     : null,
               ),
             ),
@@ -747,9 +747,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     const Text('typing...', style: TextStyle(fontSize: 11, color: BuddyColors.green))
                   else if (isGroupChat)
                     Text('${convo?.participantsData.length ?? 0} members',
-                        style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary))
+                        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant))
                   else
-                    Text(other?.username ?? '', style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
+                    Text(other?.username ?? '', style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 ],
               ),
             ),
@@ -772,7 +772,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onPressed: () => _showThemePicker(),
           ),
           IconButton(
-            icon: const Icon(Icons.more_vert),
+            icon: Icon(Icons.more_vert),
             tooltip: 'Conversation options',
             onPressed: () => _showConversationMenu(other?.username, convo),
           ),
@@ -785,17 +785,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             child: Container(
               color: _bgColor,
               child: messagesState.isLoading
-                ? const Center(child: CircularProgressIndicator(color: BuddyColors.green))
+                ? Center(child: CircularProgressIndicator(color: BuddyColors.green))
                 : displayMessages.isEmpty
                     ? ListView(
-                        children: const [
-                          SizedBox(height: 120),
+                        children: [
+                          const SizedBox(height: 120),
                           Center(
                             child: Column(
                               children: [
-                                Icon(Icons.chat_bubble_outline, size: 48, color: BuddyColors.textSecondary),
+                                Icon(Icons.chat_bubble_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                 SizedBox(height: 12),
-                                Text('Say hello!', style: TextStyle(color: BuddyColors.textSecondary)),
+                                Text('Say hello!', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                               ],
                             ),
                           ),
@@ -874,11 +874,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           _pendingMedia!.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
                         ),
-                        const Text(
+                        Text(
                           'Attachment',
-                          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
                         ),
                       ],
                     ),
@@ -892,7 +892,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       decoration: BoxDecoration(
                         color: _viewOncePending
                             ? BuddyColors.green
-                            : BuddyColors.black,
+                            : Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(14),
                         border: _viewOncePending
                             ? null
@@ -905,8 +905,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             Icons.visibility_outlined,
                             size: 12,
                             color: _viewOncePending
-                                ? BuddyColors.black
-                                : BuddyColors.textSecondary,
+                                ? Theme.of(context).colorScheme.surface
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -915,8 +915,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: _viewOncePending
-                                  ? BuddyColors.black
-                                  : BuddyColors.textSecondary,
+                                  ? Theme.of(context).colorScheme.surface
+                                  : Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -925,7 +925,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                   const SizedBox(width: 4),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 18, color: BuddyColors.textSecondary),
+                    icon: Icon(Icons.close, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     onPressed: _clearPendingMedia,
                     tooltip: 'Discard',
                   ),
@@ -949,7 +949,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.add_circle_outline, color: BuddyColors.textSecondary),
+                      icon: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       onPressed: () {
                         showModalBottomSheet(
                           context: context,
@@ -989,7 +989,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       )
                     else if (_textController.text.trim().isEmpty && _pendingMedia == null)
                       IconButton(
-                        icon: const Icon(Icons.mic_outlined, color: BuddyColors.textSecondary),
+                        icon: Icon(Icons.mic_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         onPressed: _showVoiceRecorder,
                       )
                     else
@@ -1020,7 +1020,7 @@ class _AttachmentThumbIcon extends StatelessWidget {
         color: BuddyColors.surfaceRaised,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: const Icon(Icons.videocam_outlined, color: BuddyColors.textSecondary),
+      child: Icon(Icons.videocam_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
     );
   }
 }
@@ -1089,7 +1089,7 @@ class _ChatThemeSheetState extends State<_ChatThemeSheet> {
               margin: const EdgeInsets.only(top: 12),
               width: 40, height: 4,
               decoration: BoxDecoration(
-                color: BuddyColors.textSecondary.withValues(alpha: 0.3),
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1102,7 +1102,7 @@ class _ChatThemeSheetState extends State<_ChatThemeSheet> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: _bg ?? BuddyColors.black,
+                      color: _bg ?? Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(
@@ -1133,7 +1133,7 @@ class _ChatThemeSheetState extends State<_ChatThemeSheet> {
                                 bottomLeft: Radius.circular(4), bottomRight: Radius.circular(16),
                               ),
                             ),
-                            child: const Text('I am good, thanks!', style: TextStyle(fontSize: 13, color: BuddyColors.textPrimary)),
+                            child: Text('I am good, thanks!', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface)),
                           ),
                         ),
                       ],
@@ -1142,7 +1142,7 @@ class _ChatThemeSheetState extends State<_ChatThemeSheet> {
                   const SizedBox(height: 20),
 
                   // Background presets
-                  const Text('Background', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text('Background', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8, runSpacing: 8,
@@ -1153,7 +1153,7 @@ class _ChatThemeSheetState extends State<_ChatThemeSheet> {
                         child: Container(
                           width: 48, height: 48,
                           decoration: BoxDecoration(
-                            color: c ?? BuddyColors.black,
+                            color: c ?? Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: selected ? BuddyColors.green : BuddyColors.surfaceRaised,
@@ -1161,7 +1161,7 @@ class _ChatThemeSheetState extends State<_ChatThemeSheet> {
                             ),
                           ),
                           child: c == null
-                              ? const Center(child: Text('X', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)))
+                              ? Center(child: Text('X', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)))
                               : null,
                         ),
                       );
@@ -1170,7 +1170,7 @@ class _ChatThemeSheetState extends State<_ChatThemeSheet> {
                   const SizedBox(height: 20),
 
                   // Sender color
-                  const Text('Your bubble color', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text('Your bubble color', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8, runSpacing: 8,
@@ -1198,7 +1198,7 @@ class _ChatThemeSheetState extends State<_ChatThemeSheet> {
                   const SizedBox(height: 20),
 
                   // Receiver color
-                  const Text('Their bubble color', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text('Their bubble color', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8, runSpacing: 8,
@@ -1232,7 +1232,7 @@ class _ChatThemeSheetState extends State<_ChatThemeSheet> {
                       onPressed: () => widget.onApply(_bg, _sender, _receiver),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: BuddyColors.green,
-                        foregroundColor: BuddyColors.black,
+                        foregroundColor: Theme.of(context).colorScheme.surface,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),

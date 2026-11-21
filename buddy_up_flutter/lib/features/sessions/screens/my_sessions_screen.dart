@@ -125,11 +125,11 @@ class _SessionsTabState extends ConsumerState<_SessionsTab> {
                                 ]),
                                 const SizedBox(height: 8),
                                 Row(children: [
-                                  const Icon(Icons.calendar_today, size: 14, color: BuddyColors.textSecondary),
+                                  Icon(Icons.calendar_today, size: 14, color: BuddyColors.textSecondary),
                                   const SizedBox(width: 4),
                                   Text(s.scheduledDate, style: const TextStyle(fontSize: 13)),
                                   const SizedBox(width: 16),
-                                  const Icon(Icons.access_time, size: 14, color: BuddyColors.textSecondary),
+                                  Icon(Icons.access_time, size: 14, color: BuddyColors.textSecondary),
                                   const SizedBox(width: 4),
                                   Text(s.scheduledTime, style: const TextStyle(fontSize: 13)),
                                   const SizedBox(width: 16),
@@ -292,7 +292,7 @@ class _LibraryTile extends StatelessWidget {
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: BuddyColors.textSecondary,
                       ),
@@ -300,7 +300,7 @@ class _LibraryTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+              Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
             ],
           ),
         ),
@@ -388,7 +388,7 @@ class SessionDetailScreen extends ConsumerWidget {
       child: Row(children: [
         Icon(icon, size: 18, color: BuddyColors.textSecondary),
         const SizedBox(width: 12),
-        Text('$label: ', style: const TextStyle(color: BuddyColors.textSecondary)),
+        Text('$label: ', style: TextStyle(color: BuddyColors.textSecondary)),
         Text(value),
       ]),
     );
