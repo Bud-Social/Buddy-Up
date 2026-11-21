@@ -6,6 +6,7 @@ import '../../../data/models/post.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/cache/with_cache.dart';
+import '../../../core/utils/emoji_utils.dart';
 
 final feedRepositoryProvider = Provider<FeedRepository>((ref) {
   final dio = ref.watch(apiClientProvider).dio;
@@ -19,10 +20,12 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
 
 final apiClientProvider = Provider<ApiClient>((_) => ApiClient());
 
-List<Post> _parsePostList(dynamic data) =>
-    (data as List).map((e) => Post.fromJson(e as Map<String, dynamic>)).toList();
-List<Comment> _parseCommentList(dynamic data) =>
-    (data as List).map((e) => Comment.fromJson(e as Map<String, dynamic>)).toList();
+List<Post> _parsePostList(dynamic data) => (data as List)
+    .map((e) => Post.fromJson(e as Map<String, dynamic>))
+    .toList();
+List<Comment> _parseCommentList(dynamic data) => (data as List)
+    .map((e) => Comment.fromJson(e as Map<String, dynamic>))
+    .toList();
 
 class FeedState {
   final List<Post> posts;
@@ -75,9 +78,11 @@ class FeedNotifier extends Notifier<FeedState> {
     state = state.copyWith(isLoading: true, error: null, activeTab: t);
     try {
       final cacheKey = 'feed_$t';
-      final raw = await withCache(ref as dynamic, cacheKey, () => _repository.getFeed(
-        tab: t,
-      ));
+      final raw = await withCache(
+        ref as dynamic,
+        cacheKey,
+        () => _repository.getFeed(tab: t),
+      );
       final data = raw['data'];
       final pagination = raw['pagination'] as Map<String, dynamic>?;
       state = state.copyWith(
@@ -161,11 +166,17 @@ class FeedNotifier extends Notifier<FeedState> {
     final idx = state.posts.indexWhere((p) => p.id == postId);
     if (idx == -1) return;
     final post = state.posts[idx];
-    final counts = Map<String, int>.from(post.reactionCounts);
-    if (post.userReaction == emoji) {
-      counts[emoji] = (counts[emoji] ?? 1) - 1;
-      if (counts[emoji]! <= 0) counts.remove(emoji);
-      updatePostInList(post.copyWith(userReaction: null, reactionCounts: counts));
+    final counts = normalizeReactionCounts(post.reactionCounts);
+    final emojiGlyph = toReactionEmoji(emoji);
+    final prev = post.userReaction == null
+        ? null
+        : toReactionEmoji(post.userReaction!);
+    if (prev == emojiGlyph) {
+      counts[emojiGlyph] = (counts[emojiGlyph] ?? 1) - 1;
+      if (counts[emojiGlyph]! <= 0) counts.remove(emojiGlyph);
+      updatePostInList(
+        post.copyWith(userReaction: null, reactionCounts: counts),
+      );
       try {
         await _repository.unreact(postId);
       } catch (_) {
@@ -173,15 +184,16 @@ class FeedNotifier extends Notifier<FeedState> {
       }
       return;
     }
-    final prev = post.userReaction;
     if (prev != null) {
       counts[prev] = (counts[prev] ?? 1) - 1;
       if (counts[prev]! <= 0) counts.remove(prev);
     }
-    counts[emoji] = (counts[emoji] ?? 0) + 1;
-    updatePostInList(post.copyWith(userReaction: emoji, reactionCounts: counts));
+    counts[emojiGlyph] = (counts[emojiGlyph] ?? 0) + 1;
+    updatePostInList(
+      post.copyWith(userReaction: emojiGlyph, reactionCounts: counts),
+    );
     try {
-      await _repository.react(postId, ReactionInput(reactionType: emoji));
+      await _repository.react(postId, ReactionInput(reactionType: emojiGlyph));
     } catch (_) {
       updatePostInList(post);
     }
@@ -192,10 +204,12 @@ class FeedNotifier extends Notifier<FeedState> {
     final idx = state.posts.indexWhere((p) => p.id == postId);
     if (idx == -1) return;
     final post = state.posts[idx];
-    updatePostInList(post.copyWith(
-      isSaved: !post.isSaved,
-      saveCount: (post.saveCount + (post.isSaved ? -1 : 1)).clamp(0, 999999),
-    ));
+    updatePostInList(
+      post.copyWith(
+        isSaved: !post.isSaved,
+        saveCount: (post.saveCount + (post.isSaved ? -1 : 1)).clamp(0, 999999),
+      ),
+    );
     try {
       if (post.isSaved) {
         await _repository.unsave(postId);
@@ -213,7 +227,8 @@ class FeedNotifier extends Notifier<FeedState> {
     if (idx == -1) return;
     try {
       final raw = await _repository.sharePost(postId, {'channel': 'copy'});
-      final count = (raw['data'] as Map<String, dynamic>?)?['share_count'] as int?;
+      final count =
+          (raw['data'] as Map<String, dynamic>?)?['share_count'] as int?;
       if (count != null) {
         updatePostInList(state.posts[idx].copyWith(shareCount: count));
       }
@@ -244,30 +259,34 @@ class FeedNotifier extends Notifier<FeedState> {
     if (idx == -1) return;
     try {
       final raw = await _repository.recordView(postId);
-      final count = (raw['data'] as Map<String, dynamic>?)?['view_count'] as int?;
+      final count =
+          (raw['data'] as Map<String, dynamic>?)?['view_count'] as int?;
       if (count != null) {
         updatePostInList(state.posts[idx].copyWith(viewCount: count));
       }
     } catch (_) {}
   }
 
-  Future<void> toggleRepost(String postId) async {    final idx = state.posts.indexWhere((p) => p.id == postId);
+  Future<void> toggleRepost(String postId) async {
+    final idx = state.posts.indexWhere((p) => p.id == postId);
     if (idx == -1) return;
-    
+
     final post = state.posts[idx];
     final isReposted = post.isRepostedByMe;
-    
+
     // Optimistic update
     final updated = post.copyWith(
       isRepostedByMe: !isReposted,
       repostCount: (post.repostCount + (isReposted ? -1 : 1)).clamp(0, 999999),
     );
     updatePostInList(updated);
-    
+
     try {
       final res = await _repository.repost(postId, const RepostPayload());
       if (res['repost_count'] != null) {
-        updatePostInList(updated.copyWith(repostCount: res['repost_count'] as int));
+        updatePostInList(
+          updated.copyWith(repostCount: res['repost_count'] as int),
+        );
       }
     } catch (e) {
       // Rollback
@@ -282,7 +301,13 @@ class FeedNotifier extends Notifier<FeedState> {
     final post = state.posts[idx];
     final profileRepo = ref.read(profileRepositoryProvider);
     final currentlyFollowing = post.authorData.followedByViewer;
-    updatePostInList(post.copyWith(authorData: post.authorData.copyWith(followedByViewer: !currentlyFollowing)));
+    updatePostInList(
+      post.copyWith(
+        authorData: post.authorData.copyWith(
+          followedByViewer: !currentlyFollowing,
+        ),
+      ),
+    );
     try {
       if (currentlyFollowing) {
         await profileRepo.unfollowUser(post.authorData.username);
@@ -290,7 +315,13 @@ class FeedNotifier extends Notifier<FeedState> {
         await profileRepo.followUser(post.authorData.username);
       }
     } catch (_) {
-      updatePostInList(post.copyWith(authorData: post.authorData.copyWith(followedByViewer: currentlyFollowing)));
+      updatePostInList(
+        post.copyWith(
+          authorData: post.authorData.copyWith(
+            followedByViewer: currentlyFollowing,
+          ),
+        ),
+      );
     }
   }
 
@@ -469,27 +500,31 @@ class FeedNotifier extends Notifier<FeedState> {
     final row = state.posts[idx];
     final orig = row.originalPostData;
     final target = (row.isRepost && orig != null) ? orig : null;
-    final current = target?.userReaction ?? row.userReaction;
-    final counts = Map<String, int>.from(
+    final rawCurrent = target?.userReaction ?? row.userReaction;
+    final current = rawCurrent == null ? null : toReactionEmoji(rawCurrent);
+    final emojiGlyph = toReactionEmoji(emoji);
+    final counts = normalizeReactionCounts(
       target?.reactionCounts ?? row.reactionCounts,
     );
     String? next;
-    if (current == emoji) {
-      counts[emoji] = (counts[emoji] ?? 1) - 1;
-      if (counts[emoji]! <= 0) counts.remove(emoji);
+    if (current == emojiGlyph) {
+      counts[emojiGlyph] = (counts[emojiGlyph] ?? 1) - 1;
+      if (counts[emojiGlyph]! <= 0) counts.remove(emojiGlyph);
       next = null;
     } else {
       if (current != null) {
         counts[current] = (counts[current] ?? 1) - 1;
         if (counts[current]! <= 0) counts.remove(current);
       }
-      counts[emoji] = (counts[emoji] ?? 0) + 1;
-      next = emoji;
+      counts[emojiGlyph] = (counts[emojiGlyph] ?? 0) + 1;
+      next = emojiGlyph;
     }
     final patched = target != null
         ? row.copyWith(
-            originalPostData:
-                target.copyWith(userReaction: next, reactionCounts: counts),
+            originalPostData: target.copyWith(
+              userReaction: next,
+              reactionCounts: counts,
+            ),
           )
         : row.copyWith(userReaction: next, reactionCounts: counts);
     updatePostInList(patched);
@@ -497,7 +532,10 @@ class FeedNotifier extends Notifier<FeedState> {
       if (next == null) {
         await _repository.unreact(targetId);
       } else {
-        await _repository.react(targetId, ReactionInput(reactionType: emoji));
+        await _repository.react(
+          targetId,
+          ReactionInput(reactionType: emojiGlyph),
+        );
       }
       AnalyticsService.instance.track(
         'feed.post_interaction',
@@ -531,7 +569,9 @@ class FeedNotifier extends Notifier<FeedState> {
   }
 }
 
-final feedProvider = NotifierProvider<FeedNotifier, FeedState>(FeedNotifier.new);
+final feedProvider = NotifierProvider<FeedNotifier, FeedState>(
+  FeedNotifier.new,
+);
 
 /// Bumping forces the inline composer drawer open on the feed screen — the
 /// share-a-replay flow bumps it before navigating so the freshly-restored
@@ -544,9 +584,14 @@ class ComposerExpandRequestNotifier extends Notifier<int> {
 }
 
 final composerExpandRequestProvider =
-    NotifierProvider<ComposerExpandRequestNotifier, int>(ComposerExpandRequestNotifier.new);
+    NotifierProvider<ComposerExpandRequestNotifier, int>(
+      ComposerExpandRequestNotifier.new,
+    );
 
-final postDetailProvider = FutureProvider.family<Post, String>((ref, postId) async {
+final postDetailProvider = FutureProvider.family<Post, String>((
+  ref,
+  postId,
+) async {
   final repo = ref.watch(feedRepositoryProvider);
   final raw = await repo.getPost(postId);
   return Post.fromJson(raw['data'] as Map<String, dynamic>);
@@ -569,7 +614,10 @@ final savedPostsProvider = FutureProvider<List<Post>>((ref) async {
       .toList(growable: false);
 });
 
-final commentsProvider = FutureProvider.family<List<Comment>, String>((ref, postId) async {
+final commentsProvider = FutureProvider.family<List<Comment>, String>((
+  ref,
+  postId,
+) async {
   final repo = ref.watch(feedRepositoryProvider);
   final raw = await repo.getComments(postId);
   return _parseCommentList(raw['data']);
@@ -577,10 +625,10 @@ final commentsProvider = FutureProvider.family<List<Comment>, String>((ref, post
 
 /// Replies to a single comment, lazily loaded by the PostDetailScreen.
 /// Takes (postId, commentId) so it doesn't need a separate post-id provider.
-final commentRepliesProvider =
-    FutureProvider.family.autoDispose<List<Comment>, (String, String)>((ref, params) async {
-  final (postId, commentId) = params;
-  final repo = ref.watch(feedRepositoryProvider);
-  final raw = await repo.getCommentReplies(postId, commentId);
-  return _parseCommentList(raw['data']);
-});
+final commentRepliesProvider = FutureProvider.family
+    .autoDispose<List<Comment>, (String, String)>((ref, params) async {
+      final (postId, commentId) = params;
+      final repo = ref.watch(feedRepositoryProvider);
+      final raw = await repo.getCommentReplies(postId, commentId);
+      return _parseCommentList(raw['data']);
+    });

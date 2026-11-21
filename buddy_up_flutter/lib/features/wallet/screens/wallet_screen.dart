@@ -42,7 +42,10 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Wallet', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Wallet',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: Column(
         children: [
@@ -65,7 +68,9 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                const _OverviewTab(),
+                _OverviewTab(
+                  onQuickAction: (index) => _tabController.animateTo(index),
+                ),
                 const _BuyTab(),
                 _SendTab(),
                 const _HistoryTab(),
@@ -101,7 +106,10 @@ class _BalanceHeader extends ConsumerWidget {
             children: [
               Text(
                 '\$${balance.regularTotalFiat.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
                 '$headlineLabel · spendable',
@@ -111,7 +119,10 @@ class _BalanceHeader extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   '$earningsLabel earnings',
-                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                  style: const TextStyle(
+                    color: BuddyColors.textSecondary,
+                    fontSize: 12,
+                  ),
                 ),
               ],
               const SizedBox(height: 12),
@@ -120,13 +131,20 @@ class _BalanceHeader extends ConsumerWidget {
                 child: Row(
                   // Spendable artifacts only — creator tokens are not in this
                   // wallet until they are transferred into it.
-                  children: balance.regularBalance.map((item) => Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: Chip(
-                      backgroundColor: BuddyColors.surfaceRaised,
-                      label: Text('${item.quantity} ${item.label}', style: const TextStyle(fontSize: 13)),
-                    ),
-                  )).toList(),
+                  children: balance.regularBalance
+                      .map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: Chip(
+                            backgroundColor: BuddyColors.surfaceRaised,
+                            label: Text(
+                              '${item.quantity} ${item.label}',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ],
@@ -140,7 +158,10 @@ class _BalanceHeader extends ConsumerWidget {
 }
 
 class _OverviewTab extends ConsumerStatefulWidget {
-  const _OverviewTab();
+  const _OverviewTab({this.onQuickAction});
+
+  /// Switches the parent wallet TabBar to Buy / Send / Withdraw.
+  final void Function(int index)? onQuickAction;
 
   @override
   ConsumerState<_OverviewTab> createState() => _OverviewTabState();
@@ -173,25 +194,36 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Artifact Breakdown', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text(
+            'Artifact Breakdown',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
           balanceAsync.when(
             data: (balance) {
               if (balance == null) return const SizedBox.shrink();
               return Column(
-                children: balance.balance.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Card(
-                    color: BuddyColors.surface,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: _artifactIcon(item.artifactType),
-                      title: Text(item.label),
-                      trailing: Text('${item.quantity} (\$${item.usdValue.toStringAsFixed(2)})',
-                        style: const TextStyle(color: BuddyColors.green)),
-                    ),
-                  ),
-                )).toList(),
+                children: balance.balance
+                    .map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Card(
+                          color: BuddyColors.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListTile(
+                            leading: _artifactIcon(item.artifactType),
+                            title: Text(item.label),
+                            trailing: Text(
+                              '${item.quantity} (\$${item.usdValue.toStringAsFixed(2)})',
+                              style: const TextStyle(color: BuddyColors.green),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
               );
             },
             loading: () => const CircularProgressIndicator(),
@@ -201,72 +233,157 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
           balanceAsync.when(
             data: (balance) {
               if (balance == null) return const SizedBox.shrink();
-              final hasCreatorBalance = balance.creatorBalance.any((i) => i.quantity > 0);
+              final hasCreatorBalance = balance.creatorBalance.any(
+                (i) => i.quantity > 0,
+              );
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Wallet Balance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Wallet Balance',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
-                  ...balance.regularBalance.where((i) => i.quantity > 0).map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text('${item.quantity} × ${item.label}', style: const TextStyle(fontSize: 13)),
-                  )),
-                  if (balance.regularBalance.where((i) => i.quantity > 0).isEmpty)
-                    const Text('No tokens in wallet.', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
-                  Text('\$${balance.regularTotalFiat.toStringAsFixed(2)}'
-                      '${balance.regularTotalLabel.isEmpty ? '' : ' · ${balance.regularTotalLabel}'}'
-                      ' — spendable',
-                    style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+                  ...balance.regularBalance
+                      .where((i) => i.quantity > 0)
+                      .map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            '${item.quantity} × ${item.label}',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ),
+                  if (balance.regularBalance
+                      .where((i) => i.quantity > 0)
+                      .isEmpty)
+                    const Text(
+                      'No tokens in wallet.',
+                      style: TextStyle(
+                        color: BuddyColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  Text(
+                    '\$${balance.regularTotalFiat.toStringAsFixed(2)}'
+                    '${balance.regularTotalLabel.isEmpty ? '' : ' · ${balance.regularTotalLabel}'}'
+                    ' — spendable',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: BuddyColors.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: 16),
-                  if (hasCreatorBalance || balance.creatorDisplayName.isNotEmpty) ...[
-                    Row(children: [
-                      Icon(Icons.star, size: 18, color: Colors.amber.withValues(alpha: 0.8)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          balance.creatorDisplayName.isNotEmpty
-                            ? '${balance.creatorDisplayName}\'s Creator Wallet'
-                            : 'Creator Wallet',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  if (hasCreatorBalance ||
+                      balance.creatorDisplayName.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.star,
+                          size: 18,
+                          color: Colors.amber.withValues(alpha: 0.8),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit, size: 16, color: BuddyColors.textSecondary),
-                        onPressed: () => _openCreatorNameEdit(balance.creatorDisplayName),
-                        tooltip: 'Edit creator name',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ]),
-                    const SizedBox(height: 8),
-                    ...balance.creatorBalance.where((i) => i.quantity > 0).map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: InkWell(
-                        onTap: () => _openTransfer(item),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                          child: Row(children: [
-                            Icon(Icons.star, size: 14, color: Colors.amber.withValues(alpha: 0.5)),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text('${item.quantity} × ${item.label}',
-                                style: TextStyle(fontSize: 13, color: Colors.amber.withValues(alpha: 0.8))),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            balance.creatorDisplayName.isNotEmpty
+                                ? '${balance.creatorDisplayName}\'s Creator Wallet'
+                                : 'Creator Wallet',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
-                            Icon(Icons.swap_horiz, size: 14, color: BuddyColors.textSecondary.withValues(alpha: 0.7)),
-                          ]),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.edit,
+                            size: 16,
+                            color: BuddyColors.textSecondary,
+                          ),
+                          onPressed: () =>
+                              _openCreatorNameEdit(balance.creatorDisplayName),
+                          tooltip: 'Edit creator name',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...balance.creatorBalance
+                        .where((i) => i.quantity > 0)
+                        .map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: InkWell(
+                              onTap: () => _openTransfer(item),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                  horizontal: 4,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.star,
+                                      size: 14,
+                                      color: Colors.amber.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        '${item.quantity} × ${item.label}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.amber.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.swap_horiz,
+                                      size: 14,
+                                      color: BuddyColors.textSecondary
+                                          .withValues(alpha: 0.7),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    if (balance.creatorBalance
+                        .where((i) => i.quantity > 0)
+                        .isEmpty)
+                      const Text(
+                        'No marketplace earnings yet.',
+                        style: TextStyle(
+                          color: BuddyColors.textSecondary,
+                          fontSize: 12,
                         ),
                       ),
-                    )),
-                    if (balance.creatorBalance.where((i) => i.quantity > 0).isEmpty)
-                      const Text('No marketplace earnings yet.', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
-                    Text('\$${balance.creatorTotalFiat.toStringAsFixed(2)}'
-                        '${balance.creatorTotalLabel.isEmpty ? '' : ' · ${balance.creatorTotalLabel}'}'
-                        ' — earnings',
-                      style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+                    Text(
+                      '\$${balance.creatorTotalFiat.toStringAsFixed(2)}'
+                      '${balance.creatorTotalLabel.isEmpty ? '' : ' · ${balance.creatorTotalLabel}'}'
+                      ' — earnings',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: BuddyColors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text('Tap an item to transfer to your wallet.',
-                      style: TextStyle(fontSize: 10, color: BuddyColors.textSecondary.withValues(alpha: 0.7))),
+                    Text(
+                      'Tap an item to transfer to your wallet.',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: BuddyColors.textSecondary.withValues(alpha: 0.7),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                   ],
                 ],
@@ -276,15 +393,41 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
             error: (_, _) => const SizedBox.shrink(),
           ),
           const SizedBox(height: 8),
-          const Text('Quick Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text(
+            'Quick Actions',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
-          Row(children: [
-            Expanded(child: BuddyButton(label: 'Buy', variant: BuddyButtonVariant.secondary, icon: Icons.add, onPressed: () {})),
-            const SizedBox(width: 12),
-            Expanded(child: BuddyButton(label: 'Send', variant: BuddyButtonVariant.secondary, icon: Icons.send, onPressed: () {})),
-            const SizedBox(width: 12),
-            Expanded(child: BuddyButton(label: 'Withdraw', variant: BuddyButtonVariant.secondary, icon: Icons.download, onPressed: () {})),
-          ]),
+          Row(
+            children: [
+              Expanded(
+                child: BuddyButton(
+                  label: 'Buy',
+                  variant: BuddyButtonVariant.secondary,
+                  icon: Icons.add,
+                  onPressed: () => widget.onQuickAction?.call(1),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: BuddyButton(
+                  label: 'Send',
+                  variant: BuddyButtonVariant.secondary,
+                  icon: Icons.send,
+                  onPressed: () => widget.onQuickAction?.call(2),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: BuddyButton(
+                  label: 'Withdraw',
+                  variant: BuddyButtonVariant.secondary,
+                  icon: Icons.download,
+                  onPressed: () => widget.onQuickAction?.call(4),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -302,27 +445,46 @@ class _BuyTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Purchase Artifacts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Purchase Artifacts',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           bundlesAsync.when(
             data: (bundles) => Column(
-              children: bundles.map((bundle) => Card(
-                color: BuddyColors.surface,
-                margin: const EdgeInsets.only(bottom: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: ListTile(
-                  leading: _artifactIcon(bundle.artifactType),
-                  title: Text('${bundle.quantity} × ${bundle.artifactLabel}'),
-                  subtitle: Text('Save ${bundle.savings.toStringAsFixed(0)}%'),
-                  trailing: Text('\$${bundle.priceUsd.toStringAsFixed(2)}', style: const TextStyle(color: BuddyColors.green, fontWeight: FontWeight.bold)),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => _PurchaseDialog(bundle: bundle),
-                    );
-                  },
-                ),
-              )).toList(),
+              children: bundles
+                  .map(
+                    (bundle) => Card(
+                      color: BuddyColors.surface,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        leading: _artifactIcon(bundle.artifactType),
+                        title: Text(
+                          '${bundle.quantity} × ${bundle.artifactLabel}',
+                        ),
+                        subtitle: Text(
+                          'Save ${bundle.savings.toStringAsFixed(0)}%',
+                        ),
+                        trailing: Text(
+                          '\$${bundle.priceUsd.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: BuddyColors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (_) => _PurchaseDialog(bundle: bundle),
+                          );
+                        },
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
             loading: () => const CircularProgressIndicator(),
             error: (e, _) => Text('$e'),
@@ -346,7 +508,11 @@ class _PurchaseDialog extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text('Price: \$${bundle.priceUsd.toStringAsFixed(2)}'),
-          if (bundle.savings > 0) Text('You save ${bundle.savings.toStringAsFixed(0)}%!', style: const TextStyle(color: BuddyColors.green)),
+          if (bundle.savings > 0)
+            Text(
+              'You save ${bundle.savings.toStringAsFixed(0)}%!',
+              style: const TextStyle(color: BuddyColors.green),
+            ),
           const SizedBox(height: 16),
           const Text('Payment method:'),
           const SizedBox(height: 8),
@@ -356,37 +522,49 @@ class _PurchaseDialog extends ConsumerWidget {
               border: Border.all(color: BuddyColors.green),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Row(children: [
-              Icon(Icons.phone_android, color: BuddyColors.green),
-              SizedBox(width: 8),
-              Text('Flutterwave'),
-            ]),
+            child: const Row(
+              children: [
+                Icon(Icons.phone_android, color: BuddyColors.green),
+                SizedBox(width: 8),
+                Text('Flutterwave'),
+              ],
+            ),
           ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          BuddyButton(label: 'Pay', onPressed: () async {
-          final repo = ref.read(walletRepositoryProvider);
-          try {
-            await repo.initializePurchase({
-              'bundle_id': bundle.id,
-              'quantity': 1,
-            });
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Purchase initiated! Check your email for payment instructions.')),
-              );
-              Navigator.pop(context);
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        BuddyButton(
+          label: 'Pay',
+          onPressed: () async {
+            final repo = ref.read(walletRepositoryProvider);
+            try {
+              await repo.initializePurchase({
+                'bundle_id': bundle.id,
+                'quantity': 1,
+              });
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Purchase initiated! Check your email for payment instructions.',
+                    ),
+                  ),
+                );
+                Navigator.pop(context);
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Purchase failed: $e')));
+              }
             }
-          } catch (e) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Purchase failed: $e')),
-              );
-            }
-          }
-        }),
+          },
+        ),
       ],
     );
   }
@@ -434,8 +612,11 @@ class _SendTabState extends ConsumerState<_SendTab> {
       try {
         final repo = ref.read(_walletProfileRepoProvider);
         final result = await repo.searchProfiles(query, null, 1);
-        final data = result['data'] as List? ?? result['results'] as List? ?? [];
-        if (mounted) setState(() => _searchResults = data.cast<Map<String, dynamic>>());
+        final data =
+            result['data'] as List? ?? result['results'] as List? ?? [];
+        if (mounted) {
+          setState(() => _searchResults = data.cast<Map<String, dynamic>>());
+        }
       } catch (_) {
         if (mounted) setState(() => _searchResults = []);
       } finally {
@@ -453,7 +634,8 @@ class _SendTabState extends ConsumerState<_SendTab> {
   }
 
   Future<void> _send(bool isGift) async {
-    final username = (_selectedUsername ?? _usernameCtrl.text.trim()).replaceAll('@', '');
+    final username = (_selectedUsername ?? _usernameCtrl.text.trim())
+        .replaceAll('@', '');
     final type = _artifactTypeCtrl.text.trim();
     final qty = int.tryParse(_qtyCtrl.text.trim()) ?? 1;
     if (username.isEmpty || type.isEmpty) return;
@@ -486,9 +668,9 @@ class _SendTabState extends ConsumerState<_SendTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -502,11 +684,19 @@ class _SendTabState extends ConsumerState<_SendTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Send Artifacts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Send Artifacts',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           Text(
-            _selectedUsername != null ? 'To: @$_selectedUsername' : 'Search for a recipient or type a @username',
-            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+            _selectedUsername != null
+                ? 'To: @$_selectedUsername'
+                : 'Search for a recipient or type a @username',
+            style: const TextStyle(
+              color: BuddyColors.textSecondary,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 6),
           BuddyInput(
@@ -528,7 +718,8 @@ class _SendTabState extends ConsumerState<_SendTab> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _searchResults.length.clamp(0, 5),
-                separatorBuilder: (_, _) => const Divider(height: 1, color: BuddyColors.surfaceRaised),
+                separatorBuilder: (_, _) =>
+                    const Divider(height: 1, color: BuddyColors.surfaceRaised),
                 itemBuilder: (_, i) {
                   final p = _searchResults[i];
                   final name = p['display_name'] ?? p['username'] ?? '';
@@ -540,34 +731,61 @@ class _SendTabState extends ConsumerState<_SendTab> {
                       alt: name,
                       size: AvatarSize.sm,
                     ),
-                    title: Text(name, style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
-                    subtitle: Text('@$username', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                    title: Text(
+                      name,
+                      style: const TextStyle(
+                        color: BuddyColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '@$username',
+                      style: const TextStyle(
+                        color: BuddyColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
                     onTap: () => _selectRecipient(p),
                   );
                 },
               ),
             ),
           const SizedBox(height: 12),
-          BuddyInput(label: 'Artifact Type', controller: _artifactTypeCtrl, hint: 'e.g. dumbbell, burpee, sprint'),
+          BuddyInput(
+            label: 'Artifact Type',
+            controller: _artifactTypeCtrl,
+            hint: 'e.g. dumbbell, burpee, sprint',
+          ),
           const SizedBox(height: 12),
-          BuddyInput(label: 'Quantity', controller: _qtyCtrl, keyboardType: TextInputType.number),
+          BuddyInput(
+            label: 'Quantity',
+            controller: _qtyCtrl,
+            keyboardType: TextInputType.number,
+          ),
           const SizedBox(height: 12),
           BuddyInput(label: 'Message (optional)', controller: _msgCtrl),
           const SizedBox(height: 24),
-          Row(children: [
-            Expanded(child: BuddyButton(
-              label: 'Send Tip',
-              variant: BuddyButtonVariant.secondary,
-              isLoading: _isSending,
-              onPressed: () => _send(false),
-            )),
-            const SizedBox(width: 12),
-            Expanded(child: BuddyButton(
-              label: 'Send Gift',
-              isLoading: _isSending,
-              onPressed: () => _send(true),
-            )),
-          ]),
+          Row(
+            children: [
+              Expanded(
+                child: BuddyButton(
+                  label: 'Send Tip',
+                  variant: BuddyButtonVariant.secondary,
+                  isLoading: _isSending,
+                  onPressed: () => _send(false),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: BuddyButton(
+                  label: 'Send Gift',
+                  isLoading: _isSending,
+                  onPressed: () => _send(true),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -600,7 +818,9 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(transactionHistoryProvider.notifier).load());
+    Future.microtask(
+      () => ref.read(transactionHistoryProvider.notifier).load(),
+    );
   }
 
   @override
@@ -626,7 +846,9 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                 selected: selected,
                 onSelected: (_) {
                   if (state.typeFilter == value) return;
-                  ref.read(transactionHistoryProvider.notifier).load(type: value.isEmpty ? null : value);
+                  ref
+                      .read(transactionHistoryProvider.notifier)
+                      .load(type: value.isEmpty ? null : value);
                 },
                 selectedColor: BuddyColors.green.withValues(alpha: 0.25),
                 backgroundColor: BuddyColors.surfaceRaised,
@@ -638,7 +860,9 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
                 labelStyle: TextStyle(
                   fontSize: 12,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                  color: selected ? BuddyColors.green : BuddyColors.textSecondary,
+                  color: selected
+                      ? BuddyColors.green
+                      : BuddyColors.textSecondary,
                 ),
               );
             },
@@ -646,47 +870,73 @@ class _HistoryTabState extends ConsumerState<_HistoryTab> {
         ),
         Expanded(
           child: state.transactions.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.receipt_long_outlined, size: 64, color: BuddyColors.textSecondary.withValues(alpha: 0.3)),
-                    const SizedBox(height: 16),
-                    const Text('No transactions yet', style: TextStyle(color: BuddyColors.textSecondary)),
-                  ],
-                ),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: state.transactions.length,
-                itemBuilder: (_, i) {
-                  final tx = state.transactions[i];
-                  final isCredit = tx.direction == 'credit';
-                  return Card(
-                    color: BuddyColors.surface,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: _artifactIcon(tx.artifactType),
-                      title: Text((tx.description?.isNotEmpty ?? false) ? tx.description! : tx.transactionType.replaceAll('_', ' ')),
-                      subtitle: Text(tx.artifactType, style: const TextStyle(fontSize: 12)),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text('${isCredit ? '+' : '-'}${tx.quantity} ${tx.artifactType}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: isCredit ? BuddyColors.green : BuddyColors.red,
-                            )),
-                          if (tx.fiatAmount != null)
-                            Text('\$${tx.fiatAmount}', style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
-                        ],
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.receipt_long_outlined,
+                        size: 64,
+                        color: BuddyColors.textSecondary.withValues(alpha: 0.3),
                       ),
-                    ),
-                  );
-                },
-              ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No transactions yet',
+                        style: TextStyle(color: BuddyColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: state.transactions.length,
+                  itemBuilder: (_, i) {
+                    final tx = state.transactions[i];
+                    final isCredit = tx.direction == 'credit';
+                    return Card(
+                      color: BuddyColors.surface,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        leading: _artifactIcon(tx.artifactType),
+                        title: Text(
+                          (tx.description?.isNotEmpty ?? false)
+                              ? tx.description!
+                              : tx.transactionType.replaceAll('_', ' '),
+                        ),
+                        subtitle: Text(
+                          tx.artifactType,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${isCredit ? '+' : '-'}${tx.quantity} ${tx.artifactType}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: isCredit
+                                    ? BuddyColors.green
+                                    : BuddyColors.red,
+                              ),
+                            ),
+                            if (tx.fiatAmount != null)
+                              Text(
+                                '\$${tx.fiatAmount}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: BuddyColors.textSecondary,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );
@@ -722,7 +972,10 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
     final qty = int.tryParse(_qtyCtrl.text.trim());
     if (type.isEmpty || qty == null || qty <= 0) return;
     if (_method == 'mpesa' && _phoneCtrl.text.trim().isEmpty) return;
-    if (_method == 'bank_transfer' && (_bankCode.isEmpty || _bankAccountCtrl.text.trim().isEmpty)) return;
+    if (_method == 'bank_transfer' &&
+        (_bankCode.isEmpty || _bankAccountCtrl.text.trim().isEmpty)) {
+      return;
+    }
 
     setState(() => _isWithdrawing = true);
     try {
@@ -748,9 +1001,9 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Withdrawal failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Withdrawal failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isWithdrawing = false);
@@ -772,34 +1025,47 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Withdraw Artifacts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Withdraw Artifacts',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
-          const Text('Withdraw from',
-              style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary)),
+          const Text(
+            'Withdraw from',
+            style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(
-                child: _sourceChip('regular', 'Regular Wallet'),
-              ),
+              Expanded(child: _sourceChip('regular', 'Regular Wallet')),
               const SizedBox(width: 8),
-              Expanded(
-                child: _sourceChip('creator', 'Creator Wallet'),
-              ),
+              Expanded(child: _sourceChip('creator', 'Creator Wallet')),
             ],
           ),
           if (available > 0) ...[
             const SizedBox(height: 8),
-            Text('Available: $available ${_artifactTypeCtrl.text.trim()}',
-                style: const TextStyle(fontSize: 12, color: BuddyColors.green)),
+            Text(
+              'Available: $available ${_artifactTypeCtrl.text.trim()}',
+              style: const TextStyle(fontSize: 12, color: BuddyColors.green),
+            ),
           ],
           const SizedBox(height: 16),
-          BuddyInput(label: 'Artifact Type', controller: _artifactTypeCtrl, hint: 'e.g. dumbbell, burpee, sprint'),
+          BuddyInput(
+            label: 'Artifact Type',
+            controller: _artifactTypeCtrl,
+            hint: 'e.g. dumbbell, burpee, sprint',
+          ),
           const SizedBox(height: 12),
-          BuddyInput(label: 'Quantity', controller: _qtyCtrl, keyboardType: TextInputType.number),
+          BuddyInput(
+            label: 'Quantity',
+            controller: _qtyCtrl,
+            keyboardType: TextInputType.number,
+          ),
           const SizedBox(height: 16),
-          const Text('Payout method',
-              style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary)),
+          const Text(
+            'Payout method',
+            style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -810,23 +1076,37 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
           ),
           const SizedBox(height: 16),
           if (_method == 'mpesa') ...[
-            BuddyInput(label: 'Phone number (Flutterwave)', controller: _phoneCtrl, hint: '+254...'),
+            BuddyInput(
+              label: 'Phone number (Flutterwave)',
+              controller: _phoneCtrl,
+              hint: '+254...',
+            ),
           ] else ...[
             FutureBuilder<dynamic>(
               future: ref.read(walletRepositoryProvider).getBanks(),
               builder: (context, snapshot) {
-                final banks = ((snapshot.data?['data'] ?? snapshot.data?['banks']) as List?) ?? const [];
+                final banks =
+                    ((snapshot.data?['data'] ?? snapshot.data?['banks'])
+                        as List?) ??
+                    const [];
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: Padding(
-                    padding: EdgeInsets.all(12),
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ));
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
                 }
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Bank',
-                        style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary)),
+                    const Text(
+                      'Bank',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: BuddyColors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       initialValue: _bankCode.isEmpty ? null : _bankCode,
@@ -835,30 +1115,46 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: BuddyColors.surface,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         hintText: 'Select bank',
                       ),
                       items: banks.map<DropdownMenuItem<String>>((b) {
                         final m = b as Map<String, dynamic>;
                         return DropdownMenuItem(
                           value: m['code'] as String,
-                          child: Text('${m['name']}', overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            '${m['name']}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
                       }).toList(),
                       onChanged: (v) => setState(() => _bankCode = v ?? ''),
                     ),
                     const SizedBox(height: 12),
-                    BuddyInput(label: 'Account number', controller: _bankAccountCtrl, keyboardType: TextInputType.number),
+                    BuddyInput(
+                      label: 'Account number',
+                      controller: _bankAccountCtrl,
+                      keyboardType: TextInputType.number,
+                    ),
                   ],
                 );
               },
             ),
           ],
           const SizedBox(height: 24),
-          BuddyButton(label: 'Withdraw', fullWidth: true, isLoading: _isWithdrawing, onPressed: _withdraw),
+          BuddyButton(
+            label: 'Withdraw',
+            fullWidth: true,
+            isLoading: _isWithdrawing,
+            onPressed: _withdraw,
+          ),
           const SizedBox(height: 12),
-          const Text('Note: Withdrawals are processed via Flutterwave within 24-48 hours. Creator wallet funds require clearance before withdrawal.',
-            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+          const Text(
+            'Note: Withdrawals are processed via Flutterwave within 24-48 hours. Creator wallet funds require clearance before withdrawal.',
+            style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -872,17 +1168,23 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: active ? BuddyColors.green.withValues(alpha: 0.15) : BuddyColors.surface,
-          border: Border.all(color: active ? BuddyColors.green : BuddyColors.border),
+          color: active
+              ? BuddyColors.green.withValues(alpha: 0.15)
+              : BuddyColors.surface,
+          border: Border.all(
+            color: active ? BuddyColors.green : BuddyColors.border,
+          ),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text(label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: active ? BuddyColors.green : BuddyColors.textSecondary,
-            )),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: active ? BuddyColors.green : BuddyColors.textSecondary,
+          ),
+        ),
       ),
     );
   }
@@ -900,13 +1202,15 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
           border: Border.all(color: active ? accent : BuddyColors.border),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text(label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: active ? accent : BuddyColors.textSecondary,
-            )),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: active ? accent : BuddyColors.textSecondary,
+          ),
+        ),
       ),
     );
   }
@@ -917,33 +1221,49 @@ Widget _artifactIcon(String type) {
   Color color;
   switch (type) {
     case 'dumbbell':
-      icon = Icons.fitness_center; color = BuddyColors.green;
+      icon = Icons.fitness_center;
+      color = BuddyColors.green;
     case 'barbell':
-      icon = Icons.emoji_events; color = Colors.amber;
+      icon = Icons.emoji_events;
+      color = Colors.amber;
     case 'burpee':
-      icon = Icons.local_fire_department; color = BuddyColors.red;
+      icon = Icons.local_fire_department;
+      color = BuddyColors.red;
     case 'squat':
-      icon = Icons.accessibility; color = Colors.blue;
+      icon = Icons.accessibility;
+      color = Colors.blue;
     case 'sprint':
-      icon = Icons.directions_run; color = Colors.purple;
+      icon = Icons.directions_run;
+      color = Colors.purple;
     case 'pr':
-      icon = Icons.diamond; color = Colors.cyan;
+      icon = Icons.diamond;
+      color = Colors.cyan;
     case 'champion':
-      icon = Icons.star; color = Colors.amber;
+      icon = Icons.star;
+      color = Colors.amber;
     case 'event':
-      icon = Icons.event; color = Colors.teal;
+      icon = Icons.event;
+      color = Colors.teal;
     case 'meal_plan':
-      icon = Icons.restaurant; color = Colors.orange;
+      icon = Icons.restaurant;
+      color = Colors.orange;
     case 'training_programme':
-      icon = Icons.fitness_center; color = Colors.indigo;
+      icon = Icons.fitness_center;
+      color = Colors.indigo;
     case 'product':
-      icon = Icons.shopping_bag; color = Colors.pink;
+      icon = Icons.shopping_bag;
+      color = Colors.pink;
     default:
-      icon = Icons.receipt_long; color = BuddyColors.textSecondary;
+      icon = Icons.receipt_long;
+      color = BuddyColors.textSecondary;
   }
   return Container(
-    width: 40, height: 40,
-    decoration: BoxDecoration(color: color.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
+    width: 40,
+    height: 40,
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.2),
+      borderRadius: BorderRadius.circular(10),
+    ),
     child: Icon(icon, color: color, size: 22),
   );
 }
@@ -979,7 +1299,10 @@ class _TransferDialogState extends ConsumerState<_TransferDialog> {
       setState(() => _error = 'Enter 1-${widget.item.quantity}.');
       return;
     }
-    setState(() { _submitting = true; _error = null; });
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
     try {
       final repo = ref.read(walletRepositoryProvider);
       await repo.transferFromCreator({
@@ -998,17 +1321,21 @@ class _TransferDialogState extends ConsumerState<_TransferDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: BuddyColors.surface,
-      title: Row(children: [
-        Icon(Icons.swap_horiz, color: Colors.amber.shade700),
-        const SizedBox(width: 8),
-        const Text('Transfer to Wallet'),
-      ]),
+      title: Row(
+        children: [
+          Icon(Icons.swap_horiz, color: Colors.amber.shade700),
+          const SizedBox(width: 8),
+          const Text('Transfer to Wallet'),
+        ],
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Move ${widget.item.label} from your creator wallet to your regular wallet so you can withdraw them.',
-            style: const TextStyle(fontSize: 13)),
+          Text(
+            'Move ${widget.item.label} from your creator wallet to your regular wallet so you can withdraw them.',
+            style: const TextStyle(fontSize: 13),
+          ),
           const SizedBox(height: 12),
           BuddyInput(
             label: 'Quantity (available: ${widget.item.quantity})',
@@ -1017,13 +1344,22 @@ class _TransferDialogState extends ConsumerState<_TransferDialog> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
-            Text(_error!, style: const TextStyle(color: BuddyColors.red, fontSize: 12)),
+            Text(
+              _error!,
+              style: const TextStyle(color: BuddyColors.red, fontSize: 12),
+            ),
           ],
         ],
       ),
       actions: [
-        TextButton(onPressed: _submitting ? null : () => Navigator.pop(context), child: const Text('Cancel')),
-        BuddyButton(label: _submitting ? 'Transferring...' : 'Transfer', onPressed: _submitting ? null : _submit),
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        BuddyButton(
+          label: _submitting ? 'Transferring...' : 'Transfer',
+          onPressed: _submitting ? null : _submit,
+        ),
       ],
     );
   }
@@ -1034,10 +1370,12 @@ class _CreatorNameEditDialog extends ConsumerStatefulWidget {
   const _CreatorNameEditDialog({required this.current});
 
   @override
-  ConsumerState<_CreatorNameEditDialog> createState() => _CreatorNameEditDialogState();
+  ConsumerState<_CreatorNameEditDialog> createState() =>
+      _CreatorNameEditDialogState();
 }
 
-class _CreatorNameEditDialogState extends ConsumerState<_CreatorNameEditDialog> {
+class _CreatorNameEditDialogState
+    extends ConsumerState<_CreatorNameEditDialog> {
   late final TextEditingController _nameCtrl;
   bool _submitting = false;
   String? _error;
@@ -1060,7 +1398,10 @@ class _CreatorNameEditDialogState extends ConsumerState<_CreatorNameEditDialog> 
       setState(() => _error = 'Display name must be 3-50 characters.');
       return;
     }
-    setState(() { _submitting = true; _error = null; });
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
     try {
       final repo = ref.read(walletRepositoryProvider);
       await repo.updateCreatorProfile({'creator_display_name': trimmed});
@@ -1081,8 +1422,10 @@ class _CreatorNameEditDialogState extends ConsumerState<_CreatorNameEditDialog> 
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Shown to buyers alongside your marketplace services. Leave empty to clear.',
-            style: TextStyle(fontSize: 13)),
+          const Text(
+            'Shown to buyers alongside your marketplace services. Leave empty to clear.',
+            style: TextStyle(fontSize: 13),
+          ),
           const SizedBox(height: 12),
           BuddyInput(
             label: 'Display name',
@@ -1091,13 +1434,22 @@ class _CreatorNameEditDialogState extends ConsumerState<_CreatorNameEditDialog> 
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
-            Text(_error!, style: const TextStyle(color: BuddyColors.red, fontSize: 12)),
+            Text(
+              _error!,
+              style: const TextStyle(color: BuddyColors.red, fontSize: 12),
+            ),
           ],
         ],
       ),
       actions: [
-        TextButton(onPressed: _submitting ? null : () => Navigator.pop(context), child: const Text('Cancel')),
-        BuddyButton(label: _submitting ? 'Saving...' : 'Save', onPressed: _submitting ? null : _submit),
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        BuddyButton(
+          label: _submitting ? 'Saving...' : 'Save',
+          onPressed: _submitting ? null : _submit,
+        ),
       ],
     );
   }

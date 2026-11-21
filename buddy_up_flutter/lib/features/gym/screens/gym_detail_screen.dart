@@ -17,6 +17,7 @@ import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/input.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/emoji_utils.dart';
 import '../../live/providers/live_provider.dart';
 import '../../feed/providers/feed_provider.dart';
 import '../../feed/widgets/post_card.dart';
@@ -88,7 +89,10 @@ Future<bool?> _confirmRemove(BuildContext context, String userId) {
     context: context,
     builder: (dialogContext) => AlertDialog(
       backgroundColor: BuddyColors.surface,
-      title: const Text('Remove member', style: TextStyle(color: BuddyColors.textPrimary)),
+      title: const Text(
+        'Remove member',
+        style: TextStyle(color: BuddyColors.textPrimary),
+      ),
       content: const Text(
         'They lose access to this gym immediately and are notified.',
         style: TextStyle(color: BuddyColors.textSecondary),
@@ -96,7 +100,10 @@ Future<bool?> _confirmRemove(BuildContext context, String userId) {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('Cancel', style: TextStyle(color: BuddyColors.textSecondary)),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(color: BuddyColors.textSecondary),
+          ),
         ),
         TextButton(
           key: const Key('gym-remove-confirm'),
@@ -125,9 +132,11 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
     return _gymFeedFuture ??= ref
         .read(gymRepositoryProvider)
         .getGymFeed(widget.slug)
-        .then((raw) => (raw['data'] as List? ?? [])
-            .map((e) => Post.fromJson(e as Map<String, dynamic>))
-            .toList());
+        .then(
+          (raw) => (raw['data'] as List? ?? [])
+              .map((e) => Post.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
   }
 
   void _updateGymPost(Post updated) {
@@ -140,11 +149,19 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
   }
 
   Future<void> _handleGymReact(String postId, String reaction) async {
-    if (reaction.isEmpty) return;
+    final repo = ref.read(feedRepositoryProvider);
+    if (reaction.isEmpty) {
+      // PostCard signals un-react with an empty reaction.
+      try {
+        await repo.unreact(postId);
+      } catch (_) {}
+      return;
+    }
     try {
-      final raw = await ref
-          .read(feedRepositoryProvider)
-          .react(postId, ReactionInput(reactionType: reaction));
+      final raw = await repo.react(
+        postId,
+        ReactionInput(reactionType: toReactionEmoji(reaction)),
+      );
       _updateGymPost(Post.fromJson(raw['data'] as Map<String, dynamic>));
     } catch (_) {}
   }
@@ -187,8 +204,9 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
   Future<void> _handleGymDelete(String postId) async {
     try {
       await ref.read(feedRepositoryProvider).deletePost(postId);
-      final remaining =
-          (_gymFeedPosts ?? const <Post>[]).where((p) => p.id != postId).toList();
+      final remaining = (_gymFeedPosts ?? const <Post>[])
+          .where((p) => p.id != postId)
+          .toList();
       _gymFeedPosts = remaining;
       if (mounted) setState(() {});
     } catch (_) {}
@@ -201,7 +219,12 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
     return Scaffold(
       body: gymAsync.when(
         loading: () => const Scaffold(body: PageLoader()),
-        error: (e, _) => Scaffold(body: ErrorView(message: e.toString(), onRetry: () => ref.invalidate(gymDetailProvider(widget.slug)))),
+        error: (e, _) => Scaffold(
+          body: ErrorView(
+            message: e.toString(),
+            onRetry: () => ref.invalidate(gymDetailProvider(widget.slug)),
+          ),
+        ),
         data: (gym) => NestedScrollView(
           headerSliverBuilder: (_, _) => [
             SliverAppBar(
@@ -212,7 +235,11 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                   fit: StackFit.expand,
                   children: [
                     if (gym.coverUrl.isNotEmpty)
-                      Image.network(gym.coverUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => _coverPlaceholder())
+                      Image.network(
+                        gym.coverUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _coverPlaceholder(),
+                      )
                     else
                       _coverPlaceholder(),
                     // Always-dark scrim so the back button and any overlaid
@@ -222,7 +249,11 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.black54, Color(0x33000000), Colors.black87],
+                          colors: [
+                            Colors.black54,
+                            Color(0x33000000),
+                            Colors.black87,
+                          ],
                           stops: [0.0, 0.5, 1.0],
                         ),
                       ),
@@ -243,17 +274,24 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                       }
                     },
                     itemBuilder: (_) => [
-                      const PopupMenuItem(value: 'leave', child: Text('Leave Gym', style: TextStyle(color: BuddyColors.red))),
+                      const PopupMenuItem(
+                        value: 'leave',
+                        child: Text(
+                          'Leave Gym',
+                          style: TextStyle(color: BuddyColors.red),
+                        ),
+                      ),
                     ],
                   ),
               ],
             ),
-            SliverToBoxAdapter(
-              child: _buildHeader(gym),
-            ),
+            SliverToBoxAdapter(child: _buildHeader(gym)),
             SliverPersistentHeader(
               pinned: true,
-              delegate: _TabBarDelegate(_tabIndex, (i) => setState(() => _tabIndex = i)),
+              delegate: _TabBarDelegate(
+                _tabIndex,
+                (i) => setState(() => _tabIndex = i),
+              ),
             ),
           ],
           body: _buildTabContent(gym),
@@ -263,9 +301,16 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
   }
 
   Widget _coverPlaceholder() {
-    return Container(color: BuddyColors.surfaceRaised, child: const Center(
-      child: Icon(Icons.fitness_center, color: BuddyColors.textSecondary, size: 64),
-    ));
+    return Container(
+      color: BuddyColors.surfaceRaised,
+      child: const Center(
+        child: Icon(
+          Icons.fitness_center,
+          color: BuddyColors.textSecondary,
+          size: 64,
+        ),
+      ),
+    );
   }
 
   Widget _buildHeader(Gym gym) {
@@ -276,7 +321,11 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
         children: [
           Row(
             children: [
-              Avatar(src: gym.logoUrl.isNotEmpty ? gym.logoUrl : null, alt: gym.name, size: AvatarSize.xl),
+              Avatar(
+                src: gym.logoUrl.isNotEmpty ? gym.logoUrl : null,
+                alt: gym.name,
+                size: AvatarSize.xl,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -285,7 +334,14 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(gym.name, style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+                          child: Text(
+                            gym.name,
+                            style: const TextStyle(
+                              color: BuddyColors.textPrimary,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                         if (gym.isVerified)
                           VerifiedGymBadge(
@@ -293,20 +349,34 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                             tier: gym.tier,
                             size: 20,
                             capacity: GymTierCapacity(
-                              cap: gym.tier == 'regular' ? 50 : gym.tier == 'midlevel' ? 500 : null,
+                              cap: gym.tier == 'regular'
+                                  ? 50
+                                  : gym.tier == 'midlevel'
+                                  ? 500
+                                  : null,
                               current: gym.memberCount,
                             ),
                           ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text('@${gym.handle}', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+                    Text(
+                      '@${gym.handle}',
+                      style: const TextStyle(
+                        color: BuddyColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
                         _statItem('${gym.memberCount}', 'members'),
                         const SizedBox(width: 16),
-                        if (gym.averageRating != null) _statItem(gym.averageRating!.toStringAsFixed(1), 'rating'),
+                        if (gym.averageRating != null)
+                          _statItem(
+                            gym.averageRating!.toStringAsFixed(1),
+                            'rating',
+                          ),
                         const SizedBox(width: 16),
                         _statItem('${gym.activeToday}', 'active'),
                       ],
@@ -318,16 +388,31 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
           ),
           if (gym.description.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(gym.description, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 14)),
+            Text(
+              gym.description,
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 14,
+              ),
+            ),
           ],
           if (gym.locationCity.isNotEmpty) ...[
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.location_on, size: 14, color: BuddyColors.green),
+                const Icon(
+                  Icons.location_on,
+                  size: 14,
+                  color: BuddyColors.green,
+                ),
                 const SizedBox(width: 4),
-                Text('${gym.locationCity}${gym.locationCountry.isNotEmpty ? ', ${gym.locationCountry}' : ''}',
-                    style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+                Text(
+                  '${gym.locationCity}${gym.locationCountry.isNotEmpty ? ', ${gym.locationCountry}' : ''}',
+                  style: const TextStyle(
+                    color: BuddyColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
               ],
             ),
           ],
@@ -349,7 +434,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: () => context.push('/gyms/${gym.handle}/manage'),
-                  icon: const Icon(Icons.admin_panel_settings_outlined, size: 16),
+                  icon: const Icon(
+                    Icons.admin_panel_settings_outlined,
+                    size: 16,
+                  ),
                   label: const Text('Manage'),
                 ),
               ],
@@ -386,22 +474,43 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
   Widget _statItem(String value, String label) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: BuddyColors.textPrimary,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            color: BuddyColors.textSecondary,
+            fontSize: 11,
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildTabContent(Gym gym) {
     switch (_tabIndex) {
-      case 0: return _buildFeedTab(gym);
-      case 1: return _buildScheduleTab(gym);
-      case 2: return _buildLivesTab(gym);
-      case 3: return _buildMembersTab(gym);
-      case 4: return _buildReviewsTab(gym);
-      case 5: return _buildAboutTab(gym);
-      case 6: return _buildEventsTab(gym);
-      default: return const SizedBox();
+      case 0:
+        return _buildFeedTab(gym);
+      case 1:
+        return _buildScheduleTab(gym);
+      case 2:
+        return _buildLivesTab(gym);
+      case 3:
+        return _buildMembersTab(gym);
+      case 4:
+        return _buildReviewsTab(gym);
+      case 5:
+        return _buildAboutTab(gym);
+      case 6:
+        return _buildEventsTab(gym);
+      default:
+        return const SizedBox();
     }
   }
 
@@ -409,7 +518,8 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
     return FutureBuilder<List<Post>>(
       future: _loadGymFeed(),
       builder: (_, snap) {
-        if (snap.connectionState == ConnectionState.waiting && _gymFeedPosts == null) {
+        if (snap.connectionState == ConnectionState.waiting &&
+            _gymFeedPosts == null) {
           return const PageLoader();
         }
         if (snap.hasError && _gymFeedPosts == null) {
@@ -423,7 +533,12 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
         }
         final posts = _gymFeedPosts ?? snap.data ?? const <Post>[];
         if (posts.isEmpty) {
-          return const Center(child: Text('No gym posts yet', style: TextStyle(color: BuddyColors.textSecondary)));
+          return const Center(
+            child: Text(
+              'No gym posts yet',
+              style: TextStyle(color: BuddyColors.textSecondary),
+            ),
+          );
         }
         return ListView.builder(
           padding: const EdgeInsets.only(top: 8),
@@ -453,9 +568,19 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
     final schedule = ref.watch(schedulePostsProvider(widget.slug));
     return schedule.when(
       loading: () => const PageLoader(),
-      error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(schedulePostsProvider(widget.slug))),
+      error: (e, _) => ErrorView(
+        message: e.toString(),
+        onRetry: () => ref.invalidate(schedulePostsProvider(widget.slug)),
+      ),
       data: (posts) {
-        if (posts.isEmpty) return const Center(child: Text('No schedule posts', style: TextStyle(color: BuddyColors.textSecondary)));
+        if (posts.isEmpty) {
+          return const Center(
+            child: Text(
+              'No schedule posts',
+              style: TextStyle(color: BuddyColors.textSecondary),
+            ),
+          );
+        }
         return ListView.builder(
           padding: const EdgeInsets.only(top: 8),
           itemCount: posts.length,
@@ -476,16 +601,35 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
     final livesAsync = ref.watch(gymScheduleLivesProvider(gym.id));
     return livesAsync.when(
       loading: () => const PageLoader(),
-      error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(gymScheduleLivesProvider(gym.id))),
+      error: (e, _) => ErrorView(
+        message: e.toString(),
+        onRetry: () => ref.invalidate(gymScheduleLivesProvider(gym.id)),
+      ),
       data: (lives) {
-        if (lives.isEmpty) return const Center(child: Text('No scheduled lives', style: TextStyle(color: BuddyColors.textSecondary)));
+        if (lives.isEmpty) {
+          return const Center(
+            child: Text(
+              'No scheduled lives',
+              style: TextStyle(color: BuddyColors.textSecondary),
+            ),
+          );
+        }
         return ListView.builder(
           padding: const EdgeInsets.only(top: 8),
           itemCount: lives.length,
           itemBuilder: (_, i) => ListTile(
-            leading: Avatar(src: lives[i].host.avatarUrl, alt: lives[i].host.displayName),
-            title: Text(lives[i].title, style: const TextStyle(color: BuddyColors.textPrimary)),
-            subtitle: Text(lives[i].status, style: const TextStyle(color: BuddyColors.textSecondary)),
+            leading: Avatar(
+              src: lives[i].host.avatarUrl,
+              alt: lives[i].host.displayName,
+            ),
+            title: Text(
+              lives[i].title,
+              style: const TextStyle(color: BuddyColors.textPrimary),
+            ),
+            subtitle: Text(
+              lives[i].status,
+              style: const TextStyle(color: BuddyColors.textSecondary),
+            ),
             onTap: () => context.push('/lives/${lives[i].id}'),
           ),
         );
@@ -506,8 +650,9 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
       error: (e, _) {
         if (apiStatusCode(e) == 403) return _rosterGate(gym);
         return ErrorView(
-            message: e.toString(),
-            onRetry: () => ref.invalidate(membersProvider(widget.slug)));
+          message: e.toString(),
+          onRetry: () => ref.invalidate(membersProvider(widget.slug)),
+        );
       },
       data: (list) {
         if (list.isEmpty) {
@@ -516,7 +661,9 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
               gym.memberCount > 0
                   ? 'No members to show yet.'
                   : 'No members yet.',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           );
         }
@@ -528,7 +675,8 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
             // Partner staff, not "owner": the server lets co-owners and
             // moderators manage members too, and gating the UI to owners
             // hid actions that would have succeeded.
-            canManage: _partnerRoles.contains(gym.membershipRole) &&
+            canManage:
+                _partnerRoles.contains(gym.membershipRole) &&
                 !_unmanageableRoles.contains(list[i].role),
             onManage: (uid, action) async {
               final repo = ref.read(gymRepositoryProvider);
@@ -593,9 +741,19 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
         Expanded(
           child: reviews.when(
             loading: () => const PageLoader(),
-            error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(reviewsProvider(widget.slug))),
+            error: (e, _) => ErrorView(
+              message: e.toString(),
+              onRetry: () => ref.invalidate(reviewsProvider(widget.slug)),
+            ),
             data: (list) {
-              if (list.isEmpty) return const Center(child: Text('No reviews', style: TextStyle(color: BuddyColors.textSecondary)));
+              if (list.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No reviews',
+                    style: TextStyle(color: BuddyColors.textSecondary),
+                  ),
+                );
+              }
               return ListView.builder(
                 padding: const EdgeInsets.only(top: 8),
                 itemCount: list.length,
@@ -614,14 +772,23 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
             child: Row(
               children: [
                 Row(
-                  children: List.generate(5, (i) => IconButton(
-                    icon: Icon(i < _reviewRating ? Icons.star : Icons.star_border,
-                        color: BuddyColors.green, size: 20),
-                    onPressed: () => setState(() => _reviewRating = i + 1),
-                  )),
+                  children: List.generate(
+                    5,
+                    (i) => IconButton(
+                      icon: Icon(
+                        i < _reviewRating ? Icons.star : Icons.star_border,
+                        color: BuddyColors.green,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _reviewRating = i + 1),
+                    ),
+                  ),
                 ),
                 Expanded(
-                  child: BuddyInput(controller: _reviewController, hint: 'Write a review...'),
+                  child: BuddyInput(
+                    controller: _reviewController,
+                    hint: 'Write a review...',
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.send, color: BuddyColors.green),
@@ -651,87 +818,156 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
         // rendered only when the server actually sent them — an absent list is
         // never rendered as "no owners" / "no reviews".
         if (gym.ownerData.isNotEmpty) ...[
-          const Text('Ownership',
-              style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
+          const Text(
+            'Ownership',
+            style: TextStyle(
+              color: BuddyColors.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+          ),
           const SizedBox(height: 8),
-          ...gym.ownerData.map((owner) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Avatar(src: owner.avatarUrl.isEmpty ? null : owner.avatarUrl,
-                        alt: owner.displayName),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(owner.displayName.isEmpty ? owner.username : owner.displayName,
-                              style: const TextStyle(
-                                  color: BuddyColors.textPrimary, fontSize: 14)),
-                          Text('@${owner.username} · ${owner.role.replaceAll('_', ' ')}',
-                              style: const TextStyle(
-                                  color: BuddyColors.textSecondary, fontSize: 12)),
-                        ],
-                      ),
+          ...gym.ownerData.map(
+            (owner) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Avatar(
+                    src: owner.avatarUrl.isEmpty ? null : owner.avatarUrl,
+                    alt: owner.displayName,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          owner.displayName.isEmpty
+                              ? owner.username
+                              : owner.displayName,
+                          style: const TextStyle(
+                            color: BuddyColors.textPrimary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          '@${owner.username} · ${owner.role.replaceAll('_', ' ')}',
+                          style: const TextStyle(
+                            color: BuddyColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
         ],
         if (gym.recentReviewers.isNotEmpty) ...[
-          const Text('Reviewed by',
-              style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
+          const Text(
+            'Reviewed by',
+            style: TextStyle(
+              color: BuddyColors.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: gym.recentReviewers.map((reviewer) => SizedBox(
-              width: 72,
-              child: Column(
-                children: [
-                  Avatar(src: reviewer.avatarUrl.isEmpty ? null : reviewer.avatarUrl,
-                      alt: reviewer.displayName),
-                  const SizedBox(height: 4),
-                  Text(
-                    reviewer.displayName.isEmpty ? reviewer.username : reviewer.displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: BuddyColors.textSecondary, fontSize: 11),
+            children: gym.recentReviewers
+                .map(
+                  (reviewer) => SizedBox(
+                    width: 72,
+                    child: Column(
+                      children: [
+                        Avatar(
+                          src: reviewer.avatarUrl.isEmpty
+                              ? null
+                              : reviewer.avatarUrl,
+                          alt: reviewer.displayName,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          reviewer.displayName.isEmpty
+                              ? reviewer.username
+                              : reviewer.displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: BuddyColors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-            )).toList(),
+                )
+                .toList(),
           ),
           const SizedBox(height: 16),
         ],
         if (gym.rules.isNotEmpty) ...[
-          const Text('Rules', style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
-          const SizedBox(height: 8),
-          ...gym.rules.map((r) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('• ', style: TextStyle(color: BuddyColors.green)),
-                Expanded(child: Text(r, style: const TextStyle(color: BuddyColors.textSecondary))),
-              ],
+          const Text(
+            'Rules',
+            style: TextStyle(
+              color: BuddyColors.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
             ),
-          )),
+          ),
+          const SizedBox(height: 8),
+          ...gym.rules.map(
+            (r) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('• ', style: TextStyle(color: BuddyColors.green)),
+                  Expanded(
+                    child: Text(
+                      r,
+                      style: const TextStyle(color: BuddyColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
         ],
         if (gym.tags.isNotEmpty) ...[
-          const Text('Tags', style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
+          const Text(
+            'Tags',
+            style: TextStyle(
+              color: BuddyColors.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 6,
-            children: gym.tags.map((t) => Chip(
-              label: Text(t, style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12)),
-              backgroundColor: BuddyColors.surface,
-              side: const BorderSide(color: BuddyColors.border),
-            )).toList(),
+            children: gym.tags
+                .map(
+                  (t) => Chip(
+                    label: Text(
+                      t,
+                      style: const TextStyle(
+                        color: BuddyColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    backgroundColor: BuddyColors.surface,
+                    side: const BorderSide(color: BuddyColors.border),
+                  ),
+                )
+                .toList(),
           ),
         ],
         const SizedBox(height: 16),
@@ -766,7 +1002,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
       data: (list) {
         if (list.isEmpty) {
           return const Center(
-            child: Text('No events', style: TextStyle(color: BuddyColors.textSecondary)),
+            child: Text(
+              'No events',
+              style: TextStyle(color: BuddyColors.textSecondary),
+            ),
           );
         }
 
@@ -776,7 +1015,10 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
             .map((e) => e.gymPhotoRoll)
             .expand((urls) => urls)
             .toList();
-        final deduped = {for (final url in roll) if (url.isNotEmpty) url}.toList();
+        final deduped = {
+          for (final url in roll)
+            if (url.isNotEmpty) url,
+        }.toList();
 
         return ListView(
           padding: const EdgeInsets.only(top: 8),
@@ -811,8 +1053,11 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                               height: 110,
                               color: BuddyColors.surfaceRaised,
                               alignment: Alignment.center,
-                              child: const Icon(Icons.landscape_outlined,
-                                  size: 22, color: BuddyColors.textSecondary),
+                              child: const Icon(
+                                Icons.landscape_outlined,
+                                size: 22,
+                                color: BuddyColors.textSecondary,
+                              ),
                             ),
                           ),
                         ),
@@ -821,12 +1066,19 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                     const SizedBox(height: 6),
                     const Row(
                       children: [
-                        Icon(Icons.verified_user_outlined, size: 11, color: BuddyColors.green),
+                        Icon(
+                          Icons.verified_user_outlined,
+                          size: 11,
+                          color: BuddyColors.green,
+                        ),
                         SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             'Members-only roll — visible because you\'re an active member.',
-                            style: TextStyle(fontSize: 10, color: BuddyColors.textSecondary),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: BuddyColors.textSecondary,
+                            ),
                           ),
                         ),
                       ],
@@ -835,8 +1087,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                 ),
               ),
             ],
-            for (final event in list)
-              _GymEventCard(event: event),
+            for (final event in list) _GymEventCard(event: event),
           ],
         );
       },
@@ -849,14 +1100,20 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: BuddyColors.surface,
-        title: const Text('Donate', style: TextStyle(color: BuddyColors.textPrimary)),
+        title: const Text(
+          'Donate',
+          style: TextStyle(color: BuddyColors.textPrimary),
+        ),
         content: BuddyInput(
           controller: controller,
           hint: 'Amount',
           keyboardType: TextInputType.number,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () async {
               final amount = double.tryParse(controller.text);
@@ -872,7 +1129,6 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
     );
   }
 }
-
 
 /// One gym event card — mirrors the web's GymDetail events tab card:
 /// cover chip, badges, price split, capacity bar and a direct maps link.
@@ -893,17 +1149,23 @@ class _GymEventCard extends StatelessWidget {
 
   String _fmtSplit(Map<String, int>? m) {
     if (m == null || m.isEmpty) return 'Free';
-    return m.entries.map((e) => '${e.value} ${_artifactLabel[e.key] ?? e.key}').join(', ');
+    return m.entries
+        .map((e) => '${e.value} ${_artifactLabel[e.key] ?? e.key}')
+        .join(', ');
   }
 
   @override
   Widget build(BuildContext context) {
-    final start = event.startTime == null ? null : DateTime.tryParse(event.startTime!)?.toLocal();
+    final start = event.startTime == null
+        ? null
+        : DateTime.tryParse(event.startTime!)?.toLocal();
     final formatter = DateFormat('EEE, MMM d · HH:mm');
     final capacity = event.capacity;
     final attending = event.attendeeCount;
     final pct = capacity > 0 ? (attending / capacity).clamp(0.0, 1.0) : 0.0;
-    final spotsLeft = capacity > 0 ? (capacity - attending).clamp(0, capacity) : null;
+    final spotsLeft = capacity > 0
+        ? (capacity - attending).clamp(0, capacity)
+        : null;
     final memberSplit = event.memberPriceArtifacts;
     final nonMemberSplit = event.nonMemberPriceArtifacts;
     final hasSplit = memberSplit != null || nonMemberSplit != null;
@@ -941,7 +1203,11 @@ class _GymEventCard extends StatelessWidget {
                 alignment: Alignment.center,
                 child: event.coverImageUrl.isNotEmpty
                     ? null
-                    : const Icon(Icons.event, size: 28, color: BuddyColors.textSecondary),
+                    : const Icon(
+                        Icons.event,
+                        size: 28,
+                        color: BuddyColors.textSecondary,
+                      ),
               ),
               Expanded(
                 child: Padding(
@@ -955,11 +1221,20 @@ class _GymEventCard extends StatelessWidget {
                         spacing: 4,
                         runSpacing: 2,
                         children: [
-                          BuddyBadge(label: event.eventType.replaceAll('_', ' '), color: BuddyColors.gold),
+                          BuddyBadge(
+                            label: event.eventType.replaceAll('_', ' '),
+                            color: BuddyColors.gold,
+                          ),
                           if (event.visibility == 'gym_members')
-                            const BuddyBadge(label: 'Members only', color: BuddyColors.blue),
+                            const BuddyBadge(
+                              label: 'Members only',
+                              color: BuddyColors.blue,
+                            ),
                           if (event.category.isNotEmpty)
-                            BuddyBadge(label: event.category, color: BuddyColors.textSecondary),
+                            BuddyBadge(
+                              label: event.category,
+                              color: BuddyColors.textSecondary,
+                            ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -967,7 +1242,10 @@ class _GymEventCard extends StatelessWidget {
                         event.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
                       if (event.description.isNotEmpty)
                         Padding(
@@ -976,27 +1254,49 @@ class _GymEventCard extends StatelessWidget {
                             event.description,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 10, color: BuddyColors.textSecondary),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: BuddyColors.textSecondary,
+                            ),
                           ),
                         ),
                       const SizedBox(height: 4),
                       if (start != null)
                         Row(
                           children: [
-                            const Icon(Icons.calendar_today, size: 11, color: BuddyColors.green),
+                            const Icon(
+                              Icons.calendar_today,
+                              size: 11,
+                              color: BuddyColors.green,
+                            ),
                             const SizedBox(width: 4),
-                            Text(formatter.format(start), style: const TextStyle(fontSize: 10, color: BuddyColors.textPrimary)),
+                            Text(
+                              formatter.format(start),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: BuddyColors.textPrimary,
+                              ),
+                            ),
                           ],
                         ),
                       if (event.location.isNotEmpty)
                         InkWell(
-                          onTap: event.locationLat != null && event.locationLng != null
-                              ? () => launchUrl(Uri.parse(
-                                  'https://maps.google.com/?q=${event.locationLat},${event.locationLng}'))
+                          onTap:
+                              event.locationLat != null &&
+                                  event.locationLng != null
+                              ? () => launchUrl(
+                                  Uri.parse(
+                                    'https://maps.google.com/?q=${event.locationLat},${event.locationLng}',
+                                  ),
+                                )
                               : null,
                           child: Row(
                             children: [
-                              const Icon(Icons.place_outlined, size: 11, color: BuddyColors.blue),
+                              const Icon(
+                                Icons.place_outlined,
+                                size: 11,
+                                color: BuddyColors.blue,
+                              ),
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
@@ -1005,10 +1305,14 @@ class _GymEventCard extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: event.locationLat != null && event.locationLng != null
+                                    color:
+                                        event.locationLat != null &&
+                                            event.locationLng != null
                                         ? BuddyColors.blue
                                         : BuddyColors.textSecondary,
-                                    decoration: event.locationLat != null && event.locationLng != null
+                                    decoration:
+                                        event.locationLat != null &&
+                                            event.locationLng != null
                                         ? TextDecoration.underline
                                         : TextDecoration.none,
                                   ),
@@ -1029,7 +1333,10 @@ class _GymEventCard extends StatelessWidget {
                                 minHeight: 4,
                                 backgroundColor: BuddyColors.surfaceRaised,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  pct >= 1 ? BuddyColors.red : BuddyColors.green),
+                                  pct >= 1
+                                      ? BuddyColors.red
+                                      : BuddyColors.green,
+                                ),
                               ),
                             ),
                           ),
@@ -1037,7 +1344,10 @@ class _GymEventCard extends StatelessWidget {
                             const SizedBox(width: 6),
                             Text(
                               '$attending/$capacity · $spotsLeft left',
-                              style: const TextStyle(fontSize: 9, color: BuddyColors.textSecondary),
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: BuddyColors.textSecondary,
+                              ),
                             ),
                           ],
                         ],
@@ -1051,21 +1361,38 @@ class _GymEventCard extends StatelessWidget {
                           children: [
                             Text(
                               'Member: ${_fmtSplit(memberSplit)}',
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: BuddyColors.green),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: BuddyColors.green,
+                              ),
                             ),
                             Text(
                               'Others: ${_fmtSplit(nonMemberSplit)}',
-                              style: const TextStyle(fontSize: 10, color: BuddyColors.textSecondary),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: BuddyColors.textSecondary,
+                              ),
                             ),
                           ],
                         )
                       else if (event.isFree)
-                        const Text('Free',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: BuddyColors.green))
+                        const Text(
+                          'Free',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: BuddyColors.green,
+                          ),
+                        )
                       else
                         const Text(
                           'Paid',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: BuddyColors.green),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: BuddyColors.green,
+                          ),
                         ),
                     ],
                   ),
@@ -1086,7 +1413,11 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   _TabBarDelegate(this.tabIndex, this.onTabChanged);
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(
       color: BuddyColors.black,
       child: GymTabBar(activeIndex: tabIndex, onTabChanged: onTabChanged),

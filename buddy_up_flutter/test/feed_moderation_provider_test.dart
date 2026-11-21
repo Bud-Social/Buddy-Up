@@ -237,8 +237,8 @@ void main() {
           rowId: 'p1', targetId: 'p1', emoji: 'fire');
 
       final updated = c.read(feedProvider).posts.single;
-      expect(updated.userReaction, 'fire');
-      expect(updated.reactionCounts['fire'], 1);
+      expect(updated.userReaction, '🔥');
+      expect(updated.reactionCounts['🔥'], 1);
       expect(seen.single.method, 'POST');
       expect(seen.single.path, '/feed/p1/react/');
     });
@@ -267,7 +267,7 @@ void main() {
           rowId: 'row1', targetId: 'orig9', emoji: 'fire');
 
       final updated = c.read(feedProvider).posts.single;
-      expect(updated.originalPostData?.userReaction, 'fire');
+      expect(updated.originalPostData?.userReaction, '🔥');
       expect(seen.single.path, '/feed/orig9/react/');
     });
 

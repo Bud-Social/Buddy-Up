@@ -36,8 +36,7 @@ class BudPressFeedScreen extends ConsumerStatefulWidget {
   const BudPressFeedScreen({super.key, this.initialPostId});
 
   @override
-  ConsumerState<BudPressFeedScreen> createState() =>
-      _BudPressFeedScreenState();
+  ConsumerState<BudPressFeedScreen> createState() => _BudPressFeedScreenState();
 }
 
 class _BudPressFeedScreenState extends ConsumerState<BudPressFeedScreen> {
@@ -295,8 +294,11 @@ class _PostMetaState extends ConsumerState<_PostMeta> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.visibility_outlined,
-                        color: Colors.white70, size: 13),
+                    const Icon(
+                      Icons.visibility_outlined,
+                      color: Colors.white70,
+                      size: 13,
+                    ),
                     const SizedBox(width: 3),
                     Text(
                       _count(viewCount),
@@ -312,8 +314,9 @@ class _PostMetaState extends ConsumerState<_PostMeta> {
                 OutlinedButton(
                   onPressed: _pending ? null : _toggleFollow,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor:
-                        _following ? Colors.white70 : BuddyColors.green,
+                    foregroundColor: _following
+                        ? Colors.white70
+                        : BuddyColors.green,
                     side: BorderSide(
                       color: _following ? Colors.white38 : BuddyColors.green,
                     ),
@@ -334,7 +337,11 @@ class _PostMetaState extends ConsumerState<_PostMeta> {
                 post.body,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.35),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  height: 1.35,
+                ),
               ),
             ],
           ],
@@ -378,7 +385,9 @@ class _ActionRail extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _RailButton(
-          icon: post.userReaction != null ? Icons.favorite : Icons.favorite_border,
+          icon: post.userReaction != null
+              ? Icons.favorite
+              : Icons.favorite_border,
           color: post.userReaction != null ? BuddyColors.red : Colors.white,
           label: _count(likes),
           onTap: onLike,
@@ -417,7 +426,9 @@ class _ActionRail extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                            color: BuddyColors.green, width: 1.5),
+                          color: BuddyColors.green,
+                          width: 1.5,
+                        ),
                       ),
                       child: Avatar(
                         src: viewerAvatarUrl,
@@ -449,7 +460,6 @@ class _ActionRail extends StatelessWidget {
           icon: Icons.visibility_outlined,
           color: Colors.white,
           label: _count(post.viewCount),
-          onTap: () {},
         ),
       ],
     );
@@ -460,33 +470,32 @@ class _RailButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String? label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _RailButton({
     required this.icon,
     required this.color,
     this.label,
-    required this.onTap,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 28),
-          if (label != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              label!,
-              style: const TextStyle(color: Colors.white, fontSize: 11),
-            ),
-          ],
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 28),
+        if (label != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            label!,
+            style: const TextStyle(color: Colors.white, fontSize: 11),
+          ),
         ],
-      ),
+      ],
     );
+    if (onTap == null) return content;
+    return GestureDetector(onTap: onTap, child: content);
   }
 }
 
@@ -533,10 +542,9 @@ Future<void> _reactToPost(WidgetRef ref, Post post) async {
   if (post.userReaction != null) return;
   _trackRailInteraction(post, 'like');
   try {
-    final raw = await ref.read(feedRepositoryProvider).react(
-          post.id,
-          const ReactionInput(reactionType: 'fire'),
-        );
+    final raw = await ref
+        .read(feedRepositoryProvider)
+        .react(post.id, const ReactionInput(reactionType: '💪'));
     ref
         .read(feedProvider.notifier)
         .updatePostInList(Post.fromJson(raw['data'] as Map<String, dynamic>));
@@ -651,16 +659,18 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
         if (raw is! Map) continue;
         final url = raw['url'] as String?;
         if (url == null || url.isEmpty) continue;
-        tracks.add(TrackCue(
-          id: 'track-$i',
-          url: url,
-          volume: ((raw['volume'] as num?)?.toDouble() ?? 100),
-          startMs: (raw['start_ms'] as num?)?.toInt() ?? 0,
-          durationMs: (raw['duration_ms'] as num?)?.toInt(),
-          fadeInMs: (raw['fade_in_ms'] as num?)?.toInt() ?? 0,
-          fadeOutMs: (raw['fade_out_ms'] as num?)?.toInt() ?? 0,
-          ducking: raw['ducking'] == true,
-        ));
+        tracks.add(
+          TrackCue(
+            id: 'track-$i',
+            url: url,
+            volume: ((raw['volume'] as num?)?.toDouble() ?? 100),
+            startMs: (raw['start_ms'] as num?)?.toInt() ?? 0,
+            durationMs: (raw['duration_ms'] as num?)?.toInt(),
+            fadeInMs: (raw['fade_in_ms'] as num?)?.toInt() ?? 0,
+            fadeOutMs: (raw['fade_out_ms'] as num?)?.toInt() ?? 0,
+            ducking: raw['ducking'] == true,
+          ),
+        );
         i++;
       }
     }
@@ -668,14 +678,16 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
     if (soundUrl != null && soundUrl.isNotEmpty) {
       final placement = meta?['sound_placement'];
       final asMap = placement is Map ? placement : <String, dynamic>{};
-      tracks.add(TrackCue(
-        id: 'attached-sound',
-        url: soundUrl,
-        volume: _soundVolume,
-        offsetMs: (asMap['start_ms'] as num?)?.toInt() ?? 0,
-        fadeInMs: (asMap['fade_in_ms'] as num?)?.toInt() ?? 0,
-        fadeOutMs: (asMap['fade_out_ms'] as num?)?.toInt() ?? 0,
-      ));
+      tracks.add(
+        TrackCue(
+          id: 'attached-sound',
+          url: soundUrl,
+          volume: _soundVolume,
+          offsetMs: (asMap['start_ms'] as num?)?.toInt() ?? 0,
+          fadeInMs: (asMap['fade_in_ms'] as num?)?.toInt() ?? 0,
+          fadeOutMs: (asMap['fade_out_ms'] as num?)?.toInt() ?? 0,
+        ),
+      );
     }
     _mixer.setTracks(tracks);
   }
@@ -712,10 +724,12 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
     _lastTickMs = nowMs;
     setState(() => _position = position);
     // Keep the parametric mix glued to the video clock.
-    unawaited(_mixer.sync(
-      position.inMilliseconds,
-      widget.active && _playing && !widget.muted,
-    ));
+    unawaited(
+      _mixer.sync(
+        position.inMilliseconds,
+        widget.active && _playing && !widget.muted,
+      ),
+    );
     // Trim loop: jump back to the in-point when the out-point is crossed.
     final endMs = _trimEndMs;
     if (endMs != null && endMs > _trimStartMs) {
@@ -738,18 +752,19 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
   }
 
   /// Engagement targets the ORIGINAL on repost rows so counts never zero out.
-  String get _engagementId =>
-      _post.isRepost && _post.originalPostData != null ? _post.originalPostData!.id : _post.id;
+  String get _engagementId => _post.isRepost && _post.originalPostData != null
+      ? _post.originalPostData!.id
+      : _post.id;
 
   Map<String, int> get _engagementCounts =>
       _post.isRepost && _post.originalPostData != null
-          ? _post.originalPostData!.reactionCounts
-          : _post.reactionCounts;
+      ? _post.originalPostData!.reactionCounts
+      : _post.reactionCounts;
 
   String? get _engagementReaction =>
       _post.isRepost && _post.originalPostData != null
-          ? _post.originalPostData!.userReaction
-          : _post.userReaction;
+      ? _post.originalPostData!.userReaction
+      : _post.userReaction;
 
   void _patchEngagement({String? userReaction, Map<String, int>? counts}) {
     final orig = _post.originalPostData;
@@ -769,7 +784,9 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
   Future<void> _handleReact() async {
     const emoji = '💪';
     _trackRailInteraction(
-        _post, _engagementReaction == emoji ? 'unlike' : 'like');
+      _post,
+      _engagementReaction == emoji ? 'unlike' : 'like',
+    );
     final counts = Map<String, int>.from(_engagementCounts);
     final prevReaction = _engagementReaction;
     final prevCounts = Map<String, int>.from(counts);
@@ -805,8 +822,7 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
   }
 
   void _handleRepost() {
-    _trackRailInteraction(
-        _post, _post.isRepostedByMe ? 'unrepost' : 'repost');
+    _trackRailInteraction(_post, _post.isRepostedByMe ? 'unrepost' : 'repost');
     ref.read(feedProvider.notifier).toggleRepost(_post.id);
   }
 
@@ -922,8 +938,9 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
     final duration = _duration.inMilliseconds > 0
         ? _duration.inMilliseconds
         : (_media.durationMs ?? 0);
-    final progress =
-        duration > 0 ? (_position.inMilliseconds / duration).clamp(0.0, 1.0) : 0.0;
+    final progress = duration > 0
+        ? (_position.inMilliseconds / duration).clamp(0.0, 1.0)
+        : 0.0;
     // Engagement reflects the ORIGINAL on repost rows.
     final orig = _post.originalPostData;
     final engagement = _post.isRepost && orig != null
@@ -968,10 +985,7 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
         // Poster while the stream buffers.
         if (!_playing)
           IgnorePointer(
-            child: Container(
-              color: Colors.black,
-              child: _buildPoster(),
-            ),
+            child: Container(color: Colors.black, child: _buildPoster()),
           ),
         if (!_playing)
           const Center(
@@ -1006,26 +1020,28 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
           ),
         ),
         // Captions + meta.
-        Builder(builder: (context) {
-          final rawStyle = _media.editMeta?['captions_style'];
-          final style = rawStyle is Map<String, dynamic>
-              ? rawStyle
-              : rawStyle is Map
-                  ? Map<String, dynamic>.from(rawStyle)
-                  : null;
-          final placement = captionPlacement(style);
-          return Positioned(
-            left: 0,
-            right: 0,
-            bottom: placement == 'top' ? null : 96,
-            top: placement == 'top' ? 96 : null,
-            child: CaptionOverlay(
-              captions: _media.captions,
-              positionMs: _position.inMilliseconds,
-              style: style,
-            ),
-          );
-        }),
+        Builder(
+          builder: (context) {
+            final rawStyle = _media.editMeta?['captions_style'];
+            final style = rawStyle is Map<String, dynamic>
+                ? rawStyle
+                : rawStyle is Map
+                ? Map<String, dynamic>.from(rawStyle)
+                : null;
+            final placement = captionPlacement(style);
+            return Positioned(
+              left: 0,
+              right: 0,
+              bottom: placement == 'top' ? null : 96,
+              top: placement == 'top' ? 96 : null,
+              child: CaptionOverlay(
+                captions: _media.captions,
+                positionMs: _position.inMilliseconds,
+                style: style,
+              ),
+            );
+          },
+        ),
         CreativeOverlays(
           meta: _media.editMeta,
           positionMs: _position.inMilliseconds,
@@ -1191,7 +1207,11 @@ class _BudPressPhotoPageState extends ConsumerState<_BudPressPhotoPage> {
               errorBuilder: (_, _, _) => const ColoredBox(
                 color: BuddyColors.surface,
                 child: Center(
-                  child: Icon(Icons.broken_image, color: Colors.white38, size: 48),
+                  child: Icon(
+                    Icons.broken_image,
+                    color: Colors.white38,
+                    size: 48,
+                  ),
                 ),
               ),
             );

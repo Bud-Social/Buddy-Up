@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/emoji_utils.dart';
 import '../../../core/utils/profanity.dart';
 import '../../../data/models/post.dart';
 import '../../../shared/widgets/avatar.dart';
@@ -53,6 +54,7 @@ class PostCard extends ConsumerStatefulWidget {
   final void Function(String postId, String reaction)? onReact;
   final void Function(String? username)? onProfileTap;
   final void Function(String postId, List<String> optionIds)? onPollVote;
+
   /// When the console acts as a gym, the repost ribbon renders the gym
   /// identity instead of the acting staff member's.
   final GymActorIdentity? gymActor;
@@ -87,8 +89,10 @@ class _PostCardState extends ConsumerState<PostCard> {
 
   /// Engagement reflects the post itself; reposts are logged properties on the
   /// original post, not separate rows.
-  Map<String, int> get _reactionCounts => _post.reactionCounts;
-  String? get _userReaction => _post.userReaction;
+  Map<String, int> get _reactionCounts =>
+      normalizeReactionCounts(_post.reactionCounts);
+  String? get _userReaction =>
+      _post.userReaction == null ? null : toReactionEmoji(_post.userReaction!);
   int get _commentCount => _post.commentCount;
   int get _repostCount => _post.repostCount;
   int get _saveCount => _post.saveCount;
@@ -211,23 +215,25 @@ class _PostCardState extends ConsumerState<PostCard> {
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
         color: BuddyColors.black,
-        border: Border(bottom: BorderSide(color: BuddyColors.border, width: 0.5)),
+        border: Border(
+          bottom: BorderSide(color: BuddyColors.border, width: 0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            if (_post.isRepostedByMe)
-              RepostIndicator(
-                reposters: _post.reposters,
-                username: 'You',
-                viewerReposted: true,
-                viewerAvatarUrl: viewer?.avatarUrl,
-                viewerDisplayName: viewer?.displayName,
-                viewerUserId: viewerUserId,
-                gymActor: widget.gymActor,
-              ),
+          if (_post.isRepostedByMe)
+            RepostIndicator(
+              reposters: _post.reposters,
+              username: 'You',
+              viewerReposted: true,
+              viewerAvatarUrl: viewer?.avatarUrl,
+              viewerDisplayName: viewer?.displayName,
+              viewerUserId: viewerUserId,
+              gymActor: widget.gymActor,
+            ),
 
-            _buildHeader(context),
+          _buildHeader(context),
           if (_displayBody.isNotEmpty) ...[
             const SizedBox(height: 8),
             _buildBody(context),
@@ -246,7 +252,6 @@ class _PostCardState extends ConsumerState<PostCard> {
               poll: _displayPoll!,
               postId: _post.id,
               onVote: widget.onPollVote,
-
             ),
           ],
           if (_displayWorkoutLogData != null) ...[
@@ -278,7 +283,7 @@ class _PostCardState extends ConsumerState<PostCard> {
     );
   }
 
-          Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context) {
     return Row(
       children: [
         GestureDetector(
@@ -368,8 +373,11 @@ class _PostCardState extends ConsumerState<PostCard> {
           ],
         ),
         IconButton(
-          icon: const Icon(Icons.more_horiz,
-              color: BuddyColors.textSecondary, size: 20),
+          icon: const Icon(
+            Icons.more_horiz,
+            color: BuddyColors.textSecondary,
+            size: 20,
+          ),
           tooltip: 'Post options',
           onPressed: _openPostMenu,
         ),
@@ -377,7 +385,7 @@ class _PostCardState extends ConsumerState<PostCard> {
     );
   }
 
-      Widget _buildBody(BuildContext context) {
+  Widget _buildBody(BuildContext context) {
     final mask = ref.watch(profanityFilterProvider);
     return Text(
       mask ? maskProfanity(_displayBody) : _displayBody,
@@ -394,17 +402,19 @@ class _PostCardState extends ConsumerState<PostCard> {
     return Row(
       // Mirrored in left-handed mode so the primary actions sit under a left
       // thumb (Settings → Appearance → Left-handed mode).
-      textDirection:
-          leftHanded ? ui.TextDirection.rtl : ui.TextDirection.ltr,
+      textDirection: leftHanded ? ui.TextDirection.rtl : ui.TextDirection.ltr,
       children: [
         _ActionButton(
           icon: _userReaction != null ? Icons.favorite : Icons.favorite_border,
-          color: _userReaction != null ? BuddyColors.red : BuddyColors.textSecondary,
+          color: _userReaction != null
+              ? BuddyColors.red
+              : BuddyColors.textSecondary,
           label: _formatCount(_reactionCounts.values.fold(0, (a, b) => a + b)),
           onTap: () {
-            _trackPostInteraction(
-                _userReaction != null ? 'unlike' : 'like');
-            widget.onReact?.call(_post.id, 'fire');
+            final liked = _userReaction != null;
+            _trackPostInteraction(liked ? 'unlike' : 'like');
+            // Web parity: one tap toggles 💪; an empty reaction removes it.
+            widget.onReact?.call(_post.id, liked ? '' : '💪');
           },
         ),
         _ActionButton(
@@ -414,11 +424,12 @@ class _PostCardState extends ConsumerState<PostCard> {
         ),
         _ActionButton(
           icon: Icons.repeat,
-          color: _post.isRepostedByMe ? BuddyColors.green : BuddyColors.textSecondary,
+          color: _post.isRepostedByMe
+              ? BuddyColors.green
+              : BuddyColors.textSecondary,
           label: _formatCount(_repostCount),
           onTap: () {
-            _trackPostInteraction(
-                _post.isRepostedByMe ? 'unrepost' : 'repost');
+            _trackPostInteraction(_post.isRepostedByMe ? 'unrepost' : 'repost');
             widget.onRepost?.call(_post.id);
           },
         ),
@@ -442,7 +453,8 @@ class _PostCardState extends ConsumerState<PostCard> {
             label: _post.authorData.followedByViewer ? 'Following' : 'Follow',
             onTap: () {
               _trackPostInteraction(
-                  _post.authorData.followedByViewer ? 'unfollow' : 'follow');
+                _post.authorData.followedByViewer ? 'unfollow' : 'follow',
+              );
               ref.read(feedProvider.notifier).toggleFollowById(_post.id);
             },
           ),
@@ -474,7 +486,8 @@ class _PostCardState extends ConsumerState<PostCard> {
     widget.onComment?.call(_post.id);
   }
 
-  Widget _buildWorkoutLog(BuildContext context) {        final data = _displayWorkoutLogData!;
+  Widget _buildWorkoutLog(BuildContext context) {
+    final data = _displayWorkoutLogData!;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -486,18 +499,28 @@ class _PostCardState extends ConsumerState<PostCard> {
         children: [
           Row(
             children: [
-              const Icon(Icons.fitness_center, color: BuddyColors.green, size: 18),
+              const Icon(
+                Icons.fitness_center,
+                color: BuddyColors.green,
+                size: 18,
+              ),
               const SizedBox(width: 6),
               Text(
                 data['exercise'] as String? ?? 'Workout',
-                style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: BuddyColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
           if (data['sets'] != null || data['reps'] != null)
             Text(
               '${data['sets'] ?? '?'} sets × ${data['reps'] ?? '?'} reps',
-              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 13,
+              ),
             ),
         ],
       ),
@@ -505,7 +528,7 @@ class _PostCardState extends ConsumerState<PostCard> {
   }
 
   Widget _buildGymTag() {
-        return Row(
+    return Row(
       children: [
         const Icon(Icons.fitness_center, size: 14, color: BuddyColors.green),
         const SizedBox(width: 4),
@@ -571,7 +594,11 @@ class _PostMenuSheet extends ConsumerWidget {
       }
     }
     final orig = live.isRepost ? live.originalPostData : null;
-    final isLiked = (orig?.userReaction ?? live.userReaction) != null;
+    final rawReaction = orig?.userReaction ?? live.userReaction;
+    final currentEmoji = rawReaction == null
+        ? null
+        : toReactionEmoji(rawReaction);
+    final isLiked = currentEmoji != null;
     final username = live.authorData.username;
 
     return SafeArea(
@@ -602,7 +629,7 @@ class _PostMenuSheet extends ConsumerWidget {
                 notifier.toggleReactionForRow(
                   rowId: post.id,
                   targetId: targetId,
-                  emoji: 'fire',
+                  emoji: isLiked ? currentEmoji : '💪',
                 );
               },
             ),
@@ -714,8 +741,10 @@ class _PostMenuSheet extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Block',
-                style: TextStyle(color: BuddyColors.red)),
+            child: const Text(
+              'Block',
+              style: TextStyle(color: BuddyColors.red),
+            ),
           ),
         ],
       ),
@@ -725,9 +754,7 @@ class _PostMenuSheet extends ConsumerWidget {
     Navigator.of(context).pop();
     final err = await notifier.blockAuthor(username);
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(err ?? '@$username blocked.'),
-      ),
+      SnackBar(content: Text(err ?? '@$username blocked.')),
     );
   }
 
@@ -924,8 +951,7 @@ class _MenuRow extends StatelessWidget {
       title: Text(
         label,
         style: TextStyle(
-          color:
-              destructive ? BuddyColors.red : BuddyColors.textPrimary,
+          color: destructive ? BuddyColors.red : BuddyColors.textPrimary,
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
@@ -950,12 +976,7 @@ class _ActionButton extends StatelessWidget {
   final String? label;
   final VoidCallback? onTap;
 
-  const _ActionButton({
-    required this.icon,
-    this.color,
-    this.label,
-    this.onTap,
-  });
+  const _ActionButton({required this.icon, this.color, this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {

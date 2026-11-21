@@ -11,6 +11,7 @@ import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/input.dart';
 import '../../../shared/widgets/toast.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/emoji_utils.dart';
 import '../../../data/models/post.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
@@ -26,7 +27,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   final TextEditingController _commentController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
-    /// When set, the comment composer is in "reply" mode — tapping send
+  /// When set, the comment composer is in "reply" mode — tapping send
   /// creates a child comment under this parent.
   String? _replyToCommentId;
   String? _replyToDisplayName;
@@ -40,30 +41,26 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     super.dispose();
   }
 
-      @override
+  @override
   Widget build(BuildContext context) {
     final postAsync = ref.watch(postDetailProvider(widget.postId));
     final commentsAsync = ref.watch(commentsProvider(widget.postId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Post'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_horiz),
-            onPressed: () {},
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Post')),
       body: postAsync.when(
         loading: () => const PageLoader(),
-        error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(postDetailProvider(widget.postId))),
+        error: (e, _) => ErrorView(
+          message: e.toString(),
+          onRetry: () => ref.invalidate(postDetailProvider(widget.postId)),
+        ),
         data: (post) => Column(
           children: [
             // A taken-down post used to 410 with no body and no explanation.
             // The creator could not read why their post was gone, and staff
             // could not review what they had just hidden.
-            if (post.tombstone != null) _TombstoneBanner(tombstone: post.tombstone!),
+            if (post.tombstone != null)
+              _TombstoneBanner(tombstone: post.tombstone!),
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -75,6 +72,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       onShare: (_) => ShareSheet.show(context, post),
                       onDelete: (id) => _handleDelete(post.id),
                     ),
+                    _TopReactions(counts: post.reactionCounts),
                     const Divider(height: 1),
                     Padding(
                       padding: const EdgeInsets.all(16),
@@ -82,7 +80,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         loading: () => const PageLoader(),
                         error: (e, _) => ErrorView(
                           message: e.toString(),
-                          onRetry: () => ref.invalidate(commentsProvider(widget.postId)),
+                          onRetry: () =>
+                              ref.invalidate(commentsProvider(widget.postId)),
                         ),
                         data: (comments) {
                           if (comments.isEmpty) {
@@ -91,22 +90,32 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                 padding: EdgeInsets.all(32),
                                 child: Text(
                                   'No comments yet. Be the first!',
-                                  style: TextStyle(color: BuddyColors.textSecondary),
+                                  style: TextStyle(
+                                    color: BuddyColors.textSecondary,
+                                  ),
                                 ),
                               ),
                             );
                           }
-                                                    return Column(
+                          return Column(
                             children: comments.map((c) {
-                              final isExpanded = _expandedReplies.contains(c.id);
-                                                            final repliesAsync = isExpanded
-                                  ? ref.watch(commentRepliesProvider((widget.postId, c.id)))
+                              final isExpanded = _expandedReplies.contains(
+                                c.id,
+                              );
+                              final repliesAsync = isExpanded
+                                  ? ref.watch(
+                                      commentRepliesProvider((
+                                        widget.postId,
+                                        c.id,
+                                      )),
+                                    )
                                   : null;
                               return CommentTile(
                                 comment: c,
-                                                                onReply: (comment) => setState(() {
+                                onReply: (comment) => setState(() {
                                   _replyToCommentId = comment.id;
-                                  _replyToDisplayName = comment.authorData.displayName;
+                                  _replyToDisplayName =
+                                      comment.authorData.displayName;
                                 }),
                                 onReact: (comment, reaction) =>
                                     _handleCommentReact(comment, reaction),
@@ -144,8 +153,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                   ? const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.comment_bank_outlined,
-                            color: BuddyColors.textSecondary, size: 18),
+                        Icon(
+                          Icons.comment_bank_outlined,
+                          color: BuddyColors.textSecondary,
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
                         Text(
                           'Comments are turned off for this post',
@@ -153,7 +165,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         ),
                       ],
                     )
-                                    : Column(
+                  : Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (_replyToCommentId != null)
@@ -163,14 +175,16 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 4),
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: BuddyColors.surfaceRaised,
                                     borderRadius: BorderRadius.circular(14),
                                   ),
                                   child: Row(
                                     children: [
-                                                                            Text(
+                                      Text(
                                         'Replying to @${_replyToDisplayName ?? ''}',
                                         style: const TextStyle(
                                           color: BuddyColors.green,
@@ -208,17 +222,26 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             ),
                             const SizedBox(width: 6),
                             IconButton(
-                              icon: const Icon(Icons.send, color: BuddyColors.green),
+                              icon: const Icon(
+                                Icons.send,
+                                color: BuddyColors.green,
+                              ),
                               onPressed: () => _submitTextComment(post.id),
                             ),
                             const SizedBox(width: 6),
                             IconButton(
-                              icon: const Icon(Icons.insert_emoticon, color: BuddyColors.textSecondary),
+                              icon: const Icon(
+                                Icons.insert_emoticon,
+                                color: BuddyColors.textSecondary,
+                              ),
                               onPressed: () => _showCommentMediaSheet(post.id),
                             ),
                             const SizedBox(width: 6),
                             IconButton(
-                              icon: const Icon(Icons.image, color: BuddyColors.textSecondary),
+                              icon: const Icon(
+                                Icons.image,
+                                color: BuddyColors.textSecondary,
+                              ),
                               onPressed: () => _pickImageComment(post.id),
                             ),
                           ],
@@ -233,10 +256,18 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 
   void _handleReact(Post post, String reaction) async {
-    if (reaction.isEmpty) return;
     final repo = ref.read(feedRepositoryProvider);
     try {
-      await repo.react(post.id, ReactionInput(reactionType: reaction));
+      if (reaction.isEmpty) {
+        // Empty means "remove" — the chip strip's un-react path.
+        if (post.userReaction == null) return;
+        await repo.unreact(post.id);
+      } else {
+        await repo.react(
+          post.id,
+          ReactionInput(reactionType: toReactionEmoji(reaction)),
+        );
+      }
       ref.invalidate(postDetailProvider(widget.postId));
     } catch (_) {}
   }
@@ -253,19 +284,22 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     } catch (_) {}
   }
 
-    void _handleCommentReact(Comment comment, String reaction) async {
+  void _handleCommentReact(Comment comment, String reaction) async {
     final repo = ref.read(feedRepositoryProvider);
     try {
       if (reaction.isEmpty) {
         await repo.unreactToComment(widget.postId, comment.id);
       } else {
-        await repo.reactToComment(widget.postId, comment.id,
-            ReactionInput(reactionType: reaction));
+        await repo.reactToComment(
+          widget.postId,
+          comment.id,
+          ReactionInput(reactionType: toReactionEmoji(reaction)),
+        );
       }
       ref.invalidate(commentsProvider(widget.postId));
       // If the comment's thread is expanded, refresh the replies too.
       if (_expandedReplies.contains(comment.id)) {
-                ref.invalidate(commentRepliesProvider((widget.postId, comment.id)));
+        ref.invalidate(commentRepliesProvider((widget.postId, comment.id)));
       }
     } catch (_) {}
   }
@@ -278,7 +312,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     } catch (_) {}
   }
 
-    void _submitTextComment(String postId) async {
+  void _submitTextComment(String postId) async {
     final body = _commentController.text.trim();
     if (body.isEmpty) return;
     final post = ref.read(postDetailProvider(postId)).value;
@@ -288,10 +322,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     }
     final repo = ref.read(feedRepositoryProvider);
     try {
-      await repo.addComment(postId, CommentCreateInput(
-        body: body,
-        parentId: _replyToCommentId,
-      ));
+      await repo.addComment(
+        postId,
+        CommentCreateInput(body: body, parentId: _replyToCommentId),
+      );
       _commentController.clear();
       setState(() => _replyToCommentId = null);
       ref.invalidate(commentsProvider(widget.postId));
@@ -310,7 +344,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Add to comment', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text(
+              'Add to comment',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -339,7 +376,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               onTap: () => Navigator.of(context).pop(),
               child: const Text(
                 'Cancel',
-                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+                style: TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 14,
+                ),
               ),
             ),
           ],
@@ -370,10 +410,17 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     await _submitMediaComment(postId, 'image', picked.path);
   }
 
-  Future<void> _submitMediaComment(String postId, String mediaType, String filePath) async {
+  Future<void> _submitMediaComment(
+    String postId,
+    String mediaType,
+    String filePath,
+  ) async {
     final repo = ref.read(feedRepositoryProvider);
     try {
-      final uploadResult = await repo.uploadCommentMedia(File(filePath), mediaType);
+      final uploadResult = await repo.uploadCommentMedia(
+        File(filePath),
+        mediaType,
+      );
       final mediaUrl = uploadResult['url'] as String;
       final stickerPack = mediaType == 'sticker' ? 'default' : null;
 
@@ -416,8 +463,11 @@ class _TombstoneBanner extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.visibility_off_outlined,
-                  size: 16, color: BuddyColors.gold),
+              Icon(
+                Icons.visibility_off_outlined,
+                size: 16,
+                color: BuddyColors.gold,
+              ),
               SizedBox(width: 8),
               Text(
                 'Taken down by moderators',
@@ -433,14 +483,20 @@ class _TombstoneBanner extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'Reason: ${tombstone.reason.replaceAll('_', ' ')}',
-              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 12,
+              ),
             ),
           ],
           if (tombstone.note.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               tombstone.note,
-              style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12),
+              style: const TextStyle(
+                color: BuddyColors.textPrimary,
+                fontSize: 12,
+              ),
             ),
           ],
           if (days != null) ...[
@@ -449,9 +505,81 @@ class _TombstoneBanner extends StatelessWidget {
               days > 0
                   ? 'You can appeal this for another $days days.'
                   : 'The appeal window has closed.',
-              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 11,
+              ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Web `PostDetailModal` reaction summary: the top three emoji glyphs followed
+/// by the total count (and how many reactions are hidden behind them).
+class _TopReactions extends StatelessWidget {
+  final Map<String, int> counts;
+
+  const _TopReactions({required this.counts});
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = normalizeReactionCounts(counts);
+    final sorted = normalized.entries.where((e) => e.value > 0).toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    if (sorted.isEmpty) return const SizedBox.shrink();
+
+    final total = sorted.fold<int>(0, (sum, e) => sum + e.value);
+    final top = sorted.take(3).toList();
+    final remaining = sorted.skip(3).fold<int>(0, (sum, e) => sum + e.value);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 22 + (top.length - 1) * 12.0,
+            height: 20,
+            child: Stack(
+              children: [
+                for (var i = 0; i < top.length; i++)
+                  Positioned(
+                    left: i * 12.0,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: BuddyColors.surfaceRaised,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: BuddyColors.surface,
+                          width: 1.5,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        top[i].key,
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '$total reaction${total == 1 ? '' : 's'}'
+              '${remaining > 0 ? ' (+$remaining more)' : ''}',
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -489,7 +617,13 @@ class _MediaSheetOption extends StatelessWidget {
               child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 12, color: BuddyColors.textPrimary)),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: BuddyColors.textPrimary,
+              ),
+            ),
           ],
         ),
       ),

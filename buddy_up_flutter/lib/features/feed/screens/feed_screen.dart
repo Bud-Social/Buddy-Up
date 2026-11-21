@@ -14,6 +14,7 @@ import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/emoji_utils.dart';
 import '../../../shared/navigation/app_nav.dart';
 import '../../../data/models/post.dart';
 import '../../onboarding/walkthrough_overlay.dart';
@@ -202,7 +203,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           'BuddyUp Fit',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        actions: [IconButton(icon: const Icon(Icons.search), onPressed: () {})],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search',
+            onPressed: () => context.push('/discover'),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -506,12 +513,24 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 
   void _handleReact(String postId, String reaction) async {
-    if (reaction.isEmpty) return;
+    if (reaction.isEmpty) {
+      // PostCard uses an empty reaction to mean "remove my reaction".
+      final post = ref
+          .read(feedProvider)
+          .posts
+          .where((p) => p.id == postId)
+          .firstOrNull;
+      final current = post?.userReaction;
+      if (current != null) {
+        await ref.read(feedProvider.notifier).reactTo(postId, current);
+      }
+      return;
+    }
     final repo = ref.read(feedRepositoryProvider);
     try {
       final raw = await repo.react(
         postId,
-        ReactionInput(reactionType: reaction),
+        ReactionInput(reactionType: toReactionEmoji(reaction)),
       );
       final updated = Post.fromJson(raw['data'] as Map<String, dynamic>);
       ref.read(feedProvider.notifier).updatePostInList(updated);
