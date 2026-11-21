@@ -49,8 +49,11 @@ void main() {
         '/admin/staff-roles',
         '/admin/verification',
       ]) {
-        expect(redirectFor(route, _auth(isStaff: false)), '/feed',
-            reason: '$route must not be reachable by a non-staff user');
+        expect(
+          redirectFor(route, _auth(isStaff: false)),
+          '/feed',
+          reason: '$route must not be reachable by a non-staff user',
+        );
       }
     });
 
@@ -63,8 +66,11 @@ void main() {
         '/admin/analytics/predictive',
         '/admin/staff-roles',
       ]) {
-        expect(redirectFor(route, _auth(isStaff: true)), isNull,
-            reason: '$route should stay reachable for staff');
+        expect(
+          redirectFor(route, _auth(isStaff: true)),
+          isNull,
+          reason: '$route should stay reachable for staff',
+        );
       }
     });
 
@@ -75,14 +81,33 @@ void main() {
     });
 
     test('a signed-out visitor is sent to login, not to feed', () {
-      expect(redirectFor('/admin', _auth(isStaff: false, isAuthenticated: false)), '/login');
+      expect(
+        redirectFor('/admin', _auth(isStaff: false, isAuthenticated: false)),
+        '/login',
+      );
     });
   });
 
   group('existing navigation rules still hold', () {
     test('a signed-out visitor reaches the public pages', () {
-      expect(redirectFor('/terms', _auth(isStaff: false, isAuthenticated: false)), isNull);
-      expect(redirectFor('/login', _auth(isStaff: false, isAuthenticated: false)), isNull);
+      expect(
+        redirectFor('/terms', _auth(isStaff: false, isAuthenticated: false)),
+        isNull,
+      );
+      expect(
+        redirectFor('/login', _auth(isStaff: false, isAuthenticated: false)),
+        isNull,
+      );
+    });
+
+    test('invitation accept flows stay reachable signed out and signed in', () {
+      final signedOut = _auth(isStaff: false, isAuthenticated: false);
+      expect(redirectFor('/staff-invite/token123', signedOut), isNull);
+      expect(redirectFor('/settings/family/accept', signedOut), isNull);
+      expect(
+        redirectFor('/settings/family/accept', _auth(isStaff: false)),
+        isNull,
+      );
     });
 
     test('incomplete onboarding is finished first', () {
@@ -102,7 +127,10 @@ void main() {
     });
 
     test('nothing is decided while the session is still loading', () {
-      expect(redirectFor('/admin', _auth(isStaff: false, isLoading: true)), isNull);
+      expect(
+        redirectFor('/admin', _auth(isStaff: false, isLoading: true)),
+        isNull,
+      );
     });
   });
 }

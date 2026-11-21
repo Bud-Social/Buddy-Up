@@ -21,6 +21,7 @@ import 'features/buddies/buddy_find_profile_screen.dart';
 import 'features/buddies/buddy_messages_screen.dart';
 import 'features/profile/user_profile_screen.dart';
 import 'features/auth/activate_account_screen.dart';
+import 'features/auth/staff_invite_screen.dart';
 import 'features/discover/discover_people_screen.dart';
 import 'features/feed/screens/feed_screen.dart';
 import 'features/feed/screens/bud_press_feed_screen.dart';
@@ -79,6 +80,7 @@ import 'features/settings/screens/security_screen.dart';
 import 'features/settings/screens/privacy_screen.dart';
 import 'features/settings/screens/data_screen.dart';
 import 'features/settings/screens/family_screen.dart';
+import 'features/settings/screens/family_accept_screen.dart';
 import 'features/settings/screens/appearance_screen.dart';
 import 'features/settings/screens/alarm_center_screen.dart';
 import 'features/settings/screens/activity_log_screen.dart';
@@ -171,7 +173,10 @@ String? redirectFor(String location, AuthState authState) {
 
   if (authState.isLoading) return null;
 
-  if (!isAuthenticated && !publicRoutes.contains(location)) {
+  final isPublicFlow =
+      location.startsWith('/staff-invite/') ||
+      location.startsWith('/settings/family/accept');
+  if (!isAuthenticated && !publicRoutes.contains(location) && !isPublicFlow) {
     return '/login';
   }
 
@@ -251,6 +256,11 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           return TotpChallengeScreen(tempToken: token);
         },
       ),
+      GoRoute(
+        path: '/staff-invite/:token',
+        builder: (_, state) =>
+            StaffInviteScreen(token: state.pathParameters['token'] ?? ''),
+      ),
       GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
       GoRoute(path: '/terms', builder: (_, _) => const TermsOfServiceScreen()),
       GoRoute(path: '/privacy', builder: (_, _) => const PrivacyPolicyScreen()),
@@ -279,6 +289,17 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         builder: (_, _, child) => _AppShell(child: child),
         routes: [
           // Web path aliases — keep deep links from the site working in-app.
+          GoRoute(path: '/app/analytics', redirect: (_, _) => '/analytics'),
+          GoRoute(
+            path: '/live/:liveId',
+            redirect: (_, state) =>
+                '/lives/${state.pathParameters['liveId'] ?? ''}',
+          ),
+          GoRoute(
+            path: '/shops/:slug',
+            redirect: (_, state) =>
+                '/marketplace/shops/${state.pathParameters['slug'] ?? ''}',
+          ),
           GoRoute(path: '/buddies/find', redirect: (_, _) => '/buddies/nearby'),
           GoRoute(path: '/creator-insights', redirect: (_, _) => '/insights'),
           GoRoute(
@@ -996,6 +1017,10 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           // Not staff-gated — an action a user cannot see is one they cannot
           // appeal. `?action=` deep-links from the notification that raised the
           // action and opens the appeal form pre-filled.
+          GoRoute(
+            path: '/settings/family/accept',
+            builder: (_, _) => const FamilyAcceptScreen(),
+          ),
           GoRoute(
             path: '/settings/moderation',
             builder: (_, state) => ModerationScreen(

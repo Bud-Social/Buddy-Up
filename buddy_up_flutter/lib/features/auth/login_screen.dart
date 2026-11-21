@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -42,12 +43,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   // Apple sign-in is an iOS-only option. Android builds (and web) must not
   // offer it: the Apple plugin flow fails on those platforms.
-  bool get _showAppleSignIn => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  bool get _showAppleSignIn =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   void initState() {
     super.initState();
     _authRepo = AuthRepository(ApiClient().dio);
+  }
+
+  /// Web parity: a `next` query parameter returns the user to the flow they came
+  /// from (e.g. the guardian invite acceptance page) after signing in.
+  void _goNext() {
+    final next = GoRouterState.of(context).uri.queryParameters['next'];
+    if (next != null && next.startsWith('/') && !next.startsWith('//')) {
+      context.go(next);
+    } else {
+      context.go('/feed');
+    }
   }
 
   @override
@@ -76,11 +89,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _isLoading = false;
         });
       } else {
-        await ref.read(authProvider.notifier).setTokens(response.loginToken, '');
+        await ref
+            .read(authProvider.notifier)
+            .setTokens(response.loginToken, '');
         if (mounted) {
           // GoRouter decides the landing spot: /onboarding for accounts that
           // have not completed the pipeline, /feed otherwise.
-          context.go('/feed');
+          _goNext();
         }
       }
     } catch (e) {
@@ -90,7 +105,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final inner = data['data'];
         if (inner is Map && inner['require_email_verification'] == true) {
           final token = inner['registration_token'] as String?;
-          final email = inner['email'] as String? ?? _emailController.text.trim();
+          final email =
+              inner['email'] as String? ?? _emailController.text.trim();
           if (token != null && mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
@@ -109,9 +125,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           await _showReactivateDialog(inner['hard_deletion_scheduled']);
           return;
         }
-        if (mounted) showToast(context, message.isNotEmpty ? message : 'Login failed.', type: ToastType.error);
+        if (mounted) {
+          showToast(
+            context,
+            message.isNotEmpty ? message : 'Login failed.',
+            type: ToastType.error,
+          );
+        }
       } else {
-        if (mounted) showToast(context, 'Login failed. Please try again.', type: ToastType.error);
+        if (mounted) {
+          showToast(
+            context,
+            'Login failed. Please try again.',
+            type: ToastType.error,
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -120,7 +148,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _showReactivateDialog(dynamic hardDeletionScheduled) async {
     if (!mounted) return;
-    final scheduledText = (hardDeletionScheduled == null ||
+    final scheduledText =
+        (hardDeletionScheduled == null ||
             hardDeletionScheduled == false ||
             (hardDeletionScheduled is String && hardDeletionScheduled.isEmpty))
         ? ''
@@ -135,8 +164,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           'and restore your data.$scheduledText',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          BuddyButton(label: 'Reactivate', onPressed: () => Navigator.pop(ctx, true)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          BuddyButton(
+            label: 'Reactivate',
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
         ],
       ),
     );
@@ -164,7 +199,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             _isLoading = false;
           });
         } else {
-          if (mounted) context.go('/feed');
+          if (mounted) _goNext();
         }
         return;
       }
@@ -186,7 +221,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (mounted) context.go('/totp-setup');
         return;
       }
-      if (mounted) showToast(context, 'Invalid OTP. Try again.', type: ToastType.error);
+      if (mounted) {
+        showToast(context, 'Invalid OTP. Try again.', type: ToastType.error);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -199,11 +236,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         'temp_token': _loginToken,
         'code': code,
       });
-      await ref.read(authProvider.notifier).setTokens(response.access, response.refresh);
-      await ref.read(authProvider.notifier).setUserAndProfile(response.user, response.profile);
-      if (mounted) context.go('/feed');
+      await ref
+          .read(authProvider.notifier)
+          .setTokens(response.access, response.refresh);
+      await ref
+          .read(authProvider.notifier)
+          .setUserAndProfile(response.user, response.profile);
+      if (mounted) _goNext();
     } catch (e) {
-      if (mounted) showToast(context, 'Invalid TOTP code.', type: ToastType.error);
+      if (mounted) {
+        showToast(context, 'Invalid TOTP code.', type: ToastType.error);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -250,7 +293,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
       // New Google emails are auto-registered by the backend; GoRouter sends
       // onboarding-incomplete accounts to /onboarding (consent first).
-      if (mounted) context.go('/feed');
+      if (mounted) _goNext();
     } catch (e) {
       if (GoogleAuth.isCancelled(e)) {
         return; // User cancelled mid-flow.
@@ -258,20 +301,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;
         final message = data['message'] as String? ?? '';
-        if (data['data']?['require_email_verification'] == true && data['data'] is Map) {
+        if (data['data']?['require_email_verification'] == true &&
+            data['data'] is Map) {
           final inner = data['data'] as Map<String, dynamic>;
           final token = inner['registration_token'] as String?;
           final email = inner['email'] as String? ?? '';
           if (token != null && mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => VerifyRegistrationOtpScreen(registrationToken: token, email: email, unverifiedNotice: true),
+                builder: (_) => VerifyRegistrationOtpScreen(
+                  registrationToken: token,
+                  email: email,
+                  unverifiedNotice: true,
+                ),
               ),
             );
             return;
           }
         }
-        if (mounted) showToast(context, message.isNotEmpty ? message : 'Google Sign-In failed.', type: ToastType.error);
+        if (mounted) {
+          showToast(
+            context,
+            message.isNotEmpty ? message : 'Google Sign-In failed.',
+            type: ToastType.error,
+          );
+        }
       } else {
         final hint = GoogleAuth.configurationHint(e);
         if (mounted) {
@@ -310,27 +364,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
       // GoRouter sends onboarding-incomplete accounts to /onboarding.
-      if (mounted) context.go('/feed');
+      if (mounted) _goNext();
     } catch (e) {
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;
         final message = data['message'] as String? ?? '';
-        if (data['data']?['require_email_verification'] == true && data['data'] is Map) {
+        if (data['data']?['require_email_verification'] == true &&
+            data['data'] is Map) {
           final inner = data['data'] as Map<String, dynamic>;
           final token = inner['registration_token'] as String?;
           final email = inner['email'] as String? ?? '';
           if (token != null && mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => VerifyRegistrationOtpScreen(registrationToken: token, email: email, unverifiedNotice: true),
+                builder: (_) => VerifyRegistrationOtpScreen(
+                  registrationToken: token,
+                  email: email,
+                  unverifiedNotice: true,
+                ),
               ),
             );
             return;
           }
         }
-        if (mounted) showToast(context, message.isNotEmpty ? message : 'Apple Sign-In failed.', type: ToastType.error);
+        if (mounted) {
+          showToast(
+            context,
+            message.isNotEmpty ? message : 'Apple Sign-In failed.',
+            type: ToastType.error,
+          );
+        }
       } else {
-        if (mounted) showToast(context, 'Apple Sign-In failed: $e', type: ToastType.error);
+        if (mounted) {
+          showToast(context, 'Apple Sign-In failed: $e', type: ToastType.error);
+        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -350,18 +417,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Text(
                   'BuddyUp Fit',
                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        color: BuddyColors.green,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: BuddyColors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   _step == LoginStep.credentials
                       ? 'Sign in to your account'
                       : _step == LoginStep.otp
-                          ? 'Enter the code sent to $_maskedEmail'
-                          : 'Enter your authenticator code',
-                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+                      ? 'Enter the code sent to $_maskedEmail'
+                      : 'Enter your authenticator code',
+                  style: const TextStyle(
+                    color: BuddyColors.textSecondary,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 if (_step == LoginStep.credentials) _buildCredentialsForm(),
@@ -420,7 +490,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text('OR', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                child: Text(
+                  'OR',
+                  style: TextStyle(
+                    color: BuddyColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
               ),
               Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
             ],
@@ -449,7 +525,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             children: [
               const Text(
                 "Don't have an account? ",
-                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+                style: TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 14,
+                ),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).push(
@@ -467,11 +546,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildOtpForm() {
     return Column(
       children: [
-        OtpInput(
-          length: 6,
-          enabled: !_isLoading,
-          onCompleted: _handleOtp,
-        ),
+        OtpInput(length: 6, enabled: !_isLoading, onCompleted: _handleOtp),
         const SizedBox(height: 24),
         BuddyButton(
           label: 'Verify Code',
@@ -497,11 +572,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildTotpForm() {
     return Column(
       children: [
-        OtpInput(
-          length: 6,
-          enabled: !_isLoading,
-          onCompleted: _handleTotp,
-        ),
+        OtpInput(length: 6, enabled: !_isLoading, onCompleted: _handleTotp),
         const SizedBox(height: 24),
         BuddyButton(
           label: 'Verify',

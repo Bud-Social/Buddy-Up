@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/api/api_client.dart';
 import '../../core/env/env.dart';
 import '../../core/theme/app_theme.dart';
@@ -47,7 +47,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   late AuthRepository _authRepo;
 
   // Apple sign-in is an iOS-only option; hide it on Android and web.
-  bool get _showAppleSignIn => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  bool get _showAppleSignIn =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   static final RegExp _usernamePattern = RegExp(r'^[A-Za-z0-9_]{3,30}$');
   Timer? _usernameTimer;
@@ -139,9 +140,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (!mounted || id != _usernameCheckId || data == null) return;
       final payload = data['data'] is Map ? data['data'] as Map : data;
       final available = payload['available'] == true;
-      setState(() => _usernameStatus = available
-          ? 'available'
-          : (payload['reason'] == 'invalid' ? 'invalid' : 'taken'));
+      setState(
+        () => _usernameStatus = available
+            ? 'available'
+            : (payload['reason'] == 'invalid' ? 'invalid' : 'taken'),
+      );
     } catch (_) {
       if (!mounted || id != _usernameCheckId) return;
       // The check endpoint may not be deployed yet; the register serializer
@@ -170,30 +173,51 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _handleRegister() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_usernameStatus == 'checking') {
-      showToast(context, 'Still checking username availability.', type: ToastType.error);
+      showToast(
+        context,
+        'Still checking username availability.',
+        type: ToastType.error,
+      );
       return;
     }
     if (_usernameStatus == 'taken' || _usernameStatus == 'invalid') {
-      showToast(context, 'Please choose an available username.', type: ToastType.error);
+      showToast(
+        context,
+        'Please choose an available username.',
+        type: ToastType.error,
+      );
       return;
     }
     if (!_acceptedTerms || !_acceptedPrivacy) {
-      showToast(context, 'You must accept the terms and privacy policy.', type: ToastType.error);
+      showToast(
+        context,
+        'You must accept the terms and privacy policy.',
+        type: ToastType.error,
+      );
       return;
     }
     final dob = _dob;
     if (dob == null) {
-      showToast(context, 'Please enter your date of birth.', type: ToastType.error);
+      showToast(
+        context,
+        'Please enter your date of birth.',
+        type: ToastType.error,
+      );
       return;
     }
     final age = AgeGating.calculateAge(dob);
     if (age < 16) {
-      showToast(context, 'You must be at least 16 years old to join BuddyUp Fit.', type: ToastType.error);
+      showToast(
+        context,
+        'You must be at least 16 years old to join BuddyUp Fit.',
+        type: ToastType.error,
+      );
       return;
     }
     // 16-17 year olds need guardian details (at least one field), mirroring web.
     if (age < 18) {
-      final hasGuardian = _guardianNameController.text.trim().isNotEmpty ||
+      final hasGuardian =
+          _guardianNameController.text.trim().isNotEmpty ||
           _guardianEmailController.text.trim().isNotEmpty ||
           _guardianPhoneController.text.trim().isNotEmpty;
       if (!hasGuardian) {
@@ -211,7 +235,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       final response = await _authRepo.register(
         RegisterPayload(
           email: _emailController.text.trim(),
-          phone: _phoneController.text.isNotEmpty ? _phoneController.text.trim() : null,
+          phone: _phoneController.text.isNotEmpty
+              ? _phoneController.text.trim()
+              : null,
           password: _passwordController.text,
           dob: _formatDob(dob),
           username: _usernameController.text.trim(),
@@ -220,13 +246,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           acceptedPrivacy: _acceptedPrivacy,
           acceptedGuidelines: _acceptedGuidelines,
           is16Plus: age >= 16,
-          guardianName: age < 18 && _guardianNameController.text.trim().isNotEmpty
+          guardianName:
+              age < 18 && _guardianNameController.text.trim().isNotEmpty
               ? _guardianNameController.text.trim()
               : null,
-          guardianEmail: age < 18 && _guardianEmailController.text.trim().isNotEmpty
+          guardianEmail:
+              age < 18 && _guardianEmailController.text.trim().isNotEmpty
               ? _guardianEmailController.text.trim()
               : null,
-          guardianPhone: age < 18 && _guardianPhoneController.text.trim().isNotEmpty
+          guardianPhone:
+              age < 18 && _guardianPhoneController.text.trim().isNotEmpty
               ? _guardianPhoneController.text.trim()
               : null,
         ),
@@ -278,24 +307,38 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;
         final message = data['message'] as String? ?? '';
-        if (message.toLowerCase().contains('verify your email') && data['data'] is Map) {
+        if (message.toLowerCase().contains('verify your email') &&
+            data['data'] is Map) {
           final inner = data['data'] as Map<String, dynamic>;
           final token = inner['registration_token'] as String?;
           final email = inner['email'] as String? ?? '';
           if (token != null && mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => VerifyRegistrationOtpScreen(registrationToken: token, email: email),
+                builder: (_) => VerifyRegistrationOtpScreen(
+                  registrationToken: token,
+                  email: email,
+                ),
               ),
             );
             return;
           }
         }
-        if (mounted) showToast(context, message.isNotEmpty ? message : 'Google Sign-In failed.', type: ToastType.error);
+        if (mounted) {
+          showToast(
+            context,
+            message.isNotEmpty ? message : 'Google Sign-In failed.',
+            type: ToastType.error,
+          );
+        }
       } else {
         final hint = GoogleAuth.configurationHint(e);
         if (mounted) {
-          showToast(context, hint ?? 'Google Sign-In failed: $e', type: ToastType.error);
+          showToast(
+            context,
+            hint ?? 'Google Sign-In failed: $e',
+            type: ToastType.error,
+          );
         }
       }
     } finally {
@@ -308,7 +351,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     setState(() => _isLoading = true);
     try {
       final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
       );
 
       final res = await _authRepo.appleLogin({
@@ -328,22 +374,34 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;
         final message = data['message'] as String? ?? '';
-        if (message.toLowerCase().contains('verify your email') && data['data'] is Map) {
+        if (message.toLowerCase().contains('verify your email') &&
+            data['data'] is Map) {
           final inner = data['data'] as Map<String, dynamic>;
           final token = inner['registration_token'] as String?;
           final email = inner['email'] as String? ?? '';
           if (token != null && mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => VerifyRegistrationOtpScreen(registrationToken: token, email: email),
+                builder: (_) => VerifyRegistrationOtpScreen(
+                  registrationToken: token,
+                  email: email,
+                ),
               ),
             );
             return;
           }
         }
-        if (mounted) showToast(context, message.isNotEmpty ? message : 'Apple Sign-In failed.', type: ToastType.error);
+        if (mounted) {
+          showToast(
+            context,
+            message.isNotEmpty ? message : 'Apple Sign-In failed.',
+            type: ToastType.error,
+          );
+        }
       } else {
-        if (mounted) showToast(context, 'Apple Sign-In failed: $e', type: ToastType.error);
+        if (mounted) {
+          showToast(context, 'Apple Sign-In failed: $e', type: ToastType.error);
+        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -378,17 +436,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   suffixIcon: _usernameStatus == 'checking'
                       ? Icons.hourglass_top
                       : _usernameStatus == 'available'
-                          ? Icons.check_circle
-                          : _usernameStatus == 'taken' || _usernameStatus == 'invalid'
-                              ? Icons.error_outline
-                              : null,
+                      ? Icons.check_circle
+                      : _usernameStatus == 'taken' ||
+                            _usernameStatus == 'invalid'
+                      ? Icons.error_outline
+                      : null,
                   validator: (v) {
                     final value = (v ?? '').trim();
                     if (value.isEmpty) return 'Required';
                     if (!_usernamePattern.hasMatch(value)) {
                       return '3-30 letters, numbers and underscores';
                     }
-                    if (_usernameStatus == 'taken') return 'This username is already taken';
+                    if (_usernameStatus == 'taken') {
+                      return 'This username is already taken';
+                    }
                     return null;
                   },
                 ),
@@ -401,9 +462,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         fontSize: 12,
                         color: _usernameStatus == 'available'
                             ? BuddyColors.green
-                            : _usernameStatus == 'taken' || _usernameStatus == 'invalid'
-                                ? Colors.red
-                                : BuddyColors.textSecondary,
+                            : _usernameStatus == 'taken' ||
+                                  _usernameStatus == 'invalid'
+                            ? Colors.red
+                            : BuddyColors.textSecondary,
                       ),
                     ),
                   ),
@@ -432,7 +494,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   padding: EdgeInsets.only(top: 4, left: 4),
                   child: Text(
                     'Optional. Leave it blank if you prefer.',
-                    style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+                    style: TextStyle(
+                      color: BuddyColors.textSecondary,
+                      fontSize: 11,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -454,7 +519,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: true,
                   prefixIcon: Icons.lock_outlined,
                   validator: (v) {
-                    if (v != _passwordController.text) return 'Passwords do not match';
+                    if (v != _passwordController.text) {
+                      return 'Passwords do not match';
+                    }
                     return null;
                   },
                 ),
@@ -466,9 +533,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   child: InputDecorator(
                     decoration: InputDecoration(
                       labelText: 'Date of Birth',
-                      labelStyle: const TextStyle(color: BuddyColors.textSecondary),
-                      prefixIcon: const Icon(Icons.cake_outlined,
-                          size: 18, color: BuddyColors.textSecondary),
+                      labelStyle: const TextStyle(
+                        color: BuddyColors.textSecondary,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.cake_outlined,
+                        size: 18,
+                        color: BuddyColors.textSecondary,
+                      ),
                       filled: true,
                       fillColor: BuddyColors.surface,
                       border: OutlineInputBorder(
@@ -477,10 +549,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     ),
                     child: Text(
-                      _dob == null ? 'Select your date of birth' : _formatDob(_dob!),
+                      _dob == null
+                          ? 'Select your date of birth'
+                          : _formatDob(_dob!),
                       style: TextStyle(
                         fontSize: 15,
-                        color: _dob == null ? BuddyColors.textSecondary : BuddyColors.textPrimary,
+                        color: _dob == null
+                            ? BuddyColors.textSecondary
+                            : BuddyColors.textPrimary,
                       ),
                     ),
                   ),
@@ -506,13 +582,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       children: [
                         const Text(
                           'Guardian Details',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         const Text(
                           'Because you are 16 or 17, we need a parent or guardian. '
                           'Provide at least one contact (name, email or phone).',
-                          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                          style: TextStyle(
+                            color: BuddyColors.textSecondary,
+                            fontSize: 12,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         BuddyInput(
@@ -545,10 +627,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   value: _acceptedTerms,
                   onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
                   title: GestureDetector(
-                    onTap: () => launchUrl(Uri.parse('https://buddyup.app/terms')),
+                    onTap: () => context.push('/terms'),
                     child: const Text(
                       'I accept the Terms of Service',
-                      style: TextStyle(fontSize: 14, decoration: TextDecoration.underline, color: BuddyColors.green),
+                      style: TextStyle(
+                        fontSize: 14,
+                        decoration: TextDecoration.underline,
+                        color: BuddyColors.green,
+                      ),
                     ),
                   ),
                   controlAffinity: ListTileControlAffinity.leading,
@@ -557,12 +643,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 CheckboxListTile(
                   value: _acceptedPrivacy,
-                  onChanged: (v) => setState(() => _acceptedPrivacy = v ?? false),
+                  onChanged: (v) =>
+                      setState(() => _acceptedPrivacy = v ?? false),
                   title: GestureDetector(
-                    onTap: () => launchUrl(Uri.parse('https://buddyup.app/privacy')),
+                    onTap: () => context.push('/privacy'),
                     child: const Text(
                       'I accept the Privacy Policy',
-                      style: TextStyle(fontSize: 14, decoration: TextDecoration.underline, color: BuddyColors.green),
+                      style: TextStyle(
+                        fontSize: 14,
+                        decoration: TextDecoration.underline,
+                        color: BuddyColors.green,
+                      ),
                     ),
                   ),
                   controlAffinity: ListTileControlAffinity.leading,
@@ -571,12 +662,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 CheckboxListTile(
                   value: _acceptedGuidelines,
-                  onChanged: (v) => setState(() => _acceptedGuidelines = v ?? false),
+                  onChanged: (v) =>
+                      setState(() => _acceptedGuidelines = v ?? false),
                   title: GestureDetector(
-                    onTap: () => launchUrl(Uri.parse('https://buddyup.app/guidelines')),
+                    onTap: () => context.push('/community-guidelines'),
                     child: const Text(
                       'I accept the Community Guidelines',
-                      style: TextStyle(fontSize: 14, decoration: TextDecoration.underline, color: BuddyColors.green),
+                      style: TextStyle(
+                        fontSize: 14,
+                        decoration: TextDecoration.underline,
+                        color: BuddyColors.green,
+                      ),
                     ),
                   ),
                   controlAffinity: ListTileControlAffinity.leading,
@@ -596,7 +692,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text('OR', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                      child: Text(
+                        'OR',
+                        style: TextStyle(
+                          color: BuddyColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                     Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
                   ],
@@ -625,7 +727,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   children: [
                     const Text(
                       'Already have an account? ',
-                      style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+                      style: TextStyle(
+                        color: BuddyColors.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
@@ -641,6 +746,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 }
+
 /// Replaces the "I am a… Trainer / Practitioner" chips that used to sit here.
 ///
 /// **Why the chips are gone.** `Profile.role` used to be self-declared: the
@@ -675,7 +781,11 @@ class _RoleApplyNotice extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.how_to_reg_outlined, size: 15, color: BuddyColors.green),
+              Icon(
+                Icons.how_to_reg_outlined,
+                size: 15,
+                color: BuddyColors.green,
+              ),
               SizedBox(width: 8),
               Text(
                 'Trainer, practitioner or business owner?',

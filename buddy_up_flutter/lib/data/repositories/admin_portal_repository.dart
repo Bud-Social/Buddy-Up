@@ -28,7 +28,8 @@ part 'admin_portal_repository.g.dart';
 /// more useful than a guess that silently returns everything.
 @RestApi()
 abstract class AdminPortalRepository {
-  factory AdminPortalRepository(Dio dio, {String baseUrl}) = _AdminPortalRepository;
+  factory AdminPortalRepository(Dio dio, {String baseUrl}) =
+      _AdminPortalRepository;
 
   // --- Users ---
   @GET('/portal/users/')
@@ -354,6 +355,16 @@ abstract class AdminPortalRepository {
   @DELETE('/governance/staff-roles/{id}/')
   Future<dynamic> revokeStaffRole(@Path('id') String roleId);
 
+  // --- Staff invitations (public accept flow, mirrors web AcceptStaffInvite) ---
+
+  /// Unauthenticated preview so a dead/forwarded link can explain itself.
+  @GET('/governance/staff-invitations/accept/{token}/')
+  Future<dynamic> getStaffInvitationPreview(@Path('token') String token);
+
+  /// Signed-in caller must be the invited email address; server enforces it.
+  @POST('/governance/staff-invitations/accept/{token}/')
+  Future<dynamic> acceptStaffInvitation(@Path('token') String token);
+
   // --- Approvals ---
 
   @GET('/governance/approvals/')
@@ -480,6 +491,7 @@ abstract class AdminPortalRepository {
   Future<dynamic> getModerationReports({
     @Query('status') String? status,
     @Query('reason') String? reason,
+
     /// `me` or a staff user id. Staff-only; ignored for a reporter's own list.
     @Query('assigned_to') String? assignedTo,
     @Query('unassigned') String? unassigned,
@@ -508,6 +520,7 @@ abstract class AdminPortalRepository {
   Future<dynamic> getContentFlagQueue({
     @Query('flag_reason') String? flagReason,
     @Query('severity') String? severity,
+
     /// Comma-separated; the endpoint also accepts a repeated param.
     @Query('content_type') String? contentType,
   });
@@ -588,11 +601,15 @@ abstract class AdminPortalRepository {
 
   /// `recipient` is a **Profile** id, not a user id.
   @POST('/moderation/commendations/')
-  Future<dynamic> createModerationCommendation(@Body() Map<String, dynamic> data);
+  Future<dynamic> createModerationCommendation(
+    @Body() Map<String, dynamic> data,
+  );
 
   /// Hard delete. The recipient may remove their own; staff may remove any.
   @DELETE('/moderation/commendations/{id}/')
-  Future<dynamic> deleteModerationCommendation(@Path('id') String commendationId);
+  Future<dynamic> deleteModerationCommendation(
+    @Path('id') String commendationId,
+  );
 
   /// Withdraw without erasing: the row stays, `visible_to_recipient` goes
   /// false, so an operator cannot quietly un-send a commendation they regret.
