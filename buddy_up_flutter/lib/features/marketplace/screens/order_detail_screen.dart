@@ -152,7 +152,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   color: done ? BuddyColors.green : BuddyColors.surfaceRaised,
                 ),
                 child: done
-                    ? Icon(
+                    ? const Icon(
                         LucideIcons.check,
                         size: 14,
                         color: BuddyColors.black,

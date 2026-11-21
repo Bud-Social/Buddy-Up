@@ -123,8 +123,8 @@ class _ActivateAccountScreenState extends State<ActivateAccountScreen> {
                   if (_loading)
                     Column(
                       children: [
-                        CircularProgressIndicator(color: BuddyColors.green),
-                        SizedBox(height: 18),
+                        const CircularProgressIndicator(color: BuddyColors.green),
+                        const SizedBox(height: 18),
                         Text(
                           'Activating your account…',
                           style: TextStyle(

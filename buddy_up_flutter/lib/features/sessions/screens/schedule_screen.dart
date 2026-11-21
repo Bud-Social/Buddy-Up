@@ -52,7 +52,7 @@ class ScheduleScreen extends ConsumerWidget {
                 Card(
                   color: BuddyColors.surface,
                   child: Padding(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     child: Text(
                       'Programmes and meal plans you buy stay here, ready to follow.',
                       style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),

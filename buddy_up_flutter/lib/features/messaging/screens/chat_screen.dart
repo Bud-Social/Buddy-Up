@@ -20,6 +20,7 @@ import '../../../data/models/messaging.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../shared/widgets/toast.dart';
+import '../../../shared/widgets/emoji_picker_sheet.dart';
 import '../../feed/providers/feed_provider.dart' show profileRepositoryProvider;
 
 /// Flat strip above the thread explaining where this chat stands as a buddy
@@ -772,7 +773,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onPressed: () => _showThemePicker(),
           ),
           IconButton(
-            icon: Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_vert),
             tooltip: 'Conversation options',
             onPressed: () => _showConversationMenu(other?.username, convo),
           ),
@@ -785,7 +786,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             child: Container(
               color: _bgColor,
               child: messagesState.isLoading
-                ? Center(child: CircularProgressIndicator(color: BuddyColors.green))
+                ? const Center(child: CircularProgressIndicator(color: BuddyColors.green))
                 : displayMessages.isEmpty
                     ? ListView(
                         children: [
@@ -794,7 +795,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             child: Column(
                               children: [
                                 Icon(Icons.chat_bubble_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                                SizedBox(height: 12),
+                                const SizedBox(height: 12),
                                 Text('Say hello!', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                               ],
                             ),
@@ -956,6 +957,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           backgroundColor: Colors.transparent,
                           builder: (_) => AttachmentMenu(onSelect: _onAttachmentTap),
                         );
+                      },
+                    ),
+                    IconButton(
+                      tooltip: 'Add emoji',
+                      icon: Icon(Icons.emoji_emotions_outlined,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      onPressed: () async {
+                        final emoji = await showEmojiPickerSheet(context);
+                        if (emoji == null) return;
+                        final text = _textController.text;
+                        final sel = _textController.selection;
+                        final start = sel.start < 0 ? text.length : sel.start;
+                        final end = sel.end < 0 ? text.length : sel.end;
+                        _textController.text =
+                            '${text.substring(0, start)}$emoji${text.substring(end)}';
+                        _textController.selection =
+                            TextSelection.collapsed(offset: start + emoji.length);
                       },
                     ),
                     Expanded(

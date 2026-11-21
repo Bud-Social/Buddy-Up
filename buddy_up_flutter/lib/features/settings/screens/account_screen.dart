@@ -175,7 +175,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                   const SizedBox(height: 12),
                   if (_hasPassword == false)
                     Padding(
-                      padding: EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.only(bottom: 12),
                       child: Text(
                         'You signed up with a social account — set a password to also log in with your email.',
                         style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),

@@ -450,7 +450,7 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                 color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 36,
                 fontWeight: FontWeight.w800,
-                fontFeatures: [FontFeature.tabularFigures()],
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ),
@@ -517,8 +517,8 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.auto_awesome, size: 18, color: BuddyColors.green),
-              SizedBox(width: 8),
+              const Icon(Icons.auto_awesome, size: 18, color: BuddyColors.green),
+              const SizedBox(width: 8),
               Text(
                 'Form analysis',
                 style: TextStyle(
@@ -542,8 +542,8 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.videocam, color: BuddyColors.green, size: 40),
-                      SizedBox(height: 8),
+                      const Icon(Icons.videocam, color: BuddyColors.green, size: 40),
+                      const SizedBox(height: 8),
                       Text('Workout clip ready — analyze to count reps',
                           style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     ],
@@ -582,7 +582,7 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.add_photo_alternate, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 48),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Text('Tap for image, or pick a workout clip below',
                           style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     ],

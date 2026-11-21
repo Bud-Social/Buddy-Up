@@ -415,7 +415,7 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                Text(
+                const Text(
                   'Promote a member to Trainer to post routines under the gym. '
                   'Moderators triage the queue but cannot touch tier, wallet or '
                   'deletion. Only owners and co-owners can change these roles.',
@@ -577,7 +577,7 @@ class _PanelEmpty extends StatelessWidget {
       child: Text(
         message,
         textAlign: TextAlign.center,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 13,
           color: BuddyColors.textSecondary,
         ),
@@ -611,16 +611,16 @@ class _MemberCard extends ConsumerWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: BuddyColors.surface,
-        title: Text('Remove member',
+        title: const Text('Remove member',
             style: TextStyle(color: BuddyColors.textPrimary)),
-        content: Text(
+        content: const Text(
           'They lose access to this gym immediately and are notified.',
           style: TextStyle(color: BuddyColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text('Cancel',
+            child: const Text('Cancel',
                 style: TextStyle(color: BuddyColors.textSecondary)),
           ),
           TextButton(
@@ -645,7 +645,7 @@ class _MemberCard extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Padding(
+            const Padding(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text('Change role',
                   style: TextStyle(
@@ -657,7 +657,7 @@ class _MemberCard extends ConsumerWidget {
               ListTile(
                 key: Key('manage-role-$option'),
                 title: Text(option.replaceAll('_', ' '),
-                    style: TextStyle(color: BuddyColors.textPrimary)),
+                    style: const TextStyle(color: BuddyColors.textPrimary)),
                 onTap: () => Navigator.of(sheetContext).pop(option),
               ),
             const SizedBox(height: 8),
@@ -714,7 +714,7 @@ class _MemberCardBody extends StatelessWidget {
                 ),
                 Text(
                   '@${member.username}',
-                  style: TextStyle(
+                  style: const TextStyle(
                       fontSize: 11, color: BuddyColors.textSecondary),
                 ),
               ],
@@ -728,7 +728,7 @@ class _MemberCardBody extends StatelessWidget {
             PopupMenuButton<String>(
               key: Key('manage-member-menu-${membership.memberId}'),
               color: BuddyColors.surface,
-              icon: Icon(Icons.more_horiz,
+              icon: const Icon(Icons.more_horiz,
                   color: BuddyColors.textSecondary, size: 18),
               onSelected: (action) {
                 if (action == 'remove') onRemove?.call();
@@ -766,7 +766,7 @@ class _MetricTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 11, color: BuddyColors.textSecondary)),
           const SizedBox(height: 4),
           Text(
@@ -823,7 +823,7 @@ class _JoinRequestCard extends StatelessWidget {
                     ),
                     Text(
                       '@${requester.username} · ${_day(request.createdAt)}',
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 11, color: BuddyColors.textSecondary),
                     ),
                   ],
@@ -835,7 +835,7 @@ class _JoinRequestCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               request.message,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 color: BuddyColors.textSecondary,
                 height: 1.4,
@@ -929,13 +929,13 @@ class _ScheduleCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                Icon(Icons.access_time,
+                const Icon(Icons.access_time,
                     size: 13, color: BuddyColors.textSecondary),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     _moment(post.startTime!),
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 12, color: BuddyColors.textSecondary),
                   ),
                 ),
@@ -1010,11 +1010,11 @@ class _ReviewCardState extends State<_ReviewCard> {
                       children: [
                         Text(
                           '@${reviewer.username}',
-                          style: TextStyle(
+                          style: const TextStyle(
                               fontSize: 11, color: BuddyColors.textSecondary),
                         ),
                         if (review.rating > 0) ...[
-                          Text(' · ',
+                          const Text(' · ',
                               style: TextStyle(
                                   fontSize: 11,
                                   color: BuddyColors.textSecondary)),
@@ -1061,7 +1061,7 @@ class _ReviewCardState extends State<_ReviewCard> {
                   const SizedBox(height: 4),
                   Text(
                     review.replyText,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       color: BuddyColors.textSecondary,
                       height: 1.4,
@@ -1155,7 +1155,7 @@ class _InviteSheetState extends State<_InviteSheet> {
           const Text('Invite members',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 6),
-          Text(
+          const Text(
             'Search by username, or enter an email address.',
             style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
           ),
@@ -1435,7 +1435,7 @@ class _TeamCountTile extends StatelessWidget {
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
           const SizedBox(height: 2),
           Text(label.toUpperCase(),
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 9,
                   color: BuddyColors.textSecondary,
                   letterSpacing: 0.5)),
@@ -1473,16 +1473,16 @@ class _TeamMemberCard extends ConsumerWidget {
         context: context,
         builder: (dialogContext) => AlertDialog(
           backgroundColor: BuddyColors.surface,
-          title: Text('Remove from the gym?',
+          title: const Text('Remove from the gym?',
               style: TextStyle(color: BuddyColors.textPrimary)),
           content: Text(
             '${member.displayName.isEmpty ? member.username : member.displayName} loses access to this gym immediately.',
-            style: TextStyle(color: BuddyColors.textSecondary),
+            style: const TextStyle(color: BuddyColors.textSecondary),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text('Keep', style: TextStyle(color: BuddyColors.textSecondary)),
+              child: const Text('Keep', style: TextStyle(color: BuddyColors.textSecondary)),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -1517,7 +1517,7 @@ class _TeamMemberCard extends ConsumerWidget {
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 Text('@${member.username}',
-                    style: TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
+                    style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
               ],
             ),
           ),
@@ -1607,7 +1607,7 @@ class _ActionLogTileState extends State<_ActionLogTile> {
                     children: [
                       Text(
                         entry.action.replaceAll('.', ' · ').toUpperCase(),
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 9,
                             color: BuddyColors.textSecondary,
                             letterSpacing: 0.5),
@@ -1620,7 +1620,7 @@ class _ActionLogTileState extends State<_ActionLogTile> {
                               fontSize: 12, fontWeight: FontWeight.w500)),
                       const SizedBox(height: 2),
                       Text('@${entry.actor}${entry.createdAt != null ? ' · ${_moment(entry.createdAt!.toIso8601String())}' : ''}',
-                          style: TextStyle(
+                          style: const TextStyle(
                               fontSize: 10, color: BuddyColors.textSecondary)),
                     ],
                   ),
@@ -1713,7 +1713,7 @@ class _DeltaTable extends StatelessWidget {
           2: FlexColumnWidth(2),
         },
         children: [
-          TableRow(
+          const TableRow(
             decoration: BoxDecoration(color: BuddyColors.surfaceRaised),
             children: [
               Padding(padding: EdgeInsets.all(6), child: Text('Field', style: TextStyle(fontSize: 9, color: BuddyColors.textSecondary))),
@@ -1727,7 +1727,7 @@ class _DeltaTable extends StatelessWidget {
                 Padding(
                     padding: const EdgeInsets.all(6),
                     child: Text(key,
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 9,
                             fontFamily: 'monospace',
                             color: BuddyColors.textSecondary))),

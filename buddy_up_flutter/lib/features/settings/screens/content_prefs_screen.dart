@@ -74,7 +74,7 @@ class _ContentPrefsScreenState extends ConsumerState<ContentPrefsScreen> {
                 ),
                 if (!isAdult)
                   Padding(
-                    padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Text(
                       'Mature content is disabled for under-18 accounts. '
                       'Confirm your age with an ID or passport in Settings → '

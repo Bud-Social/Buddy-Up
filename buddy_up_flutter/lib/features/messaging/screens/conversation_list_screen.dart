@@ -543,7 +543,7 @@ class _CallRow extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.phone, size: 11, color: Theme.of(context).colorScheme.surface),
-                                SizedBox(width: 3),
+                                const SizedBox(width: 3),
                                 Text('Rejoin',
                                     style: TextStyle(
                                         color: Theme.of(context).colorScheme.surface,

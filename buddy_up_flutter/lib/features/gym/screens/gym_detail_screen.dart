@@ -55,7 +55,7 @@ Future<String?> _pickRole(BuildContext context, String current) {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
               'Change role',
               style: TextStyle(
@@ -771,7 +771,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              border: Border(top: BorderSide(color: BuddyColors.border)),
+              border: const Border(top: BorderSide(color: BuddyColors.border)),
             ),
             child: Row(
               children: [
@@ -1070,12 +1070,12 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           LucideIcons.badgeCheck,
                           size: 11,
                           color: BuddyColors.green,
                         ),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             'Members-only roll — visible because you\'re an active member.',

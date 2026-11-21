@@ -162,7 +162,7 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.videocam_off, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text('No lives found', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),

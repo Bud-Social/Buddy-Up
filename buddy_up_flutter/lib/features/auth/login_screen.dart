@@ -487,9 +487,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
+              const Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   'OR',
                   style: TextStyle(
@@ -498,7 +498,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
-              Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
+              const Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
             ],
           ),
           const SizedBox(height: 16),

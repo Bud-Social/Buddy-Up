@@ -422,12 +422,12 @@ class _OrganiserBody extends ConsumerWidget {
             ),
             data: (attendees) => attendees.isEmpty
                 ? RoleCard(
-                    padding: EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
                         Icon(Icons.groups_outlined,
                             color: Theme.of(context).colorScheme.onSurfaceVariant, size: 28),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
                           'No attendees match these filters.',
                           style: TextStyle(

@@ -515,7 +515,7 @@ class _AdminAuditScreenState extends ConsumerState<AdminAuditScreen> {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: Icon(Icons.arrow_forward,
                     size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),

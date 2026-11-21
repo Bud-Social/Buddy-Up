@@ -240,7 +240,7 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
                       hintText: '0',
                       hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                       labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                      border: OutlineInputBorder(
+                      border: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                       ),
                     ),

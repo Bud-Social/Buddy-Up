@@ -450,7 +450,7 @@ class _BuddyPickerState extends ConsumerState<_BuddyPicker> {
               )
             else if (_buddies == null || _buddies!.isEmpty)
               Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: Text('No buddies yet — add some from Find a Buddy.',
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               )

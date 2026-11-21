@@ -498,7 +498,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                     : state.buddies.isEmpty
                         ? Center(
                             child: Padding(
-                              padding: EdgeInsets.all(24),
+                              padding: const EdgeInsets.all(24),
                               child: Text(
                                 'No buddies found yet.\nPick an intent above and tap "Near me" to find buddies around you.',
                                 textAlign: TextAlign.center,

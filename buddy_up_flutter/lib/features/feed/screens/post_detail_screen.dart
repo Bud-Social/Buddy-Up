@@ -10,6 +10,7 @@ import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/input.dart';
 import '../../../shared/widgets/toast.dart';
+import '../../../shared/widgets/emoji_picker_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/emoji_utils.dart';
 import '../../../data/models/post.dart';
@@ -247,7 +248,20 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                   context,
                                 ).colorScheme.onSurfaceVariant,
                               ),
-                              onPressed: () => _showCommentMediaSheet(post.id),
+                              onPressed: () async {
+                                final emoji = await showEmojiPickerSheet(context);
+                                if (emoji == null) return;
+                                final text = _commentController.text;
+                                final sel = _commentController.selection;
+                                final start = sel.start < 0 ? text.length : sel.start;
+                                final end = sel.end < 0 ? text.length : sel.end;
+                                _commentController.text =
+                                    '${text.substring(0, start)}$emoji${text.substring(end)}';
+                                _commentController.selection =
+                                    TextSelection.collapsed(
+                                  offset: start + emoji.length,
+                                );
+                              },
                             ),
                             const SizedBox(width: 6),
                             IconButton(
@@ -257,7 +271,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                   context,
                                 ).colorScheme.onSurfaceVariant,
                               ),
-                              onPressed: () => _pickImageComment(post.id),
+                              onPressed: () => _showCommentMediaSheet(post.id),
                             ),
                           ],
                         ),

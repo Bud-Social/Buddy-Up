@@ -338,7 +338,7 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
                 : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(Icons.add_photo_alternate_outlined,
                         size: 36, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     Text('Upload cover image',
                         style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
                   ]),

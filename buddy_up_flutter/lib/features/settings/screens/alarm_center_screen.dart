@@ -44,13 +44,13 @@ class AlarmCenterScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             Card(
               child: Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('How alarms work',
+                    const Text('How alarms work',
                         style: TextStyle(fontWeight: FontWeight.w700)),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     Text(
                       'Alarms ring anywhere in BuddyUp while the app is open — '
                       'no need to sit on this page. One-off alarms switch '
@@ -426,7 +426,7 @@ class _SoundsCardState extends ConsumerState<_SoundsCard> {
                 final mine = rows.where((s) => s.isMine).toList();
                 if (mine.isEmpty) {
                   return Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
                       'No custom sounds yet — upload your wake-up anthem.',
                       style: TextStyle(

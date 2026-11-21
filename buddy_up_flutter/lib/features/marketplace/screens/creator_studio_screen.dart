@@ -344,7 +344,7 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
             ),
             if (services.discountCodes.isEmpty)
               Padding(
-                padding: EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: 8),
                 child: Text('No discount codes created.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               )
             else

@@ -1069,7 +1069,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   'Report host',
                   style: TextStyle(
@@ -1820,7 +1820,7 @@ class _CrownFab extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Icon(
+              const Icon(
                 Icons.workspace_premium,
                 color: BuddyColors.black,
                 size: 20,

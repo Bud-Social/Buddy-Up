@@ -110,10 +110,10 @@ class _AccessibilityCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Left-handed mode',
+                      const Text('Left-handed mode',
                           style: TextStyle(
                               fontWeight: FontWeight.w600, fontSize: 14)),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
                         'Mirror post interaction buttons so they sit under a '
                         'left thumb.',
@@ -130,11 +130,11 @@ class _AccessibilityCard extends ConsumerWidget {
                 ),
               ],
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text('Post interaction preview',
                 style: TextStyle(
                     fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-            SizedBox(height: 6),
+            const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
@@ -147,16 +147,16 @@ class _AccessibilityCard extends ConsumerWidget {
                 children: [
                   Icon(Icons.favorite_border,
                       size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  SizedBox(width: 18),
+                  const SizedBox(width: 18),
                   Icon(Icons.chat_bubble_outline,
                       size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  SizedBox(width: 18),
+                  const SizedBox(width: 18),
                   Icon(Icons.repeat,
                       size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  SizedBox(width: 18),
+                  const SizedBox(width: 18),
                   Icon(Icons.bookmark_border,
                       size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  Spacer(),
+                  const Spacer(),
                   Icon(Icons.share_outlined,
                       size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ],

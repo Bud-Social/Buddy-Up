@@ -187,8 +187,8 @@ class _ProgrammeActivityFocusScreenState
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.play_circle_outline, size: 56, color: BuddyColors.green),
-                      SizedBox(height: 8),
+                      const Icon(Icons.play_circle_outline, size: 56, color: BuddyColors.green),
+                      const SizedBox(height: 8),
                       Text('Tap to play video',
                           style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
                     ],

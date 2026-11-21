@@ -292,7 +292,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
                       children: [
                         Icon(Icons.add_photo_alternate_outlined,
                             size: 40, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text('Tap to upload cover image',
                             style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                       ],
@@ -392,8 +392,8 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: BuddyColors.green, size: 18),
-                SizedBox(width: 8),
+                const Icon(Icons.info_outline, color: BuddyColors.green, size: 18),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'You can apply for certification after creating your shop to unlock more features.',

@@ -402,7 +402,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
               children: [
                 Icon(Icons.timer_outlined,
                     size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Text(
                   'No countdowns yet',
                   style: TextStyle(
@@ -410,7 +410,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                     fontSize: 18,
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   'Track sobriety, gym attendance, walking days and more.',
                   style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),

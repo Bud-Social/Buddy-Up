@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/session_provider.dart';
+import '../../messaging/providers/messaging_provider.dart';
+import '../../../data/models/messaging.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/button.dart';
@@ -150,11 +152,48 @@ class TrainerProfileScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              BuddyButton(
-                label: 'Book Session',
-                fullWidth: true,
-                icon: LucideIcons.calendarDays,
-                onPressed: () => context.push('/book/${trainer.username}'),
+              Row(
+                children: [
+                  Expanded(
+                    child: BuddyButton(
+                      label: 'Book Session',
+                      icon: LucideIcons.calendarDays,
+                      onPressed: () => context.push('/book/${trainer.username}'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: BuddyButton(
+                      label: 'Message',
+                      variant: BuddyButtonVariant.outline,
+                      icon: LucideIcons.messageCircle,
+                      onPressed: () async {
+                        try {
+                          final repo = ref.read(messagingRepositoryProvider);
+                          final result = await repo.startConversation({
+                            'participants': [trainer.username],
+                          });
+                          final data = result['data'] as Map<String, dynamic>;
+                          final convo = Conversation.fromJson(data);
+                          ref
+                              .read(conversationsProvider.notifier)
+                              .updateConversation(convo);
+                          if (context.mounted) {
+                            context.push('/messages/${convo.id}');
+                          }
+                        } catch (_) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to start conversation'),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 32),
               const Text(

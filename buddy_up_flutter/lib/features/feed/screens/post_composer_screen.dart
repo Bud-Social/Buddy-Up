@@ -15,6 +15,7 @@ import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/upload/cloudinary_uploader.dart';
 import '../../../core/utils/constants.dart';
+import '../../../shared/widgets/emoji_picker_sheet.dart';
 import '../../../data/models/post.dart';
 import '../../../features/analytics/providers/analytics_provider.dart';
 import '../../community/providers/community_provider.dart';
@@ -1043,6 +1044,25 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ),
+              const SizedBox(width: 6),
+              IconButton(
+                tooltip: 'Add emoji',
+                icon: const Icon(Icons.emoji_emotions_outlined,
+                    color: BuddyColors.green, size: 20),
+                onPressed: () async {
+                  final emoji = await showEmojiPickerSheet(context);
+                  if (emoji == null) return;
+                  final text = _bodyController.text;
+                  final selection = _bodyController.selection;
+                  final start = selection.start < 0 ? text.length : selection.start;
+                  final end = selection.end < 0 ? text.length : selection.end;
+                  _bodyController.text =
+                      '${text.substring(0, start)}$emoji${text.substring(end)}';
+                  _bodyController.selection = TextSelection.collapsed(
+                    offset: start + emoji.length,
+                  );
+                },
+              ),
             if (_correctedCaption != null && _correctedCaption!.isNotEmpty)
               Container(
                 margin: const EdgeInsets.only(left: 8),

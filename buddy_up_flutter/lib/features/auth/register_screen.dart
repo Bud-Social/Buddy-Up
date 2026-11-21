@@ -491,7 +491,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   prefixIcon: Icons.phone_outlined,
                 ),
                 Padding(
-                  padding: EdgeInsets.only(top: 4, left: 4),
+                  padding: const EdgeInsets.only(top: 4, left: 4),
                   child: Text(
                     'Optional. Leave it blank if you prefer.',
                     style: TextStyle(
@@ -689,9 +689,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
+                    const Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'OR',
                         style: TextStyle(
@@ -700,7 +700,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ),
                       ),
                     ),
-                    Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
+                    const Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -781,12 +781,12 @@ class _RoleApplyNotice extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.how_to_reg_outlined,
                 size: 15,
                 color: BuddyColors.green,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 'Trainer, practitioner or business owner?',
                 style: TextStyle(
@@ -797,7 +797,7 @@ class _RoleApplyNotice extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(
             'Those are applied for and reviewed — they cannot be chosen at '
             'sign-up. Create your account as a member, then submit an '

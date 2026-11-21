@@ -301,7 +301,7 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
                 const SizedBox(height: 10),
                 if (mine.isEmpty)
                   Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
+                    padding: const EdgeInsets.symmetric(vertical: 24),
                     child: Center(
                       child: Text('No communities yet — create one or join with a code',
                           style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),

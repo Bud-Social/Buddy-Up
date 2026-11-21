@@ -187,7 +187,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             color: BuddyColors.green,
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
+                          child: const Icon(
                             LucideIcons.camera,
                             size: 16,
                             color: BuddyColors.black,

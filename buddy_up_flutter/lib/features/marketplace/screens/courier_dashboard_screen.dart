@@ -361,17 +361,17 @@ class _NoOrders extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RoleCard(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       child: Column(
         children: [
           Icon(Icons.inventory_2_outlined,
               color: Theme.of(context).colorScheme.onSurfaceVariant, size: 28),
-          SizedBox(height: 10),
-          Text(
+          const SizedBox(height: 10),
+          const Text(
             'No assigned orders.',
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             'New deliveries appear here as soon as a shop assigns one to you.',
             textAlign: TextAlign.center,
@@ -481,7 +481,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
           const Divider(height: 20),
           if (order.allowedTransitions.isEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.only(top: 2),
               child: Text(
                 'No status changes available from here.',
                 style: TextStyle(
