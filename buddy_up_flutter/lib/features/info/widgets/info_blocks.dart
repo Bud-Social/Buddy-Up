@@ -24,11 +24,11 @@ class InfoScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text(title),
-        backgroundColor: BuddyColors.black,
-        foregroundColor: BuddyColors.textPrimary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
       ),
       body: SafeArea(
@@ -41,8 +41,8 @@ class InfoScaffold extends StatelessWidget {
             ],
             Text(
               title,
-              style: const TextStyle(
-                color: BuddyColors.textPrimary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 30,
                 fontWeight: FontWeight.w800,
                 height: 1.15,
@@ -52,8 +52,8 @@ class InfoScaffold extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 subtitle!,
-                style: const TextStyle(
-                  color: BuddyColors.textSecondary,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 15,
                   height: 1.55,
                 ),
@@ -87,7 +87,7 @@ class InfoCard extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: color ?? BuddyColors.surface,
+        color: color ?? Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: BuddyColors.border.withValues(alpha: 0.6)),
       ),
@@ -107,8 +107,8 @@ class InfoSectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10, top: 8),
       child: Text(
         text,
-        style: const TextStyle(
-          color: BuddyColors.textPrimary,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
           fontSize: 20,
           fontWeight: FontWeight.w800,
         ),
@@ -142,8 +142,8 @@ class InfoBullet extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
                 height: 1.5,
               ),
@@ -209,7 +209,10 @@ class InfoTextField extends StatelessWidget {
         validator: validator,
         autofillHints: autofillHints,
         enabled: enabled,
-        style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 14),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: 14,
+        ),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
@@ -258,7 +261,10 @@ class InfoDropdown extends StatelessWidget {
           if (next != null) onChanged(next);
         },
         dropdownColor: BuddyColors.surfaceRaised,
-        style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 14),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: 14,
+        ),
         decoration: InputDecoration(
           labelText: label,
           filled: true,

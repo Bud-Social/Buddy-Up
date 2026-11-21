@@ -88,7 +88,7 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
     final user = auth.profile;
 
     return Drawer(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       child: SafeArea(
         child: ListView(
           padding: EdgeInsets.zero,

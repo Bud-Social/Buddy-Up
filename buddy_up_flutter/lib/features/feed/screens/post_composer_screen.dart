@@ -24,10 +24,18 @@ import 'bud_press_studio_screen.dart';
 import '../models/composer_media.dart';
 
 const List<String> _docExtensions = [
-  'pdf', 'doc', 'docx', 'xls', 'xlsx',
-  'ppt', 'pptx', 'txt', 'csv', 'md', 'zip',
+  'pdf',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+  'txt',
+  'csv',
+  'md',
+  'zip',
 ];
-
 
 class PostComposerScreen extends ConsumerStatefulWidget {
   final String? communityId;
@@ -85,6 +93,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   bool _commentsEnabled = true;
 
   bool _isSubmitting = false;
+  String? _idempotencyKey;
   bool _isCorrectingCaption = false;
   String? _correctedCaption;
   // TikTok-style publish stages: Finalizing → Uploading (overall %) → Creating.
@@ -99,7 +108,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   @override
   void initState() {
     super.initState();
-    _pollOptionControllers.addAll([TextEditingController(), TextEditingController()]);
+    _pollOptionControllers.addAll([
+      TextEditingController(),
+      TextEditingController(),
+    ]);
     _restoreServerDraftIfAny();
     // Per-account draft sync (mirrors the web composer).
     _bodyController.addListener(_scheduleDraftSave);
@@ -114,7 +126,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       if (drafts.isEmpty) return;
       final latest = Draft.fromJson(drafts.first as Map<String, dynamic>);
       if (!mounted) return;
-      final hasContent = (latest.body.trim()).isNotEmpty ||
+      final hasContent =
+          (latest.body.trim()).isNotEmpty ||
           latest.pollQuestion.trim().isNotEmpty ||
           latest.locationLabel.trim().isNotEmpty ||
           latest.mediaUrls.isNotEmpty;
@@ -130,9 +143,15 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             style: const TextStyle(color: BuddyColors.textSecondary),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Discard')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Discard'),
+            ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
+              style: FilledButton.styleFrom(
+                backgroundColor: BuddyColors.green,
+                foregroundColor: BuddyColors.black,
+              ),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Restore'),
             ),
@@ -151,12 +170,14 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           // Plain URL media — a replay share draft carries the remote file.
           final url = entry.trim();
           final name = Uri.tryParse(url)?.pathSegments.lastOrNull;
-          _media.add(ComposerMedia(
-            path: '',
-            name: name?.isNotEmpty == true ? name! : 'replay.mp4',
-            type: 'video',
-            remoteUrl: url,
-          ));
+          _media.add(
+            ComposerMedia(
+              path: '',
+              name: name?.isNotEmpty == true ? name! : 'replay.mp4',
+              type: 'video',
+              remoteUrl: url,
+            ),
+          );
           continue;
         }
         try {
@@ -166,30 +187,32 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             final map = raw as Map<String, dynamic>;
             final path = (map['path'] ?? '') as String;
             if (path.isEmpty || !File(path).existsSync()) continue;
-            restoredMedia.add(ComposerMedia(
-              path: path,
-              name: (map['name'] ?? '') as String,
-              type: (map['type'] ?? 'image') as String,
-              trimStartMs: (map['trim_start_ms'] ?? 0) as int,
-              trimEndMs: (map['trim_end_ms'] ?? 0) as int,
-              soundId: map['sound_id'] as String?,
-              soundVolume: (map['sound_volume'] as num?)?.toDouble(),
-              studioItemId: (map['studio_item_id'] as String?) ?? const Uuid().v4(),
-              coverOffsetSec: (map['cover_offset_sec'] as num?)?.toDouble(),
-              editMeta:
-                  (map['edit_meta'] as Map<String, dynamic>?),
-              textContent: map['text_content'] as String?,
-              textStyle: (map['text_style'] as Map<String, dynamic>?),
-              captions: [
-                for (final c in (map['captions'] as List? ?? []))
-                  if (c is Map)
-                    {
-                      'start_ms': (c['start_ms'] as num?)?.toInt() ?? 0,
-                      'end_ms': (c['end_ms'] as num?)?.toInt() ?? 0,
-                      'text': (c['text'] as String?) ?? '',
-                    },
-              ],
-            ));
+            restoredMedia.add(
+              ComposerMedia(
+                path: path,
+                name: (map['name'] ?? '') as String,
+                type: (map['type'] ?? 'image') as String,
+                trimStartMs: (map['trim_start_ms'] ?? 0) as int,
+                trimEndMs: (map['trim_end_ms'] ?? 0) as int,
+                soundId: map['sound_id'] as String?,
+                soundVolume: (map['sound_volume'] as num?)?.toDouble(),
+                studioItemId:
+                    (map['studio_item_id'] as String?) ?? const Uuid().v4(),
+                coverOffsetSec: (map['cover_offset_sec'] as num?)?.toDouble(),
+                editMeta: (map['edit_meta'] as Map<String, dynamic>?),
+                textContent: map['text_content'] as String?,
+                textStyle: (map['text_style'] as Map<String, dynamic>?),
+                captions: [
+                  for (final c in (map['captions'] as List? ?? []))
+                    if (c is Map)
+                      {
+                        'start_ms': (c['start_ms'] as num?)?.toInt() ?? 0,
+                        'end_ms': (c['end_ms'] as num?)?.toInt() ?? 0,
+                        'text': (c['text'] as String?) ?? '',
+                      },
+                ],
+              ),
+            );
           }
         } catch (_) {}
       }
@@ -203,15 +226,21 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         _locationLng = latest.locationLng?.toString();
         _pollAllowMultiple = latest.pollAllowMultiple;
         _pollMinSelections = latest.pollMinSelections;
-        _pollMaxSelections = latest.pollMaxSelections < 2 ? 2 : latest.pollMaxSelections;
+        _pollMaxSelections = latest.pollMaxSelections < 2
+            ? 2
+            : latest.pollMaxSelections;
         if (latest.pollQuestion.isNotEmpty) {
           _pollQuestionController.text = latest.pollQuestion;
         }
         // Rebuild option controllers to match the saved poll shape.
-        for (final c in _pollOptionControllers) { c.dispose(); }
+        for (final c in _pollOptionControllers) {
+          c.dispose();
+        }
         _pollOptionControllers
           ..clear()
-          ..addAll(latest.pollOptions.map((t) => TextEditingController(text: t)));
+          ..addAll(
+            latest.pollOptions.map((t) => TextEditingController(text: t)),
+          );
         while (_pollOptionControllers.length < 2) {
           _pollOptionControllers.add(TextEditingController());
         }
@@ -237,31 +266,34 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             .where((c) => c.text.trim().isNotEmpty)
             .map((c) => c.text.trim())
             .toList();
-        final hasContent = _bodyController.text.trim().isNotEmpty ||
+        final hasContent =
+            _bodyController.text.trim().isNotEmpty ||
             _pollQuestionController.text.trim().isNotEmpty;
         if (!hasContent) return;
         final repo = ref.read(feedRepositoryProvider);
-        final res = await repo.saveDraft(Draft(
-          id: _serverDraftId,
-          postType: _postType,
-          body: _bodyController.text.trim(),
-          visibility: _visibility,
-          locationLabel: _locationLabel,
-          locationLat: double.tryParse(_locationLat ?? ''),
-          locationLng: double.tryParse(_locationLng ?? ''),
-          pollQuestion: _pollQuestionController.text.trim(),
-          pollOptions: filledOptions,
-          pollAllowMultiple: _pollAllowMultiple,
-          pollMinSelections: _pollMinSelections,
-          pollMaxSelections: _pollMaxSelections,
-          // Persist studio media (paths + trim/sound metadata) as a JSON
-          // entry inside mediaUrls so the draft survives app restarts.
-          mediaUrls: _media.isEmpty
-              ? const <String>[]
-              : <String>[
-                  jsonEncode({
-                    'buddyup_media': _media
-                        .map((m) => {
+        final res = await repo.saveDraft(
+          Draft(
+            id: _serverDraftId,
+            postType: _postType,
+            body: _bodyController.text.trim(),
+            visibility: _visibility,
+            locationLabel: _locationLabel,
+            locationLat: double.tryParse(_locationLat ?? ''),
+            locationLng: double.tryParse(_locationLng ?? ''),
+            pollQuestion: _pollQuestionController.text.trim(),
+            pollOptions: filledOptions,
+            pollAllowMultiple: _pollAllowMultiple,
+            pollMinSelections: _pollMinSelections,
+            pollMaxSelections: _pollMaxSelections,
+            // Persist studio media (paths + trim/sound metadata) as a JSON
+            // entry inside mediaUrls so the draft survives app restarts.
+            mediaUrls: _media.isEmpty
+                ? const <String>[]
+                : <String>[
+                    jsonEncode({
+                      'buddyup_media': _media
+                          .map(
+                            (m) => {
                               'path': m.path,
                               'name': m.name,
                               'type': m.type,
@@ -275,12 +307,15 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                               'text_content': m.textContent,
                               'text_style': m.textStyle,
                               'captions': m.captions,
-                            })
-                        .toList(),
-                  }),
-                ],
-        ));
-        final savedId = (res['data'] as Map<String, dynamic>?)?['id'] as String?;
+                            },
+                          )
+                          .toList(),
+                    }),
+                  ],
+          ),
+        );
+        final savedId =
+            (res['data'] as Map<String, dynamic>?)?['id'] as String?;
         if (savedId != null) _serverDraftId = savedId;
       } catch (_) {}
     });
@@ -303,7 +338,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     switch (_postType) {
       case 'poll':
         return _pollQuestionController.text.trim().isNotEmpty &&
-            _pollOptionControllers.where((c) => c.text.trim().isNotEmpty).length >= 2;
+            _pollOptionControllers
+                    .where((c) => c.text.trim().isNotEmpty)
+                    .length >=
+                2;
       default:
         return _bodyController.text.trim().isNotEmpty ||
             _media.isNotEmpty ||
@@ -349,7 +387,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         break;
       case 'audio':
         final item = ComposerMedia(
-          name: 'Audio track', type: 'audio',
+          name: 'Audio track',
+          type: 'audio',
           studioItemId: const Uuid().v4(),
         );
         if (!mounted) return;
@@ -380,10 +419,15 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               controller: controller,
               maxLines: 4,
               maxLength: 200,
-              decoration: const InputDecoration(hintText: 'What’s on your mind?'),
+              decoration: const InputDecoration(
+                hintText: 'What’s on your mind?',
+              ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
               FilledButton(
                 onPressed: controller.text.trim().isEmpty
                     ? null
@@ -395,19 +439,22 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         );
         if (!mounted || result == null) return;
         setState(() {
-          _media.add(ComposerMedia(
-            name: 'Text', type: 'text',
-            studioItemId: const Uuid().v4(),
-            textContent: result.trim(),
-            textStyle: {
-              'background': 'none',
-              'font': 'classic',
-              'color': '#FFFFFF',
-              'effect': 'none',
-              'size': 1.0,
-              'alignment': 'center',
-            },
-          ));
+          _media.add(
+            ComposerMedia(
+              name: 'Text',
+              type: 'text',
+              studioItemId: const Uuid().v4(),
+              textContent: result.trim(),
+              textStyle: {
+                'background': 'none',
+                'font': 'classic',
+                'color': '#FFFFFF',
+                'effect': 'none',
+                'size': 1.0,
+                'alignment': 'center',
+              },
+            ),
+          );
         });
         break;
       case 'file':
@@ -421,19 +468,25 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           final bytes = await f.xFile.readAsBytes();
           if (!mounted) return;
           setState(() {
-            _media.add(ComposerMedia(
-              path: f.path ?? '',
-              name: f.name,
-              type: f.path == null ? 'document' : _mediaKind,
-              bytes: bytes,
-            ));
+            _media.add(
+              ComposerMedia(
+                path: f.path ?? '',
+                name: f.name,
+                type: f.path == null ? 'document' : _mediaKind,
+                bytes: bytes,
+              ),
+            );
           });
         }
         break;
       default: // image
         final files = await _picker.pickMultiImage(imageQuality: 85);
         for (final f in files.take(remaining)) {
-          setState(() => _media.add(ComposerMedia(path: f.path, name: f.name, type: 'image')));
+          setState(
+            () => _media.add(
+              ComposerMedia(path: f.path, name: f.name, type: 'image'),
+            ),
+          );
         }
     }
   }
@@ -462,7 +515,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         mainAxisSize: MainAxisSize.min,
         children: visibilityOptions.map((opt) {
           return ListTile(
-            title: Text(opt, style: const TextStyle(color: BuddyColors.textPrimary)),
+            title: Text(
+              opt,
+              style: const TextStyle(color: BuddyColors.textPrimary),
+            ),
             trailing: _visibility == opt
                 ? const Icon(Icons.check, color: BuddyColors.green)
                 : null,
@@ -510,13 +566,19 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     }
 
     if (_postType == 'poll') {
-      final filled = _pollOptionControllers.where((c) => c.text.trim().isNotEmpty).length;
+      final filled = _pollOptionControllers
+          .where((c) => c.text.trim().isNotEmpty)
+          .length;
       data['poll_question'] = _pollQuestionController.text.trim();
-      data['poll_options'] =
-          _pollOptionControllers.where((c) => c.text.trim().isNotEmpty).map((c) => c.text.trim()).toList();
+      data['poll_options'] = _pollOptionControllers
+          .where((c) => c.text.trim().isNotEmpty)
+          .map((c) => c.text.trim())
+          .toList();
       data['poll_allow_multiple'] = '$_pollAllowMultiple';
       if (_pollAllowMultiple) {
-        final maxSel = _pollMaxSelections < 2 ? 2 : (_pollMaxSelections > filled ? filled : _pollMaxSelections);
+        final maxSel = _pollMaxSelections < 2
+            ? 2
+            : (_pollMaxSelections > filled ? filled : _pollMaxSelections);
         data['poll_min_selections'] =
             '${_pollMinSelections < 1 ? 1 : (_pollMinSelections > maxSel ? maxSel : _pollMinSelections)}';
         data['poll_max_selections'] = '$maxSel';
@@ -527,12 +589,13 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           .map((m) => m.remoteUrl ?? m.path)
           .where((e) => e.isNotEmpty)
           .toList();
-      data['comments_disabled'] = '$_commentsEnabled';
+      data['comments_disabled'] = '${!_commentsEnabled}';
     } else {
       // text / photo / video
       final uploadable =
-          _media.isNotEmpty && !_media.any((m) => m.type == 'file' || m.type == 'document');
-      data['comments_disabled'] = '$_commentsEnabled';
+          _media.isNotEmpty &&
+          !_media.any((m) => m.type == 'file' || m.type == 'document');
+      data['comments_disabled'] = '${!_commentsEnabled}';
       var mediaJson = const <Map<String, dynamic>>[];
       if (uploadable) {
         mediaJson = await _uploadMediaViaCloudinary();
@@ -557,14 +620,19 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         if (_media.isNotEmpty) {
           mediaUrl = _media.first.path;
         }
-        await ref.read(communityFeedProvider(widget.communityId!).notifier).createPost(body, mediaUrl: mediaUrl);
+        await ref
+            .read(communityFeedProvider(widget.communityId!).notifier)
+            .createPost(body, mediaUrl: mediaUrl);
         widget.onPostCreated?.call();
         if (mounted) Navigator.of(context).pop();
         return;
       }
 
       final repo = ref.read(feedRepositoryProvider);
-      final raw = await repo.createPost(data);
+      // Same key on every retry: the backend returns the original post instead
+      // of duplicating it if the first request succeeded but the response was lost.
+      _idempotencyKey ??= 'flutter-${DateTime.now().microsecondsSinceEpoch}';
+      final raw = await repo.createPost(data, idempotencyKey: _idempotencyKey);
       final post = Post.fromJson(raw['data'] as Map<String, dynamic>);
       ref.read(feedProvider.notifier).addPostToTop(post);
       AnalyticsService.instance.track(
@@ -580,16 +648,19 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       );
       widget.onPostCreated?.call();
       if (_serverDraftId != null) {
-        try { await repo.deleteDraft(_serverDraftId!); } catch (_) {}
+        try {
+          await repo.deleteDraft(_serverDraftId!);
+        } catch (_) {}
         _serverDraftId = null;
+        _idempotencyKey = null;
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create post: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to create post: $e')));
     }
   }
 
@@ -653,7 +724,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           _uploadStatus = 'Finalizing your edits…';
         });
       }
-      final prepared = <({ComposerMedia m, File file, int? width, int? height})>[];
+      final prepared =
+          <({ComposerMedia m, File file, int? width, int? height})>[];
       var totalBytes = 0;
       for (final m in _media) {
         final isVideo = m.type == 'video';
@@ -692,12 +764,15 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       var sentBefore = 0;
       for (var i = 0; i < prepared.length; i++) {
         final (:m, :file, width: finalWidth, height: finalHeight) = prepared[i];
-      var width = finalWidth;
-      var height = finalHeight;
+        var width = finalWidth;
+        var height = finalHeight;
         // Text media was added directly in stage 1 — nothing to upload.
         if (m.type == 'text') continue;
         if (mounted) {
-          setState(() => _uploadStatus = 'Uploading ${m.name}… (${i + 1}/${prepared.length})');
+          setState(
+            () => _uploadStatus =
+                'Uploading ${m.name}… (${i + 1}/${prepared.length})',
+          );
         }
         final sign = await uploader.sign(
           resourceType: m.type == 'video' ? 'video' : 'image',
@@ -720,8 +795,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             if (!mounted || total <= 0) return;
             setState(() => _uploadProgress[i] = sent / total);
             if (totalBytes > 0) {
-              setState(() =>
-                  _overallProgress = (sentBefore + sent).clamp(0, totalBytes) / totalBytes);
+              setState(
+                () => _overallProgress =
+                    (sentBefore + sent).clamp(0, totalBytes) / totalBytes,
+              );
             }
           },
         );
@@ -738,13 +815,16 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           'height': height,
           if (res.durationMs != null) 'duration_ms': res.durationMs,
           'poster_url': res.posterUrl,
-          if (m.type == 'video' && m.trimStartMs > 0) 'trim_start_ms': m.trimStartMs,
+          if (m.type == 'video' && m.trimStartMs > 0)
+            'trim_start_ms': m.trimStartMs,
           if (m.type == 'video' && m.trimEndMs > 0) 'trim_end_ms': m.trimEndMs,
           'sound_id': m.soundId,
           'sound_volume': m.soundVolume,
           if (m.coverOffsetSec != null) 'cover_offset_sec': m.coverOffsetSec,
-          if (m.editMeta != null && m.editMeta!.isNotEmpty) 'edit_meta': m.editMeta,
-          if (m.type == 'video' && m.captions.isNotEmpty) 'captions': m.captions,
+          if (m.editMeta != null && m.editMeta!.isNotEmpty)
+            'edit_meta': m.editMeta,
+          if (m.type == 'video' && m.captions.isNotEmpty)
+            'captions': m.captions,
         });
         AnalyticsService.instance.track(
           'upload.completed',
@@ -792,8 +872,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           widget.gymName != null
               ? 'Post as ${widget.gymName}'
               : widget.communityName != null
-                  ? 'Post to ${widget.communityName}'
-                  : 'Create Post',
+              ? 'Post to ${widget.communityName}'
+              : 'Create Post',
         ),
         leading: IconButton(
           icon: const Icon(Icons.close),
@@ -820,18 +900,31 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             if (widget.gymName != null) ...[
               Row(
                 children: [
-                  const Icon(Icons.fitness_center, size: 15, color: BuddyColors.green),
+                  const Icon(
+                    Icons.fitness_center,
+                    size: 15,
+                    color: BuddyColors.green,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'Posting to ',
-                    style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.75),
+                    ),
                   ),
                   Flexible(
                     child: Text(
                       widget.gymName!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: BuddyColors.green),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: BuddyColors.green,
+                      ),
                     ),
                   ),
                 ],
@@ -846,7 +939,9 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             const Divider(),
             _buildOptionTile(
               Icons.push_pin,
-              _locationLabel.isNotEmpty ? 'Location: $_locationLabel' : 'Add location',
+              _locationLabel.isNotEmpty
+                  ? 'Location: $_locationLabel'
+                  : 'Add location',
               Icons.check_circle,
               () => _pickLocation(),
             ),
@@ -910,7 +1005,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                 controller: _bodyController,
                 maxLines: 8,
                 maxLength: maxPostBodyLength,
-                style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 16),
+                style: const TextStyle(
+                  color: BuddyColors.textPrimary,
+                  fontSize: 16,
+                ),
                 decoration: const InputDecoration(
                   hintText: "What's on your mind?",
                   hintStyle: TextStyle(color: BuddyColors.textSecondary),
@@ -930,12 +1028,18 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                   : OutlinedButton.icon(
                       onPressed: _correctCaption,
                       icon: const Icon(Icons.auto_fix_high, size: 16),
-                      label: const Text('Fix grammar', style: TextStyle(fontSize: 12)),
+                      label: const Text(
+                        'Fix grammar',
+                        style: TextStyle(fontSize: 12),
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: BuddyColors.green,
                         side: const BorderSide(color: BuddyColors.green),
                         minimumSize: Size.zero,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ),
@@ -950,7 +1054,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                     foregroundColor: BuddyColors.green,
                     side: const BorderSide(color: BuddyColors.green),
                     minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
@@ -988,7 +1095,11 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       children: kinds.map((k) {
         final isActive = _mediaKind == k.$1;
         return ChoiceChip(
-          avatar: Icon(k.$2, size: 16, color: isActive ? BuddyColors.green : BuddyColors.textSecondary),
+          avatar: Icon(
+            k.$2,
+            size: 16,
+            color: isActive ? BuddyColors.green : BuddyColors.textSecondary,
+          ),
           label: Text(k.$3),
           selected: isActive,
           onSelected: (_) => setState(() => _mediaKind = k.$1),
@@ -1047,7 +1158,11 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                 ),
                 if (_pollOptionControllers.length > 2)
                   IconButton(
-                    icon: const Icon(Icons.remove_circle, color: BuddyColors.red, size: 20),
+                    icon: const Icon(
+                      Icons.remove_circle,
+                      color: BuddyColors.red,
+                      size: 20,
+                    ),
                     onPressed: () {
                       final c = _pollOptionControllers.removeAt(i);
                       c.dispose();
@@ -1073,8 +1188,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           contentPadding: EdgeInsets.zero,
           controlAffinity: ListTileControlAffinity.leading,
           dense: true,
-          title: const Text('Allow multiple selections',
-              style: TextStyle(color: BuddyColors.textPrimary, fontSize: 14)),
+          title: const Text(
+            'Allow multiple selections',
+            style: TextStyle(color: BuddyColors.textPrimary, fontSize: 14),
+          ),
           onChanged: (on) {
             setState(() {
               _pollAllowMultiple = on ?? false;
@@ -1094,11 +1211,19 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             ),
             child: Column(
               children: [
-                _buildPollBoundStepper('Minimum choices', _pollMinSelections, 1,
-                    (v) => setState(() => _pollMinSelections = v)),
+                _buildPollBoundStepper(
+                  'Minimum choices',
+                  _pollMinSelections,
+                  1,
+                  (v) => setState(() => _pollMinSelections = v),
+                ),
                 const SizedBox(height: 8),
-                _buildPollBoundStepper('Maximum choices', _pollMaxSelections, 2,
-                    (v) => setState(() => _pollMaxSelections = v)),
+                _buildPollBoundStepper(
+                  'Maximum choices',
+                  _pollMaxSelections,
+                  2,
+                  (v) => setState(() => _pollMaxSelections = v),
+                ),
               ],
             ),
           ),
@@ -1107,29 +1232,55 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     );
   }
 
-  Widget _buildPollBoundStepper(String label, int value, int floor, void Function(int) onChanged) {
-    final filled = _pollOptionControllers.where((c) => c.text.trim().isNotEmpty).length;
+  Widget _buildPollBoundStepper(
+    String label,
+    int value,
+    int floor,
+    void Function(int) onChanged,
+  ) {
+    final filled = _pollOptionControllers
+        .where((c) => c.text.trim().isNotEmpty)
+        .length;
     final ceiling = filled > floor ? filled : floor;
     return Row(
       children: [
-        Expanded(child: Text(label, style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13))),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: BuddyColors.textPrimary,
+              fontSize: 13,
+            ),
+          ),
+        ),
         IconButton(
           icon: const Icon(Icons.remove_circle_outline, size: 20),
           color: value <= floor ? BuddyColors.textSecondary : BuddyColors.green,
           onPressed: value <= floor ? null : () => onChanged(value - 1),
         ),
-        Text('$value',
-            style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold)),
+        Text(
+          '$value',
+          style: const TextStyle(
+            color: BuddyColors.textPrimary,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         IconButton(
           icon: const Icon(Icons.add_circle_outline, size: 20),
-          color: value >= ceiling ? BuddyColors.textSecondary : BuddyColors.green,
+          color: value >= ceiling
+              ? BuddyColors.textSecondary
+              : BuddyColors.green,
           onPressed: value >= ceiling ? null : () => onChanged(value + 1),
         ),
       ],
     );
   }
 
-  Widget _buildMediaGallery(List<ComposerMedia> items, void Function(int) onRemove) {
+  Widget _buildMediaGallery(
+    List<ComposerMedia> items,
+    void Function(int) onRemove,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1202,20 +1353,35 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     );
   }
 
-  Widget _buildSmallThumb(ComposerMedia m, VoidCallback onRemove, {double? progress}) {
+  Widget _buildSmallThumb(
+    ComposerMedia m,
+    VoidCallback onRemove, {
+    double? progress,
+  }) {
     Widget preview;
     if (m.type == 'image') {
       preview = m.path.isNotEmpty
           ? Image.file(File(m.path), width: 100, height: 100, fit: BoxFit.cover)
           : (m.bytes != null
-                ? Image.memory(m.bytes!, width: 100, height: 100, fit: BoxFit.cover)
+                ? Image.memory(
+                    m.bytes!,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  )
                 : _fileThumb(m));
     } else if (m.type == 'video') {
       preview = Container(
         width: 100,
         height: 100,
         color: BuddyColors.surfaceRaised,
-        child: const Center(child: Icon(Icons.play_circle_outline, color: BuddyColors.textSecondary, size: 36)),
+        child: const Center(
+          child: Icon(
+            Icons.play_circle_outline,
+            color: BuddyColors.textSecondary,
+            size: 36,
+          ),
+        ),
       );
     } else {
       preview = _fileThumb(m);
@@ -1252,7 +1418,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           child: GestureDetector(
             onTap: onRemove,
             child: Container(
-              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black87),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black87,
+              ),
               padding: const EdgeInsets.all(3),
               child: const Icon(Icons.close, size: 14, color: Colors.white),
             ),
@@ -1284,19 +1453,34 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 10),
+            style: const TextStyle(
+              color: BuddyColors.textSecondary,
+              fontSize: 10,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOptionTile(IconData icon, String label, IconData? trailingIcon, VoidCallback onTap) {
+  Widget _buildOptionTile(
+    IconData icon,
+    String label,
+    IconData? trailingIcon,
+    VoidCallback onTap,
+  ) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(icon, color: BuddyColors.textSecondary, size: 22),
-      title: Text(label, style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 14)),
-      trailing: Icon(trailingIcon ?? Icons.chevron_right, color: BuddyColors.textSecondary, size: 20),
+      title: Text(
+        label,
+        style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 14),
+      ),
+      trailing: Icon(
+        trailingIcon ?? Icons.chevron_right,
+        color: BuddyColors.textSecondary,
+        size: 20,
+      ),
       onTap: onTap,
     );
   }

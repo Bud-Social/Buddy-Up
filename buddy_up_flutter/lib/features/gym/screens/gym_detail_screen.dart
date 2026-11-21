@@ -20,6 +20,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/emoji_utils.dart';
 import '../../live/providers/live_provider.dart';
 import '../../feed/providers/feed_provider.dart';
+import '../../feed/widgets/share_sheet.dart';
 import '../../feed/widgets/post_card.dart';
 import '../../../data/models/gym.dart';
 import '../../../data/models/post.dart';
@@ -548,6 +549,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
           itemBuilder: (_, i) => PostCard(
             post: posts[i],
             onComment: (id) => context.push('/feed/$id'),
+            onShare: (id) => ShareSheet.show(context, posts[i]),
             onReact: _handleGymReact,
             onSave: _handleGymSave,
             // Gated on the same partner roles the server accepts, so the

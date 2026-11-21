@@ -71,10 +71,15 @@ class _FeedRepository implements FeedRepository {
   }
 
   @override
-  Future<dynamic> createPost(Map<String, dynamic> data) async {
+  Future<dynamic> createPost(
+    Map<String, dynamic> data, {
+    String? idempotencyKey,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{r'Idempotency-Key': idempotencyKey};
+    _headers.removeWhere((k, v) => v == null);
     final _data = FormData.fromMap(data);
     final _options = _setStreamType<dynamic>(
       Options(

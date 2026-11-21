@@ -1190,7 +1190,7 @@ class _AppShellState extends State<_AppShell> {
                   ),
                 ],
               ),
-              backgroundColor: BuddyColors.black,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               indicatorColor: BuddyColors.green.withValues(alpha: 0.2),
               selectedIconTheme: const IconThemeData(color: BuddyColors.green),
               selectedLabelTextStyle: const TextStyle(
@@ -1350,9 +1350,9 @@ class _WebBottomNav extends StatelessWidget {
     const center = 2;
     return Container(
       height: 68,
-      decoration: const BoxDecoration(
-        color: BuddyColors.black,
-        border: Border(top: BorderSide(color: BuddyColors.border, width: 0.7)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: const Border(top: BorderSide(color: BuddyColors.border, width: 0.7)),
       ),
       child: Stack(
         alignment: Alignment.topCenter,

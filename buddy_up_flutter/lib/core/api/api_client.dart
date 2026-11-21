@@ -29,6 +29,12 @@ class ApiClient {
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
+        // Media posts upload large payloads: the web gives /feed/create/ 120s.
+        if (options.path.startsWith('/feed/create/')) {
+          options.connectTimeout = const Duration(seconds: 30);
+          options.sendTimeout = const Duration(seconds: 120);
+          options.receiveTimeout = const Duration(seconds: 120);
+        }
         // Device sessions: the backend stores this to attribute logins.
         options.headers['X-Device-Id'] = await DeviceId.get();
         handler.next(options);
@@ -42,7 +48,8 @@ class ApiClient {
         final data = response.data;
         if (data is Map &&
             data.containsKey('data') &&
-            (path.startsWith('/auth/') || path.startsWith('/profiles/onboarding/'))) {
+            (path.startsWith('/auth/') ||
+                path.startsWith('/profiles/onboarding/'))) {
           response.data = data['data'];
         }
         handler.next(response);
@@ -71,10 +78,7 @@ class ApiClient {
             try {
               final response = await Dio(
                 BaseOptions(baseUrl: Env.apiBaseUrl),
-              ).post(
-                '/auth/token/refresh/',
-                data: {'refresh': refreshToken},
-              );
+              ).post('/auth/token/refresh/', data: {'refresh': refreshToken});
               // The refresh endpoint also returns the envelope — unwrap it.
               final raw = response.data;
               final body = (raw is Map && raw['data'] is Map)
@@ -84,7 +88,8 @@ class ApiClient {
               final newRefresh = body['refresh'] as String? ?? refreshToken;
               await _storage.write(key: 'access_token', value: newAccess);
               await _storage.write(key: 'refresh_token', value: newRefresh);
-              error.requestOptions.headers['Authorization'] = 'Bearer $newAccess';
+              error.requestOptions.headers['Authorization'] =
+                  'Bearer $newAccess';
               final retry = await dio.fetch(error.requestOptions);
               handler.resolve(retry);
               return;

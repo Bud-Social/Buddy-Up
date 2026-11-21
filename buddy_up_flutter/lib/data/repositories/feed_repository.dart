@@ -22,16 +22,16 @@ abstract class FeedRepository {
 
   @POST('/feed/create/')
   @MultiPart()
-  Future<dynamic> createPost(@Part() Map<String, dynamic> data);
+  Future<dynamic> createPost(
+    @Part() Map<String, dynamic> data, {
+    @Header('Idempotency-Key') String? idempotencyKey,
+  });
 
   @DELETE('/feed/{id}/')
   Future<void> deletePost(@Path('id') String postId);
 
   @POST('/feed/{id}/react/')
-  Future<dynamic> react(
-    @Path('id') String postId,
-    @Body() ReactionInput input,
-  );
+  Future<dynamic> react(@Path('id') String postId, @Body() ReactionInput input);
 
   @DELETE('/feed/{id}/react/')
   Future<void> unreact(@Path('id') String postId);
@@ -52,7 +52,7 @@ abstract class FeedRepository {
     @Part(name: 'media_type') String mediaType,
   );
 
-    @DELETE('/feed/{id}/comments/{cid}/')
+  @DELETE('/feed/{id}/comments/{cid}/')
   Future<void> deleteComment(
     @Path('id') String postId,
     @Path('cid') String commentId,
@@ -99,10 +99,7 @@ abstract class FeedRepository {
   Future<dynamic> getCreatorInsights();
 
   @POST('/feed/{id}/save/')
-  Future<dynamic> save(
-    @Path('id') String postId,
-    @Body() SavePayload payload,
-  );
+  Future<dynamic> save(@Path('id') String postId, @Body() SavePayload payload);
 
   @DELETE('/feed/{id}/save/')
   Future<void> unsave(@Path('id') String postId);
@@ -138,9 +135,7 @@ abstract class FeedRepository {
   Future<dynamic> submitModerationReport(@Body() Map<String, dynamic> body);
 
   @GET('/feed/saved/')
-  Future<dynamic> getSavedPosts({
-    @Query('collection') String? collection,
-  });
+  Future<dynamic> getSavedPosts({@Query('collection') String? collection});
 
   @GET('/feed/drafts/')
   Future<dynamic> getDrafts();
@@ -155,15 +150,11 @@ abstract class FeedRepository {
   Future<dynamic> analyzeWorkout();
 
   @GET('/feed/health-insights/')
-  Future<dynamic> getHealthInsights({
-    @Query('period') String? period,
-  });
+  Future<dynamic> getHealthInsights({@Query('period') String? period});
 
   @POST('/feed/workout-form/')
   @MultiPart()
-  Future<dynamic> analyzeWorkoutForm(
-    @Part() Map<String, dynamic> data,
-  );
+  Future<dynamic> analyzeWorkoutForm(@Part() Map<String, dynamic> data);
 
   @GET('/sounds/')
   Future<dynamic> getSounds({

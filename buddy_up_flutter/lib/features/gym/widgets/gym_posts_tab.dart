@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/role_dashboard_shell.dart';
 import '../../feed/widgets/post_card.dart';
+import '../../feed/widgets/share_sheet.dart';
 import '../../feed/widgets/gym_actor_identity.dart';
 import '../../messaging/providers/messaging_provider.dart';
 import '../providers/gym_engagement.dart';
@@ -38,18 +39,39 @@ class _GymPostsTabState extends ConsumerState<GymPostsTab> {
       children: [
         Row(
           children: [
-            _SubTab(label: 'Gym feed', active: _tab == _PostsTab.gymFeed, onTap: () => setState(() => _tab = _PostsTab.gymFeed)),
+            _SubTab(
+              label: 'Gym feed',
+              active: _tab == _PostsTab.gymFeed,
+              onTap: () => setState(() => _tab = _PostsTab.gymFeed),
+            ),
             const SizedBox(width: 8),
-            _SubTab(label: 'Home feed', active: _tab == _PostsTab.homeFeed, onTap: () => setState(() => _tab = _PostsTab.homeFeed)),
+            _SubTab(
+              label: 'Home feed',
+              active: _tab == _PostsTab.homeFeed,
+              onTap: () => setState(() => _tab = _PostsTab.homeFeed),
+            ),
             const SizedBox(width: 8),
-            _SubTab(label: 'Saved', active: _tab == _PostsTab.saved, onTap: () => setState(() => _tab = _PostsTab.saved)),
+            _SubTab(
+              label: 'Saved',
+              active: _tab == _PostsTab.saved,
+              onTap: () => setState(() => _tab = _PostsTab.saved),
+            ),
           ],
         ),
         const SizedBox(height: 10),
         switch (_tab) {
-          _PostsTab.gymFeed => _GymFeedPane(slug: widget.slug, identity: widget.identity),
-          _PostsTab.homeFeed => _HomeFeedPane(slug: widget.slug, identity: widget.identity),
-          _PostsTab.saved => GymSavedPostsTab(slug: widget.slug, identity: widget.identity),
+          _PostsTab.gymFeed => _GymFeedPane(
+            slug: widget.slug,
+            identity: widget.identity,
+          ),
+          _PostsTab.homeFeed => _HomeFeedPane(
+            slug: widget.slug,
+            identity: widget.identity,
+          ),
+          _PostsTab.saved => GymSavedPostsTab(
+            slug: widget.slug,
+            identity: widget.identity,
+          ),
         },
       ],
     );
@@ -60,7 +82,11 @@ class _SubTab extends StatelessWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
-  const _SubTab({required this.label, required this.active, required this.onTap});
+  const _SubTab({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +98,9 @@ class _SubTab extends StatelessWidget {
         decoration: BoxDecoration(
           color: active ? BuddyColors.green : BuddyColors.surface,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: active ? BuddyColors.green : BuddyColors.surfaceRaised),
+          border: Border.all(
+            color: active ? BuddyColors.green : BuddyColors.surfaceRaised,
+          ),
         ),
         child: Text(
           label,
@@ -109,12 +137,18 @@ class _GymFeedActions {
   }
 
   void onLike(String postId) => _react(postId, '💪');
-  void onReact(String postId, String reaction) => _react(postId, reaction.isEmpty ? '💪' : reaction);
+  void onReact(String postId, String reaction) =>
+      _react(postId, reaction.isEmpty ? '💪' : reaction);
 
   Future<void> _react(String postId, String reaction) async {
     try {
       final dio = ref.read(apiClientProvider4).dio;
-      await GymEngagementService.react(dio, slug, postId: postId, reactionType: reaction);
+      await GymEngagementService.react(
+        dio,
+        slug,
+        postId: postId,
+        reactionType: reaction,
+      );
       _refresh();
     } catch (_) {
       _toast('Could not react to that post.');
@@ -155,7 +189,9 @@ class _GymFeedActions {
 
   void _toast(String message) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -177,13 +213,15 @@ class _GymFeedPane extends ConsumerWidget {
     return feedAsync.when(
       loading: () => const PageLoader(fullScreen: false),
       error: (_, _) => const RoleNotice(
-        message: 'Could not load the gym feed. Check your connection and try again.',
+        message:
+            'Could not load the gym feed. Check your connection and try again.',
         isError: true,
       ),
       data: (posts) {
         if (posts.isEmpty) {
           return const RoleNotice(
-            message: 'Nothing on the gym feed yet — post from the home feed with a gym tag and it shows up here.',
+            message:
+                'Nothing on the gym feed yet — post from the home feed with a gym tag and it shows up here.',
           );
         }
         return Column(
@@ -194,6 +232,10 @@ class _GymFeedPane extends ConsumerWidget {
                 post: post,
                 gymActor: identity,
                 onLike: actions.onLike,
+                onShare: (id) => ShareSheet.show(
+                  context,
+                  posts.firstWhere((p) => p.id == id),
+                ),
                 onReact: actions.onReact,
                 onRepost: actions.onRepost,
                 onSave: actions.onSave,
@@ -239,19 +281,22 @@ class _HomeFeedPaneState extends ConsumerState<_HomeFeedPane> {
                 child: PostComposerScreen(
                   gymId: widget.identity.id,
                   gymName: widget.identity.name,
-                  onPostCreated: () => setState(() => _composerExpanded = false),
+                  onPostCreated: () =>
+                      setState(() => _composerExpanded = false),
                 ),
               ),
             feedAsync.when(
               loading: () => const PageLoader(fullScreen: false),
               error: (_, _) => const RoleNotice(
-                message: 'Could not load the home feed. Pull to refresh, or try again later.',
+                message:
+                    'Could not load the home feed. Pull to refresh, or try again later.',
                 isError: true,
               ),
               data: (posts) {
                 if (posts.isEmpty) {
                   return const RoleNotice(
-                    message: 'The home feed is empty — create something and share it with your members.',
+                    message:
+                        'The home feed is empty — create something and share it with your members.',
                   );
                 }
                 return Column(
@@ -279,8 +324,12 @@ class _HomeFeedPaneState extends ConsumerState<_HomeFeedPane> {
           child: FloatingActionButton(
             heroTag: 'gym-home-feed-composer',
             backgroundColor: BuddyColors.green,
-            onPressed: () => setState(() => _composerExpanded = !_composerExpanded),
-            child: Icon(_composerExpanded ? Icons.close : Icons.edit, color: BuddyColors.black),
+            onPressed: () =>
+                setState(() => _composerExpanded = !_composerExpanded),
+            child: Icon(
+              _composerExpanded ? Icons.close : Icons.edit,
+              color: BuddyColors.black,
+            ),
           ),
         ),
       ],

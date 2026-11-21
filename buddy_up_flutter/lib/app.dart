@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'core/updates/update_prompt.dart';
 import 'core/auth/auth_provider.dart';
@@ -15,12 +16,30 @@ import 'router.dart';
 
 // ── Theme notifier — the four palettes the web app offers ───────────────────────
 class BuddyThemeNotifier extends Notifier<BuddyTheme> {
+  static const _key = 'buddyup-theme';
+
   @override
   BuddyTheme build() => BuddyTheme.dark;
 
-  void setTheme(BuddyTheme theme) => state = theme;
-  void toggle() =>
-      state = state == BuddyTheme.dark ? BuddyTheme.light : BuddyTheme.dark;
+  /// Restore the web-equivalent persisted palette on cold start.
+  Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_key);
+    if (saved == null) return;
+    state = BuddyTheme.values.firstWhere(
+      (theme) => theme.name == saved,
+      orElse: () => BuddyTheme.dark,
+    );
+  }
+
+  Future<void> setTheme(BuddyTheme theme) async {
+    state = theme;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, theme.name);
+  }
+
+  Future<void> toggle() =>
+      setTheme(state == BuddyTheme.dark ? BuddyTheme.light : BuddyTheme.dark);
 }
 
 final themeModeProvider = NotifierProvider<BuddyThemeNotifier, BuddyTheme>(
@@ -48,6 +67,7 @@ class _BuddyUpAppState extends ConsumerState<BuddyUpApp>
     super.initState();
     _router = buildRouter(ref);
     ref.listen(authProvider, (_, _) => _router.refresh());
+    Future.microtask(() => ref.read(themeModeProvider.notifier).load());
     WidgetsBinding.instance.addObserver(this);
     Future.microtask(() {
       ref.read(pushNotificationServiceProvider).initialize();

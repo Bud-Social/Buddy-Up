@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
@@ -213,71 +214,84 @@ class _PostCardState extends ConsumerState<PostCard> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: BuddyColors.black,
-        border: Border(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: const Border(
           bottom: BorderSide(color: BuddyColors.border, width: 0.5),
         ),
       ),
-      child: Column(
+      child: Row(
+        textDirection: ref.watch(handednessProvider)
+            ? ui.TextDirection.rtl
+            : ui.TextDirection.ltr,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_post.isRepostedByMe)
-            RepostIndicator(
-              reposters: _post.reposters,
-              username: 'You',
-              viewerReposted: true,
-              viewerAvatarUrl: viewer?.avatarUrl,
-              viewerDisplayName: viewer?.displayName,
-              viewerUserId: viewerUserId,
-              gymActor: widget.gymActor,
-            ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_post.isRepostedByMe)
+                  RepostIndicator(
+                    reposters: _post.reposters,
+                    username: 'You',
+                    viewerReposted: true,
+                    viewerAvatarUrl: viewer?.avatarUrl,
+                    viewerDisplayName: viewer?.displayName,
+                    viewerUserId: viewerUserId,
+                    gymActor: widget.gymActor,
+                  ),
 
-          _buildHeader(context),
-          if (_displayBody.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            _buildBody(context),
-          ],
-          if (_displayMediaUrls.isNotEmpty || _displayMedia.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            MediaGallery(
-              urls: _displayMediaUrls,
-              media: _displayMedia.isEmpty ? null : _displayMedia,
-              postId: _post.id,
+                _buildHeader(context),
+                if (_displayBody.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildBody(context),
+                ],
+                if (_displayMediaUrls.isNotEmpty ||
+                    _displayMedia.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  MediaGallery(
+                    urls: _displayMediaUrls,
+                    media: _displayMedia.isEmpty ? null : _displayMedia,
+                    postId: _post.id,
+                  ),
+                ],
+                if (_displayPoll != null) ...[
+                  const SizedBox(height: 8),
+                  PollWidget(
+                    poll: _displayPoll!,
+                    postId: _post.id,
+                    onVote: widget.onPollVote,
+                  ),
+                ],
+                if (_displayWorkoutLogData != null) ...[
+                  const SizedBox(height: 8),
+                  _buildWorkoutLog(context),
+                ],
+                AiAnalysisCard(analysis: _post.aiAnalysis),
+                const SizedBox(height: 10),
+                _buildActionBar(context, viewer),
+                const SizedBox(height: 8),
+                ReactionBar(
+                  counts: _reactionCounts,
+                  userReaction: _userReaction,
+                  onReact: (r) {
+                    _trackPostInteraction('like');
+                    widget.onReact?.call(_post.id, r);
+                  },
+                  onUnreact: () {
+                    _trackPostInteraction('unlike');
+                    widget.onReact?.call(_post.id, '');
+                  },
+                ),
+                if (_displayGymTagName != null) ...[
+                  const SizedBox(height: 6),
+                  _buildGymTag(),
+                ],
+              ],
             ),
-          ],
-          if (_displayPoll != null) ...[
-            const SizedBox(height: 8),
-            PollWidget(
-              poll: _displayPoll!,
-              postId: _post.id,
-              onVote: widget.onPollVote,
-            ),
-          ],
-          if (_displayWorkoutLogData != null) ...[
-            const SizedBox(height: 8),
-            _buildWorkoutLog(context),
-          ],
-          AiAnalysisCard(analysis: _post.aiAnalysis),
-          const SizedBox(height: 10),
-          _buildActionBar(context, viewer),
-          const SizedBox(height: 8),
-          ReactionBar(
-            counts: _reactionCounts,
-            userReaction: _userReaction,
-            onReact: (r) {
-              _trackPostInteraction('like');
-              widget.onReact?.call(_post.id, r);
-            },
-            onUnreact: () {
-              _trackPostInteraction('unlike');
-              widget.onReact?.call(_post.id, '');
-            },
           ),
-          if (_displayGymTagName != null) ...[
-            const SizedBox(height: 6),
-            _buildGymTag(),
-          ],
+          const SizedBox(width: 8),
+          _buildActionBar(context, viewer),
         ],
       ),
     );
@@ -398,76 +412,81 @@ class _PostCardState extends ConsumerState<PostCard> {
   }
 
   Widget _buildActionBar(BuildContext context, final viewer) {
-    final leftHanded = ref.watch(handednessProvider);
-    return Row(
-      // Mirrored in left-handed mode so the primary actions sit under a left
-      // thumb (Settings → Appearance → Left-handed mode).
-      textDirection: leftHanded ? ui.TextDirection.rtl : ui.TextDirection.ltr,
-      children: [
-        _ActionButton(
-          icon: _userReaction != null ? Icons.favorite : Icons.favorite_border,
-          color: _userReaction != null
-              ? BuddyColors.red
-              : BuddyColors.textSecondary,
-          label: _formatCount(_reactionCounts.values.fold(0, (a, b) => a + b)),
-          onTap: () {
-            final liked = _userReaction != null;
-            _trackPostInteraction(liked ? 'unlike' : 'like');
-            // Web parity: one tap toggles 💪; an empty reaction removes it.
-            widget.onReact?.call(_post.id, liked ? '' : '💪');
-          },
-        ),
-        _ActionButton(
-          icon: Icons.chat_bubble_outline,
-          label: _formatCount(_commentCount),
-          onTap: () => _handleCommentTap(context),
-        ),
-        _ActionButton(
-          icon: Icons.repeat,
-          color: _post.isRepostedByMe
-              ? BuddyColors.green
-              : BuddyColors.textSecondary,
-          label: _formatCount(_repostCount),
-          onTap: () {
-            _trackPostInteraction(_post.isRepostedByMe ? 'unrepost' : 'repost');
-            widget.onRepost?.call(_post.id);
-          },
-        ),
-        _ActionButton(
-          icon: _post.isSaved ? Icons.bookmark : Icons.bookmark_border,
-          color: _post.isSaved ? BuddyColors.green : BuddyColors.textSecondary,
-          label: _formatCount(_saveCount),
-          onTap: () {
-            _trackPostInteraction(_post.isSaved ? 'unsave' : 'save');
-            widget.onSave?.call(_post.id);
-          },
-        ),
-        if (_post.authorData.userId != viewer?.userId)
+    final idle = Theme.of(context).colorScheme.onSurfaceVariant;
+    return SizedBox(
+      width: 52,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           _ActionButton(
-            icon: _post.authorData.followedByViewer
-                ? Icons.person_remove
-                : Icons.person_add,
-            color: _post.authorData.followedByViewer
-                ? BuddyColors.green
-                : BuddyColors.textSecondary,
-            label: _post.authorData.followedByViewer ? 'Following' : 'Follow',
+            icon: LucideIcons.heart,
+            color: _userReaction != null ? BuddyColors.red : idle,
+            label: _formatCount(
+              _reactionCounts.values.fold(0, (a, b) => a + b),
+            ),
             onTap: () {
-              _trackPostInteraction(
-                _post.authorData.followedByViewer ? 'unfollow' : 'follow',
-              );
-              ref.read(feedProvider.notifier).toggleFollowById(_post.id);
+              final liked = _userReaction != null;
+              _trackPostInteraction(liked ? 'unlike' : 'like');
+              widget.onReact?.call(_post.id, liked ? '' : '💪');
             },
           ),
-        const Spacer(),
-        _ActionButton(
-          icon: Icons.share_outlined,
-          label: _formatCount(_shareCount),
-          onTap: () {
-            _trackPostInteraction('share');
-            widget.onShare?.call(_post.id);
-          },
-        ),
-      ],
+          const SizedBox(height: 12),
+          _ActionButton(
+            icon: LucideIcons.messageCircle,
+            label: _formatCount(_commentCount),
+            onTap: () => _handleCommentTap(context),
+          ),
+          const SizedBox(height: 12),
+          _ActionButton(
+            icon: LucideIcons.repeat2,
+            color: _post.isRepostedByMe ? BuddyColors.green : idle,
+            label: _formatCount(_repostCount),
+            onTap: () {
+              _trackPostInteraction(
+                _post.isRepostedByMe ? 'unrepost' : 'repost',
+              );
+              widget.onRepost?.call(_post.id);
+            },
+          ),
+          const SizedBox(height: 12),
+          _ActionButton(
+            icon: LucideIcons.bookmark,
+            color: _post.isSaved ? BuddyColors.green : idle,
+            label: _formatCount(_saveCount),
+            onTap: () {
+              _trackPostInteraction(_post.isSaved ? 'unsave' : 'save');
+              widget.onSave?.call(_post.id);
+            },
+          ),
+          if (_post.authorData.userId != viewer?.userId) ...[
+            const SizedBox(height: 12),
+            _ActionButton(
+              icon: _post.authorData.followedByViewer
+                  ? LucideIcons.userRoundMinus
+                  : LucideIcons.userRoundPlus,
+              color: _post.authorData.followedByViewer
+                  ? BuddyColors.green
+                  : idle,
+              label: _post.authorData.followedByViewer ? 'Following' : 'Follow',
+              onTap: () {
+                _trackPostInteraction(
+                  _post.authorData.followedByViewer ? 'unfollow' : 'follow',
+                );
+                ref.read(feedProvider.notifier).toggleFollowById(_post.id);
+              },
+            ),
+          ],
+          const SizedBox(height: 12),
+          _ActionButton(
+            icon: LucideIcons.share2,
+            label: _formatCount(_shareCount),
+            onTap: () {
+              _trackPostInteraction('share');
+              widget.onShare?.call(_post.id);
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -980,26 +999,24 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 20, color: color ?? BuddyColors.textSecondary),
-            if (label != null && int.tryParse(label!) != 0) ...[
-              const SizedBox(width: 4),
-              Text(
-                label!,
-                style: TextStyle(
-                  color: color ?? BuddyColors.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-            ],
+    final tint = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 22, color: tint),
+          if (label != null && int.tryParse(label!) != 0) ...[
+            const SizedBox(height: 2),
+            Text(
+              label!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: tint, fontSize: 11),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
