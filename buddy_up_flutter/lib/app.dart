@@ -12,16 +12,17 @@ import 'features/messaging/widgets/call_host.dart';
 import 'features/settings/widgets/alarm_ring_host.dart';
 import 'router.dart';
 
-// ── Simple theme-mode notifier ─────────────────────────────────────────────────
-class ThemeModeNotifier extends Notifier<ThemeMode> {
+// ── Theme notifier — the four palettes the web app offers ───────────────────────
+class BuddyThemeNotifier extends Notifier<BuddyTheme> {
   @override
-  ThemeMode build() => ThemeMode.dark;
+  BuddyTheme build() => BuddyTheme.dark;
 
-  void setThemeMode(ThemeMode mode) => state = mode;
-  void toggle() => state = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+  void setTheme(BuddyTheme theme) => state = theme;
+  void toggle() => state = state == BuddyTheme.dark ? BuddyTheme.light : BuddyTheme.dark;
 }
 
-final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+final themeModeProvider =
+    NotifierProvider<BuddyThemeNotifier, BuddyTheme>(BuddyThemeNotifier.new);
 
 class BuddyUpApp extends ConsumerStatefulWidget {
   const BuddyUpApp({super.key});
@@ -97,9 +98,11 @@ class _BuddyUpAppState extends ConsumerState<BuddyUpApp> with WidgetsBindingObse
       child: MaterialApp.router(
         title: 'BuddyUp Fit',
         debugShowCheckedModeBanner: false,
-        theme: buildBuddyLightTheme(),
+        theme: buildBuddyThemeFor(themeMode),
         darkTheme: buildBuddyTheme(),
-        themeMode: themeMode,
+        // The selected palette is supplied explicitly via `theme`; keeping the
+        // platform mode light makes Material use it on every device.
+        themeMode: ThemeMode.light,
         routerConfig: buildRouter(ref, authState),
         builder: (context, child) {
           // Biometric app-lock overlay: blocks the UI until unlocked.

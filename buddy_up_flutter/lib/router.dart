@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'core/auth/auth_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/login_screen.dart';
@@ -13,6 +14,7 @@ import 'features/auth/totp_setup_screen.dart';
 import 'features/auth/totp_challenge_screen.dart';
 import 'features/auth/onboarding_screen.dart';
 import 'features/profile/profile_screen.dart';
+import 'features/profile/edit_profile_screen.dart';
 import 'features/profile/buddy_list_screen.dart';
 import 'features/buddies/buddy_nearby_screen.dart';
 import 'features/buddies/buddy_find_profile_screen.dart';
@@ -74,6 +76,8 @@ import 'features/settings/screens/blocked_screen.dart';
 import 'features/settings/screens/notification_prefs_screen.dart';
 import 'features/settings/screens/adult_content_policy_screen.dart';
 import 'features/analytics/screens/analytics_screen.dart';
+import 'features/analytics/screens/activities_screen.dart';
+import 'features/analytics/screens/gps_tracker_screen.dart';
 import 'features/countdowns/screens/countdowns_screen.dart';
 import 'features/routines/screens/routines_screen.dart';
 import 'features/routines/screens/routine_editor_screen.dart';
@@ -265,611 +269,71 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         path: '/adult-content-policy',
         builder: (_, _) => const AdultContentPolicyScreen(),
       ),
-      GoRoute(
-        path: '/feed/post',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const PostComposerScreen(),
-      ),
-      GoRoute(
-        path: '/feed/:postId',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final postId = state.pathParameters['postId'] ?? '';
-          return PostDetailScreen(postId: postId);
-        },
-      ),
-      GoRoute(
-        path: '/health-insights',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const HealthInsightsScreen(),
-      ),
-      GoRoute(
-        path: '/workout-form',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const WorkoutFormScreen(),
-      ),
-      // Gym routes
-      GoRoute(
-        path: '/my-gyms',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const MyGymsScreen(),
-      ),
-      GoRoute(
-        path: '/gyms/create',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CreateGymScreen(),
-      ),
-      // Declared BEFORE `/gyms/:slug` so `manage` is never read as a slug.
-      // Without a real route here, the "Manage" button on a gym detail page sent
-      // owners into their own profile — the same dead link the web had.
-      GoRoute(
-        path: '/gyms/:slug/coaches/:coachId/respond',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final slug = state.pathParameters['slug'] ?? '';
-          final coachId = state.pathParameters['coachId'] ?? '';
-          return CoachInviteRespondScreen(slug: slug, coachId: coachId);
-        },
-      ),
-      GoRoute(
-        path: '/gyms/:slug/manage',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final slug = state.pathParameters['slug'] ?? '';
-          return GymManageScreen(slug: slug);
-        },
-      ),
-      GoRoute(
-        path: '/gyms/:slug',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final slug = state.pathParameters['slug'] ?? '';
-          return GymDetailScreen(slug: slug);
-        },
-      ),
-      // Live routes
-      GoRoute(
-        path: '/lives/create',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CreateLiveScreen(),
-      ),
-      GoRoute(
-        path: '/lives/random-drop',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const RandomDropScreen(),
-      ),
-      GoRoute(
-        path: '/lives/:liveId',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final liveId = state.pathParameters['liveId'] ?? '';
-          return LiveRoomScreen(liveId: liveId);
-        },
-      ),
-      // Marketplace routes
-      GoRoute(
-        path: '/marketplace',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const MarketplaceScreen(),
-      ),
-      GoRoute(
-        path: '/marketplace/meal-plans/:planId',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final planId = state.pathParameters['planId'] ?? '';
-          return MealPlanDetailScreen(planId: planId);
-        },
-      ),
-      GoRoute(
-        path: '/marketplace/programmes/:programmeId',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final programmeId = state.pathParameters['programmeId'] ?? '';
-          return ProgrammeDetailScreen(programmeId: programmeId);
-        },
-      ),
-      // Create route must precede the parameterized :productId route so
-      // go_router does not treat 'create' as an ID.
-      GoRoute(
-        path: '/marketplace/products/create',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final editId = state.uri.queryParameters['edit'];
-          return CreateProductScreen(editProductId: (editId != null && editId.isNotEmpty) ? editId : null);
-        },
-      ),
-      GoRoute(
-        path: '/marketplace/products/:productId',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final productId = state.pathParameters['productId'] ?? '';
-          return ProductDetailScreen(productId: productId);
-        },
-      ),
-      // Create and the organiser dashboard must both precede
-      // `/marketplace/events/:eventId`, or go_router reads `create` as an event
-      // id — the same ordering rule the product routes above already follow.
-      GoRoute(
-        path: '/marketplace/events',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const EventOrganiserScreen(),
-      ),
-      GoRoute(
-        path: '/marketplace/events/create',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final shopHandle = state.uri.queryParameters['shop'];
-          return CreateEventScreen(shopHandle: shopHandle);
-        },
-      ),
-      GoRoute(
-        path: '/marketplace/events/:eventId',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final eventId = state.pathParameters['eventId'] ?? '';
-          return EventDetailScreen(eventId: eventId);
-        },
-      ),
-      GoRoute(
-        path: '/marketplace/tickets',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const EventTicketsScreen(),
-      ),
-      GoRoute(
-        path: '/marketplace/cart',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CartScreen(),
-      ),
-      // Checkout is its own screen so the flow is deep-linkable and the payment /
-      // station / address choices are never squeezed into a bottom sheet.
-      GoRoute(
-        path: '/marketplace/checkout',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CheckoutScreen(),
-      ),
-      // Fulfillment logistics: register as a courier, run your deliveries, apply
-      // to become a pickup station, and manage the stations you own.
-      GoRoute(
-        path: '/marketplace/delivery',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CourierDashboardScreen(),
-      ),
-      GoRoute(
-        path: '/marketplace/delivery-personnel',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const DeliveryPersonnelScreen(),
-      ),
-      GoRoute(
-        path: '/marketplace/stations/apply',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const StationApplicationScreen(),
-      ),
-      GoRoute(
-        path: '/marketplace/stations',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const ManageStationsScreen(),
-      ),
-      GoRoute(
-        path: '/marketplace/orders',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const OrdersScreen(),
-      ),
-      GoRoute(
-        path: '/marketplace/orders/:orderId',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) => OrderDetailScreen(orderId: state.pathParameters['orderId']!),
-      ),
-      GoRoute(
-        path: '/marketplace/creator-studio',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CreatorStudioScreen(),
-      ),
-      GoRoute(
-        path: '/marketplace/creator/discount-codes',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const DiscountCodesScreen(),
-      ),
-      GoRoute(
-        path: '/marketplace/meal-plans/create',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final shopHandle = state.uri.queryParameters['shop'];
-          final editId = state.uri.queryParameters['edit'];
-          return CreateMealPlanScreen(
-            shopHandle: shopHandle,
-            editId: (editId != null && editId.isNotEmpty) ? editId : null,
-          );
-        },
-      ),
-      GoRoute(
-        path: '/marketplace/programmes/create',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final shopHandle = state.uri.queryParameters['shop'];
-          final editId = state.uri.queryParameters['edit'];
-          return CreateProgrammeScreen(
-            shopHandle: shopHandle,
-            editId: (editId != null && editId.isNotEmpty) ? editId : null,
-          );
-        },
-      ),
-      // `/marketplace/events/create` is declared above, next to the organiser
-      // dashboard, so both precede `/marketplace/events/:eventId`.
-      // Shop routes
-      GoRoute(
-        path: '/marketplace/shops',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) => MyShopsScreen(
-          initialTab: state.uri.queryParameters['tab'] ?? 'shops',
-        ),
-      ),
-      GoRoute(
-        path: '/marketplace/shops/create',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CreateShopScreen(),
-      ),
-      // Shop manage — owner/manager console scoped to one shop; precedes
-      // the public shop detail route so the 4-segment path always wins.
-      GoRoute(
-        path: '/marketplace/shops/:handle/manage',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) => ShopManageScreen(
-          handle: state.pathParameters['handle'] ?? '',
-          initialTab: state.uri.queryParameters['tab'],
-        ),
-      ),
-      GoRoute(
-        path: '/marketplace/shops/:handle',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final handle = state.pathParameters['handle'] ?? '';
-          return ShopDetailScreen(handle: handle);
-        },
-      ),
-      // Programme activity focus
-      GoRoute(
-        path: '/marketplace/programmes/:programmeId/activity',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final programmeId = state.pathParameters['programmeId'] ?? '';
-          final weekIndex =
-              int.tryParse(state.uri.queryParameters['week'] ?? '0') ?? 0;
-          final day = state.uri.queryParameters['day'] ?? 'Monday';
-          final activityIndex =
-              int.tryParse(state.uri.queryParameters['activity'] ?? '0') ?? 0;
-          return ProgrammeActivityFocusScreen(
-            programmeId: programmeId,
-            weekIndex: weekIndex,
-            day: day,
-            activityIndex: activityIndex,
-          );
-        },
-      ),
-      // Wallet routes
-      GoRoute(
-        path: '/wallet',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const WalletScreen(),
-      ),
-      // Analytics
-      GoRoute(
-        path: '/analytics',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AnalyticsScreen(),
-      ),
-      GoRoute(
-        path: '/countdowns',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CountdownsScreen(),
-      ),
-      GoRoute(
-        path: '/routines',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const RoutinesScreen(),
-      ),
-      GoRoute(
-        path: '/routines/create',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const RoutineEditorScreen(),
-      ),
-      GoRoute(
-        path: '/routines/:routineId/edit',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) =>
-            RoutineEditorScreen(routineId: state.pathParameters['routineId']),
-      ),
-      GoRoute(
-        path: '/insights',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CreatorInsightsScreen(),
-      ),
-      // Notifications
-      GoRoute(
-        path: '/notifications',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const NotificationsScreen(),
-      ),
-      // Settings sub-screens (hub lives in the shell at /settings)
-      GoRoute(
-        path: '/settings/account',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AccountScreen(),
-      ),
-      GoRoute(
-        path: '/settings/security',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const SecurityScreen(),
-      ),
-      GoRoute(
-        path: '/settings/privacy',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const PrivacyScreen(),
-      ),
-      GoRoute(
-        path: '/settings/notifications',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const NotificationPrefsScreen(),
-      ),
-      GoRoute(
-        path: '/settings/family',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const FamilyScreen(),
-      ),
-      GoRoute(
-        path: '/settings/appearance',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AppearanceScreen(),
-      ),
-      GoRoute(
-        path: '/settings/alarms',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AlarmCenterScreen(),
-      ),
-      GoRoute(
-        path: '/settings/activity',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const ActivityLogScreen(),
-      ),
-      GoRoute(
-        path: '/settings/billing',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const BillingScreen(),
-      ),
-      GoRoute(
-        path: '/settings/content',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const ContentPrefsScreen(),
-      ),
-      GoRoute(
-        path: '/settings/data',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const DataScreen(),
-      ),
-      GoRoute(
-        path: '/settings/blocked',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const BlockedScreen(),
-      ),
-      GoRoute(
-        path: '/notifications/preferences',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const NotificationPrefsScreen(),
-      ),
-      // Verification
-      GoRoute(
-        path: '/verification',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const VerificationScreen(),
-      ),
-      // Trainers
-      GoRoute(
-        path: '/trainers',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const TrainerListScreen(),
-      ),
-      GoRoute(
-        path: '/trainers/:username',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final username = state.pathParameters['username'] ?? '';
-          return TrainerProfileScreen(username: username);
-        },
-      ),
-      GoRoute(
-        path: '/book/:username',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final username = state.pathParameters['username'] ?? '';
-          return BookingScreen(trainerUsername: username);
-        },
-      ),
-      // Sessions
-      GoRoute(
-        path: '/schedule',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const ScheduleScreen(),
-      ),
-      GoRoute(
-        path: '/sessions',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const MySessionsScreen(),
-      ),
-      GoRoute(
-        path: '/sessions/availability',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AvailabilityScreen(),
-      ),
-      GoRoute(
-        path: '/my-enrollments',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const MyEnrollmentsScreen(),
-      ),
-      GoRoute(
-        path: '/programmes/:programmeId/weeks',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final programmeId = state.pathParameters['programmeId'] ?? '';
-          final title = state.uri.queryParameters['title'] ?? 'Programme';
-          return ProgrammeWeeksScreen(
-            programmeId: programmeId,
-            programmeTitle: title,
-          );
-        },
-      ),
-      GoRoute(
-        path: '/sessions/:bookingId',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final bookingId = state.pathParameters['bookingId'] ?? '';
-          return SessionDetailScreen(bookingId: bookingId);
-        },
-      ),
-      GoRoute(
-        path: '/sessions/:bookingId/review',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final bookingId = state.pathParameters['bookingId'] ?? '';
-          final trainerUsername = state.uri.queryParameters['trainer'] ?? '';
-          return SessionReviewScreen(
-            bookingId: bookingId,
-            trainerUsername: trainerUsername,
-          );
-        },
-      ),
-      // Admin console (staff only, gated on user.is_staff like the web AdminGuard).
-      GoRoute(
-        path: '/admin',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminConsoleScreen(),
-      ),
-      GoRoute(
-        path: '/admin/users',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminUsersScreen(),
-      ),
-      GoRoute(
-        path: '/admin/shops',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminShopsScreen(),
-      ),
-      GoRoute(
-        path: '/admin/orders',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminOrdersScreen(),
-      ),
-      GoRoute(
-        path: '/admin/gyms',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminGymsScreen(),
-      ),
-      GoRoute(
-        path: '/admin/communities',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminCommunitiesScreen(),
-      ),
-      GoRoute(
-        path: '/admin/stations',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminStationsScreen(),
-      ),
-      GoRoute(
-        path: '/admin/delivery',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminDeliveryScreen(),
-      ),
-      GoRoute(
-        path: '/admin/wallet',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminWalletScreen(),
-      ),
-      // Governance: the two-person surface. Gated by the `/admin` redirect
-      // above, not by per-screen checks: several of these screens do not test
-      // `isStaff` themselves, so the guard has to live in the router to be
-      // true for a deep link as well as for navigation from the console.
-      GoRoute(
-        path: '/admin/moderation',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminModerationScreen(),
-      ),
-      GoRoute(
-        path: '/admin/approvals',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminApprovalsScreen(),
-      ),
-      GoRoute(
-        path: '/admin/audit',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminAuditScreen(),
-      ),
-      GoRoute(
-        path: '/admin/emails',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminEmailScreen(),
-      ),
-      GoRoute(
-        path: '/admin/staff-roles',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminStaffScreen(),
-      ),
-      // Verification review. Two-person: `review/` queues a decision and
-      // applies nothing, `decide/` is the only call that writes a status, a
-      // role or a gym verification.
-      GoRoute(
-        path: '/admin/verification',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminVerificationScreen(),
-      ),
-      // Platform analytics. Five reports under `/portal/analytics/**`.
-      // Staff-gated by the `/admin` redirect above; the analytics screens do
-      // not each re-check `isStaff`.
-      GoRoute(
-        path: '/admin/analytics',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminAnalyticsOverviewScreen(),
-      ),
-      GoRoute(
-        path: '/admin/analytics/trends',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminAnalyticsTrendsScreen(),
-      ),
-      GoRoute(
-        path: '/admin/analytics/trending',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminAnalyticsTrendingScreen(),
-      ),
-      GoRoute(
-        path: '/admin/analytics/ai-quality',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminAnalyticsAiQualityScreen(),
-      ),
-      GoRoute(
-        path: '/admin/analytics/predictive',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminAnalyticsPredictiveScreen(),
-      ),
-      // Applying for an elevated role. Not staff-gated — registration refuses
-      // an elevated role now, so this is the only route to trainer or
-      // practitioner and it belongs to the applicant, not the console.
-      GoRoute(
-        path: '/verification/apply',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CategoryApplicationScreen(),
-      ),
-      // User-side moderation: their own record, appeals and commendations.
-      // Not staff-gated — an action a user cannot see is one they cannot
-      // appeal. `?action=` deep-links from the notification that raised the
-      // action and opens the appeal form pre-filled.
-      GoRoute(
-        path: '/settings/moderation',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) => ModerationScreen(
-          appealActionId: state.uri.queryParameters['action'],
-        ),
-      ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (_, _, child) => _AppShell(child: child),
         routes: [
+          // Web path aliases — keep deep links from the site working in-app.
+          GoRoute(path: '/buddies/find', redirect: (_, _) => '/buddies/nearby'),
+          GoRoute(path: '/creator-insights', redirect: (_, _) => '/insights'),
+          GoRoute(path: '/marketplace/creator', redirect: (_, _) => '/marketplace/creator-studio'),
+          GoRoute(path: '/marketplace/events/my-tickets', redirect: (_, _) => '/marketplace/tickets'),
+          GoRoute(path: '/sessions/offering', redirect: (_, _) => '/sessions/availability'),
+          GoRoute(path: '/verification/categories', redirect: (_, _) => '/verification/apply'),
+          GoRoute(path: '/marketplace/delivery/register', redirect: (_, _) => '/marketplace/delivery-personnel'),
+          GoRoute(path: '/admin/email', redirect: (_, _) => '/admin/emails'),
+          GoRoute(path: '/admin/staff', redirect: (_, _) => '/admin/staff-roles'),
+          GoRoute(path: '/admin/appeals', redirect: (_, _) => '/admin/moderation'),
+          GoRoute(path: '/admin/overview', redirect: (_, _) => '/admin'),
+          GoRoute(path: '/admin/models', redirect: (_, _) => '/admin/analytics'),
+          GoRoute(
+            path: '/profile/edit',
+            builder: (_, state) {
+              final profile = authState.profile;
+              if (profile == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+              return EditProfileScreen(profile: profile);
+            },
+          ),
+          GoRoute(
+            path: '/:username/following',
+            builder: (_, state) => _infoPage(
+              'Following',
+              'People ${state.pathParameters['username'] ?? ''} follows.',
+            ),
+          ),
+          GoRoute(
+            path: '/:username/followers',
+            builder: (_, state) => _infoPage(
+              'Followers',
+              'People following ${state.pathParameters['username'] ?? ''}.',
+            ),
+          ),
+          GoRoute(path: '/activate', builder: (_, _) => _infoPage(
+            'Activate your account',
+            'Open the activation link we sent to your email, then sign in again.',
+          )),
+          GoRoute(path: '/help', builder: (_, _) => _infoPage(
+            'Help & support',
+            'Need a hand? Email support@buddyupfit.com and we will get back to you.',
+          )),
+          GoRoute(path: '/about', builder: (_, _) => _infoPage(
+            'About BuddyUp Fit',
+            'BuddyUp Fit helps you find workout buddies, gyms and activities near you.',
+          )),
+          GoRoute(path: '/careers', builder: (_, _) => _infoPage(
+            'Careers',
+            'Join the BuddyUp Fit team. Email careers@buddyupfit.com.',
+          )),
+          GoRoute(path: '/contact', builder: (_, _) => _infoPage(
+            'Contact',
+            'Reach us at support@buddyupfit.com.',
+          )),
+          GoRoute(path: '/services', builder: (_, _) => _infoPage(
+            'Services',
+            'Discover gyms, trainers, sessions and activities in BuddyUp Fit.',
+          )),
+          GoRoute(path: '/activities', builder: (_, _) => const ActivitiesScreen()),
+          GoRoute(path: '/activities/new', builder: (_, _) => const GpsTrackerScreen()),
           GoRoute(path: '/feed', builder: (_, _) => const FeedScreen()),
           GoRoute(
             path: '/feed/following',
@@ -972,12 +436,538 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
               return UserProfileScreen(username: username);
             },
           ),
+      GoRoute(
+        path: '/feed/post',
+        builder: (_, _) => const PostComposerScreen(),
+      ),
+      GoRoute(
+        path: '/feed/:postId',
+        builder: (_, state) {
+          final postId = state.pathParameters['postId'] ?? '';
+          return PostDetailScreen(postId: postId);
+        },
+      ),
+      GoRoute(
+        path: '/health-insights',
+        builder: (_, _) => const HealthInsightsScreen(),
+      ),
+      GoRoute(
+        path: '/workout-form',
+        builder: (_, _) => const WorkoutFormScreen(),
+      ),
+      // Gym routes
+      GoRoute(
+        path: '/my-gyms',
+        builder: (_, _) => const MyGymsScreen(),
+      ),
+      GoRoute(
+        path: '/gyms/create',
+        builder: (_, _) => const CreateGymScreen(),
+      ),
+      // Declared BEFORE `/gyms/:slug` so `manage` is never read as a slug.
+      // Without a real route here, the "Manage" button on a gym detail page sent
+      // owners into their own profile — the same dead link the web had.
+      GoRoute(
+        path: '/gyms/:slug/coaches/:coachId/respond',
+        builder: (_, state) {
+          final slug = state.pathParameters['slug'] ?? '';
+          final coachId = state.pathParameters['coachId'] ?? '';
+          return CoachInviteRespondScreen(slug: slug, coachId: coachId);
+        },
+      ),
+      GoRoute(
+        path: '/gyms/:slug/manage',
+        builder: (_, state) {
+          final slug = state.pathParameters['slug'] ?? '';
+          return GymManageScreen(slug: slug);
+        },
+      ),
+      GoRoute(
+        path: '/gyms/:slug',
+        builder: (_, state) {
+          final slug = state.pathParameters['slug'] ?? '';
+          return GymDetailScreen(slug: slug);
+        },
+      ),
+      // Live routes
+      GoRoute(
+        path: '/lives/create',
+        builder: (_, _) => const CreateLiveScreen(),
+      ),
+      GoRoute(
+        path: '/lives/random-drop',
+        builder: (_, _) => const RandomDropScreen(),
+      ),
+      GoRoute(
+        path: '/lives/:liveId',
+        builder: (_, state) {
+          final liveId = state.pathParameters['liveId'] ?? '';
+          return LiveRoomScreen(liveId: liveId);
+        },
+      ),
+      // Marketplace routes
+      GoRoute(
+        path: '/marketplace',
+        builder: (_, _) => const MarketplaceScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/meal-plans/:planId',
+        builder: (_, state) {
+          final planId = state.pathParameters['planId'] ?? '';
+          return MealPlanDetailScreen(planId: planId);
+        },
+      ),
+      GoRoute(
+        path: '/marketplace/programmes/:programmeId',
+        builder: (_, state) {
+          final programmeId = state.pathParameters['programmeId'] ?? '';
+          return ProgrammeDetailScreen(programmeId: programmeId);
+        },
+      ),
+      // Create route must precede the parameterized :productId route so
+      // go_router does not treat 'create' as an ID.
+      GoRoute(
+        path: '/marketplace/products/create',
+        builder: (_, state) {
+          final editId = state.uri.queryParameters['edit'];
+          return CreateProductScreen(editProductId: (editId != null && editId.isNotEmpty) ? editId : null);
+        },
+      ),
+      GoRoute(
+        path: '/marketplace/products/:productId',
+        builder: (_, state) {
+          final productId = state.pathParameters['productId'] ?? '';
+          return ProductDetailScreen(productId: productId);
+        },
+      ),
+      // Create and the organiser dashboard must both precede
+      // `/marketplace/events/:eventId`, or go_router reads `create` as an event
+      // id — the same ordering rule the product routes above already follow.
+      GoRoute(
+        path: '/marketplace/events',
+        builder: (_, _) => const EventOrganiserScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/events/create',
+        builder: (_, state) {
+          final shopHandle = state.uri.queryParameters['shop'];
+          return CreateEventScreen(shopHandle: shopHandle);
+        },
+      ),
+      GoRoute(
+        path: '/marketplace/events/:eventId',
+        builder: (_, state) {
+          final eventId = state.pathParameters['eventId'] ?? '';
+          return EventDetailScreen(eventId: eventId);
+        },
+      ),
+      GoRoute(
+        path: '/marketplace/tickets',
+        builder: (_, _) => const EventTicketsScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/cart',
+        builder: (_, _) => const CartScreen(),
+      ),
+      // Checkout is its own screen so the flow is deep-linkable and the payment /
+      // station / address choices are never squeezed into a bottom sheet.
+      GoRoute(
+        path: '/marketplace/checkout',
+        builder: (_, _) => const CheckoutScreen(),
+      ),
+      // Fulfillment logistics: register as a courier, run your deliveries, apply
+      // to become a pickup station, and manage the stations you own.
+      GoRoute(
+        path: '/marketplace/delivery',
+        builder: (_, _) => const CourierDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/delivery-personnel',
+        builder: (_, _) => const DeliveryPersonnelScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/stations/apply',
+        builder: (_, _) => const StationApplicationScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/stations',
+        builder: (_, _) => const ManageStationsScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/orders',
+        builder: (_, _) => const OrdersScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/orders/:orderId',
+        builder: (_, state) => OrderDetailScreen(orderId: state.pathParameters['orderId']!),
+      ),
+      GoRoute(
+        path: '/marketplace/creator-studio',
+        builder: (_, _) => const CreatorStudioScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/creator/discount-codes',
+        builder: (_, _) => const DiscountCodesScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/meal-plans/create',
+        builder: (_, state) {
+          final shopHandle = state.uri.queryParameters['shop'];
+          final editId = state.uri.queryParameters['edit'];
+          return CreateMealPlanScreen(
+            shopHandle: shopHandle,
+            editId: (editId != null && editId.isNotEmpty) ? editId : null,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/marketplace/programmes/create',
+        builder: (_, state) {
+          final shopHandle = state.uri.queryParameters['shop'];
+          final editId = state.uri.queryParameters['edit'];
+          return CreateProgrammeScreen(
+            shopHandle: shopHandle,
+            editId: (editId != null && editId.isNotEmpty) ? editId : null,
+          );
+        },
+      ),
+      // `/marketplace/events/create` is declared above, next to the organiser
+      // dashboard, so both precede `/marketplace/events/:eventId`.
+      // Shop routes
+      GoRoute(
+        path: '/marketplace/shops',
+        builder: (_, state) => MyShopsScreen(
+          initialTab: state.uri.queryParameters['tab'] ?? 'shops',
+        ),
+      ),
+      GoRoute(
+        path: '/marketplace/shops/create',
+        builder: (_, _) => const CreateShopScreen(),
+      ),
+      // Shop manage — owner/manager console scoped to one shop; precedes
+      // the public shop detail route so the 4-segment path always wins.
+      GoRoute(
+        path: '/marketplace/shops/:handle/manage',
+        builder: (_, state) => ShopManageScreen(
+          handle: state.pathParameters['handle'] ?? '',
+          initialTab: state.uri.queryParameters['tab'],
+        ),
+      ),
+      GoRoute(
+        path: '/marketplace/shops/:handle',
+        builder: (_, state) {
+          final handle = state.pathParameters['handle'] ?? '';
+          return ShopDetailScreen(handle: handle);
+        },
+      ),
+      // Programme activity focus
+      GoRoute(
+        path: '/marketplace/programmes/:programmeId/activity',
+        builder: (_, state) {
+          final programmeId = state.pathParameters['programmeId'] ?? '';
+          final weekIndex =
+              int.tryParse(state.uri.queryParameters['week'] ?? '0') ?? 0;
+          final day = state.uri.queryParameters['day'] ?? 'Monday';
+          final activityIndex =
+              int.tryParse(state.uri.queryParameters['activity'] ?? '0') ?? 0;
+          return ProgrammeActivityFocusScreen(
+            programmeId: programmeId,
+            weekIndex: weekIndex,
+            day: day,
+            activityIndex: activityIndex,
+          );
+        },
+      ),
+      // Wallet routes
+      GoRoute(
+        path: '/wallet',
+        builder: (_, _) => const WalletScreen(),
+      ),
+      // Analytics
+      GoRoute(
+        path: '/analytics',
+        builder: (_, _) => const AnalyticsScreen(),
+      ),
+      GoRoute(
+        path: '/countdowns',
+        builder: (_, _) => const CountdownsScreen(),
+      ),
+      GoRoute(
+        path: '/routines',
+        builder: (_, _) => const RoutinesScreen(),
+      ),
+      GoRoute(
+        path: '/routines/create',
+        builder: (_, _) => const RoutineEditorScreen(),
+      ),
+      GoRoute(
+        path: '/routines/:routineId/edit',
+        builder: (_, state) =>
+            RoutineEditorScreen(routineId: state.pathParameters['routineId']),
+      ),
+      GoRoute(
+        path: '/insights',
+        builder: (_, _) => const CreatorInsightsScreen(),
+      ),
+      // Notifications
+      GoRoute(
+        path: '/notifications',
+        builder: (_, _) => const NotificationsScreen(),
+      ),
+      // Settings sub-screens (hub lives in the shell at /settings)
+      GoRoute(
+        path: '/settings/account',
+        builder: (_, _) => const AccountScreen(),
+      ),
+      GoRoute(
+        path: '/settings/security',
+        builder: (_, _) => const SecurityScreen(),
+      ),
+      GoRoute(
+        path: '/settings/privacy',
+        builder: (_, _) => const PrivacyScreen(),
+      ),
+      GoRoute(
+        path: '/settings/notifications',
+        builder: (_, _) => const NotificationPrefsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/family',
+        builder: (_, _) => const FamilyScreen(),
+      ),
+      GoRoute(
+        path: '/settings/appearance',
+        builder: (_, _) => const AppearanceScreen(),
+      ),
+      GoRoute(
+        path: '/settings/alarms',
+        builder: (_, _) => const AlarmCenterScreen(),
+      ),
+      GoRoute(
+        path: '/settings/activity',
+        builder: (_, _) => const ActivityLogScreen(),
+      ),
+      GoRoute(
+        path: '/settings/billing',
+        builder: (_, _) => const BillingScreen(),
+      ),
+      GoRoute(
+        path: '/settings/content',
+        builder: (_, _) => const ContentPrefsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/data',
+        builder: (_, _) => const DataScreen(),
+      ),
+      GoRoute(
+        path: '/settings/blocked',
+        builder: (_, _) => const BlockedScreen(),
+      ),
+      GoRoute(
+        path: '/notifications/preferences',
+        builder: (_, _) => const NotificationPrefsScreen(),
+      ),
+      // Verification
+      GoRoute(
+        path: '/verification',
+        builder: (_, _) => const VerificationScreen(),
+      ),
+      // Trainers
+      GoRoute(
+        path: '/trainers',
+        builder: (_, _) => const TrainerListScreen(),
+      ),
+      GoRoute(
+        path: '/trainers/:username',
+        builder: (_, state) {
+          final username = state.pathParameters['username'] ?? '';
+          return TrainerProfileScreen(username: username);
+        },
+      ),
+      GoRoute(
+        path: '/book/:username',
+        builder: (_, state) {
+          final username = state.pathParameters['username'] ?? '';
+          return BookingScreen(trainerUsername: username);
+        },
+      ),
+      // Sessions
+      GoRoute(
+        path: '/schedule',
+        builder: (_, _) => const ScheduleScreen(),
+      ),
+      GoRoute(
+        path: '/sessions',
+        builder: (_, _) => const MySessionsScreen(),
+      ),
+      GoRoute(
+        path: '/sessions/availability',
+        builder: (_, _) => const AvailabilityScreen(),
+      ),
+      GoRoute(
+        path: '/my-enrollments',
+        builder: (_, _) => const MyEnrollmentsScreen(),
+      ),
+      GoRoute(
+        path: '/programmes/:programmeId/weeks',
+        builder: (_, state) {
+          final programmeId = state.pathParameters['programmeId'] ?? '';
+          final title = state.uri.queryParameters['title'] ?? 'Programme';
+          return ProgrammeWeeksScreen(
+            programmeId: programmeId,
+            programmeTitle: title,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/sessions/:bookingId',
+        builder: (_, state) {
+          final bookingId = state.pathParameters['bookingId'] ?? '';
+          return SessionDetailScreen(bookingId: bookingId);
+        },
+      ),
+      GoRoute(
+        path: '/sessions/:bookingId/review',
+        builder: (_, state) {
+          final bookingId = state.pathParameters['bookingId'] ?? '';
+          final trainerUsername = state.uri.queryParameters['trainer'] ?? '';
+          return SessionReviewScreen(
+            bookingId: bookingId,
+            trainerUsername: trainerUsername,
+          );
+        },
+      ),
+      // Admin console (staff only, gated on user.is_staff like the web AdminGuard).
+      GoRoute(
+        path: '/admin',
+        builder: (_, _) => const AdminConsoleScreen(),
+      ),
+      GoRoute(
+        path: '/admin/users',
+        builder: (_, _) => const AdminUsersScreen(),
+      ),
+      GoRoute(
+        path: '/admin/shops',
+        builder: (_, _) => const AdminShopsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/orders',
+        builder: (_, _) => const AdminOrdersScreen(),
+      ),
+      GoRoute(
+        path: '/admin/gyms',
+        builder: (_, _) => const AdminGymsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/communities',
+        builder: (_, _) => const AdminCommunitiesScreen(),
+      ),
+      GoRoute(
+        path: '/admin/stations',
+        builder: (_, _) => const AdminStationsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/delivery',
+        builder: (_, _) => const AdminDeliveryScreen(),
+      ),
+      GoRoute(
+        path: '/admin/wallet',
+        builder: (_, _) => const AdminWalletScreen(),
+      ),
+      // Governance: the two-person surface. Gated by the `/admin` redirect
+      // above, not by per-screen checks: several of these screens do not test
+      // `isStaff` themselves, so the guard has to live in the router to be
+      // true for a deep link as well as for navigation from the console.
+      GoRoute(
+        path: '/admin/moderation',
+        builder: (_, _) => const AdminModerationScreen(),
+      ),
+      GoRoute(
+        path: '/admin/approvals',
+        builder: (_, _) => const AdminApprovalsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/audit',
+        builder: (_, _) => const AdminAuditScreen(),
+      ),
+      GoRoute(
+        path: '/admin/emails',
+        builder: (_, _) => const AdminEmailScreen(),
+      ),
+      GoRoute(
+        path: '/admin/staff-roles',
+        builder: (_, _) => const AdminStaffScreen(),
+      ),
+      // Verification review. Two-person: `review/` queues a decision and
+      // applies nothing, `decide/` is the only call that writes a status, a
+      // role or a gym verification.
+      GoRoute(
+        path: '/admin/verification',
+        builder: (_, _) => const AdminVerificationScreen(),
+      ),
+      // Platform analytics. Five reports under `/portal/analytics/**`.
+      // Staff-gated by the `/admin` redirect above; the analytics screens do
+      // not each re-check `isStaff`.
+      GoRoute(
+        path: '/admin/analytics',
+        builder: (_, _) => const AdminAnalyticsOverviewScreen(),
+      ),
+      GoRoute(
+        path: '/admin/analytics/trends',
+        builder: (_, _) => const AdminAnalyticsTrendsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/analytics/trending',
+        builder: (_, _) => const AdminAnalyticsTrendingScreen(),
+      ),
+      GoRoute(
+        path: '/admin/analytics/ai-quality',
+        builder: (_, _) => const AdminAnalyticsAiQualityScreen(),
+      ),
+      GoRoute(
+        path: '/admin/analytics/predictive',
+        builder: (_, _) => const AdminAnalyticsPredictiveScreen(),
+      ),
+      // Applying for an elevated role. Not staff-gated — registration refuses
+      // an elevated role now, so this is the only route to trainer or
+      // practitioner and it belongs to the applicant, not the console.
+      GoRoute(
+        path: '/verification/apply',
+        builder: (_, _) => const CategoryApplicationScreen(),
+      ),
+      // User-side moderation: their own record, appeals and commendations.
+      // Not staff-gated — an action a user cannot see is one they cannot
+      // appeal. `?action=` deep-links from the notification that raised the
+      // action and opens the appeal form pre-filled.
+      GoRoute(
+        path: '/settings/moderation',
+        builder: (_, state) => ModerationScreen(
+          appealActionId: state.uri.queryParameters['action'],
+        ),
+      ),
         ],
       ),
     ],
   );
 }
 
+
+Widget _infoPage(String title, String message) {
+  return Scaffold(
+    appBar: AppBar(title: Text(title)),
+    body: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Text(
+        message,
+        style: const TextStyle(
+          color: BuddyColors.textSecondary,
+          fontSize: 15,
+          height: 1.5,
+        ),
+      ),
+    ),
+  );
+}
 
 Widget _legalPage(String title) {
   return Scaffold(
@@ -1004,93 +994,31 @@ class _AppShellState extends State<_AppShell> {
   bool _railExtended = true;
 
   static const _railDestinations = <_NavDestination>[
-    _NavDestination('/feed', Icons.home_outlined, Icons.home, 'Home'),
-    _NavDestination(
-      '/discover',
-      Icons.explore_outlined,
-      Icons.explore,
-      'Discover',
-    ),
-    _NavDestination(
-      '/buddies/nearby',
-      Icons.person_search_outlined,
-      Icons.person_search,
-      'Find a Buddy',
-    ),
-    _NavDestination('/lives', Icons.videocam_outlined, Icons.videocam, 'Lives'),
-    _NavDestination(
-      '/gyms',
-      Icons.fitness_center_outlined,
-      Icons.fitness_center,
-      'Gyms',
-    ),
-    _NavDestination(
-      '/schedule',
-      Icons.event_note_outlined,
-      Icons.event_note,
-      'Schedule',
-    ),
-    _NavDestination(
-      '/messages',
-      Icons.chat_bubble_outline,
-      Icons.chat_bubble,
-      'Messages',
-    ),
-    _NavDestination(
-      '/communities',
-      Icons.groups_outlined,
-      Icons.groups,
-      'Communities',
-    ),
-    _NavDestination('/profile', Icons.person_outline, Icons.person, 'Profile'),
-    _NavDestination(
-      '/countdowns',
-      Icons.timer_outlined,
-      Icons.timer,
-      'Countdowns',
-    ),
-    _NavDestination(
-      '/routines',
-      Icons.repeat_rounded,
-      Icons.repeat_rounded,
-      'Routines',
-    ),
-    _NavDestination(
-      '/settings',
-      Icons.settings_outlined,
-      Icons.settings,
-      'Settings',
-    ),
+    _NavDestination('/feed', LucideIcons.home, LucideIcons.home, 'Home'),
+    _NavDestination('/discover', LucideIcons.search, LucideIcons.search, 'Discover'),
+    _NavDestination('/buddies/find', LucideIcons.footprints, LucideIcons.footprints, 'Find a Buddy'),
+    _NavDestination('/analytics', LucideIcons.activity, LucideIcons.activity, 'Analytics'),
+    _NavDestination('/countdowns', LucideIcons.timer, LucideIcons.timer, 'Countdowns'),
+    _NavDestination('/activities', LucideIcons.map, LucideIcons.map, 'Activities'),
+    _NavDestination('/lives', LucideIcons.radio, LucideIcons.radio, 'Lives'),
+    _NavDestination('/gyms', LucideIcons.dumbbell, LucideIcons.dumbbell, 'Gyms'),
+    _NavDestination('/trainers', LucideIcons.users, LucideIcons.users, 'Trainers'),
+    _NavDestination('/marketplace', LucideIcons.shoppingBag, LucideIcons.shoppingBag, 'Marketplace'),
+    _NavDestination('/routines', LucideIcons.calendarDays, LucideIcons.calendarDays, 'Routines'),
+    _NavDestination('/sessions', LucideIcons.calendar, LucideIcons.calendar, 'Sessions'),
+    _NavDestination('/messages', LucideIcons.messageCircle, LucideIcons.messageCircle, 'Messages'),
+    _NavDestination('/communities', LucideIcons.users, LucideIcons.users, 'Communities'),
+    _NavDestination('/wallet', LucideIcons.wallet, LucideIcons.wallet, 'Wallet'),
+    _NavDestination('/profile', LucideIcons.user, LucideIcons.user, 'Profile'),
+    _NavDestination('/settings', LucideIcons.settings, LucideIcons.settings, 'Settings'),
   ];
 
   static const _phoneDestinations = <_NavDestination>[
-    _NavDestination('/feed', Icons.home_outlined, Icons.home, 'Home'),
-    _NavDestination(
-      '/discover',
-      Icons.explore_outlined,
-      Icons.explore,
-      'Discover',
-    ),
-    _NavDestination('/lives', Icons.videocam_outlined, Icons.videocam, 'Lives'),
-    _NavDestination(
-      '/gyms',
-      Icons.fitness_center_outlined,
-      Icons.fitness_center,
-      'Gyms',
-    ),
-    _NavDestination('/profile', Icons.person_outline, Icons.person, 'Profile'),
-    _NavDestination(
-      '/countdowns',
-      Icons.timer_outlined,
-      Icons.timer,
-      'Countdowns',
-    ),
-    _NavDestination(
-      '/routines',
-      Icons.repeat_rounded,
-      Icons.repeat_rounded,
-      'Routines',
-    ),
+    _NavDestination('/feed', LucideIcons.home, LucideIcons.home, 'Home'),
+    _NavDestination('/discover', LucideIcons.search, LucideIcons.search, 'Find'),
+    _NavDestination('/lives', LucideIcons.radio, LucideIcons.radio, 'Live'),
+    _NavDestination('/activities', LucideIcons.map, LucideIcons.map, 'Activities'),
+    _NavDestination('/profile', LucideIcons.user, LucideIcons.user, 'Profile'),
   ];
 
   @override
@@ -1121,10 +1049,10 @@ class _AppShellState extends State<_AppShell> {
                   ),
                   const Padding(
                     padding: EdgeInsets.only(top: 8, bottom: 8),
-                    child: Icon(
-                      Icons.fitness_center,
-                      color: BuddyColors.green,
-                      size: 28,
+                    child: Image(
+                      image: AssetImage('assets/logo-dark.png'),
+                      height: 28,
+                      width: 28,
                     ),
                   ),
                 ],
@@ -1175,19 +1103,10 @@ class _AppShellState extends State<_AppShell> {
           Expanded(child: widget.child),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: _WebBottomNav(
+        destinations: _phoneDestinations,
         currentIndex: _calculateIndex(context, _phoneDestinations),
         onTap: (i) => context.go(_phoneDestinations[i].route),
-        type: BottomNavigationBarType.fixed,
-        items: _phoneDestinations
-            .map(
-              (d) => BottomNavigationBarItem(
-                icon: Icon(d.icon),
-                activeIcon: Icon(d.selectedIcon),
-                label: d.label,
-              ),
-            )
-            .toList(),
       ),
     );
   }
@@ -1226,9 +1145,13 @@ class _AppShellState extends State<_AppShell> {
     if (profileIndex >= 0 &&
         (location.startsWith('/buddies') ||
             location.startsWith('/settings') ||
+            location.startsWith('/messages') ||
+            location.startsWith('/communities') ||
             _isUsernameRoute(location))) {
       return profileIndex;
     }
+    final activitiesIndex = destinations.indexWhere((d) => d.route == '/activities');
+    if (activitiesIndex >= 0 && location.startsWith('/gyms')) return activitiesIndex;
     return 0;
   }
 }
@@ -1240,4 +1163,113 @@ class _NavDestination {
   final String label;
 
   const _NavDestination(this.route, this.icon, this.selectedIcon, this.label);
+}
+
+/// Web-parity mobile bottom bar: five items with a raised green Live pill.
+class _WebBottomNav extends StatelessWidget {
+  final List<_NavDestination> destinations;
+  final int currentIndex;
+  final void Function(int) onTap;
+
+  const _WebBottomNav({
+    required this.destinations,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const center = 2;
+    return Container(
+      height: 68,
+      decoration: const BoxDecoration(
+        color: BuddyColors.black,
+        border: Border(top: BorderSide(color: BuddyColors.border, width: 0.7)),
+      ),
+      child: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
+        children: [
+          Row(
+            children: List.generate(destinations.length, (i) {
+              final item = destinations[i];
+              final active = i == currentIndex;
+              if (i == center) {
+                return Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      const SizedBox(height: 36),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          item.label,
+                          style: TextStyle(
+                            color: active ? BuddyColors.green : BuddyColors.textSecondary,
+                            fontSize: 10,
+                            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return Expanded(
+                child: InkWell(
+                  onTap: () => onTap(i),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        item.icon,
+                        size: 21,
+                        color: active ? BuddyColors.green : BuddyColors.textSecondary,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.label,
+                        style: TextStyle(
+                          color: active ? BuddyColors.green : BuddyColors.textSecondary,
+                          fontSize: 10,
+                          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+          Positioned(
+            top: -20,
+            child: GestureDetector(
+              onTap: () => onTap(center),
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: BuddyColors.green,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: BuddyColors.green.withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  destinations[center].icon,
+                  color: BuddyColors.black,
+                  size: 26,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

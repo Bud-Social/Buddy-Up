@@ -1,17 +1,33 @@
 import 'package:flutter/material.dart';
 
+/// Web design tokens (tailwind.config.ts) mirrored here so both clients look
+/// the same on every screen.
 class BuddyColors {
-  static const Color green = Color(0xFF4ADE80);
+  static const Color green = Color(0xFF00C896);
+  static const Color greenDeep = Color(0xFF009E78);
+  static const Color electric = Color(0xFF7B61FF);
   static const Color blue = Color(0xFF3B82F6);
-  static const Color black = Color(0xFF0F0F0F);
-  static const Color surface = Color(0xFF1C1C1C);
-  static const Color surfaceRaised = Color(0xFF2C2C2C);
+  static const Color orange = Color(0xFFFF6B35);
+  static const Color black = Color(0xFF0A0A0A);
+  static const Color surface = Color(0xFF141414);
+  static const Color surfaceRaised = Color(0xFF1E1E1E);
+  static const Color white = Color(0xFFF8F8F8);
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFFA0A0A0);
-  static const Color red = Color(0xFFEF4444);
-  static const Color gold = Color(0xFFEAB308);
+  static const Color red = Color(0xFFFF4757);
+  static const Color gold = Color(0xFFFFD700);
   static const Color border = Color(0xFF333333);
 }
+
+/// The four palettes the web offers in Appearance.
+enum BuddyTheme { dark, light, highContrast, ambient }
+
+ThemeData buildBuddyThemeFor(BuddyTheme theme) => switch (theme) {
+      BuddyTheme.dark => buildBuddyTheme(),
+      BuddyTheme.light => buildBuddyLightTheme(),
+      BuddyTheme.highContrast => buildBuddyHighContrastTheme(),
+      BuddyTheme.ambient => buildBuddyAmbientTheme(),
+    };
 
 class BuddyLightColors {
   static const Color surface = Color(0xFFFFFFFF);
@@ -238,5 +254,50 @@ ThemeData buildBuddyLightTheme() {
       ),
       behavior: SnackBarBehavior.floating,
     ),
+  );
+}
+
+ThemeData buildBuddyHighContrastTheme() {
+  final base = buildBuddyTheme();
+  return base.copyWith(
+    scaffoldBackgroundColor: Colors.black,
+    colorScheme: const ColorScheme.dark(
+      primary: Color(0xFF00FFB3),
+      secondary: Color(0xFF00FFB3),
+      surface: Colors.black,
+      onSurface: Colors.white,
+      error: Color(0xFFFF6B6B),
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      elevation: 0,
+    ),
+    textTheme: base.textTheme.apply(
+      bodyColor: Colors.white,
+      displayColor: Colors.white,
+    ),
+  );
+}
+
+ThemeData buildBuddyAmbientTheme() {
+  final base = buildBuddyTheme();
+  const background = Color(0xFF0B1020);
+  const surface = Color(0xFF141B2E);
+  return base.copyWith(
+    scaffoldBackgroundColor: background,
+    colorScheme: const ColorScheme.dark(
+      primary: Color(0xFF6EE7B7),
+      secondary: BuddyColors.electric,
+      surface: surface,
+      onSurface: Colors.white,
+      error: BuddyColors.red,
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: background,
+      foregroundColor: Colors.white,
+      elevation: 0,
+    ),
+    cardTheme: base.cardTheme.copyWith(color: surface),
   );
 }
