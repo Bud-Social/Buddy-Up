@@ -10,6 +10,7 @@ import '../../data/repositories/profile_repository.dart';
 import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/input.dart';
 import '../../shared/widgets/toast.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   final Profile profile;
@@ -38,12 +39,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.initState();
     _profileRepo = ProfileRepository(ApiClient().dio);
     _avatarUrl = widget.profile.avatarUrl;
-    _displayNameController = TextEditingController(text: widget.profile.displayName);
+    _displayNameController = TextEditingController(
+      text: widget.profile.displayName,
+    );
     _bioController = TextEditingController(text: widget.profile.bio);
     _pronounsController = TextEditingController(text: widget.profile.pronouns);
-    _locationCityController = TextEditingController(text: widget.profile.locationCity);
-    _locationCountryController = TextEditingController(text: widget.profile.locationCountry);
-    _externalLinkController = TextEditingController(text: widget.profile.externalLink ?? '');
+    _locationCityController = TextEditingController(
+      text: widget.profile.locationCity,
+    );
+    _locationCountryController = TextEditingController(
+      text: widget.profile.locationCountry,
+    );
+    _externalLinkController = TextEditingController(
+      text: widget.profile.externalLink ?? '',
+    );
   }
 
   @override
@@ -58,26 +67,37 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _pickImage() async {
-    final file = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512);
+    final file = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+    );
     if (file == null) return;
     setState(() => _isLoading = true);
     try {
       final res = await _profileRepo.uploadAvatar(
         FormData.fromMap({
-          'avatar': await MultipartFile.fromFile(file.path, filename: 'avatar.jpg'),
+          'avatar': await MultipartFile.fromFile(
+            file.path,
+            filename: 'avatar.jpg',
+          ),
         }),
       );
       final data = res['data'] as Map<String, dynamic>?;
       final newUrl = data?['avatar_url'] as String? ?? '';
       if (newUrl.isNotEmpty) {
         setState(() => _avatarUrl = newUrl);
-        await ref.read(authProvider.notifier).updateProfile(
-          widget.profile.copyWith(avatarUrl: newUrl),
-        );
+        await ref
+            .read(authProvider.notifier)
+            .updateProfile(widget.profile.copyWith(avatarUrl: newUrl));
       }
-      if (mounted) showToast(context, 'Avatar updated!', type: ToastType.success);
+      if (mounted) {
+        showToast(context, 'Avatar updated!', type: ToastType.success);
+      }
     } catch (e) {
-      if (mounted) showToast(context, 'Failed to upload avatar.', type: ToastType.error);
+      if (mounted) {
+        showToast(context, 'Failed to upload avatar.', type: ToastType.error);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -94,23 +114,31 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           pronouns: _pronounsController.text.trim(),
           locationCity: _locationCityController.text.trim(),
           locationCountry: _locationCountryController.text.trim(),
-          externalLink: _externalLinkController.text.trim().isNotEmpty ? _externalLinkController.text.trim() : null,
+          externalLink: _externalLinkController.text.trim().isNotEmpty
+              ? _externalLinkController.text.trim()
+              : null,
         ),
       );
       if (mounted) {
         showToast(context, 'Profile updated!', type: ToastType.success);
-        await ref.read(authProvider.notifier).updateProfile(widget.profile.copyWith(
-          displayName: _displayNameController.text.trim(),
-          bio: _bioController.text.trim(),
-          pronouns: _pronounsController.text.trim(),
-          locationCity: _locationCityController.text.trim(),
-          locationCountry: _locationCountryController.text.trim(),
-          avatarUrl: _avatarUrl,
-        ));
+        await ref
+            .read(authProvider.notifier)
+            .updateProfile(
+              widget.profile.copyWith(
+                displayName: _displayNameController.text.trim(),
+                bio: _bioController.text.trim(),
+                pronouns: _pronounsController.text.trim(),
+                locationCity: _locationCityController.text.trim(),
+                locationCountry: _locationCountryController.text.trim(),
+                avatarUrl: _avatarUrl,
+              ),
+            );
         if (mounted) Navigator.of(context).pop();
       }
     } catch (e) {
-      if (mounted) showToast(context, 'Failed to update profile.', type: ToastType.error);
+      if (mounted) {
+        showToast(context, 'Failed to update profile.', type: ToastType.error);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -159,7 +187,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             color: BuddyColors.green,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.camera_alt, size: 16, color: BuddyColors.black),
+                          child: const Icon(
+                            LucideIcons.camera,
+                            size: 16,
+                            color: BuddyColors.black,
+                          ),
                         ),
                       ),
                     ],
@@ -178,10 +210,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   maxLines: 3,
                 ),
                 const SizedBox(height: 16),
-                BuddyInput(
-                  controller: _pronounsController,
-                  label: 'Pronouns',
-                ),
+                BuddyInput(controller: _pronounsController, label: 'Pronouns'),
                 const SizedBox(height: 16),
                 Row(
                   children: [

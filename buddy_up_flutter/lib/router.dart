@@ -217,11 +217,12 @@ String? redirectFor(String location, AuthState authState) {
   return null;
 }
 
-GoRouter buildRouter(WidgetRef ref, AuthState authState) {
+GoRouter buildRouter(WidgetRef ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/feed',
-    redirect: (context, state) => redirectFor(state.matchedLocation, authState),
+    redirect: (context, state) =>
+        redirectFor(state.matchedLocation, ref.read(authProvider)),
     routes: [
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (_, _) => const RegisterScreen()),
@@ -339,7 +340,7 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           GoRoute(
             path: '/profile/edit',
             builder: (_, state) {
-              final profile = authState.profile;
+              final profile = ref.read(authProvider).profile;
               if (profile == null) {
                 return const Scaffold(
                   body: Center(child: CircularProgressIndicator()),

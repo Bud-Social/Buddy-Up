@@ -62,21 +62,29 @@ abstract class AuthRepository {
   /// device sends nothing and authenticates with the normal access token. The
   /// server accepts it only on these two endpoints and only before TOTP is on.
   @POST('/auth/totp/setup/')
-  Future<TOTPSetupResponse> totpSetup(
-      {@Header('X-TOTP-Enrolment-Token') String? enrolmentToken});
+  Future<TOTPSetupResponse> totpSetup({
+    @Header('X-TOTP-Enrolment-Token') String? enrolmentToken,
+  });
 
   @POST('/auth/totp/verify/')
-  Future<void> totpVerify(@Body() Map<String, dynamic> body,
-      {@Header('X-TOTP-Enrolment-Token') String? enrolmentToken});
+  Future<void> totpVerify(
+    @Body() Map<String, dynamic> body, {
+    @Header('X-TOTP-Enrolment-Token') String? enrolmentToken,
+  });
 
   @POST('/auth/totp/disable/')
   Future<void> totpDisable(@Body() Map<String, dynamic> body);
 
   @POST('/auth/totp/challenge/')
-  Future<TOTPChallengeResponse> totpChallenge(@Body() Map<String, dynamic> body);
+  Future<TOTPChallengeResponse> totpChallenge(
+    @Body() Map<String, dynamic> body,
+  );
 
   @POST('/auth/verify-age/')
   Future<VerifyAgeResponse> verifyAge(@Body() Map<String, dynamic> body);
+
+  @POST('/auth/social/age-setup/')
+  Future<dynamic> socialAgeSetup(@Body() Map<String, dynamic> body);
 
   @POST('/auth/deactivate/')
   Future<void> deactivateAccount();

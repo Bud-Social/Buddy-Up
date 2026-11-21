@@ -10,6 +10,7 @@ import '../../core/env/env.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/onboarding.dart';
 import '../../data/models/profile.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/profile_repository.dart';
 
 import '../../shared/widgets/button.dart';
@@ -28,6 +29,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _isLoading = false;
   OnboardingPlan? _plan;
 
+  // Web onboarding starts with an age step for social sign-ins whose age is
+  // unknown (?step=age or user.is_adult === false). All later indices shift.
+  late final bool _needsAge;
+  DateTime? _dob;
+  String? _ageError;
+  late final AuthRepository _authRepo;
+
+  int get _offset => _needsAge ? 1 : 0;
+  int get _logicalStep => _step - _offset;
+  int get _totalSteps => 9 + _offset;
+
   // Web onboarding's profile step (step 2) — social sign-ins need all of these.
   final _displayName = TextEditingController();
   final _username = TextEditingController();
@@ -36,9 +48,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String _usernameStatus = 'idle';
   int _usernameCheckId = 0;
   Timer? _usernameTimer;
-
-  static const _totalSteps =
-      9; // consent, profile, goals, level, workouts, diet, time, preview, plan
 
   // Consent step. Must match the backend's CURRENT_TERMS_VERSION and the
   // web onboarding's TERMS_VERSION — the backend records whatever version
@@ -150,8 +159,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
+    _authRepo = AuthRepository(ApiClient().dio);
     _profileRepo = ProfileRepository(ApiClient().dio);
-    final profile = ref.read(authProvider).profile;
+    final auth = ref.read(authProvider);
+    _needsAge =
+        (auth.user?.isAdult == false) ||
+        GoRouterState.of(context).uri.queryParameters['step'] == 'age';
+    final profile = auth.profile;
     if (profile != null) {
       _displayName.text = profile.displayName;
       _username.text = profile.username;
@@ -263,7 +277,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         if (mounted) {
           setState(() {
             _plan = OnboardingPlan.fromJson(planJson);
-            _step = 8;
+            _step = 8 + _offset;
           });
         }
         return;
@@ -272,11 +286,50 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     } catch (e) {
       if (mounted) {
         // Web returns to the profile step with the server's field error.
-        if (_step == 7) setState(() => _step = 1);
+        if (_logicalStep == 7) setState(() => _step = 1 + _offset);
         showToast(
           context,
           'Something went wrong. Please try again.',
           type: ToastType.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Web `submitAge`: stores a DOB hash server-side and returns the profile.
+  Future<void> _submitAge() async {
+    if (_dob == null) {
+      setState(() => _ageError = 'Enter your date of birth.');
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _ageError = null;
+    });
+    try {
+      final dob =
+          '${_dob!.year.toString().padLeft(4, '0')}-'
+          '${_dob!.month.toString().padLeft(2, '0')}-'
+          '${_dob!.day.toString().padLeft(2, '0')}';
+      final res = await _authRepo.socialAgeSetup({'date_of_birth': dob});
+      final profileJson = res is Map
+          ? (res['data'] is Map ? res['data']['profile'] : res['profile'])
+          : null;
+      if (profileJson is Map<String, dynamic>) {
+        await ref
+            .read(authProvider.notifier)
+            .updateProfile(Profile.fromJson(profileJson));
+      }
+      if (mounted) setState(() => _step++);
+    } catch (e) {
+      final message = e.toString().replaceFirst(RegExp(r'^.*?:'), '').trim();
+      if (mounted) {
+        setState(
+          () => _ageError = message.isEmpty
+              ? 'Could not verify your date of birth. Please try again.'
+              : message,
         );
       }
     } finally {
@@ -289,7 +342,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Step ${_step + 1} of $_totalSteps'),
-        leading: _step > 0 && _step < 8
+        leading: _step > 0 && _logicalStep < 8
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => setState(() => _step--),
@@ -313,14 +366,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Expanded(child: _buildStep()),
               const SizedBox(height: 24),
               BuddyButton(
-                label: _step == 8
+                label: _step == 0 && _needsAge
+                    ? 'Continue'
+                    : _logicalStep == 8
                     ? 'Go to BuddyUp'
-                    : _step == 7
+                    : _logicalStep == 7
                     ? 'Confirm & Finish'
                     : 'Next',
-                onPressed: _step == 8
+                onPressed: _step == 0 && _needsAge
+                    ? (_isLoading ? null : _submitAge)
+                    : _logicalStep == 8
                     ? () => context.go('/feed?walkthrough=1')
-                    : _step == 7
+                    : _logicalStep == 7
                     ? (_isLoading ? null : _submit)
                     : (!_canAdvance ? null : () => setState(() => _step++)),
                 isLoading: _isLoading,
@@ -339,7 +396,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// Web parity: each step requires an answer before advancing, including the
   /// profile step's display name, username format and live availability.
   bool get _canAdvance {
-    switch (_step) {
+    if (_needsAge && _step == 0) return _dob != null;
+    final step = _logicalStep;
+    switch (step) {
       case 0:
         return _consentStepValid;
       case 1:
@@ -365,7 +424,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildStep() {
-    switch (_step) {
+    if (_needsAge && _step == 0) return _buildAgeStep();
+    switch (_logicalStep) {
       case 0:
         return _buildConsentStep();
       case 1:
@@ -675,6 +735,76 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               for (final s in plan.recommendedTrainerSpecialties)
                 _previewChip(s),
             ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAgeStep() {
+    return ListView(
+      children: [
+        const Text(
+          'Confirm your date of birth',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: BuddyColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Used only for age-appropriate content. We store a secure hash, never the date itself.',
+          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: BuddyColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: BuddyColors.border),
+          ),
+          child: InkWell(
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: DateTime(2000),
+                firstDate: DateTime(1940),
+                lastDate: DateTime.now(),
+              );
+              if (date != null) setState(() => _dob = date);
+            },
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today,
+                  color: BuddyColors.green,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _dob == null
+                        ? 'Tap to select date of birth'
+                        : '${_dob!.day}/${_dob!.month}/${_dob!.year}',
+                    style: TextStyle(
+                      color: _dob == null
+                          ? BuddyColors.textSecondary
+                          : BuddyColors.textPrimary,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_ageError != null) ...[
+          const SizedBox(height: 10),
+          Text(
+            _ageError!,
+            style: const TextStyle(color: BuddyColors.red, fontSize: 12),
           ),
         ],
       ],

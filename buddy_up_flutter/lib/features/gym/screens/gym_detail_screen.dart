@@ -23,6 +23,7 @@ import '../../feed/providers/feed_provider.dart';
 import '../../feed/widgets/post_card.dart';
 import '../../../data/models/gym.dart';
 import '../../../data/models/post.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class GymDetailScreen extends ConsumerStatefulWidget {
   final String slug;
@@ -69,7 +70,11 @@ Future<String?> _pickRole(BuildContext context, String current) {
               // The current role stays selectable but is marked, so the sheet
               // does not silently discard the member's existing assignment.
               trailing: role == current
-                  ? const Icon(Icons.check, size: 18, color: BuddyColors.green)
+                  ? const Icon(
+                      LucideIcons.check,
+                      size: 18,
+                      color: BuddyColors.green,
+                    )
                   : null,
               title: Text(
                 role.replaceAll('_', ' '),
@@ -265,7 +270,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                 if (gym.isMember)
                   PopupMenuButton<String>(
                     color: BuddyColors.surface,
-                    icon: const Icon(Icons.more_horiz),
+                    icon: const Icon(LucideIcons.ellipsis),
                     onSelected: (v) async {
                       if (v == 'leave') {
                         final repo = ref.read(gymRepositoryProvider);
@@ -305,7 +310,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
       color: BuddyColors.surfaceRaised,
       child: const Center(
         child: Icon(
-          Icons.fitness_center,
+          LucideIcons.dumbbell,
           color: BuddyColors.textSecondary,
           size: 64,
         ),
@@ -401,7 +406,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
             Row(
               children: [
                 const Icon(
-                  Icons.location_on,
+                  LucideIcons.mapPin,
                   size: 14,
                   color: BuddyColors.green,
                 ),
@@ -434,10 +439,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: () => context.push('/gyms/${gym.handle}/manage'),
-                  icon: const Icon(
-                    Icons.admin_panel_settings_outlined,
-                    size: 16,
-                  ),
+                  icon: const Icon(LucideIcons.shieldCheck, size: 16),
                   label: const Text('Manage'),
                 ),
               ],
@@ -453,14 +455,14 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                     gymSlug: widget.slug,
                   ),
                 ),
-                icon: const Icon(Icons.forum_outlined, size: 16),
+                icon: const Icon(LucideIcons.messagesSquare, size: 16),
                 label: const Text('Message gym'),
               ),
               if (gym.isDonationsEnabled) ...[
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: () => _showDonateDialog(gym),
-                  icon: const Icon(Icons.favorite, size: 16),
+                  icon: const Icon(LucideIcons.heart, size: 16),
                   label: const Text('Donate'),
                 ),
               ],
@@ -712,7 +714,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.lock_outline, size: 40, color: cs.onSurfaceVariant),
+            Icon(LucideIcons.lock, size: 40, color: cs.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
               '${gym.memberCount} member${gym.memberCount == 1 ? '' : 's'}',
@@ -776,7 +778,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                     5,
                     (i) => IconButton(
                       icon: Icon(
-                        i < _reviewRating ? Icons.star : Icons.star_border,
+                        i < _reviewRating ? LucideIcons.star : LucideIcons.star,
                         color: BuddyColors.green,
                         size: 20,
                       ),
@@ -791,7 +793,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send, color: BuddyColors.green),
+                  icon: const Icon(LucideIcons.send, color: BuddyColors.green),
                   onPressed: () async {
                     if (_reviewController.text.trim().isEmpty) return;
                     final repo = ref.read(gymRepositoryProvider);
@@ -1054,7 +1056,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                               color: BuddyColors.surfaceRaised,
                               alignment: Alignment.center,
                               child: const Icon(
-                                Icons.landscape_outlined,
+                                LucideIcons.image,
                                 size: 22,
                                 color: BuddyColors.textSecondary,
                               ),
@@ -1067,7 +1069,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                     const Row(
                       children: [
                         Icon(
-                          Icons.verified_user_outlined,
+                          LucideIcons.badgeCheck,
                           size: 11,
                           color: BuddyColors.green,
                         ),
@@ -1204,7 +1206,7 @@ class _GymEventCard extends StatelessWidget {
                 child: event.coverImageUrl.isNotEmpty
                     ? null
                     : const Icon(
-                        Icons.event,
+                        LucideIcons.calendarDays,
                         size: 28,
                         color: BuddyColors.textSecondary,
                       ),
@@ -1265,7 +1267,7 @@ class _GymEventCard extends StatelessWidget {
                         Row(
                           children: [
                             const Icon(
-                              Icons.calendar_today,
+                              LucideIcons.calendarDays,
                               size: 11,
                               color: BuddyColors.green,
                             ),
@@ -1293,7 +1295,7 @@ class _GymEventCard extends StatelessWidget {
                           child: Row(
                             children: [
                               const Icon(
-                                Icons.place_outlined,
+                                LucideIcons.mapPin,
                                 size: 11,
                                 color: BuddyColors.blue,
                               ),

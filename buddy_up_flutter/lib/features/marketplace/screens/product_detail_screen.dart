@@ -6,13 +6,15 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/page_loader.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
   const ProductDetailScreen({super.key, required this.productId});
 
   @override
-  ConsumerState<ProductDetailScreen> createState() => _ProductDetailScreenState();
+  ConsumerState<ProductDetailScreen> createState() =>
+      _ProductDetailScreenState();
 }
 
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
@@ -52,54 +54,90 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   height: 250,
                   color: BuddyColors.surfaceRaised,
                   child: const Center(
-                      child: Icon(Icons.shopping_bag, size: 48,
-                          color: BuddyColors.textSecondary)),
+                    child: Icon(
+                      LucideIcons.shoppingBag,
+                      size: 48,
+                      color: BuddyColors.textSecondary,
+                    ),
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            Text(product.name,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(
+              product.name,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             if (product.brand.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(product.brand,
-                  style:
-                      const TextStyle(color: BuddyColors.textSecondary, fontSize: 16)),
+              Text(
+                product.brand,
+                style: const TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 16,
+                ),
+              ),
             ],
             const SizedBox(height: 8),
-            Text(product.priceDisplay,
-                style: const TextStyle(
-                    color: BuddyColors.green,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold)),
+            Text(
+              product.priceDisplay,
+              style: const TextStyle(
+                color: BuddyColors.green,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             if (product.category.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Chip(label: Text(product.category),
-                  backgroundColor: BuddyColors.surfaceRaised),
+              Chip(
+                label: Text(product.category),
+                backgroundColor: BuddyColors.surfaceRaised,
+              ),
             ],
             if (product.stockTrackingEnabled || product.reviewCount > 0) ...[
               const SizedBox(height: 8),
-              Row(children: [
-                if (product.stockTrackingEnabled)
-                  StockBadge(quantity: product.stockQuantity, soldOut: soldOut),
-                if (product.stockTrackingEnabled && product.reviewCount > 0)
-                  const SizedBox(width: 12),
-                // A product with no reviews shows nothing rather than a bare
-                // "0.0": zero stars on a new listing reads as "rated badly".
-                if (product.reviewCount > 0)
-                  Row(children: [
-                    const Icon(Icons.star, size: 16, color: BuddyColors.gold),
-                    const SizedBox(width: 4),
-                    Text('${product.averageRating.toStringAsFixed(1)} · ${product.reviewCount} review${product.reviewCount == 1 ? '' : 's'}',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  ]),
-              ]),
+              Row(
+                children: [
+                  if (product.stockTrackingEnabled)
+                    StockBadge(
+                      quantity: product.stockQuantity,
+                      soldOut: soldOut,
+                    ),
+                  if (product.stockTrackingEnabled && product.reviewCount > 0)
+                    const SizedBox(width: 12),
+                  // A product with no reviews shows nothing rather than a bare
+                  // "0.0": zero stars on a new listing reads as "rated badly".
+                  if (product.reviewCount > 0)
+                    Row(
+                      children: [
+                        const Icon(
+                          LucideIcons.star,
+                          size: 16,
+                          color: BuddyColors.gold,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${product.averageRating.toStringAsFixed(1)} · ${product.reviewCount} review${product.reviewCount == 1 ? '' : 's'}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ],
             const SizedBox(height: 16),
             Text(product.description, style: const TextStyle(height: 1.5)),
             const SizedBox(height: 8),
-            Text('${product.clickCount} clicks',
-                style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+            Text(
+              '${product.clickCount} clicks',
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
             const SizedBox(height: 24),
             _ProductReviewsSection(productId: widget.productId),
             const SizedBox(height: 24),
@@ -107,7 +145,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               label: 'View on Affiliate Site',
               fullWidth: true,
               variant: BuddyButtonVariant.outline,
-              icon: Icons.open_in_new,
+              icon: LucideIcons.externalLink,
               onPressed: () async {
                 final repo = ref.read(marketplaceRepositoryProvider);
                 await repo.clickProduct(widget.productId);
@@ -143,19 +181,22 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _QtyButton(
-                      icon: Icons.remove,
-                      onPressed:
-                          _quantity > 1 ? () => setState(() => _quantity--) : null,
+                      icon: LucideIcons.minus,
+                      onPressed: _quantity > 1
+                          ? () => setState(() => _quantity--)
+                          : null,
                     ),
                     SizedBox(
                       width: 40,
                       child: Center(
-                        child: Text('$_quantity',
-                            style: const TextStyle(fontWeight: FontWeight.w600)),
+                        child: Text(
+                          '$_quantity',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                     _QtyButton(
-                      icon: Icons.add,
+                      icon: LucideIcons.plus,
                       onPressed: () => setState(() => _quantity++),
                     ),
                   ],
@@ -179,14 +220,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   void _addToCart(BuildContext context) {
-    ref.read(cartProvider.notifier).addToCart(
-      'product',
-      {'product_id': widget.productId},
-      quantity: _quantity,
-    );
+    ref.read(cartProvider.notifier).addToCart('product', {
+      'product_id': widget.productId,
+    }, quantity: _quantity);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-          content: Text('Added to cart'), duration: Duration(seconds: 1)),
+        content: Text('Added to cart'),
+        duration: Duration(seconds: 1),
+      ),
     );
     _quantity = 1;
   }
@@ -208,8 +249,8 @@ class StockBadge extends StatelessWidget {
     final (label, color) = soldOut
         ? ('Out of stock', BuddyColors.red)
         : quantity <= 5
-            ? ('Only $quantity left', BuddyColors.gold)
-            : ('In stock', BuddyColors.green);
+        ? ('Only $quantity left', BuddyColors.gold)
+        : ('In stock', BuddyColors.green);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -217,8 +258,14 @@ class StockBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
-      child: Text(label,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
     );
   }
 }
@@ -245,8 +292,10 @@ class _ProductReviewsSection extends ConsumerWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Customer reviews',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Customer reviews',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 12),
                 ...reviews.take(5).map((review) => _ReviewTile(review: review)),
               ],
@@ -276,26 +325,37 @@ class _ReviewTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            ...List.generate(5, (i) => Icon(
-              i < review.rating ? Icons.star : Icons.star_border,
-              size: 14,
-              color: BuddyColors.gold,
-            )),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                review.buyerData.displayName.isEmpty
-                    ? review.buyerData.username
-                    : review.buyerData.displayName,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                overflow: TextOverflow.ellipsis,
+          Row(
+            children: [
+              ...List.generate(
+                5,
+                (i) => Icon(
+                  i < review.rating ? LucideIcons.star : LucideIcons.star,
+                  size: 14,
+                  color: BuddyColors.gold,
+                ),
               ),
-            ),
-          ]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  review.buyerData.displayName.isEmpty
+                      ? review.buyerData.username
+                      : review.buyerData.displayName,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
           if (review.body.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(review.body, style: const TextStyle(fontSize: 13, height: 1.4)),
+            Text(
+              review.body,
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
           ],
         ],
       ),
@@ -318,7 +378,9 @@ class _QtyButton extends StatelessWidget {
         icon: Icon(icon, size: 18),
         onPressed: onPressed,
         padding: EdgeInsets.zero,
-        color: onPressed == null ? BuddyColors.textSecondary : BuddyColors.textPrimary,
+        color: onPressed == null
+            ? BuddyColors.textSecondary
+            : BuddyColors.textPrimary,
       ),
     );
   }

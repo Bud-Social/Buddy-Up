@@ -19,6 +19,7 @@ import '../../shared/widgets/page_loader.dart';
 import '../feed/providers/feed_provider.dart';
 import '../feed/widgets/post_card.dart';
 import 'edit_profile_screen.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -111,7 +112,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const PageLoader();
-    if (_error != null) return ErrorView(message: _error!, onRetry: _loadProfile);
+    if (_error != null) {
+      return ErrorView(message: _error!, onRetry: _loadProfile);
+    }
     if (_profile == null) return const ErrorView(message: 'Profile not found');
 
     final p = _profile!;
@@ -168,7 +171,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       pinned: true,
       backgroundColor: BuddyColors.black,
       leading: IconButton(
-        icon: const Icon(Icons.menu),
+        icon: const Icon(LucideIcons.menu),
         tooltip: 'Menu',
         onPressed: () => AppNav.open(context),
       ),
@@ -200,7 +203,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.settings_outlined),
+          icon: const Icon(LucideIcons.settings),
           tooltip: 'Settings',
           onPressed: () => context.push('/settings'),
         ),
@@ -209,14 +212,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Widget _coverGradient() => Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF132e20), BuddyColors.black],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-      );
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF132e20), BuddyColors.black],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+  );
 
   Widget _buildProfileHeader(Profile p) {
     return Padding(
@@ -265,12 +268,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 if (p.pronouns.isNotEmpty)
                   Text(
                     p.pronouns,
-                    style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                    style: const TextStyle(
+                      color: BuddyColors.textSecondary,
+                      fontSize: 13,
+                    ),
                   ),
                 const SizedBox(height: 2),
                 Text(
                   '@${p.username}',
-                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+                  style: const TextStyle(
+                    color: BuddyColors.textSecondary,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -278,7 +287,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   children: [
                     BuddyButton(
                       label: 'Add story',
-                      icon: Icons.add_a_photo_outlined,
+                      icon: LucideIcons.camera,
                       onPressed: () => context.push('/messages/story/create'),
                       variant: BuddyButtonVariant.primary,
                       size: BuddyButtonSize.sm,
@@ -286,7 +295,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     const SizedBox(width: 10),
                     BuddyButton(
                       label: 'Edit Profile',
-                      icon: Icons.edit_outlined,
+                      icon: LucideIcons.pencil,
                       onPressed: () async {
                         await Navigator.of(context).push(
                           MaterialPageRoute(
@@ -301,15 +310,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     const SizedBox(width: 10),
                     OutlinedButton.icon(
                       onPressed: () => context.push('/post/new'),
-                      icon: const Icon(Icons.add_rounded, size: 16, color: BuddyColors.green),
+                      icon: const Icon(
+                        LucideIcons.plus,
+                        size: 16,
+                        color: BuddyColors.green,
+                      ),
                       label: const Text(
                         'New Post',
-                        style: TextStyle(color: BuddyColors.green, fontSize: 13, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: BuddyColors.green,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: BuddyColors.green),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                   ],
@@ -356,25 +378,51 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         children: [
           _statItem('${p.streakDays}🔥', 'Day Streak', null),
           _divider(),
-          _statItem('${p.buddyCount}', 'Buddies', () => context.push('/buddies')),
+          _statItem(
+            '${p.buddyCount}',
+            'Buddies',
+            () => context.push('/buddies'),
+          ),
           _divider(),
-          _statItem('${p.followerCount}', 'Followers', () => context.push('/buddies')),
+          _statItem(
+            '${p.followerCount}',
+            'Followers',
+            () => context.push('/buddies'),
+          ),
           _divider(),
-          _statItem('${p.followingCount}', 'Following', () => context.push('/buddies')),
+          _statItem(
+            '${p.followingCount}',
+            'Following',
+            () => context.push('/buddies'),
+          ),
         ],
       ),
     );
   }
 
-  Widget _divider() => Container(height: 28, width: 1, color: BuddyColors.border);
+  Widget _divider() =>
+      Container(height: 28, width: 1, color: BuddyColors.border);
 
   Widget _statItem(String value, String label, VoidCallback? onTap) {
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: BuddyColors.textPrimary)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: BuddyColors.textPrimary,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: BuddyColors.textSecondary,
+            fontSize: 12,
+          ),
+        ),
       ],
     );
     if (onTap == null) return content;
@@ -394,7 +442,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       child: Text(
         p.bio,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 14, height: 1.4),
+        style: const TextStyle(
+          color: BuddyColors.textSecondary,
+          fontSize: 14,
+          height: 1.4,
+        ),
       ),
     );
   }
@@ -403,31 +455,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     final items = <Widget>[];
 
     if (p.locationCity.isNotEmpty) {
-      items.add(_detailChip(
-        icon: Icons.location_on_outlined,
-        label: [p.locationCity, p.locationCountry].where((s) => s.isNotEmpty).join(', '),
-      ));
+      items.add(
+        _detailChip(
+          icon: LucideIcons.mapPin,
+          label: [
+            p.locationCity,
+            p.locationCountry,
+          ].where((s) => s.isNotEmpty).join(', '),
+        ),
+      );
     }
 
     if (p.externalLink != null && p.externalLink!.isNotEmpty) {
-      items.add(_detailChip(
-        icon: Icons.link_rounded,
-        label: p.externalLink!.replaceFirst(RegExp(r'https?://'), '').split('/').first,
-        onTap: () async {
-          final uri = Uri.tryParse(p.externalLink!);
-          if (uri != null && await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          }
-        },
-        color: BuddyColors.green,
-      ));
+      items.add(
+        _detailChip(
+          icon: LucideIcons.link,
+          label: p.externalLink!
+              .replaceFirst(RegExp(r'https?://'), '')
+              .split('/')
+              .first,
+          onTap: () async {
+            final uri = Uri.tryParse(p.externalLink!);
+            if (uri != null && await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          color: BuddyColors.green,
+        ),
+      );
     }
 
     if (p.gymCount > 0) {
-      items.add(_detailChip(
-        icon: Icons.fitness_center_rounded,
-        label: '${p.gymCount} gym${p.gymCount > 1 ? 's' : ''}',
-      ));
+      items.add(
+        _detailChip(
+          icon: LucideIcons.dumbbell,
+          label: '${p.gymCount} gym${p.gymCount > 1 ? 's' : ''}',
+        ),
+      );
     }
 
     if (items.isEmpty) return const SizedBox(height: 4);
@@ -435,7 +499,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
       child: Center(
-        child: Wrap(spacing: 8, runSpacing: 6, alignment: WrapAlignment.center, children: items),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          alignment: WrapAlignment.center,
+          children: items,
+        ),
       ),
     );
   }
@@ -471,7 +540,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   Widget _buildPostsList(List<Post> posts, {required bool isReposts}) {
     if (_postsLoading) {
-      return const Center(child: CircularProgressIndicator(color: BuddyColors.green));
+      return const Center(
+        child: CircularProgressIndicator(color: BuddyColors.green),
+      );
     }
     if (posts.isEmpty) {
       return Center(
@@ -479,13 +550,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isReposts ? Icons.repeat_rounded : Icons.dynamic_feed_rounded,
+              isReposts ? LucideIcons.repeat2 : LucideIcons.rss,
               size: 48,
               color: BuddyColors.textSecondary.withValues(alpha: 0.25),
             ),
             const SizedBox(height: 12),
             Text(
-              isReposts ? 'You haven\'t reposted anything yet' : 'You haven\'t posted anything yet',
+              isReposts
+                  ? 'You haven\'t reposted anything yet'
+                  : 'You haven\'t posted anything yet',
               style: TextStyle(
                 color: BuddyColors.textSecondary.withValues(alpha: 0.6),
                 fontSize: 15,
@@ -495,12 +568,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: () => context.push('/post/new'),
-                icon: const Icon(Icons.add_rounded, size: 18),
+                icon: const Icon(LucideIcons.plus, size: 18),
                 label: const Text('Create First Post'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: BuddyColors.green,
                   foregroundColor: BuddyColors.black,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ],
@@ -511,7 +586,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: posts.length,
-      separatorBuilder: (_, _) => const Divider(color: BuddyColors.border, height: 1),
+      separatorBuilder: (_, _) =>
+          const Divider(color: BuddyColors.border, height: 1),
       itemBuilder: (_, i) => PostCard(
         post: posts[i],
         // Both are optional on PostCard and their handlers end in `?.call()`.
@@ -550,27 +626,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       padding: const EdgeInsets.all(20),
       children: [
         if (p.streakDays > 0) ...[
-          _interestSection(
-            'Workout Streak',
-            [
-              _interestBadge(
-                Icons.local_fire_department_rounded,
-                '${p.streakDays} Day Active Streak',
-                BuddyColors.gold,
-              ),
-            ],
-          ),
+          _interestSection('Workout Streak', [
+            _interestBadge(
+              LucideIcons.flame,
+              '${p.streakDays} Day Active Streak',
+              BuddyColors.gold,
+            ),
+          ]),
           const SizedBox(height: 20),
         ],
         if (workoutTypes.isNotEmpty) ...[
           _interestSection(
             'Your Activities & Workouts',
             workoutTypes
-                .map((t) => _interestBadge(
-                      Icons.fitness_center_rounded,
-                      t.replaceAll('_', ' ').toUpperCase(),
-                      BuddyColors.green,
-                    ))
+                .map(
+                  (t) => _interestBadge(
+                    LucideIcons.dumbbell,
+                    t.replaceAll('_', ' ').toUpperCase(),
+                    BuddyColors.green,
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 20),
@@ -579,11 +654,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           _interestSection(
             'Your Gyms',
             gymNames
-                .map((g) => _interestBadge(
-                      Icons.location_city_rounded,
-                      g,
-                      BuddyColors.gold,
-                    ))
+                .map(
+                  (g) => _interestBadge(
+                    LucideIcons.building2,
+                    g,
+                    BuddyColors.gold,
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 20),
@@ -592,30 +669,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           _interestSection(
             'Frequent Topics & Tags',
             allTags
-                .map((t) => _interestBadge(
-                      Icons.tag_rounded,
-                      t,
-                      BuddyColors.textSecondary,
-                    ))
+                .map(
+                  (t) => _interestBadge(
+                    LucideIcons.tag,
+                    t,
+                    BuddyColors.textSecondary,
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 20),
         ],
-        _interestSection(
-          'Profile Privacy & Content',
-          [
-            _interestBadge(
-              Icons.shield_outlined,
-              'Privacy: ${p.privacyLevel.toUpperCase()}',
-              BuddyColors.textSecondary,
-            ),
-            _interestBadge(
-              Icons.visibility_outlined,
-              'Content Rating: ${p.contentRating.toUpperCase()}',
-              BuddyColors.textSecondary,
-            ),
-          ],
-        ),
+        _interestSection('Profile Privacy & Content', [
+          _interestBadge(
+            LucideIcons.shield,
+            'Privacy: ${p.privacyLevel.toUpperCase()}',
+            BuddyColors.textSecondary,
+          ),
+          _interestBadge(
+            LucideIcons.eye,
+            'Content Rating: ${p.contentRating.toUpperCase()}',
+            BuddyColors.textSecondary,
+          ),
+        ]),
       ],
     );
   }
@@ -651,7 +727,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 5),
-          Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
@@ -670,7 +753,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     final async = ref.watch(savedPostsProvider);
     return async.when(
       loading: () => const Center(child: PageLoader()),
-      error: (_, _) => const Center(child: ErrorView(message: 'Could not load saved posts.')),
+      error: (_, _) => const Center(
+        child: ErrorView(message: 'Could not load saved posts.'),
+      ),
       data: (posts) {
         if (posts.isEmpty) {
           return const Center(
@@ -679,14 +764,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.bookmark_outline, size: 40, color: BuddyColors.textSecondary),
+                  Icon(
+                    LucideIcons.bookmark,
+                    size: 40,
+                    color: BuddyColors.textSecondary,
+                  ),
                   SizedBox(height: 12),
-                  Text('No saved posts yet',
-                      style: TextStyle(color: BuddyColors.textSecondary)),
+                  Text(
+                    'No saved posts yet',
+                    style: TextStyle(color: BuddyColors.textSecondary),
+                  ),
                   SizedBox(height: 4),
-                  Text('Tap the bookmark on any post to keep it here.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                  Text(
+                    'Tap the bookmark on any post to keep it here.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: BuddyColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -695,7 +791,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         return ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 8),
           itemCount: posts.length,
-          separatorBuilder: (_, _) => const Divider(color: BuddyColors.border, height: 1),
+          separatorBuilder: (_, _) =>
+              const Divider(color: BuddyColors.border, height: 1),
           itemBuilder: (_, i) => PostCard(
             post: posts[i],
             onComment: (id) => _openPostDetail(id),
@@ -718,20 +815,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        _linkTile(Icons.storefront, 'Marketplace', 'Explore shop items & programmes', () => context.push('/marketplace')),
+        _linkTile(
+          LucideIcons.store,
+          'Marketplace',
+          'Explore shop items & programmes',
+          () => context.push('/marketplace'),
+        ),
         const SizedBox(height: 8),
-        _linkTile(Icons.account_balance_wallet, 'Wallet', 'Manage payments, earnings & balance', () => context.push('/wallet')),
+        _linkTile(
+          LucideIcons.wallet,
+          'Wallet',
+          'Manage payments, earnings & balance',
+          () => context.push('/wallet'),
+        ),
         const SizedBox(height: 8),
-        _linkTile(Icons.insights, 'Analytics', 'View your activity and engagement stats', () => context.push('/analytics')),
+        _linkTile(
+          LucideIcons.chartNoAxesCombined,
+          'Analytics',
+          'View your activity and engagement stats',
+          () => context.push('/analytics'),
+        ),
         const SizedBox(height: 8),
-        _linkTile(Icons.query_stats, 'Content Insights', 'Analyze post performance and reach', () => context.push('/insights')),
+        _linkTile(
+          LucideIcons.chartNoAxesColumnIncreasing,
+          'Content Insights',
+          'Analyze post performance and reach',
+          () => context.push('/insights'),
+        ),
         const SizedBox(height: 8),
-        _linkTile(Icons.people_outline, 'Buddies & Community', 'Manage your workout connections', () => context.push('/buddies')),
+        _linkTile(
+          LucideIcons.usersRound,
+          'Buddies & Community',
+          'Manage your workout connections',
+          () => context.push('/buddies'),
+        ),
       ],
     );
   }
 
-  Widget _linkTile(IconData icon, String label, String subtitle, VoidCallback onTap) {
+  Widget _linkTile(
+    IconData icon,
+    String label,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
     return Card(
       color: BuddyColors.surface,
       margin: EdgeInsets.zero,
@@ -745,9 +872,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ),
           child: Icon(icon, color: BuddyColors.green, size: 20),
         ),
-        title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: BuddyColors.textPrimary)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
-        trailing: const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+        title: Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: BuddyColors.textPrimary,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(
+            fontSize: 12,
+            color: BuddyColors.textSecondary,
+          ),
+        ),
+        trailing: const Icon(
+          LucideIcons.chevronRight,
+          color: BuddyColors.textSecondary,
+        ),
         onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
@@ -765,7 +907,11 @@ class _ProfileStickyTabBar extends SliverPersistentHeaderDelegate {
   double get maxExtent => tabBar.preferredSize.height + 1;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(
       color: BuddyColors.black,
       child: Column(
@@ -778,5 +924,6 @@ class _ProfileStickyTabBar extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(_ProfileStickyTabBar oldDelegate) => tabBar != oldDelegate.tabBar;
+  bool shouldRebuild(_ProfileStickyTabBar oldDelegate) =>
+      tabBar != oldDelegate.tabBar;
 }

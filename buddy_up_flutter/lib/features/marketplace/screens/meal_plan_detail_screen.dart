@@ -4,6 +4,7 @@ import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/page_loader.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class MealPlanDetailScreen extends ConsumerWidget {
   final String planId;
@@ -28,8 +29,15 @@ class MealPlanDetailScreen extends ConsumerWidget {
                   height: 200,
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => Container(
-                    height: 200, color: BuddyColors.surfaceRaised,
-                    child: const Center(child: Icon(Icons.restaurant, size: 48, color: BuddyColors.textSecondary)),
+                    height: 200,
+                    color: BuddyColors.surfaceRaised,
+                    child: const Center(
+                      child: Icon(
+                        LucideIcons.utensils,
+                        size: 48,
+                        color: BuddyColors.textSecondary,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -37,16 +45,31 @@ class MealPlanDetailScreen extends ConsumerWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(plan.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      plan.title,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   if (plan.isPurchased)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: BuddyColors.green.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text('Purchased', style: TextStyle(color: BuddyColors.green, fontSize: 12)),
+                      child: const Text(
+                        'Purchased',
+                        style: TextStyle(
+                          color: BuddyColors.green,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -65,17 +88,31 @@ class MealPlanDetailScreen extends ConsumerWidget {
                       children: [
                         Row(
                           children: [
-                            Text(plan.creatorData.displayName,
-                                style: const TextStyle(fontWeight: FontWeight.w600)),
-                            if (plan.creatorData.verificationStatus == 'verified') ...[
+                            Text(
+                              plan.creatorData.displayName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (plan.creatorData.verificationStatus ==
+                                'verified') ...[
                               const SizedBox(width: 4),
-                              const Icon(Icons.verified, size: 14, color: Colors.blue),
+                              const Icon(
+                                LucideIcons.badgeCheck,
+                                size: 14,
+                                color: Colors.blue,
+                              ),
                             ],
                           ],
                         ),
                         if (plan.shopData != null)
-                          Text('by ${plan.shopData!.name}',
-                              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                          Text(
+                            'by ${plan.shopData!.name}',
+                            style: const TextStyle(
+                              color: BuddyColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -84,17 +121,38 @@ class MealPlanDetailScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Icon(Icons.restaurant_menu, size: 16, color: BuddyColors.textSecondary),
+                  const Icon(
+                    LucideIcons.utensils,
+                    size: 16,
+                    color: BuddyColors.textSecondary,
+                  ),
                   const SizedBox(width: 4),
-                  Text(plan.dietType, style: const TextStyle(color: BuddyColors.textSecondary)),
+                  Text(
+                    plan.dietType,
+                    style: const TextStyle(color: BuddyColors.textSecondary),
+                  ),
                   const SizedBox(width: 16),
-                  const Icon(Icons.calendar_today, size: 16, color: BuddyColors.textSecondary),
+                  const Icon(
+                    LucideIcons.calendarDays,
+                    size: 16,
+                    color: BuddyColors.textSecondary,
+                  ),
                   const SizedBox(width: 4),
-                  Text('${plan.durationWeeks} weeks', style: const TextStyle(color: BuddyColors.textSecondary)),
+                  Text(
+                    '${plan.durationWeeks} weeks',
+                    style: const TextStyle(color: BuddyColors.textSecondary),
+                  ),
                   const SizedBox(width: 16),
-                  const Icon(Icons.local_fire_department, size: 16, color: BuddyColors.textSecondary),
+                  const Icon(
+                    LucideIcons.flame,
+                    size: 16,
+                    color: BuddyColors.textSecondary,
+                  ),
                   const SizedBox(width: 4),
-                  Text(plan.calorieRange, style: const TextStyle(color: BuddyColors.textSecondary)),
+                  Text(
+                    plan.calorieRange,
+                    style: const TextStyle(color: BuddyColors.textSecondary),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -102,26 +160,36 @@ class MealPlanDetailScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Icon(Icons.star, color: Colors.amber, size: 20),
+                  const Icon(LucideIcons.star, color: Colors.amber, size: 20),
                   const SizedBox(width: 4),
-                  Text('${plan.averageRating.toStringAsFixed(1)} (${plan.reviewCount} reviews)'),
+                  Text(
+                    '${plan.averageRating.toStringAsFixed(1)} (${plan.reviewCount} reviews)',
+                  ),
                   const Spacer(),
-                  Text('${plan.purchaseCount} purchased', style: const TextStyle(color: BuddyColors.textSecondary)),
+                  Text(
+                    '${plan.purchaseCount} purchased',
+                    style: const TextStyle(color: BuddyColors.textSecondary),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
               if (plan.priceArtifacts.isNotEmpty) ...[
-                const Text('Price', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Price',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: plan.priceArtifacts.entries.map((e) =>
-                    Chip(
-                      label: Text('${e.value} ${e.key}'),
-                      backgroundColor: BuddyColors.surfaceRaised,
-                    ),
-                  ).toList(),
+                  children: plan.priceArtifacts.entries
+                      .map(
+                        (e) => Chip(
+                          label: Text('${e.value} ${e.key}'),
+                          backgroundColor: BuddyColors.surfaceRaised,
+                        ),
+                      )
+                      .toList(),
                 ),
                 const SizedBox(height: 24),
               ],
@@ -130,14 +198,20 @@ class MealPlanDetailScreen extends ConsumerWidget {
                 fullWidth: true,
                 onPressed: () async {
                   if (plan.isPurchased) {
-                    await ref.read(marketplaceRepositoryProvider).personaliseMealPlan(planId);
+                    await ref
+                        .read(marketplaceRepositoryProvider)
+                        .personaliseMealPlan(planId);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Personalisation started!')),
+                        const SnackBar(
+                          content: Text('Personalisation started!'),
+                        ),
                       );
                     }
                   } else {
-                    await ref.read(marketplaceRepositoryProvider).purchaseMealPlan(planId);
+                    await ref
+                        .read(marketplaceRepositoryProvider)
+                        .purchaseMealPlan(planId);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Purchase successful!')),
@@ -190,17 +264,36 @@ class _FullPlanSheet extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: BuddyColors.textSecondary, borderRadius: BorderRadius.circular(2)))),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: BuddyColors.textSecondary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
-            const Text('Full Meal Plan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'Full Meal Plan',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             Expanded(
               child: ListView(
                 controller: scrollController,
-                children: plan.entries.map((e) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text('${e.key}: ${e.value}', style: const TextStyle(height: 1.4)),
-                )).toList(),
+                children: plan.entries
+                    .map(
+                      (e) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          '${e.key}: ${e.value}',
+                          style: const TextStyle(height: 1.4),
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
             ),
           ],

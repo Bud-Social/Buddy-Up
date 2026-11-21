@@ -5,6 +5,7 @@ import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../data/models/marketplace.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -17,7 +18,13 @@ class OrderDetailScreen extends ConsumerStatefulWidget {
 class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   bool _confirming = false;
 
-  static const _trackSteps = ['Paid', 'Processing', 'Shipped', 'In Transit', 'Delivered'];
+  static const _trackSteps = [
+    'Paid',
+    'Processing',
+    'Shipped',
+    'In Transit',
+    'Delivered',
+  ];
 
   int get _currentStep {
     switch (_statusOf) {
@@ -46,10 +53,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   Future<void> _confirmDelivery(String orderId) async {
     setState(() => _confirming = true);
     try {
-      await ref.read(marketplaceRepositoryProvider).updateOrderFulfillment(orderId, {
-        'status': 'delivered',
-        'note': 'Confirmed by buyer',
-      });
+      await ref.read(marketplaceRepositoryProvider).updateOrderFulfillment(
+        orderId,
+        {'status': 'delivered', 'note': 'Confirmed by buyer'},
+      );
       ref.invalidate(orderDetailProvider(orderId));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -97,7 +104,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             const SizedBox(height: 12),
             _itemsCard(order),
             if (!order.isSeller &&
-                const ['shipped', 'out_for_delivery', 'ready_for_pickup'].contains(order.status)) ...[
+                const [
+                  'shipped',
+                  'out_for_delivery',
+                  'ready_for_pickup',
+                ].contains(order.status)) ...[
               const SizedBox(height: 12),
               _confirmDeliveryCard(order),
             ],
@@ -123,7 +134,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               child: Container(
                 height: 2,
                 margin: const EdgeInsets.symmetric(horizontal: 2),
-                color: (i ~/ 2) < step ? BuddyColors.green : BuddyColors.surfaceRaised,
+                color: (i ~/ 2) < step
+                    ? BuddyColors.green
+                    : BuddyColors.surfaceRaised,
               ),
             );
           }
@@ -139,7 +152,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   color: done ? BuddyColors.green : BuddyColors.surfaceRaised,
                 ),
                 child: done
-                    ? const Icon(Icons.check, size: 14, color: BuddyColors.black)
+                    ? const Icon(
+                        LucideIcons.check,
+                        size: 14,
+                        color: BuddyColors.black,
+                      )
                     : null,
               ),
               const SizedBox(height: 4),
@@ -172,22 +189,31 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Received your order?',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                const Text(
+                  'Received your order?',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
                 const SizedBox(height: 4),
-                Text('Confirm delivery to let the seller know it arrived.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+                Text(
+                  'Confirm delivery to let the seller know it arrived.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 12),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
+            style: FilledButton.styleFrom(
+              backgroundColor: BuddyColors.green,
+              foregroundColor: BuddyColors.black,
+            ),
             onPressed: _confirming ? null : () => _confirmDelivery(order.id),
             child: _confirming
                 ? const SizedBox(
-                    width: 16, height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Text('Confirm'),
           ),
         ],
@@ -212,7 +238,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.check_circle, color: color, size: 24),
+            child: Icon(LucideIcons.circleCheck, color: color, size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -224,12 +250,16 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                       ? order.statusLabel
                       : order.status.replaceAll('_', ' '),
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
                 ),
                 Text(
                   'Order ${order.orderNumber}',
                   style: const TextStyle(
-                      fontSize: 12, color: BuddyColors.textSecondary),
+                    fontSize: 12,
+                    color: BuddyColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -241,8 +271,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   Widget _digitalCard() {
     return _sectionCard([
-      const Text('Digital delivery',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+      const Text(
+        'Digital delivery',
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+      ),
       const SizedBox(height: 8),
       const Text(
         'Nothing ships. Your purchases are unlocked and stay in My Activity.',
@@ -258,8 +290,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             minimumSize: const Size(0, 32),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
-          child: const Text('Open my library',
-              style: TextStyle(color: BuddyColors.green, fontSize: 12)),
+          child: const Text(
+            'Open my library',
+            style: TextStyle(color: BuddyColors.green, fontSize: 12),
+          ),
         ),
       ),
     ]);
@@ -267,35 +301,50 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   Widget _fulfillmentCard(Order order) {
     final f = order.fulfillment;
-    final fulfillmentLabel =
-        order.fulfillmentType.replaceAll('_', ' ').toUpperCase();
+    final fulfillmentLabel = order.fulfillmentType
+        .replaceAll('_', ' ')
+        .toUpperCase();
     return _sectionCard([
-      const Text('Fulfillment',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+      const Text(
+        'Fulfillment',
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+      ),
       const SizedBox(height: 8),
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(fulfillmentLabel,
-              style: const TextStyle(
-                  fontSize: 12, color: BuddyColors.textSecondary)),
+          Text(
+            fulfillmentLabel,
+            style: const TextStyle(
+              fontSize: 12,
+              color: BuddyColors.textSecondary,
+            ),
+          ),
           if (f != null && f.carrier.isNotEmpty)
-            Text(f.carrier,
-                style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600)),
+            Text(
+              f.carrier,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
         ],
       ),
       if (f != null && f.pickupLocation.isNotEmpty) ...[
         const SizedBox(height: 6),
         Row(
           children: [
-            const Icon(Icons.store,
-                size: 13, color: BuddyColors.textSecondary),
+            const Icon(
+              LucideIcons.store,
+              size: 13,
+              color: BuddyColors.textSecondary,
+            ),
             const SizedBox(width: 6),
             Expanded(
-              child: Text(f.pickupLocation,
-                  style: const TextStyle(
-                      fontSize: 12, color: BuddyColors.textSecondary)),
+              child: Text(
+                f.pickupLocation,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: BuddyColors.textSecondary,
+                ),
+              ),
             ),
           ],
         ),
@@ -304,14 +353,19 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         const SizedBox(height: 6),
         Row(
           children: [
-            const Icon(Icons.local_shipping,
-                size: 13, color: BuddyColors.textSecondary),
+            const Icon(
+              LucideIcons.truck,
+              size: 13,
+              color: BuddyColors.textSecondary,
+            ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 'Tracking: ${f.trackingNumber}',
                 style: const TextStyle(
-                    fontSize: 12, color: BuddyColors.textSecondary),
+                  fontSize: 12,
+                  color: BuddyColors.textSecondary,
+                ),
               ),
             ),
           ],
@@ -321,8 +375,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         const SizedBox(height: 6),
         Row(
           children: [
-            const Icon(Icons.location_on,
-                size: 13, color: BuddyColors.textSecondary),
+            const Icon(
+              LucideIcons.mapPin,
+              size: 13,
+              color: BuddyColors.textSecondary,
+            ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -331,7 +388,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     .map((v) => '$v')
                     .join(', '),
                 style: const TextStyle(
-                    fontSize: 12, color: BuddyColors.textSecondary),
+                  fontSize: 12,
+                  color: BuddyColors.textSecondary,
+                ),
               ),
             ),
           ],
@@ -349,15 +408,22 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('Items',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          const Text(
+            'Items',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
           if (hasTickets)
             TextButton.icon(
               onPressed: () => context.push('/marketplace/tickets'),
-              icon: const Icon(Icons.confirmation_number_outlined,
-                  size: 16, color: BuddyColors.green),
-              label: const Text('View tickets',
-                  style: TextStyle(color: BuddyColors.green, fontSize: 12)),
+              icon: const Icon(
+                LucideIcons.ticket,
+                size: 16,
+                color: BuddyColors.green,
+              ),
+              label: const Text(
+                'View tickets',
+                style: TextStyle(color: BuddyColors.green, fontSize: 12),
+              ),
             ),
         ],
       ),
@@ -396,13 +462,19 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${it.title} × ${it.quantity}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text(
+                          '${it.title} × ${it.quantity}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                         Text(
                           '${it.itemType.replaceAll('_', ' ')}${it.creatorName != null && it.creatorName!.isNotEmpty ? ' · by ${it.creatorName}' : ''}',
                           style: const TextStyle(
-                              fontSize: 12, color: BuddyColors.textSecondary),
+                            fontSize: 12,
+                            color: BuddyColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -412,14 +484,18 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         ? _artifactDisplay(it.paidArtifacts)
                         : '-',
                     style: const TextStyle(
-                        color: BuddyColors.green,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13),
+                      color: BuddyColors.green,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                   if (openable) ...[
                     const SizedBox(width: 4),
-                    const Icon(Icons.chevron_right,
-                        size: 18, color: BuddyColors.textSecondary),
+                    const Icon(
+                      LucideIcons.chevronRight,
+                      size: 18,
+                      color: BuddyColors.textSecondary,
+                    ),
                   ],
                 ],
               ),
@@ -431,16 +507,19 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('You paid',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const Text(
+            'You paid',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
           Text(
             _artifactDisplay(order.totalArtifacts).isNotEmpty
                 ? _artifactDisplay(order.totalArtifacts)
                 : '\$0',
             style: const TextStyle(
-                color: BuddyColors.green,
-                fontWeight: FontWeight.bold,
-                fontSize: 13),
+              color: BuddyColors.green,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
           ),
         ],
       ),
@@ -449,12 +528,17 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Value (USD)',
-                style: TextStyle(
-                    fontSize: 12, color: BuddyColors.textSecondary)),
-            Text('\$${order.spentUsd.toStringAsFixed(2)}',
-                style: const TextStyle(
-                    fontSize: 12, color: BuddyColors.textSecondary)),
+            const Text(
+              'Value (USD)',
+              style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+            ),
+            Text(
+              '\$${order.spentUsd.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 12,
+                color: BuddyColors.textSecondary,
+              ),
+            ),
           ],
         ),
       ],
@@ -464,8 +548,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   Widget _timelineCard(Order order) {
     final timeline = order.statusHistory.reversed.toList();
     return _sectionCard([
-      const Text('Order Timeline',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+      const Text(
+        'Order Timeline',
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+      ),
       const SizedBox(height: 12),
       ...List.generate(timeline.length, (i) {
         final entry = timeline[i];
@@ -506,21 +592,29 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                       Text(
                         entry.status.replaceAll('_', ' ').toUpperCase(),
                         style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       if (_formatDate(entry.at).isNotEmpty) ...[
                         const SizedBox(height: 2),
-                        Text(_formatDate(entry.at),
-                            style: const TextStyle(
-                                fontSize: 12,
-                                color: BuddyColors.textSecondary)),
+                        Text(
+                          _formatDate(entry.at),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: BuddyColors.textSecondary,
+                          ),
+                        ),
                       ],
                       if (entry.note.isNotEmpty) ...[
                         const SizedBox(height: 2),
-                        Text(entry.note,
-                            style: const TextStyle(
-                                fontSize: 12,
-                                color: BuddyColors.textSecondary)),
+                        Text(
+                          entry.note,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: BuddyColors.textSecondary,
+                          ),
+                        ),
                       ],
                     ],
                   ),

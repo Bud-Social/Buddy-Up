@@ -10,6 +10,7 @@ import '../providers/community_provider.dart';
 import 'community_settings_screen.dart';
 import 'community_members_screen.dart';
 import 'community_activities_screen.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Tab kind for community navigation.
 enum _CommunityTabKind { all, single }
@@ -131,18 +132,18 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
   }
 
   Future<void> _toggleRepost(String communityId, String postId) async {
-    await ref
-        .read(communityFeedProvider(communityId).notifier)
-        .repost(postId);
+    await ref.read(communityFeedProvider(communityId).notifier).repost(postId);
   }
 
   Future<void> _toggleSave(String communityId, String postId) async {
-    await ref
-        .read(communityFeedProvider(communityId).notifier)
-        .save(postId);
+    await ref.read(communityFeedProvider(communityId).notifier).save(postId);
   }
 
-  Future<void> _handleReact(String communityId, String postId, String reaction) async {
+  Future<void> _handleReact(
+    String communityId,
+    String postId,
+    String reaction,
+  ) async {
     await ref
         .read(communityFeedProvider(communityId).notifier)
         .react(postId, reaction);
@@ -154,7 +155,11 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
         .share(postId);
   }
 
-  Future<void> _addComment(String communityId, String postId, String body) async {
+  Future<void> _addComment(
+    String communityId,
+    String postId,
+    String body,
+  ) async {
     await ref
         .read(communityFeedProvider(communityId).notifier)
         .addComment(postId, body);
@@ -316,7 +321,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    icon: const Icon(Icons.copy, size: 16),
+                    icon: const Icon(LucideIcons.copy, size: 16),
                     label: const Text('Copy Code'),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: detail.inviteCode));
@@ -332,7 +337,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    icon: const Icon(Icons.share, size: 16),
+                    icon: const Icon(LucideIcons.share2, size: 16),
                     label: const Text('Share Link'),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: inviteLink));
@@ -384,7 +389,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
-                      Icons.person_outline,
+                      LucideIcons.userRound,
                       size: 18,
                       color: cs.onSurface.withValues(alpha: 0.6),
                     ),
@@ -412,7 +417,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.send, color: BuddyColors.green),
+                  icon: const Icon(LucideIcons.send, color: BuddyColors.green),
                   onPressed: () {
                     if (controller.text.trim().isNotEmpty) {
                       _addComment(communityId, post.id, controller.text.trim());
@@ -449,7 +454,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               onPressed: () => _openPostComposer(
                 asyncState.value?.detail?.groupName ?? 'Community',
               ),
-              child: const Icon(Icons.add),
+              child: const Icon(LucideIcons.plus),
             )
           : null,
       body: asyncState.when(
@@ -480,7 +485,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 child: detail.coverUrl.isNotEmpty
                     ? Image.network(detail.coverUrl, fit: BoxFit.cover)
                     : const Icon(
-                        Icons.groups_outlined,
+                        LucideIcons.usersRound,
                         size: 56,
                         color: BuddyColors.green,
                       ),
@@ -504,7 +509,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                         ),
                         if (canManage)
                           IconButton(
-                            icon: const Icon(Icons.settings_outlined, size: 20),
+                            icon: const Icon(LucideIcons.settings, size: 20),
                             onPressed: () => Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => CommunitySettingsScreen(
@@ -520,7 +525,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                           ),
                         if (isMember)
                           IconButton(
-                            icon: const Icon(Icons.share_outlined, size: 20),
+                            icon: const Icon(LucideIcons.share2, size: 20),
                             onPressed: () => _showInviteSheet(detail),
                           ),
                       ],
@@ -579,7 +584,11 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                     Row(
                       children: [
                         ActionChip(
-                          avatar: const Icon(Icons.event_note, size: 16, color: BuddyColors.green),
+                          avatar: const Icon(
+                            LucideIcons.calendarDays,
+                            size: 16,
+                            color: BuddyColors.green,
+                          ),
                           label: const Text(
                             'Activities',
                             style: TextStyle(
@@ -588,8 +597,12 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                               color: BuddyColors.green,
                             ),
                           ),
-                          backgroundColor: BuddyColors.green.withValues(alpha: 0.15),
-                          side: BorderSide(color: BuddyColors.green.withValues(alpha: 0.4)),
+                          backgroundColor: BuddyColors.green.withValues(
+                            alpha: 0.15,
+                          ),
+                          side: BorderSide(
+                            color: BuddyColors.green.withValues(alpha: 0.4),
+                          ),
                           onPressed: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => CommunityActivitiesScreen(
@@ -763,7 +776,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               children: [
                 const SizedBox(height: 80),
                 Icon(
-                  Icons.forum_outlined,
+                  LucideIcons.messagesSquare,
                   size: 48,
                   color: cs.onSurface.withValues(alpha: 0.4),
                 ),
@@ -832,7 +845,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               children: [
                 const SizedBox(height: 80),
                 Icon(
-                  Icons.forum_outlined,
+                  LucideIcons.messagesSquare,
                   size: 48,
                   color: cs.onSurface.withValues(alpha: 0.4),
                 ),
@@ -866,8 +879,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                       ? (_) async {
                           await ref
                               .read(
-                                communityFeedProvider(entry.communityId)
-                                    .notifier,
+                                communityFeedProvider(
+                                  entry.communityId,
+                                ).notifier,
                               )
                               .updatePost(p.id, {'is_pinned': !p.isPinned});
                         }
@@ -876,8 +890,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                       ? (_) async {
                           await ref
                               .read(
-                                communityFeedProvider(entry.communityId)
-                                    .notifier,
+                                communityFeedProvider(
+                                  entry.communityId,
+                                ).notifier,
                               )
                               .deletePost(p.id);
                         }

@@ -25,6 +25,7 @@ import '../../shared/widgets/toast.dart';
 import '../../shared/widgets/button.dart';
 import '../feed/widgets/post_card.dart';
 import 'widgets/buddy_search_card.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 // ---------------------------------------------------------------------------
 // Animated Action Button with Spring & Morph Animation
@@ -131,10 +132,7 @@ class _AnimatedProfileButtonState extends State<AnimatedProfileButton>
           animation: _pulseAnimation,
           builder: (context, child) {
             final scale = widget.isHighlighted ? _pulseAnimation.value : 1.0;
-            return Transform.scale(
-              scale: scale,
-              child: child,
-            );
+            return Transform.scale(scale: scale, child: child);
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
@@ -175,10 +173,16 @@ class _AnimatedProfileButtonState extends State<AnimatedProfileButton>
                         ),
                       )
                     : Row(
-                        key: ValueKey('${widget.label}_${widget.icon.codePoint}'),
+                        key: ValueKey(
+                          '${widget.label}_${widget.icon.codePoint}',
+                        ),
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(widget.icon, size: 16, color: widget.foregroundColor),
+                          Icon(
+                            widget.icon,
+                            size: 16,
+                            color: widget.foregroundColor,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             widget.label,
@@ -257,8 +261,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     try {
       // Raw envelope read — the locked payload for private accounts is
       // recognisable by its message, which the typed model drops.
-      final raw = await ref.read(apiClientProvider4).dio.get('/profiles/${widget.username}/');
-      final envelope = raw.data is Map<String, dynamic> ? raw.data as Map<String, dynamic> : <String, dynamic>{};
+      final raw = await ref
+          .read(apiClientProvider4)
+          .dio
+          .get('/profiles/${widget.username}/');
+      final envelope = raw.data is Map<String, dynamic>
+          ? raw.data as Map<String, dynamic>
+          : <String, dynamic>{};
       final locked = envelope['message'] == 'This profile is private.';
       final data = envelope['data'];
       final profile = Profile.fromJson(Map<String, dynamic>.from(data as Map));
@@ -324,7 +333,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             followerCount: (_profile!.followerCount - 1).clamp(0, 9999999),
           );
         });
-        if (mounted) showToast(context, 'Unfollowed @${widget.username}', type: ToastType.info);
+        if (mounted) {
+          showToast(
+            context,
+            'Unfollowed @${widget.username}',
+            type: ToastType.info,
+          );
+        }
       } else {
         await _profileRepo.followUser(widget.username);
         setState(() {
@@ -333,11 +348,21 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             followerCount: _profile!.followerCount + 1,
           );
         });
-        if (mounted) showToast(context, 'Following @${widget.username}! 🎉', type: ToastType.success);
+        if (mounted) {
+          showToast(
+            context,
+            'Following @${widget.username}! 🎉',
+            type: ToastType.success,
+          );
+        }
       }
     } catch (_) {
       if (mounted) {
-        showToast(context, 'Action failed. Please try again.', type: ToastType.error);
+        showToast(
+          context,
+          'Action failed. Please try again.',
+          type: ToastType.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _followLoading = false);
@@ -351,11 +376,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       final status = _profile!.buddyStatus;
       if (_profile!.isBuddy) {
         if (mounted) {
-          showToast(context, 'You are workout buddies with @${widget.username}!', type: ToastType.info);
+          showToast(
+            context,
+            'You are workout buddies with @${widget.username}!',
+            type: ToastType.info,
+          );
         }
       } else if (status == 'pending_sent') {
         if (mounted) {
-          showToast(context, 'Buddy request already pending.', type: ToastType.info);
+          showToast(
+            context,
+            'Buddy request already pending.',
+            type: ToastType.info,
+          );
         }
       } else if (status == 'pending_received') {
         await _profileRepo.acceptBuddyRequest(widget.username);
@@ -367,7 +400,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           );
         });
         if (mounted) {
-          showToast(context, 'Buddy request accepted! 🎉 You are now workout buddies!', type: ToastType.success);
+          showToast(
+            context,
+            'Buddy request accepted! 🎉 You are now workout buddies!',
+            type: ToastType.success,
+          );
         }
       } else {
         await _profileRepo.sendBuddyRequest(widget.username);
@@ -375,12 +412,20 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           _profile = _profile!.copyWith(buddyStatus: 'pending_sent');
         });
         if (mounted) {
-          showToast(context, 'Buddy request sent to @${widget.username}! 💪', type: ToastType.success);
+          showToast(
+            context,
+            'Buddy request sent to @${widget.username}! 💪',
+            type: ToastType.success,
+          );
         }
       }
     } catch (_) {
       if (mounted) {
-        showToast(context, 'Action failed. Please try again.', type: ToastType.error);
+        showToast(
+          context,
+          'Action failed. Please try again.',
+          type: ToastType.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _buddyLoading = false);
@@ -394,10 +439,20 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         widget.username,
         const PingPayload(message: '👋'),
       );
-      if (mounted) showToast(context, 'Ping sent to @${widget.username}! 👋', type: ToastType.success);
+      if (mounted) {
+        showToast(
+          context,
+          'Ping sent to @${widget.username}! 👋',
+          type: ToastType.success,
+        );
+      }
     } catch (_) {
       if (mounted) {
-        showToast(context, 'Failed to ping. Try again later.', type: ToastType.error);
+        showToast(
+          context,
+          'Failed to ping. Try again later.',
+          type: ToastType.error,
+        );
       }
     }
   }
@@ -406,12 +461,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
 
   // ── UI helpers ────────────────────────────────────────────────────────────
 
-  ({String label, IconData icon, Color bg, Color fg, Color? border, bool isHighlighted})
-      _buddyButtonProps(Profile p) {
+  ({
+    String label,
+    IconData icon,
+    Color bg,
+    Color fg,
+    Color? border,
+    bool isHighlighted,
+  })
+  _buddyButtonProps(Profile p) {
     if (p.isBuddy) {
       return (
         label: 'Buddies',
-        icon: Icons.handshake_rounded,
+        icon: LucideIcons.handshake,
         bg: BuddyColors.green.withValues(alpha: 0.15),
         fg: BuddyColors.green,
         border: BuddyColors.green,
@@ -421,7 +483,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     if (p.buddyStatus == 'pending_sent') {
       return (
         label: 'Pending',
-        icon: Icons.hourglass_top_rounded,
+        icon: LucideIcons.hourglass,
         bg: BuddyColors.surfaceRaised,
         fg: BuddyColors.textSecondary,
         border: BuddyColors.border,
@@ -431,7 +493,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     if (p.buddyStatus == 'pending_received') {
       return (
         label: 'Accept Buddy',
-        icon: Icons.check_circle_rounded,
+        icon: LucideIcons.circleCheck,
         bg: BuddyColors.green,
         fg: BuddyColors.black,
         border: null,
@@ -440,7 +502,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     }
     return (
       label: 'Buddy Up',
-      icon: Icons.person_add_rounded,
+      icon: LucideIcons.userRoundPlus,
       bg: BuddyColors.green,
       fg: BuddyColors.black,
       border: null,
@@ -464,15 +526,34 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: BuddyColors.green.withValues(alpha: 0.4), width: 2),
+                border: Border.all(
+                  color: BuddyColors.green.withValues(alpha: 0.4),
+                  width: 2,
+                ),
               ),
-              child: Avatar(src: p.avatarUrl, alt: p.displayName, size: AvatarSize.xl),
+              child: Avatar(
+                src: p.avatarUrl,
+                alt: p.displayName,
+                size: AvatarSize.xl,
+              ),
             ),
             const SizedBox(height: 14),
-            Text(p.displayName,
-                style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(
+              p.displayName,
+              style: const TextStyle(
+                color: BuddyColors.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 2),
-            Text('@${p.username}', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+            Text(
+              '@${p.username}',
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
             const SizedBox(height: 22),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -480,21 +561,38 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
               decoration: BoxDecoration(
                 color: BuddyColors.green.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: BuddyColors.green.withValues(alpha: 0.35)),
+                border: Border.all(
+                  color: BuddyColors.green.withValues(alpha: 0.35),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.lock_outline, color: BuddyColors.green, size: 22),
+                  const Icon(
+                    LucideIcons.lock,
+                    color: BuddyColors.green,
+                    size: 22,
+                  ),
                   const SizedBox(width: 12),
                   Flexible(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('This account is private',
-                            style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
-                        Text('Only buddies can see @${p.username}\'s posts and stories.',
-                            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                        const Text(
+                          'This account is private',
+                          style: TextStyle(
+                            color: BuddyColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          'Only buddies can see @${p.username}\'s posts and stories.',
+                          style: const TextStyle(
+                            color: BuddyColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -504,7 +602,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             const SizedBox(height: 22),
             BuddyButton(
               label: 'Send buddy request',
-              icon: Icons.person_add_alt_1,
+              icon: LucideIcons.userRoundPlus,
               onPressed: _handleBuddy,
               variant: BuddyButtonVariant.primary,
               size: BuddyButtonSize.md,
@@ -576,12 +674,12 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       pinned: true,
       backgroundColor: BuddyColors.black,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+        icon: const Icon(LucideIcons.arrowLeft, size: 20),
         onPressed: () => context.pop(),
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.more_vert_rounded),
+          icon: const Icon(LucideIcons.ellipsisVertical),
           onPressed: () => _showMoreOptions(p),
         ),
       ],
@@ -615,14 +713,14 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   }
 
   Widget _coverGradient() => Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1a3a2a), BuddyColors.black],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-      );
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF1a3a2a), BuddyColors.black],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+  );
 
   // ── Profile Info ──────────────────────────────────────────────────────────
 
@@ -733,14 +831,23 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         children: [
           _statItem('${p.postCount}', 'Posts', null),
           _divider(),
-          _statItem('${p.buddyCount}', 'Buddies',
-              () => context.push('/profile/${p.username}/buddies')),
+          _statItem(
+            '${p.buddyCount}',
+            'Buddies',
+            () => context.push('/profile/${p.username}/buddies'),
+          ),
           _divider(),
-          _statItem('${p.followerCount}', 'Followers',
-              () => context.push('/profile/${p.username}/followers')),
+          _statItem(
+            '${p.followerCount}',
+            'Followers',
+            () => context.push('/profile/${p.username}/followers'),
+          ),
           _divider(),
-          _statItem('${p.followingCount}', 'Following',
-              () => context.push('/profile/${p.username}/following')),
+          _statItem(
+            '${p.followingCount}',
+            'Following',
+            () => context.push('/profile/${p.username}/following'),
+          ),
           _divider(),
           _statItem('${p.streakDays}🔥', 'Streak', null),
         ],
@@ -748,7 +855,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
-  Widget _divider() => Container(height: 28, width: 1, color: BuddyColors.border);
+  Widget _divider() =>
+      Container(height: 28, width: 1, color: BuddyColors.border);
 
   Widget _statItem(String value, String label, VoidCallback? onTap) {
     final col = Column(
@@ -764,7 +872,10 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         ),
         Text(
           label,
-          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+          style: const TextStyle(
+            color: BuddyColors.textSecondary,
+            fontSize: 11,
+          ),
         ),
       ],
     );
@@ -787,18 +898,23 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       final res = await repo.getStories();
       final reels = (res['data'] as List? ?? const []);
       final match = reels.cast<Map<String, dynamic>>().firstWhere(
-            (r) => (r['user']?['username'] ?? '').toString() == widget.username &&
-                ((r['stories'] as List?)?.isNotEmpty ?? false),
-            orElse: () => const <String, dynamic>{},
-          );
+        (r) =>
+            (r['user']?['username'] ?? '').toString() == widget.username &&
+            ((r['stories'] as List?)?.isNotEmpty ?? false),
+        orElse: () => const <String, dynamic>{},
+      );
       if (match.isEmpty) {
         if (!mounted) return;
         showToast(context, 'No story in the last 24h', type: ToastType.info);
         return;
       }
       // Build a lightweight viewer payload; reuse the existing StoryViewer.
-      final parsed = reels.map((r) => StoryReel.fromJson(Map<String, dynamic>.from(r as Map))).toList();
-      final index = parsed.indexWhere((r) => r.user.username == widget.username);
+      final parsed = reels
+          .map((r) => StoryReel.fromJson(Map<String, dynamic>.from(r as Map)))
+          .toList();
+      final index = parsed.indexWhere(
+        (r) => r.user.username == widget.username,
+      );
       if (index < 0) return;
       if (!mounted) return;
       final nav = Navigator.of(context);
@@ -806,7 +922,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       nav.push(
         MaterialPageRoute<void>(
           fullscreenDialog: true,
-          builder: (_) => StoryViewer(reels: parsed, initialReelIndex: index, seenIds: ids),
+          builder: (_) =>
+              StoryViewer(reels: parsed, initialReelIndex: index, seenIds: ids),
         ),
       );
     } catch (_) {
@@ -826,8 +943,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
             child: AnimatedProfileButton(
               label: p.isFollowing ? 'Following' : 'Follow',
               icon: p.isFollowing
-                  ? Icons.check_rounded
-                  : Icons.person_add_alt_1_rounded,
+                  ? LucideIcons.check
+                  : LucideIcons.userRoundPlus,
               backgroundColor: p.isFollowing
                   ? BuddyColors.surfaceRaised
                   : BuddyColors.green,
@@ -857,7 +974,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           // Message Button
           AnimatedProfileButton(
             label: 'Message',
-            icon: Icons.chat_bubble_outline_rounded,
+            icon: LucideIcons.messageCircle,
             backgroundColor: BuddyColors.surfaceRaised,
             foregroundColor: BuddyColors.textPrimary,
             borderColor: BuddyColors.border,
@@ -867,7 +984,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           // View Story Button
           AnimatedProfileButton(
             label: 'Story',
-            icon: Icons.auto_awesome_motion_rounded,
+            icon: LucideIcons.sparkles,
             backgroundColor: BuddyColors.surfaceRaised,
             foregroundColor: BuddyColors.green,
             borderColor: BuddyColors.border,
@@ -876,7 +993,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           const SizedBox(width: 8),
           // Ping Button
           _squareButton(
-            icon: Icons.waving_hand_rounded,
+            icon: LucideIcons.hand,
             onTap: _handlePing,
             tooltip: 'Ping @${p.username}',
           ),
@@ -919,7 +1036,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
       child: Text(
         p.bio,
-        style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 14, height: 1.5),
+        style: const TextStyle(
+          color: BuddyColors.textSecondary,
+          fontSize: 14,
+          height: 1.5,
+        ),
       ),
     );
   }
@@ -930,49 +1051,68 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     final items = <Widget>[];
 
     if (p.locationCity.isNotEmpty) {
-      items.add(_detailChip(
-        icon: Icons.location_on_outlined,
-        label: [p.locationCity, p.locationCountry]
-            .where((s) => s.isNotEmpty)
-            .join(', '),
-      ));
+      items.add(
+        _detailChip(
+          icon: LucideIcons.mapPin,
+          label: [
+            p.locationCity,
+            p.locationCountry,
+          ].where((s) => s.isNotEmpty).join(', '),
+        ),
+      );
     }
 
     if (p.externalLink != null && p.externalLink!.isNotEmpty) {
-      items.add(_detailChip(
-        icon: Icons.link_rounded,
-        label: p.externalLink!
-            .replaceFirst(RegExp(r'https?://'), '')
-            .split('/')
-            .first,
-        onTap: () async {
-          final uri = Uri.tryParse(p.externalLink!);
-          if (uri != null && await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          }
-        },
-        color: BuddyColors.green,
-      ));
+      items.add(
+        _detailChip(
+          icon: LucideIcons.link,
+          label: p.externalLink!
+              .replaceFirst(RegExp(r'https?://'), '')
+              .split('/')
+              .first,
+          onTap: () async {
+            final uri = Uri.tryParse(p.externalLink!);
+            if (uri != null && await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          color: BuddyColors.green,
+        ),
+      );
     }
 
     if (p.gymCount > 0) {
-      items.add(_detailChip(
-        icon: Icons.fitness_center_rounded,
-        label: '${p.gymCount} gym${p.gymCount > 1 ? 's' : ''}',
-      ));
+      items.add(
+        _detailChip(
+          icon: LucideIcons.dumbbell,
+          label: '${p.gymCount} gym${p.gymCount > 1 ? 's' : ''}',
+        ),
+      );
     }
 
     if (p.createdAt != null) {
       try {
         final dt = DateTime.parse(p.createdAt!);
         final months = [
-          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
         ];
-        items.add(_detailChip(
-          icon: Icons.calendar_today_outlined,
-          label: 'Joined ${months[dt.month - 1]} ${dt.year}',
-        ));
+        items.add(
+          _detailChip(
+            icon: LucideIcons.calendarDays,
+            label: 'Joined ${months[dt.month - 1]} ${dt.year}',
+          ),
+        );
       } catch (_) {}
     }
 
@@ -1034,24 +1174,46 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
               ),
             ),
             const SizedBox(height: 16),
-            _sheetTile(Icons.block_rounded, 'Block @${p.username}',
-                BuddyColors.red, () async {
-              Navigator.pop(context);
-              await _profileRepo.blockUser(p.username);
-              if (mounted) {
-                showToast(context, '@${p.username} blocked', type: ToastType.info);
-              }
-            }),
-            _sheetTile(Icons.flag_outlined, 'Report profile',
-                BuddyColors.textSecondary, () => Navigator.pop(context)),
-            _sheetTile(Icons.share_outlined, 'Share profile',
-                BuddyColors.textSecondary, () {
-              Navigator.pop(context);
-              Clipboard.setData(ClipboardData(text: 'https://buddyup.app/@${p.username}'));
-              if (mounted) {
-                showToast(context, 'Profile link copied to clipboard!', type: ToastType.info);
-              }
-            }),
+            _sheetTile(
+              LucideIcons.ban,
+              'Block @${p.username}',
+              BuddyColors.red,
+              () async {
+                Navigator.pop(context);
+                await _profileRepo.blockUser(p.username);
+                if (mounted) {
+                  showToast(
+                    context,
+                    '@${p.username} blocked',
+                    type: ToastType.info,
+                  );
+                }
+              },
+            ),
+            _sheetTile(
+              LucideIcons.flag,
+              'Report profile',
+              BuddyColors.textSecondary,
+              () => Navigator.pop(context),
+            ),
+            _sheetTile(
+              LucideIcons.share2,
+              'Share profile',
+              BuddyColors.textSecondary,
+              () {
+                Navigator.pop(context);
+                Clipboard.setData(
+                  ClipboardData(text: 'https://buddyup.app/@${p.username}'),
+                );
+                if (mounted) {
+                  showToast(
+                    context,
+                    'Profile link copied to clipboard!',
+                    type: ToastType.info,
+                  );
+                }
+              },
+            ),
             const SizedBox(height: 8),
           ],
         ),
@@ -1059,7 +1221,12 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
-  Widget _sheetTile(IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _sheetTile(
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return ListTile(
       leading: Icon(icon, color: color),
       title: Text(label, style: TextStyle(color: color)),
@@ -1071,7 +1238,9 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
 
   Widget _buildPostsTab(List<Post> posts, {bool isReposts = false}) {
     if (_postsLoading) {
-      return const Center(child: CircularProgressIndicator(color: BuddyColors.green));
+      return const Center(
+        child: CircularProgressIndicator(color: BuddyColors.green),
+      );
     }
     if (posts.isEmpty) {
       return Center(
@@ -1079,7 +1248,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isReposts ? Icons.repeat_rounded : Icons.dynamic_feed_rounded,
+              isReposts ? LucideIcons.repeat2 : LucideIcons.rss,
               size: 48,
               color: BuddyColors.textSecondary.withValues(alpha: 0.25),
             ),
@@ -1117,11 +1286,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   // ── Interests & Info Tab ──────────────────────────────────────────────────
 
   Widget _buildInterestsTab(Profile p) {
-    final allTags = _posts
-        .expand((post) => post.tags)
-        .toSet()
-        .toList()
-      ..sort();
+    final allTags = _posts.expand((post) => post.tags).toSet().toList()..sort();
 
     final workoutTypes = _posts
         .where((post) => post.workoutLogData != null)
@@ -1137,7 +1302,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         .toSet()
         .toList();
 
-    final hasAnyData = allTags.isNotEmpty ||
+    final hasAnyData =
+        allTags.isNotEmpty ||
         workoutTypes.isNotEmpty ||
         gymNames.isNotEmpty ||
         p.role != 'user' ||
@@ -1149,7 +1315,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.interests_rounded,
+              LucideIcons.puzzle,
               size: 48,
               color: BuddyColors.textSecondary.withValues(alpha: 0.25),
             ),
@@ -1169,34 +1335,30 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       padding: const EdgeInsets.all(20),
       children: [
         if (p.streakDays > 0) ...[
-          _interestSection(
-            'Activity & Streak',
-            [
-              _statBadge(
-                Icons.local_fire_department_rounded,
-                '${p.streakDays} Day Workout Streak',
-                BuddyColors.gold,
-              ),
-            ],
-          ),
+          _interestSection('Activity & Streak', [
+            _statBadge(
+              LucideIcons.flame,
+              '${p.streakDays} Day Workout Streak',
+              BuddyColors.gold,
+            ),
+          ]),
           const SizedBox(height: 20),
         ],
         if (p.role != 'user') ...[
-          _interestSection(
-            'Community Role',
-            [_rolePill(p.role)],
-          ),
+          _interestSection('Community Role', [_rolePill(p.role)]),
           const SizedBox(height: 20),
         ],
         if (workoutTypes.isNotEmpty) ...[
           _interestSection(
             'Favorite Workouts',
             workoutTypes
-                .map((t) => _interestPill(
-                      Icons.fitness_center_rounded,
-                      _prettify(t),
-                      BuddyColors.green,
-                    ))
+                .map(
+                  (t) => _interestPill(
+                    LucideIcons.dumbbell,
+                    _prettify(t),
+                    BuddyColors.green,
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 20),
@@ -1205,11 +1367,10 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           _interestSection(
             'Tagged Gyms',
             gymNames
-                .map((g) => _interestPill(
-                      Icons.location_city_rounded,
-                      g,
-                      BuddyColors.gold,
-                    ))
+                .map(
+                  (g) =>
+                      _interestPill(LucideIcons.building2, g, BuddyColors.gold),
+                )
                 .toList(),
           ),
           const SizedBox(height: 20),
@@ -1218,11 +1379,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           _interestSection(
             'Tags & Interests',
             allTags
-                .map((t) => _interestPill(
-                      Icons.tag_rounded,
-                      t,
-                      BuddyColors.textSecondary,
-                    ))
+                .map(
+                  (t) => _interestPill(
+                    LucideIcons.tag,
+                    t,
+                    BuddyColors.textSecondary,
+                  ),
+                )
                 .toList(),
           ),
         ],
@@ -1263,7 +1426,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -1281,11 +1448,15 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star_rounded, size: 14, color: BuddyColors.green),
+          const Icon(LucideIcons.star, size: 14, color: BuddyColors.green),
           const SizedBox(width: 6),
           Text(
             _prettify(role),
-            style: const TextStyle(color: BuddyColors.green, fontSize: 13, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: BuddyColors.green,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -1307,7 +1478,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           const SizedBox(width: 5),
           Text(
             label,
-            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -1338,7 +1513,10 @@ class _StickyTabBar extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(
       color: BuddyColors.black,
       child: Column(

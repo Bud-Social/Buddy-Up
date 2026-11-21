@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/page_loader.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class EventDetailScreen extends ConsumerStatefulWidget {
   final String eventId;
@@ -58,17 +59,23 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Carousel
-                if (media.isNotEmpty)
-                  _buildCarousel(media, hasCarousel, event),
+                if (media.isNotEmpty) _buildCarousel(media, hasCarousel, event),
                 const SizedBox(height: 16),
-                Text(event.title,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                Text(
+                  event.title,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
                     CircleAvatar(
                       radius: 16,
-                      backgroundImage: NetworkImage(event.creatorData.avatarUrl),
+                      backgroundImage: NetworkImage(
+                        event.creatorData.avatarUrl,
+                      ),
                       backgroundColor: BuddyColors.surfaceRaised,
                     ),
                     const SizedBox(width: 8),
@@ -78,55 +85,79 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         children: [
                           Row(
                             children: [
-                              Text(event.creatorData.displayName,
-                                  style: const TextStyle(fontWeight: FontWeight.w600)),
-                              if (event.creatorData.verificationStatus == 'verified') ...[
+                              Text(
+                                event.creatorData.displayName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              if (event.creatorData.verificationStatus ==
+                                  'verified') ...[
                                 const SizedBox(width: 4),
-                                const Icon(Icons.verified, size: 14, color: Colors.blue),
+                                const Icon(
+                                  LucideIcons.badgeCheck,
+                                  size: 14,
+                                  color: Colors.blue,
+                                ),
                               ],
                             ],
                           ),
                           if (event.shopData != null)
-                            Text('by ${event.shopData!.name}',
-                                style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                            Text(
+                              'by ${event.shopData!.name}',
+                              style: const TextStyle(
+                                color: BuddyColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
                         ],
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                _infoRow(Icons.videocam, _eventTypeLabel(event.eventType)),
+                _infoRow(LucideIcons.video, _eventTypeLabel(event.eventType)),
                 if (event.gymData != null) ...[
                   const SizedBox(height: 4),
-                  _infoRow(Icons.fitness_center, event.gymData!.name),
+                  _infoRow(LucideIcons.dumbbell, event.gymData!.name),
                 ],
                 const SizedBox(height: 4),
-                _infoRow(Icons.calendar_today, _formatDate(event.startDatetime)),
+                _infoRow(
+                  LucideIcons.calendarDays,
+                  _formatDate(event.startDatetime),
+                ),
                 const SizedBox(height: 4),
-                _infoRow(Icons.access_time, _formatTime(event.startDatetime)),
+                _infoRow(LucideIcons.clock, _formatTime(event.startDatetime)),
                 if (event.location.isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  _infoRow(Icons.location_on, event.location),
+                  _infoRow(LucideIcons.mapPin, event.location),
                 ],
                 if (event.recurrence != 'none') ...[
                   const SizedBox(height: 4),
-                  _infoRow(Icons.repeat, _recurrenceLabel(event.recurrence)),
+                  _infoRow(
+                    LucideIcons.repeat2,
+                    _recurrenceLabel(event.recurrence),
+                  ),
                 ],
                 if (event.earlyBirdEnabled) ...[
                   const SizedBox(height: 4),
-                  _infoRow(Icons.flash_on, _earlyBirdLabel(event)),
+                  _infoRow(LucideIcons.zap, _earlyBirdLabel(event)),
                 ],
                 const SizedBox(height: 16),
                 _buildCapacityBar(event),
                 if (event.ticketTiers.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  const Text('Ticket Tiers',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Ticket Tiers',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   ...event.ticketTiers.map((t) {
                     final name = (t['name'] ?? '') as String;
                     final price = t['price_artifacts'];
-                    final selected = _tier == name || (_tier == null && t == event.ticketTiers.first);
+                    final selected =
+                        _tier == name ||
+                        (_tier == null && t == event.ticketTiers.first);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: InkWell(
@@ -138,25 +169,39 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             color: BuddyColors.surface,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: selected ? BuddyColors.green : BuddyColors.border,
+                              color: selected
+                                  ? BuddyColors.green
+                                  : BuddyColors.border,
                             ),
                           ),
                           child: Row(
                             children: [
                               Expanded(
-                                child: Text(name,
-                                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                                child: Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                               if (price is Map && price.isNotEmpty)
                                 Text(
-                                  price.entries.map((e) => '${e.value} ${e.key}').join(', '),
+                                  price.entries
+                                      .map((e) => '${e.value} ${e.key}')
+                                      .join(', '),
                                   style: const TextStyle(
-                                      color: BuddyColors.green, fontWeight: FontWeight.bold),
+                                    color: BuddyColors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 )
                               else
-                                const Text('Free',
-                                    style: TextStyle(
-                                        color: BuddyColors.green, fontWeight: FontWeight.bold)),
+                                const Text(
+                                  'Free',
+                                  style: TextStyle(
+                                    color: BuddyColors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -168,51 +213,68 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 Text(event.description, style: const TextStyle(height: 1.5)),
                 if (event.agenda.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  const Text('Agenda',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Agenda',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
-                  ...event.agenda.map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 48,
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          decoration: BoxDecoration(
-                            color: BuddyColors.green.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${item['time'] ?? ''}',
-                              style: const TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.bold,
-                                  color: BuddyColors.green),
+                  ...event.agenda.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 48,
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            decoration: BoxDecoration(
+                              color: BuddyColors.green.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${item['time'] ?? ''}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: BuddyColors.green,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('${item['title'] ?? ''}',
-                                  style: const TextStyle(fontWeight: FontWeight.w600)),
-                              if ((item['description'] ?? '').isNotEmpty)
-                                Text('${item['description']}',
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${item['title'] ?? ''}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if ((item['description'] ?? '').isNotEmpty)
+                                  Text(
+                                    '${item['description']}',
                                     style: const TextStyle(
-                                        fontSize: 12, color: BuddyColors.textSecondary)),
-                            ],
+                                      fontSize: 12,
+                                      color: BuddyColors.textSecondary,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
                 ],
                 if (event.cancellationPolicy.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  _infoRow(Icons.assignment_late, 'Cancellation: ${event.cancellationPolicy}'),
+                  _infoRow(
+                    LucideIcons.fileWarning,
+                    'Cancellation: ${event.cancellationPolicy}',
+                  ),
                 ],
                 if (event.tags.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -220,11 +282,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     spacing: 8,
                     runSpacing: 4,
                     children: event.tags
-                        .map((t) => Chip(
-                              label: Text(t),
-                              backgroundColor: BuddyColors.surfaceRaised,
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ))
+                        .map(
+                          (t) => Chip(
+                            label: Text(t),
+                            backgroundColor: BuddyColors.surfaceRaised,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        )
                         .toList(),
                   ),
                 ],
@@ -248,7 +313,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _QtyButton(
-                        icon: Icons.remove,
+                        icon: LucideIcons.minus,
                         onPressed: _quantity > 1
                             ? () => setState(() => _quantity--)
                             : null,
@@ -256,12 +321,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                       SizedBox(
                         width: 40,
                         child: Center(
-                          child: Text('$_quantity',
-                              style: const TextStyle(fontWeight: FontWeight.w600)),
+                          child: Text(
+                            '$_quantity',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                       _QtyButton(
-                        icon: Icons.add,
+                        icon: LucideIcons.plus,
                         onPressed: () => setState(() => _quantity++),
                       ),
                     ],
@@ -271,31 +338,36 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 Expanded(
                   child: Builder(
                     builder: (ctx) {
-                      final soldOut = event.capacity > 0 && event.attendeeCount >= event.capacity;
+                      final soldOut =
+                          event.capacity > 0 &&
+                          event.attendeeCount >= event.capacity;
                       return BuddyButton(
                         label: event.isRegistered
                             ? 'My Ticket'
                             : soldOut
-                                ? 'Sold Out'
-                                : 'Add to Cart',
+                            ? 'Sold Out'
+                            : 'Add to Cart',
                         onPressed: event.isRegistered
                             ? () => context.push('/marketplace/tickets')
                             : soldOut
-                                ? null
-                                : () {
-                                    ref.read(cartProvider.notifier).addToCart(
+                            ? null
+                            : () {
+                                ref
+                                    .read(cartProvider.notifier)
+                                    .addToCart(
                                       'event_ticket',
                                       {'event_id': widget.eventId},
                                       quantity: _quantity,
                                       tier: _tier,
                                     );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Added to cart'),
-                                  duration: Duration(seconds: 1)),
-                            );
-                            _quantity = 1;
-                          },
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Added to cart'),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+                                _quantity = 1;
+                              },
                       );
                     },
                   ),
@@ -310,7 +382,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     );
   }
 
-  Widget _buildCarousel(List<_MediaItem> media, bool hasCarousel, MarketplaceEvent event) {
+  Widget _buildCarousel(
+    List<_MediaItem> media,
+    bool hasCarousel,
+    MarketplaceEvent event,
+  ) {
     return SizedBox(
       height: 220,
       child: Stack(
@@ -322,14 +398,20 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     alignment: Alignment.center,
                     children: [
                       Image.network(
-                        event.coverImageUrl.isNotEmpty ? event.coverImageUrl : media[_mediaIndex].url,
+                        event.coverImageUrl.isNotEmpty
+                            ? event.coverImageUrl
+                            : media[_mediaIndex].url,
                         width: double.infinity,
                         height: 220,
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => Container(
                           height: 220,
                           color: BuddyColors.surfaceRaised,
-                          child: const Icon(Icons.videocam, size: 48, color: BuddyColors.textSecondary),
+                          child: const Icon(
+                            LucideIcons.video,
+                            size: 48,
+                            color: BuddyColors.textSecondary,
+                          ),
                         ),
                       ),
                       Container(
@@ -339,7 +421,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                           color: Colors.black54,
                           borderRadius: BorderRadius.circular(24),
                         ),
-                        child: const Icon(Icons.play_arrow, color: Colors.white, size: 32),
+                        child: const Icon(
+                          LucideIcons.play,
+                          color: Colors.white,
+                          size: 32,
+                        ),
                       ),
                     ],
                   )
@@ -351,7 +437,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     errorBuilder: (_, _, _) => Container(
                       height: 220,
                       color: BuddyColors.surfaceRaised,
-                      child: const Icon(Icons.event, size: 48, color: BuddyColors.textSecondary),
+                      child: const Icon(
+                        LucideIcons.calendarDays,
+                        size: 48,
+                        color: BuddyColors.textSecondary,
+                      ),
                     ),
                   ),
           ),
@@ -380,7 +470,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
               child: Center(
                 child: GestureDetector(
                   onTap: () => setState(() {
-                    _mediaIndex = _mediaIndex == 0 ? media.length - 1 : _mediaIndex - 1;
+                    _mediaIndex = _mediaIndex == 0
+                        ? media.length - 1
+                        : _mediaIndex - 1;
                   }),
                   child: Container(
                     padding: const EdgeInsets.all(4),
@@ -388,7 +480,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                       color: Colors.black38,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Icon(Icons.chevron_left, color: Colors.white, size: 20),
+                    child: const Icon(
+                      LucideIcons.chevronLeft,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
@@ -400,7 +496,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
               child: Center(
                 child: GestureDetector(
                   onTap: () => setState(() {
-                    _mediaIndex = _mediaIndex == media.length - 1 ? 0 : _mediaIndex + 1;
+                    _mediaIndex = _mediaIndex == media.length - 1
+                        ? 0
+                        : _mediaIndex + 1;
                   }),
                   child: Container(
                     padding: const EdgeInsets.all(4),
@@ -408,7 +506,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                       color: Colors.black38,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Icon(Icons.chevron_right, color: Colors.white, size: 20),
+                    child: const Icon(
+                      LucideIcons.chevronRight,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
@@ -449,9 +551,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.videocam, size: 12, color: Colors.white),
+                    Icon(LucideIcons.video, size: 12, color: Colors.white),
                     SizedBox(width: 4),
-                    Text('Video', style: TextStyle(color: Colors.white, fontSize: 10)),
+                    Text(
+                      'Video',
+                      style: TextStyle(color: Colors.white, fontSize: 10),
+                    ),
                   ],
                 ),
               ),
@@ -468,8 +573,12 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         children: [
           Icon(icon, size: 16, color: BuddyColors.textSecondary),
           const SizedBox(width: 4),
-          Flexible(child: Text(text,
-              style: const TextStyle(color: BuddyColors.textSecondary))),
+          Flexible(
+            child: Text(
+              text,
+              style: const TextStyle(color: BuddyColors.textSecondary),
+            ),
+          ),
         ],
       ),
     );
@@ -484,14 +593,22 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Capacity: ${event.attendeeCount}/${event.capacity}',
-                style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+            Text(
+              'Capacity: ${event.attendeeCount}/${event.capacity}',
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
             if (spots != null)
-              Text('$spots spots left',
-                  style: const TextStyle(
-                      color: BuddyColors.green,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13)),
+              Text(
+                '$spots spots left',
+                style: const TextStyle(
+                  color: BuddyColors.green,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 8),
@@ -501,8 +618,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
             value: pct.clamp(0.0, 1.0),
             minHeight: 6,
             backgroundColor: BuddyColors.surfaceRaised,
-            valueColor:
-                const AlwaysStoppedAnimation<Color>(BuddyColors.green),
+            valueColor: const AlwaysStoppedAnimation<Color>(BuddyColors.green),
           ),
         ),
       ],
@@ -558,7 +674,9 @@ String _earlyBirdLabel(MarketplaceEvent event) {
   final price = event.earlyBirdPriceArtifacts.entries
       .map((e) => '${e.value} ${e.key}s')
       .join(', ');
-  return price.isEmpty ? 'Early bird pricing$deadlineText' : 'Early bird: $price$deadlineText';
+  return price.isEmpty
+      ? 'Early bird pricing$deadlineText'
+      : 'Early bird: $price$deadlineText';
 }
 
 String _shortDate(String iso) {
@@ -582,7 +700,9 @@ class _QtyButton extends StatelessWidget {
         icon: Icon(icon, size: 18),
         onPressed: onPressed,
         padding: EdgeInsets.zero,
-        color: onPressed == null ? BuddyColors.textSecondary : BuddyColors.textPrimary,
+        color: onPressed == null
+            ? BuddyColors.textSecondary
+            : BuddyColors.textPrimary,
       ),
     );
   }

@@ -14,6 +14,7 @@ import '../../../shared/widgets/toast.dart';
 import '../feed/providers/feed_provider.dart' show feedRepositoryProvider;
 import '../messaging/providers/messaging_provider.dart';
 import 'buddy_nearby_provider.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Backend ModerationReport.REPORT_REASONS. Anything else is rejected.
 const _reportReasons = <String>[
@@ -52,10 +53,12 @@ class BuddyFindProfileScreen extends ConsumerStatefulWidget {
   const BuddyFindProfileScreen({super.key, required this.username});
 
   @override
-  ConsumerState<BuddyFindProfileScreen> createState() => _BuddyFindProfileScreenState();
+  ConsumerState<BuddyFindProfileScreen> createState() =>
+      _BuddyFindProfileScreenState();
 }
 
-class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen> {
+class _BuddyFindProfileScreenState
+    extends ConsumerState<BuddyFindProfileScreen> {
   Map<String, dynamic>? _profile;
   bool _loading = true;
   String? _error;
@@ -76,7 +79,9 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
     });
     try {
       final coords = ref.read(buddyNearbyProvider);
-      final raw = await ref.read(profileRepositoryProvider).getUserSearchProfile(
+      final raw = await ref
+          .read(profileRepositoryProvider)
+          .getUserSearchProfile(
             widget.username,
             lat: coords.lat,
             lng: coords.lng,
@@ -123,12 +128,20 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
       final likedMe = data is Map ? data['liked_me'] as bool? : null;
       _patch(likedByMe: !wasLiked, likedMe: likedMe);
       if (!wasLiked && likedMe == true) {
-        showToast(context, 'You both liked each other 🎉', type: ToastType.success);
+        showToast(
+          context,
+          'You both liked each other 🎉',
+          type: ToastType.success,
+        );
       }
     } catch (e) {
       if (!mounted) return;
       _patch(likedByMe: wasLiked);
-      showToast(context, _errorText(e, 'Could not save that like.'), type: ToastType.error);
+      showToast(
+        context,
+        _errorText(e, 'Could not save that like.'),
+        type: ToastType.error,
+      );
     } finally {
       if (mounted) setState(() => _liking = false);
     }
@@ -136,11 +149,13 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
 
   Future<void> _message() async {
     try {
-      final raw = await ref.read(messagingRepositoryProvider).startConversation({
-        'participants': [widget.username],
-        // Tags the thread as discovery-born so Buddy messages lists it.
-        'origin': 'discovery',
-      });
+      final raw = await ref.read(messagingRepositoryProvider).startConversation(
+        {
+          'participants': [widget.username],
+          // Tags the thread as discovery-born so Buddy messages lists it.
+          'origin': 'discovery',
+        },
+      );
       final data = raw['data'];
       final convoId = data is Map ? data['id'] as String? : null;
       if (!mounted) return;
@@ -165,8 +180,10 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: BuddyColors.surface,
-        title: Text('Block @${widget.username}?',
-            style: const TextStyle(color: BuddyColors.textPrimary)),
+        title: Text(
+          'Block @${widget.username}?',
+          style: const TextStyle(color: BuddyColors.textPrimary),
+        ),
         content: const Text(
           'They will not be able to message or like you, and you will stop '
           'seeing each other in Find a Buddy. They are not told that you '
@@ -180,7 +197,10 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Block', style: TextStyle(color: BuddyColors.red)),
+            child: const Text(
+              'Block',
+              style: TextStyle(color: BuddyColors.red),
+            ),
           ),
         ],
       ),
@@ -193,7 +213,11 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      showToast(context, _errorText(e, 'Could not block this profile.'), type: ToastType.error);
+      showToast(
+        context,
+        _errorText(e, 'Could not block this profile.'),
+        type: ToastType.error,
+      );
     } finally {
       if (mounted) setState(() => _blocking = false);
     }
@@ -245,7 +269,9 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
     if (likedByMe != null) next['liked_by_me'] = likedByMe;
     if (likedMe != null) next['liked_me'] = likedMe;
     setState(() => _profile = next);
-    ref.read(buddyNearbyProvider.notifier).applyLike(
+    ref
+        .read(buddyNearbyProvider.notifier)
+        .applyLike(
           widget.username,
           likedByMe: likedByMe ?? current['liked_by_me'] as bool? ?? false,
           likedMe: likedMe ?? current['liked_me'] as bool? ?? false,
@@ -255,7 +281,9 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
   List<String> get _photos {
     final p = _profile;
     if (p == null) return const [];
-    final list = ((p['photos'] as List?) ?? []).map((e) => e.toString()).toList();
+    final list = ((p['photos'] as List?) ?? [])
+        .map((e) => e.toString())
+        .toList();
     if (list.isNotEmpty) return list;
     final avatar = p['avatar_url'] as String?;
     return avatar != null && avatar.isNotEmpty ? [avatar] : const [];
@@ -263,7 +291,9 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
 
   List<String> get _intents {
     final p = _profile!;
-    final list = ((p['intents'] as List?) ?? []).map((e) => e.toString()).toList();
+    final list = ((p['intents'] as List?) ?? [])
+        .map((e) => e.toString())
+        .toList();
     final custom = p['custom_intent'] as String? ?? '';
     if (custom.isNotEmpty) list.add(custom);
     return list;
@@ -310,15 +340,19 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
           if (p != null) ...[
             IconButton(
               key: const ValueKey('buddy-find-report'),
-              icon: const Icon(Icons.flag_outlined),
+              icon: const Icon(LucideIcons.flag),
               tooltip: 'Report profile',
               onPressed: _report,
             ),
             IconButton(
               key: const ValueKey('buddy-find-block'),
               icon: _blocking
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.block),
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(LucideIcons.ban),
               tooltip: 'Block',
               onPressed: _blocking ? null : _block,
             ),
@@ -328,8 +362,8 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
       body: _loading
           ? const PageLoader(fullScreen: false)
           : _error != null
-              ? ErrorView(message: _error!, onRetry: _load)
-              : _body(p!),
+          ? ErrorView(message: _error!, onRetry: _load)
+          : _body(p!),
     );
   }
 
@@ -337,9 +371,15 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
     final name = _displayName(p);
     final liked = p['liked_by_me'] as bool? ?? false;
     final likedMe = p['liked_me'] as bool? ?? false;
-    final distance = formatDistanceBadge((p['distance_km'] as num?)?.toDouble());
-    final goals = ((p['goals'] as List?) ?? []).map((e) => _humanise(e.toString())).toList();
-    final modes = ((p['modes'] as List?) ?? []).map((e) => _humanise(e.toString())).toList();
+    final distance = formatDistanceBadge(
+      (p['distance_km'] as num?)?.toDouble(),
+    );
+    final goals = ((p['goals'] as List?) ?? [])
+        .map((e) => _humanise(e.toString()))
+        .toList();
+    final modes = ((p['modes'] as List?) ?? [])
+        .map((e) => _humanise(e.toString()))
+        .toList();
     final pace = _humanise(_text('pace'));
     final neighbourhood = _text('neighbourhood');
     final until = _untilText(p['available_until'] as String?);
@@ -363,22 +403,36 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
           children: [
             Text(
               '@${widget.username}',
-              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 13,
+              ),
             ),
             if (_text('age_band').isNotEmpty) ...[
               const SizedBox(width: 8),
               Text(
                 _text('age_band'),
-                style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                style: const TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 13,
+                ),
               ),
             ],
             if (distance != null) ...[
               const SizedBox(width: 8),
-              Icon(Icons.near_me, size: 12, color: BuddyColors.green.withValues(alpha: 0.8)),
+              Icon(
+                LucideIcons.navigation,
+                size: 12,
+                color: BuddyColors.green.withValues(alpha: 0.8),
+              ),
               const SizedBox(width: 2),
               Text(
                 distance,
-                style: const TextStyle(color: BuddyColors.green, fontSize: 13, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: BuddyColors.green,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ],
@@ -386,7 +440,7 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
         if (likedMe && !liked) ...[
           const SizedBox(height: 8),
           const _Notice(
-            icon: Icons.favorite,
+            icon: LucideIcons.heart,
             text: 'They liked you first — like them back to match.',
           ),
         ],
@@ -396,7 +450,7 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
             Expanded(
               child: BuddyButton(
                 label: 'Message',
-                icon: Icons.message_outlined,
+                icon: LucideIcons.messageCircle,
                 variant: BuddyButtonVariant.outline,
                 onPressed: _message,
               ),
@@ -405,9 +459,11 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
             Expanded(
               child: BuddyButton(
                 label: liked ? 'Liked' : 'Like',
-                icon: liked ? Icons.favorite : Icons.favorite_border,
+                icon: liked ? LucideIcons.heart : LucideIcons.heart,
                 isLoading: _liking,
-                variant: liked ? BuddyButtonVariant.primary : BuddyButtonVariant.outline,
+                variant: liked
+                    ? BuddyButtonVariant.primary
+                    : BuddyButtonVariant.outline,
                 color: liked ? BuddyColors.green : BuddyColors.textSecondary,
                 onPressed: _liking ? null : _toggleLike,
               ),
@@ -420,23 +476,35 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
             title: 'About',
             child: Text(
               _text('bio'),
-              style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 14, height: 1.4),
+              style: const TextStyle(
+                color: BuddyColors.textPrimary,
+                fontSize: 14,
+                height: 1.4,
+              ),
             ),
           ),
         ],
         if (_intents.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _Section(title: 'Looking for', child: _Chips(items: _intents)),
+          _Section(
+            title: 'Looking for',
+            child: _Chips(items: _intents),
+          ),
         ],
         if (goals.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _Section(title: 'Goals', child: _Chips(items: goals)),
+          _Section(
+            title: 'Goals',
+            child: _Chips(items: goals),
+          ),
         ],
         if (modes.isNotEmpty || pace.isNotEmpty) ...[
           const SizedBox(height: 16),
           _Section(
             title: 'How they train',
-            child: _Chips(items: [...modes, if (pace.isNotEmpty) 'Pace: $pace']),
+            child: _Chips(
+              items: [...modes, if (pace.isNotEmpty) 'Pace: $pace'],
+            ),
           ),
         ],
         if (neighbourhood.isNotEmpty || availableNow || until != null) ...[
@@ -447,15 +515,20 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (neighbourhood.isNotEmpty)
-                  _MetaRow(icon: Icons.place_outlined, text: neighbourhood),
+                  _MetaRow(icon: LucideIcons.mapPin, text: neighbourhood),
                 if (availableNow)
                   _MetaRow(
-                    icon: Icons.bolt,
-                    text: until == null ? 'Available now' : 'Available now · until $until',
+                    icon: LucideIcons.zap,
+                    text: until == null
+                        ? 'Available now'
+                        : 'Available now · until $until',
                     highlight: true,
                   )
                 else
-                  const _MetaRow(icon: Icons.schedule, text: 'Not looking right now'),
+                  const _MetaRow(
+                    icon: LucideIcons.clock,
+                    text: 'Not looking right now',
+                  ),
               ],
             ),
           ),
@@ -463,7 +536,7 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
         const SizedBox(height: 28),
         BuddyButton(
           label: 'View main profile',
-          icon: Icons.person_outline,
+          icon: LucideIcons.userRound,
           variant: BuddyButtonVariant.secondary,
           fullWidth: true,
           onPressed: () => context.push('/${widget.username}'),
@@ -489,7 +562,8 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
               itemBuilder: (_, i) => CachedNetworkImage(
                 imageUrl: photos[i],
                 fit: BoxFit.cover,
-                placeholder: (_, _) => Container(color: BuddyColors.surfaceRaised),
+                placeholder: (_, _) =>
+                    Container(color: BuddyColors.surfaceRaised),
                 errorWidget: (_, _, _) => _initials(name),
               ),
             ),
@@ -506,7 +580,9 @@ class _BuddyFindProfileScreenState extends ConsumerState<BuddyFindProfileScreen>
                   height: 6,
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
-                    color: i == _photoIndex ? BuddyColors.green : BuddyColors.border,
+                    color: i == _photoIndex
+                        ? BuddyColors.green
+                        : BuddyColors.border,
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -592,7 +668,10 @@ class _Chips extends StatelessWidget {
               color: BuddyColors.green.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(999),
             ),
-            child: Text(item, style: const TextStyle(color: BuddyColors.green, fontSize: 12)),
+            child: Text(
+              item,
+              style: const TextStyle(color: BuddyColors.green, fontSize: 12),
+            ),
           ),
       ],
     );
@@ -604,7 +683,11 @@ class _MetaRow extends StatelessWidget {
   final String text;
   final bool highlight;
 
-  const _MetaRow({required this.icon, required this.text, this.highlight = false});
+  const _MetaRow({
+    required this.icon,
+    required this.text,
+    this.highlight = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -653,7 +736,10 @@ class _Notice extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12),
+              style: const TextStyle(
+                color: BuddyColors.textPrimary,
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -723,7 +809,10 @@ class _ReportSheetState extends State<_ReportSheet> {
                           value: reason,
                           title: Text(
                             _reportReasonLabels[reason] ?? reason,
-                            style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 14),
+                            style: const TextStyle(
+                              color: BuddyColors.textPrimary,
+                              fontSize: 14,
+                            ),
                           ),
                           activeColor: BuddyColors.green,
                           dense: true,

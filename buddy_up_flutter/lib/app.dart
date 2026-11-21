@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/updates/update_prompt.dart';
 import 'core/auth/auth_provider.dart';
@@ -18,11 +19,13 @@ class BuddyThemeNotifier extends Notifier<BuddyTheme> {
   BuddyTheme build() => BuddyTheme.dark;
 
   void setTheme(BuddyTheme theme) => state = theme;
-  void toggle() => state = state == BuddyTheme.dark ? BuddyTheme.light : BuddyTheme.dark;
+  void toggle() =>
+      state = state == BuddyTheme.dark ? BuddyTheme.light : BuddyTheme.dark;
 }
 
-final themeModeProvider =
-    NotifierProvider<BuddyThemeNotifier, BuddyTheme>(BuddyThemeNotifier.new);
+final themeModeProvider = NotifierProvider<BuddyThemeNotifier, BuddyTheme>(
+  BuddyThemeNotifier.new,
+);
 
 class BuddyUpApp extends ConsumerStatefulWidget {
   const BuddyUpApp({super.key});
@@ -31,12 +34,20 @@ class BuddyUpApp extends ConsumerStatefulWidget {
   ConsumerState<BuddyUpApp> createState() => _BuddyUpAppState();
 }
 
-class _BuddyUpAppState extends ConsumerState<BuddyUpApp> with WidgetsBindingObserver {
+class _BuddyUpAppState extends ConsumerState<BuddyUpApp>
+    with WidgetsBindingObserver {
   Timer? _activitySyncTimer;
+
+  /// One GoRouter for the lifetime of the app. Recreating it whenever auth
+  /// state changes wipes the Navigator stack — Android back then exits the
+  /// app instead of returning to the previously visited page.
+  late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
+    _router = buildRouter(ref);
+    ref.listen(authProvider, (_, _) => _router.refresh());
     WidgetsBinding.instance.addObserver(this);
     Future.microtask(() {
       ref.read(pushNotificationServiceProvider).initialize();
@@ -103,10 +114,11 @@ class _BuddyUpAppState extends ConsumerState<BuddyUpApp> with WidgetsBindingObse
         // The selected palette is supplied explicitly via `theme`; keeping the
         // platform mode light makes Material use it on every device.
         themeMode: ThemeMode.light,
-        routerConfig: buildRouter(ref, authState),
+        routerConfig: _router,
         builder: (context, child) {
           // Biometric app-lock overlay: blocks the UI until unlocked.
-          final showLock = authState.user != null && biometric.enabled && biometric.locked;
+          final showLock =
+              authState.user != null && biometric.enabled && biometric.locked;
           if (showLock && child != null) {
             return Stack(
               children: [
@@ -141,7 +153,11 @@ class _BiometricLock extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.lock_outline, size: 56, color: BuddyColors.green),
+              const Icon(
+                Icons.lock_outline,
+                size: 56,
+                color: BuddyColors.green,
+              ),
               const SizedBox(height: 16),
               const Text(
                 'BuddyUp is locked',
@@ -150,7 +166,10 @@ class _BiometricLock extends ConsumerWidget {
               const SizedBox(height: 6),
               const Text(
                 'Unlock with your fingerprint or face',
-                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+                style: TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 28),
               FilledButton.icon(
@@ -158,7 +177,9 @@ class _BiometricLock extends ConsumerWidget {
                   backgroundColor: BuddyColors.green,
                   foregroundColor: BuddyColors.black,
                 ),
-                onPressed: locked ? () => ref.read(biometricProvider.notifier).unlock() : null,
+                onPressed: locked
+                    ? () => ref.read(biometricProvider.notifier).unlock()
+                    : null,
                 icon: const Icon(Icons.fingerprint),
                 label: const Text('Unlock'),
               ),

@@ -13,6 +13,7 @@ import '../../../shared/widgets/toast.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/emoji_utils.dart';
 import '../../../data/models/post.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   final String postId;
@@ -154,7 +155,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.comment_bank_outlined,
+                          LucideIcons.messagesSquare,
                           color: BuddyColors.textSecondary,
                           size: 18,
                         ),
@@ -199,7 +200,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                           _replyToDisplayName = null;
                                         }),
                                         child: const Icon(
-                                          Icons.close,
+                                          LucideIcons.x,
                                           size: 16,
                                           color: BuddyColors.textSecondary,
                                         ),
@@ -223,7 +224,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             const SizedBox(width: 6),
                             IconButton(
                               icon: const Icon(
-                                Icons.send,
+                                LucideIcons.send,
                                 color: BuddyColors.green,
                               ),
                               onPressed: () => _submitTextComment(post.id),
@@ -231,7 +232,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             const SizedBox(width: 6),
                             IconButton(
                               icon: const Icon(
-                                Icons.insert_emoticon,
+                                LucideIcons.smile,
                                 color: BuddyColors.textSecondary,
                               ),
                               onPressed: () => _showCommentMediaSheet(post.id),
@@ -239,7 +240,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             const SizedBox(width: 6),
                             IconButton(
                               icon: const Icon(
-                                Icons.image,
+                                LucideIcons.image,
                                 color: BuddyColors.textSecondary,
                               ),
                               onPressed: () => _pickImageComment(post.id),
@@ -352,19 +353,19 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             Row(
               children: [
                 _MediaSheetOption(
-                  icon: Icons.gif,
+                  icon: LucideIcons.image,
                   label: 'GIF',
                   color: BuddyColors.green,
                   onTap: () => _showStickerGifPicker(postId, 'gif'),
                 ),
                 _MediaSheetOption(
-                  icon: Icons.sentiment_very_satisfied,
+                  icon: LucideIcons.smile,
                   label: 'Sticker',
                   color: BuddyColors.red,
                   onTap: () => _showStickerGifPicker(postId, 'sticker'),
                 ),
                 _MediaSheetOption(
-                  icon: Icons.image,
+                  icon: LucideIcons.image,
                   label: 'Photo',
                   color: BuddyColors.green,
                   onTap: () => _pickImageComment(postId),
@@ -463,11 +464,7 @@ class _TombstoneBanner extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(
-                Icons.visibility_off_outlined,
-                size: 16,
-                color: BuddyColors.gold,
-              ),
+              Icon(LucideIcons.eyeOff, size: 16, color: BuddyColors.gold),
               SizedBox(width: 8),
               Text(
                 'Taken down by moderators',
