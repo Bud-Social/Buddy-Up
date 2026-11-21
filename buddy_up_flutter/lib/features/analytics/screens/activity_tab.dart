@@ -7,6 +7,7 @@ import '../providers/analytics_provider.dart';
 import '../utils/analytics_format.dart';
 import '../utils/analytics_share.dart';
 import '../widgets/analytics_widgets.dart';
+import '../widgets/activity_route_map.dart';
 import '../widgets/activity_queue_banner.dart';
 import 'gps_tracker_screen.dart';
 
@@ -76,7 +77,9 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
       if (created['queued'] == true && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Saved on this device — it uploads when you reconnect.'),
+            content: Text(
+              'Saved on this device — it uploads when you reconnect.',
+            ),
           ),
         );
       }
@@ -113,7 +116,8 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
             child: FilledButton.icon(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<bool>(
-                  builder: (_) => GpsTrackerScreen(initialActivityType: _activityType),
+                  builder: (_) =>
+                      GpsTrackerScreen(initialActivityType: _activityType),
                 ),
               ),
               style: FilledButton.styleFrom(
@@ -195,10 +199,7 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
                     ),
                     backgroundColor: cs.surface,
                     side: BorderSide(color: cs.outlineVariant),
-                    labelStyle: TextStyle(
-                      color: cs.onSurface,
-                      fontSize: 12,
-                    ),
+                    labelStyle: TextStyle(color: cs.onSurface, fontSize: 12),
                   ),
               ],
             ),
@@ -256,9 +257,7 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
                           fontSize: 12,
                         ),
                         backgroundColor: cs.surfaceContainerHighest,
-                        side: BorderSide(
-                          color: cs.outlineVariant,
-                        ),
+                        side: BorderSide(color: cs.outlineVariant),
                       ),
                     ),
                   ),
@@ -333,48 +332,57 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: cs.outlineVariant),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(type.icon, size: 18, color: BuddyColors.green),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  type.label,
-                  style: TextStyle(
-                    color: cs.onSurface,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+          Row(
+            children: [
+              Icon(type.icon, size: 18, color: BuddyColors.green),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      type.label,
+                      style: TextStyle(
+                        color: cs.onSurface,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${formatNumber(a.distanceKm, decimals: 1)} km · ${formatDuration(a.durationSeconds)}',
+                      style: TextStyle(
+                        color: cs.onSurface.withValues(alpha: 0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${formatNumber(a.distanceKm, decimals: 1)} km · ${formatDuration(a.durationSeconds)}',
-                  style: TextStyle(
-                    color: cs.onSurface.withValues(alpha: 0.6),
-                    fontSize: 12,
-                  ),
+              ),
+              Text(
+                formatDate(a.startedAt),
+                style: TextStyle(
+                  color: cs.onSurface.withValues(alpha: 0.6),
+                  fontSize: 12,
                 ),
-              ],
-            ),
+              ),
+              Builder(
+                builder: (anchor) => IconButton(
+                  icon: const Icon(Icons.share_outlined, size: 18),
+                  tooltip: 'Share activity',
+                  color: BuddyColors.green,
+                  onPressed: () => _share(a, type.label, anchor),
+                ),
+              ),
+            ],
           ),
-          Text(
-            formatDate(a.startedAt),
-            style: TextStyle(
-              color: cs.onSurface.withValues(alpha: 0.6),
-              fontSize: 12,
-            ),
-          ),
-          Builder(
-            builder: (anchor) => IconButton(
-              icon: const Icon(Icons.share_outlined, size: 18),
-              tooltip: 'Share activity',
-              color: BuddyColors.green,
-              onPressed: () => _share(a, type.label, anchor),
-            ),
-          ),
+          if (a.route.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ActivityRouteMap(route: a.route, height: 140),
+          ],
         ],
       ),
     );

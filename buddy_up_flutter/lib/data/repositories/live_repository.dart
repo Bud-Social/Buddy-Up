@@ -20,6 +20,9 @@ abstract class LiveRepository {
   @POST('/lives/start/')
   Future<dynamic> startLive(@Body() Map<String, dynamic> data);
 
+  @POST('/lives/{id}/start-scheduled/')
+  Future<dynamic> startScheduledLive(@Path('id') String liveId);
+
   @POST('/lives/{id}/end/')
   Future<void> endLive(
     @Path('id') String liveId,
@@ -36,9 +39,7 @@ abstract class LiveRepository {
   Future<dynamic> rsvp(@Path('id') String liveId);
 
   @POST('/lives/random-drop/start/')
-  Future<dynamic> startRandomDrop(
-    @Body() Map<String, dynamic> data,
-  );
+  Future<dynamic> startRandomDrop(@Body() Map<String, dynamic> data);
 
   @GET('/lives/random-drop/status/')
   Future<dynamic> getRandomDropStatus();
@@ -57,10 +58,7 @@ abstract class LiveRepository {
   });
 
   @POST('/lives/{id}/refund-gift/{txId}/')
-  Future<void> refundGift(
-    @Path('id') String liveId,
-    @Path('txId') String txId,
-  );
+  Future<void> refundGift(@Path('id') String liveId, @Path('txId') String txId);
 
   @POST('/lives/{id}/co-host/')
   Future<void> addCoHost(

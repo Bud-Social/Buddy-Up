@@ -7,6 +7,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../providers/live_provider.dart';
 import '../services/live_socket.dart';
@@ -38,9 +39,12 @@ class LiveRoomScreen extends ConsumerStatefulWidget {
   ConsumerState<LiveRoomScreen> createState() => _LiveRoomScreenState();
 }
 
-class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBindingObserver {
-  final GlobalKey<ReactionOverlayState> _reactionKey = GlobalKey<ReactionOverlayState>();
-  final GlobalKey<GiftBurstOverlayState> _giftBurstKey = GlobalKey<GiftBurstOverlayState>();
+class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen>
+    with WidgetsBindingObserver {
+  final GlobalKey<ReactionOverlayState> _reactionKey =
+      GlobalKey<ReactionOverlayState>();
+  final GlobalKey<GiftBurstOverlayState> _giftBurstKey =
+      GlobalKey<GiftBurstOverlayState>();
 
   // LiveKit
   Room? _liveKitRoom;
@@ -167,15 +171,21 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   Future<void> _refreshSpeakerRequestCount() async {
     if (!_isHost) return;
     try {
-      final raw = await ref.read(liveRepositoryProvider).getCohostRequests(widget.liveId);
+      final raw = await ref
+          .read(liveRepositoryProvider)
+          .getCohostRequests(widget.liveId);
       final data = raw['data'] as List? ?? const [];
       if (mounted) setState(() => _speakerRequestCount = data.length);
-    } catch (_) { /* transient — the next WS ping refreshes */ }
+    } catch (_) {
+      /* transient — the next WS ping refreshes */
+    }
   }
 
   void _onCohostEvent(LiveCohostEvent? event) {
     if (event == null) return;
-    final name = (event.data['display_name'] ?? event.data['username'] ?? 'Someone').toString();
+    final name =
+        (event.data['display_name'] ?? event.data['username'] ?? 'Someone')
+            .toString();
     switch (event.type) {
       case 'live_cohost_request':
         if (_isHost) {
@@ -210,18 +220,23 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: BuddyColors.surface,
-        title: const Text('Co-host invite', style: TextStyle(color: BuddyColors.textPrimary)),
-        content: const Text('The host invited you to co-host this live.',
-            style: TextStyle(color: BuddyColors.textSecondary)),
+        title: const Text(
+          'Co-host invite',
+          style: TextStyle(color: BuddyColors.textPrimary),
+        ),
+        content: const Text(
+          'The host invited you to co-host this live.',
+          style: TextStyle(color: BuddyColors.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
               try {
                 await ref.read(liveRepositoryProvider).respondCohostInvite(
-                      widget.liveId,
-                      {'action': 'decline'},
-                    );
+                  widget.liveId,
+                  {'action': 'decline'},
+                );
                 if (mounted) _toast('Invite declined');
               } catch (_) {}
             },
@@ -232,9 +247,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
               Navigator.of(ctx).pop();
               try {
                 await ref.read(liveRepositoryProvider).respondCohostInvite(
-                      widget.liveId,
-                      {'action': 'accept'},
-                    );
+                  widget.liveId,
+                  {'action': 'accept'},
+                );
                 ref.invalidate(liveRoomProvider(widget.liveId));
                 if (mounted) _toast('You are a co-host now!');
               } catch (_) {
@@ -270,9 +285,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
       await ref.read(liveRepositoryProvider).requestToSpeak(widget.liveId);
       final profile = ref.read(authProvider).profile;
       ref.read(liveSocketProvider(widget.liveId).notifier).sendCohostEvent(
-            'cohost_request',
-            {'display_name': profile?.displayName ?? ''},
-          );
+        'cohost_request',
+        {'display_name': profile?.displayName ?? ''},
+      );
       if (mounted) {
         setState(() => _hasRequestedToSpeak = true);
         _toast('Request sent to host');
@@ -305,11 +320,11 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
         final gift = next.lastGift;
         if (gift != null) {
           _giftBurstKey.currentState?.burst(
-                gift.artifactType,
-                gift.quantity,
-                gift.senderName,
-                gift.total,
-              );
+            gift.artifactType,
+            gift.quantity,
+            gift.senderName,
+            gift.total,
+          );
         }
       }
     });
@@ -335,7 +350,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
           });
 
           // Ended live with a replay → replay player instead of the room.
-          if (live.status != 'live' && live.replaySaved && live.replayUrl.isNotEmpty) {
+          if (live.status != 'live' &&
+              live.replaySaved &&
+              live.replayUrl.isNotEmpty) {
             _prepareReplay(live);
             return _buildReplayShell(live);
           }
@@ -361,16 +378,24 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                         key: _reactionKey,
                         child: Stack(
                           children: [
-                          _buildVideoView(live),
-                          _buildOverlay(live),
-                          _buildGiftTotals(),
-                          _buildCoHostStrip(),
-                          _buildRoomActions(),
-                          if (ref.watch(liveSocketProvider(widget.liveId).select((s) => s.feedbackPinned)) &&
-                              !_isHost)
-                            _buildFeedbackPinBanner(),
-                        ],
-                      ),
+                            _buildVideoView(live),
+                            if (live.status == 'scheduled' &&
+                                live.host.userId ==
+                                    ref.read(authProvider).user?.id)
+                              _scheduledBanner(live),
+                            _buildOverlay(live),
+                            _buildGiftTotals(),
+                            _buildCoHostStrip(),
+                            _buildRoomActions(),
+                            if (ref.watch(
+                                  liveSocketProvider(
+                                    widget.liveId,
+                                  ).select((s) => s.feedbackPinned),
+                                ) &&
+                                !_isHost)
+                              _buildFeedbackPinBanner(),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -390,11 +415,71 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
 
   // ── Video / replay surfaces ─────────────────────────────────────────────
 
+  Future<void> _startScheduled() async {
+    try {
+      await ref.read(liveRepositoryProvider).startScheduledLive(widget.liveId);
+      if (!mounted) return;
+      ref.invalidate(liveDetailProvider(widget.liveId));
+      ref.invalidate(liveRoomProvider(widget.liveId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your live is starting now.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not start the live: $e')));
+    }
+  }
+
+  Widget _scheduledBanner(BuddyLive live) {
+    return Positioned(
+      top: 72,
+      left: 16,
+      right: 16,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: BuddyColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: BuddyColors.gold.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            const Icon(LucideIcons.clock, size: 18, color: BuddyColors.gold),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Scheduled${live.scheduledFor != null ? ' for ${live.scheduledFor}' : ''} — only you can see this until you go live.',
+                style: const TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _startScheduled,
+              child: const Text('Go live now'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildVideoView(BuddyLive live) {
     if (_isUsingLiveKit && _liveKitRoom != null) {
       return Stack(
         children: [
-          Container(color: BuddyColors.black, child: const Center(child: Text('LiveKit Stream', style: TextStyle(color: Colors.white54)))),
+          Container(
+            color: BuddyColors.black,
+            child: const Center(
+              child: Text(
+                'LiveKit Stream',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+          ),
         ],
       );
     }
@@ -405,22 +490,40 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Avatar(src: live.host.avatarUrl, alt: live.host.displayName, size: AvatarSize.xl),
+            Avatar(
+              src: live.host.avatarUrl,
+              alt: live.host.displayName,
+              size: AvatarSize.xl,
+            ),
             const SizedBox(height: 16),
-            Text(live.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              live.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text('@${live.host.displayName}', style: const TextStyle(color: BuddyColors.textSecondary)),
+            Text(
+              '@${live.host.displayName}',
+              style: const TextStyle(color: BuddyColors.textSecondary),
+            ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () async {
                 final repo = ref.read(liveRepositoryProvider);
                 try {
                   final raw = await repo.joinLive(widget.liveId);
-                  final roomData = LiveRoomData.fromJson(raw['data'] as Map<String, dynamic>);
+                  final roomData = LiveRoomData.fromJson(
+                    raw['data'] as Map<String, dynamic>,
+                  );
                   await _joinWithCredentials(roomData);
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Join failed: $e')));
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('Join failed: $e')));
                   }
                 }
               },
@@ -453,20 +556,34 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Text('REPLAY',
-                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'REPLAY',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(live.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      live.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                   if (_isHost)
                     IconButton(
@@ -484,7 +601,11 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
               Expanded(
                 child: _replayController != null
                     ? Video(controller: _replayController!)
-                    : const Center(child: CircularProgressIndicator(color: BuddyColors.green)),
+                    : const Center(
+                        child: CircularProgressIndicator(
+                          color: BuddyColors.green,
+                        ),
+                      ),
               ),
               if (mux != null && mux.isNotEmpty) const SizedBox.shrink(),
             ],
@@ -500,7 +621,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   Future<void> _shareReplay(BuddyLive live) async {
     if (!_isHost) {
       await SharePlus.instance.share(
-        ShareParams(text: 'Watch this live replay on Buddy Up: ${live.replayUrl}'),
+        ShareParams(
+          text: 'Watch this live replay on Buddy Up: ${live.replayUrl}',
+        ),
       );
       return;
     }
@@ -536,35 +659,58 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Replay visibility',
-                  style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+              const Text(
+                'Replay visibility',
+                style: TextStyle(
+                  color: BuddyColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
               const SizedBox(height: 8),
               for (final (value, label, hint) in options)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(
-                    live.access == value ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                    color: live.access == value ? BuddyColors.green : BuddyColors.textSecondary,
+                    live.access == value
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: live.access == value
+                        ? BuddyColors.green
+                        : BuddyColors.textSecondary,
                   ),
-                  title: Text(label, style: const TextStyle(color: BuddyColors.textPrimary)),
-                  subtitle: Text(hint, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                  title: Text(
+                    label,
+                    style: const TextStyle(color: BuddyColors.textPrimary),
+                  ),
+                  subtitle: Text(
+                    hint,
+                    style: const TextStyle(
+                      color: BuddyColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
                   onTap: () async {
                     Navigator.of(ctx).pop();
                     try {
                       await ref.read(liveRepositoryProvider).updateVisibility(
-                            live.id,
-                            {'access': value},
-                          );
+                        live.id,
+                        {'access': value},
+                      );
                       if (mounted) {
                         ref.invalidate(liveDetailProvider(live.id));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Replay visibility set to $label')),
+                          SnackBar(
+                            content: Text('Replay visibility set to $label'),
+                          ),
                         );
                       }
                     } catch (e) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Could not change visibility: $e')),
+                          SnackBar(
+                            content: Text('Could not change visibility: $e'),
+                          ),
                         );
                       }
                     }
@@ -580,7 +726,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   // ── Top overlay: host row + viewer count + menu ─────────────────────────
 
   Widget _buildOverlay(BuddyLive live) {
-    final viewerCount = ref.watch(liveSocketProvider(widget.liveId).select((s) => s.viewerCount));
+    final viewerCount = ref.watch(
+      liveSocketProvider(widget.liveId).select((s) => s.viewerCount),
+    );
     final watching = viewerCount > 0 ? viewerCount : live.viewerCount;
 
     return Positioned(
@@ -599,26 +747,55 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                   Navigator.of(context).pop();
                 },
               ),
-              Avatar(src: live.host.avatarUrl, alt: live.host.displayName, size: AvatarSize.sm),
+              Avatar(
+                src: live.host.avatarUrl,
+                alt: live.host.displayName,
+                size: AvatarSize.sm,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(live.host.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text('$watching watching', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                    Text(
+                      live.host.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      '$watching watching',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                      ),
+                    ),
                   ],
                 ),
               ),
               if (live.status == 'live')
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: const BoxDecoration(color: BuddyColors.red, borderRadius: BorderRadius.all(Radius.circular(6))),
-                  child: const Text('LIVE', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: BuddyColors.red,
+                    borderRadius: BorderRadius.all(Radius.circular(6)),
+                  ),
+                  child: const Text(
+                    'LIVE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               const SizedBox(width: 4),
               IconButton(
@@ -653,13 +830,20 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
             children: [
               if (!_isHost) ...[
                 ListTile(
-                  leading: const Icon(Icons.person_add_outlined, color: BuddyColors.textPrimary),
-                  title: const Text('Follow host', style: TextStyle(color: BuddyColors.textPrimary)),
+                  leading: const Icon(
+                    Icons.person_add_outlined,
+                    color: BuddyColors.textPrimary,
+                  ),
+                  title: const Text(
+                    'Follow host',
+                    style: TextStyle(color: BuddyColors.textPrimary),
+                  ),
                   onTap: () async {
                     Navigator.of(ctx).pop();
                     try {
-                      await ProfileRepository(ApiClient().dio)
-                          .followUser(hostUsername);
+                      await ProfileRepository(
+                        ApiClient().dio,
+                      ).followUser(hostUsername);
                       _toast('Following @$hostUsername');
                     } catch (_) {
                       _toast('Could not follow — try again');
@@ -667,20 +851,34 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.flag_outlined, color: BuddyColors.textPrimary),
-                  title: const Text('Report host', style: TextStyle(color: BuddyColors.textPrimary)),
+                  leading: const Icon(
+                    Icons.flag_outlined,
+                    color: BuddyColors.textPrimary,
+                  ),
+                  title: const Text(
+                    'Report host',
+                    style: TextStyle(color: BuddyColors.textPrimary),
+                  ),
                   onTap: () {
                     Navigator.of(ctx).pop();
                     _showReportSheet(live, hostUserId);
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.visibility_off_outlined, color: BuddyColors.textPrimary),
-                  title: const Text('Not interested', style: TextStyle(color: BuddyColors.textPrimary)),
+                  leading: const Icon(
+                    Icons.visibility_off_outlined,
+                    color: BuddyColors.textPrimary,
+                  ),
+                  title: const Text(
+                    'Not interested',
+                    style: TextStyle(color: BuddyColors.textPrimary),
+                  ),
                   onTap: () async {
                     Navigator.of(ctx).pop();
                     try {
-                      await ref.read(liveRepositoryProvider).toggleNotInterested(live.id);
+                      await ref
+                          .read(liveRepositoryProvider)
+                          .toggleNotInterested(live.id);
                       _toast('We will show fewer lives like this');
                     } catch (_) {
                       _toast('Could not update');
@@ -688,13 +886,20 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.block, color: BuddyColors.textPrimary),
-                  title: const Text('Never recommend this host',
-                      style: TextStyle(color: BuddyColors.textPrimary)),
+                  leading: const Icon(
+                    Icons.block,
+                    color: BuddyColors.textPrimary,
+                  ),
+                  title: const Text(
+                    'Never recommend this host',
+                    style: TextStyle(color: BuddyColors.textPrimary),
+                  ),
                   onTap: () async {
                     Navigator.of(ctx).pop();
                     try {
-                      await ref.read(liveRepositoryProvider).toggleMuteHost(live.id);
+                      await ref
+                          .read(liveRepositoryProvider)
+                          .toggleMuteHost(live.id);
                       _toast('You will not see this host again');
                     } catch (_) {
                       _toast('Could not update');
@@ -703,34 +908,59 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                 ),
               ] else ...[
                 ListTile(
-                  leading: const Icon(Icons.bar_chart, color: BuddyColors.textPrimary),
-                  title: const Text('Feedback summary',
-                      style: TextStyle(color: BuddyColors.textPrimary)),
+                  leading: const Icon(
+                    Icons.bar_chart,
+                    color: BuddyColors.textPrimary,
+                  ),
+                  title: const Text(
+                    'Feedback summary',
+                    style: TextStyle(color: BuddyColors.textPrimary),
+                  ),
                   onTap: () {
                     Navigator.of(ctx).pop();
                     _showFeedbackSheet(hostMode: true);
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.campaign_outlined, color: BuddyColors.textPrimary),
-                  title: const Text('Ask audience to rate', style: TextStyle(color: BuddyColors.textPrimary)),
+                  leading: const Icon(
+                    Icons.campaign_outlined,
+                    color: BuddyColors.textPrimary,
+                  ),
+                  title: const Text(
+                    'Ask audience to rate',
+                    style: TextStyle(color: BuddyColors.textPrimary),
+                  ),
                   onTap: () {
                     Navigator.of(ctx).pop();
-                    ref.read(liveSocketProvider(widget.liveId).notifier).sendFeedbackPin(true);
+                    ref
+                        .read(liveSocketProvider(widget.liveId).notifier)
+                        .sendFeedbackPin(true);
                     _toast('Feedback request pinned for the audience');
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.add_circle_outline, color: BuddyColors.textPrimary),
-                  title: const Text('Create a poll', style: TextStyle(color: BuddyColors.textPrimary)),
+                  leading: const Icon(
+                    Icons.add_circle_outline,
+                    color: BuddyColors.textPrimary,
+                  ),
+                  title: const Text(
+                    'Create a poll',
+                    style: TextStyle(color: BuddyColors.textPrimary),
+                  ),
                   onTap: () {
                     Navigator.of(ctx).pop();
                     _showPollComposer();
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.stop_circle_outlined, color: BuddyColors.red),
-                  title: const Text('End live', style: TextStyle(color: BuddyColors.red)),
+                  leading: const Icon(
+                    Icons.stop_circle_outlined,
+                    color: BuddyColors.red,
+                  ),
+                  title: const Text(
+                    'End live',
+                    style: TextStyle(color: BuddyColors.red),
+                  ),
                   onTap: () {
                     Navigator.of(ctx).pop();
                     _confirmEndLive(live);
@@ -750,10 +980,14 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   /// leaks, matching the moderation-first architecture.
   Future<void> _endLive(BuddyLive live, {required bool publish}) async {
     try {
-      await ref.read(liveRepositoryProvider).endLive(live.id, {'save_replay': true});
+      await ref.read(liveRepositoryProvider).endLive(live.id, {
+        'save_replay': true,
+      });
       if (!publish) {
         try {
-          await ref.read(liveRepositoryProvider).updateVisibility(live.id, {'access': 'private'});
+          await ref.read(liveRepositoryProvider).updateVisibility(live.id, {
+            'access': 'private',
+          });
         } catch (_) {
           // Non-fatal: the replay stays unlisted by default visibility rules
           // when consent is off; log-and-forget is honest here.
@@ -762,7 +996,13 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(publish ? 'Live ended — replay will be published' : 'Live ended — replay stays private')),
+          SnackBar(
+            content: Text(
+              publish
+                  ? 'Live ended — replay will be published'
+                  : 'Live ended — replay stays private',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -775,13 +1015,19 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: BuddyColors.surface,
-        title: const Text('End this live?', style: TextStyle(color: BuddyColors.textPrimary)),
+        title: const Text(
+          'End this live?',
+          style: TextStyle(color: BuddyColors.textPrimary),
+        ),
         content: const Text(
           'The recording is always kept by moderation. Choose what goes public.',
           style: TextStyle(color: BuddyColors.textSecondary),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Keep streaming')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Keep streaming'),
+          ),
           OutlinedButton.icon(
             onPressed: () {
               Navigator.of(ctx).pop();
@@ -797,7 +1043,10 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
             },
             icon: const Icon(Icons.public, size: 16),
             label: const Text('Publish replay'),
-            style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
+            style: FilledButton.styleFrom(
+              backgroundColor: BuddyColors.green,
+              foregroundColor: BuddyColors.black,
+            ),
           ),
         ],
       ),
@@ -821,11 +1070,21 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
             children: [
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text('Report host', style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+                child: Text(
+                  'Report host',
+                  style: TextStyle(
+                    color: BuddyColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
               ),
               for (final reason in reasons)
                 ListTile(
-                  leading: const Icon(Icons.flag_outlined, color: BuddyColors.textPrimary),
+                  leading: const Icon(
+                    Icons.flag_outlined,
+                    color: BuddyColors.textPrimary,
+                  ),
                   title: Text(reason[0].toUpperCase() + reason.substring(1)),
                   onTap: () async {
                     Navigator.of(ctx).pop();
@@ -833,7 +1092,8 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                       await ModerationRepository(ApiClient().dio).createReport({
                         'target_user': hostUserId,
                         'reason': reason,
-                        'description': 'Reported from the live room: ${live.title}',
+                        'description':
+                            'Reported from the live room: ${live.title}',
                         'content_url': '/live/${live.id}',
                       });
                       _toast('Report sent to moderation');
@@ -850,7 +1110,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   // ── Feedback sheet ──────────────────────────────────────────────────────
@@ -888,17 +1150,30 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(hostMode ? 'Audience feedback' : 'Rate this live',
-                    style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18)),
+                Text(
+                  hostMode ? 'Audience feedback' : 'Rate this live',
+                  style: const TextStyle(
+                    color: BuddyColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
                 const SizedBox(height: 10),
                 if (hostMode && aggregate != null) ...[
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, color: BuddyColors.gold, size: 22),
+                      const Icon(
+                        Icons.star_rounded,
+                        color: BuddyColors.gold,
+                        size: 22,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         '${(aggregate!['average'] as num? ?? 0).toStringAsFixed(1)} · ${aggregate!['count'] ?? 0} ratings',
-                        style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 15),
+                        style: const TextStyle(
+                          color: BuddyColors.textPrimary,
+                          fontSize: 15,
+                        ),
                       ),
                     ],
                   ),
@@ -911,7 +1186,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                         IconButton(
                           iconSize: 34,
                           icon: Icon(
-                            rating >= star ? Icons.star_rounded : Icons.star_outline_rounded,
+                            rating >= star
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
                             color: BuddyColors.gold,
                           ),
                           onPressed: () => setSheetState(() => rating = star),
@@ -936,10 +1213,12 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                         : () async {
                             Navigator.of(ctx).pop();
                             try {
-                              await ref.read(liveRepositoryProvider).submitFeedback(
-                                    widget.liveId,
-                                    {'rating': rating, 'comment': comment.text.trim()},
-                                  );
+                              await ref
+                                  .read(liveRepositoryProvider)
+                                  .submitFeedback(widget.liveId, {
+                                    'rating': rating,
+                                    'comment': comment.text.trim(),
+                                  });
                               _toast('Thanks for the feedback!');
                             } catch (_) {
                               _toast('Could not send feedback');
@@ -947,7 +1226,10 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                           },
                     icon: const Icon(Icons.send),
                     label: const Text('Submit'),
-                    style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: BuddyColors.green,
+                      foregroundColor: BuddyColors.black,
+                    ),
                   ),
               ],
             ),
@@ -960,9 +1242,12 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   // ── Poll card + composer ───────────────────────────────────────────────
 
   Widget _buildPollCard(BuddyLive live) {
-    final poll = ref.watch(liveSocketProvider(widget.liveId).select((s) => s.currentPoll));
+    final poll = ref.watch(
+      liveSocketProvider(widget.liveId).select((s) => s.currentPoll),
+    );
     if (poll == null) return const SizedBox.shrink();
-    final ended = poll.endsAt != null &&
+    final ended =
+        poll.endsAt != null &&
         (DateTime.tryParse(poll.endsAt!)?.isBefore(DateTime.now()) ?? false);
     // An expired timed poll clears itself locally; the next dispatch replaces it.
     if (ended) return const SizedBox.shrink();
@@ -984,15 +1269,28 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
         children: [
           Row(
             children: [
-              const Icon(Icons.how_to_vote_outlined, size: 16, color: BuddyColors.green),
+              const Icon(
+                Icons.how_to_vote_outlined,
+                size: 16,
+                color: BuddyColors.green,
+              ),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(poll.question,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                child: Text(
+                  poll.question,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: BuddyColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
               ),
-              _PollCountdown(endsAt: poll.endsAt, fallback: poll.durationSeconds),
+              _PollCountdown(
+                endsAt: poll.endsAt,
+                fallback: poll.durationSeconds,
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -1002,16 +1300,20 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
               child: _PollOption(
                 label: poll.options[i],
                 selected: poll.yourVote == i,
-                fraction: reveal && total > 0 ? ((poll.tally?[i] ?? 0) / total) : null,
+                fraction: reveal && total > 0
+                    ? ((poll.tally?[i] ?? 0) / total)
+                    : null,
                 onTap: () async {
                   if (poll.yourVote != null) return;
-                  ref.read(liveSocketProvider(widget.liveId).notifier).setPollVote(i);
+                  ref
+                      .read(liveSocketProvider(widget.liveId).notifier)
+                      .setPollVote(i);
                   try {
                     await ref.read(liveRepositoryProvider).votePoll(
-                          widget.liveId,
-                          poll.pollId,
-                          {'option': i},
-                        );
+                      widget.liveId,
+                      poll.pollId,
+                      {'option': i},
+                    );
                   } catch (_) {
                     _toast('Could not record your vote');
                   }
@@ -1025,7 +1327,10 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
 
   void _showPollComposer() {
     final question = TextEditingController();
-    final optionControllers = [TextEditingController(), TextEditingController()];
+    final optionControllers = [
+      TextEditingController(),
+      TextEditingController(),
+    ];
     int duration = 60;
 
     showModalBottomSheet<void>(
@@ -1047,8 +1352,14 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Ask the audience',
-                  style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18)),
+              const Text(
+                'Ask the audience',
+                style: TextStyle(
+                  color: BuddyColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
               const SizedBox(height: 10),
               TextField(
                 controller: question,
@@ -1063,14 +1374,23 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                       Expanded(
                         child: TextField(
                           controller: optionControllers[i],
-                          style: const TextStyle(color: BuddyColors.textPrimary),
-                          decoration: InputDecoration(hintText: 'Option ${i + 1}'),
+                          style: const TextStyle(
+                            color: BuddyColors.textPrimary,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Option ${i + 1}',
+                          ),
                         ),
                       ),
                       if (optionControllers.length > 2)
                         IconButton(
-                          icon: const Icon(Icons.remove_circle_outline, color: BuddyColors.textSecondary),
-                          onPressed: () => setSheetState(() => optionControllers.removeAt(i)),
+                          icon: const Icon(
+                            Icons.remove_circle_outline,
+                            color: BuddyColors.textSecondary,
+                          ),
+                          onPressed: () => setSheetState(
+                            () => optionControllers.removeAt(i),
+                          ),
                         ),
                     ],
                   ),
@@ -1079,8 +1399,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
-                    onPressed: () =>
-                        setSheetState(() => optionControllers.add(TextEditingController())),
+                    onPressed: () => setSheetState(
+                      () => optionControllers.add(TextEditingController()),
+                    ),
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('Add option'),
                   ),
@@ -1088,17 +1409,26 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Text('Lasts', style: TextStyle(color: BuddyColors.textPrimary)),
+                  const Text(
+                    'Lasts',
+                    style: TextStyle(color: BuddyColors.textPrimary),
+                  ),
                   const SizedBox(width: 8),
                   DropdownButton<int>(
                     value: duration,
                     dropdownColor: BuddyColors.surfaceRaised,
                     items: const [30, 60, 120, 300]
-                        .map((d) => DropdownMenuItem(
-                              value: d,
-                              child: Text('${d}s',
-                                  style: const TextStyle(color: BuddyColors.textPrimary)),
-                            ))
+                        .map(
+                          (d) => DropdownMenuItem(
+                            value: d,
+                            child: Text(
+                              '${d}s',
+                              style: const TextStyle(
+                                color: BuddyColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        )
                         .toList(),
                     onChanged: (v) => setSheetState(() => duration = v ?? 60),
                   ),
@@ -1118,15 +1448,14 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                   }
                   Navigator.of(ctx).pop();
                   try {
-                    await ref.read(liveRepositoryProvider).createPoll(
-                          widget.liveId,
-                          {
-                            'question': q,
-                            'options': options,
-                            'show_after_seconds': 0,
-                            'duration_seconds': duration,
-                          },
-                        );
+                    await ref
+                        .read(liveRepositoryProvider)
+                        .createPoll(widget.liveId, {
+                          'question': q,
+                          'options': options,
+                          'show_after_seconds': 0,
+                          'duration_seconds': duration,
+                        });
                     _toast('Poll sent to the audience');
                   } catch (e) {
                     _toast('Could not create the poll: $e');
@@ -1165,10 +1494,14 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   }
 
   Widget _buildGiftTotals() {
-    final totals = ref.watch(liveSocketProvider(widget.liveId).select((s) => s.giftTotals));
+    final totals = ref.watch(
+      liveSocketProvider(widget.liveId).select((s) => s.giftTotals),
+    );
     if (totals.isEmpty) return const SizedBox.shrink();
-    final coHosts = ref.watch(liveRoomProvider(widget.liveId)).value?.coHosts.length ?? 0;
-    final entries = totals.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final coHosts =
+        ref.watch(liveRoomProvider(widget.liveId)).value?.coHosts.length ?? 0;
+    final entries = totals.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     final shown = entries.take(3);
 
     return Positioned(
@@ -1187,7 +1520,11 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
               ),
               child: Text(
                 '${entry.key} ×${entry.value}',
-                style: const TextStyle(color: Color(0xFFFDE68A), fontSize: 11, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: Color(0xFFFDE68A),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
         ],
@@ -1216,16 +1553,28 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                const Icon(Icons.star_rounded, color: BuddyColors.gold, size: 22),
+                const Icon(
+                  Icons.star_rounded,
+                  color: BuddyColors.gold,
+                  size: 22,
+                ),
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
                     'The host would love your feedback — rate this live',
-                    style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, size: 18, color: Colors.white70),
+                  icon: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: Colors.white70,
+                  ),
                   onPressed: () => setState(() => _feedbackPinDismissed = true),
                   tooltip: 'Dismiss',
                 ),
@@ -1255,12 +1604,19 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
           ] else if (canAsk) ...[
             FloatingActionButton.small(
               heroTag: 'ask-cohost',
-              backgroundColor:
-                  _hasRequestedToSpeak ? BuddyColors.green : BuddyColors.surfaceRaised,
-              foregroundColor: _hasRequestedToSpeak ? BuddyColors.black : Colors.white,
+              backgroundColor: _hasRequestedToSpeak
+                  ? BuddyColors.green
+                  : BuddyColors.surfaceRaised,
+              foregroundColor: _hasRequestedToSpeak
+                  ? BuddyColors.black
+                  : Colors.white,
               onPressed: _askToCoHost,
-              tooltip: _hasRequestedToSpeak ? 'Request sent — waiting for host' : 'Ask to co-host',
-              child: Icon(_hasRequestedToSpeak ? Icons.check : Icons.mic_outlined),
+              tooltip: _hasRequestedToSpeak
+                  ? 'Request sent — waiting for host'
+                  : 'Ask to co-host',
+              child: Icon(
+                _hasRequestedToSpeak ? Icons.check : Icons.mic_outlined,
+              ),
             ),
             const SizedBox(height: 10),
           ],
@@ -1284,10 +1640,9 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
                 builder: (_) => GiftPicker(
                   onSendGift: (artifact, quantity, total) {
                     Navigator.of(context).pop();
-                    ref.read(liveSocketProvider(widget.liveId).notifier).sendGift(
-                          artifact.toLowerCase(),
-                          quantity,
-                        );
+                    ref
+                        .read(liveSocketProvider(widget.liveId).notifier)
+                        .sendGift(artifact.toLowerCase(), quantity);
                     _toast('Gift sent! 🎁');
                   },
                 ),
@@ -1335,7 +1690,9 @@ class _PollCountdownState extends State<_PollCountdown> {
   }
 
   Duration _computeLeft() {
-    final ends = widget.endsAt != null ? DateTime.tryParse(widget.endsAt!) : null;
+    final ends = widget.endsAt != null
+        ? DateTime.tryParse(widget.endsAt!)
+        : null;
     if (ends != null) {
       final left = ends.difference(DateTime.now());
       return left.isNegative ? Duration.zero : left;
@@ -1354,7 +1711,11 @@ class _PollCountdownState extends State<_PollCountdown> {
       ),
       child: Text(
         '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}',
-        style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 11, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+          color: BuddyColors.textPrimary,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -1366,7 +1727,12 @@ class _PollOption extends StatelessWidget {
   final double? fraction;
   final VoidCallback onTap;
 
-  const _PollOption({required this.label, required this.selected, required this.fraction, required this.onTap});
+  const _PollOption({
+    required this.label,
+    required this.selected,
+    required this.fraction,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1376,7 +1742,9 @@ class _PollOption extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? BuddyColors.green.withValues(alpha: 0.22) : BuddyColors.surfaceRaised,
+          color: selected
+              ? BuddyColors.green.withValues(alpha: 0.22)
+              : BuddyColors.surfaceRaised,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? BuddyColors.green : Colors.transparent,
@@ -1403,11 +1771,23 @@ class _PollOption extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(label, style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13)),
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: BuddyColors.textPrimary,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
                 if (fraction != null)
-                  Text('${(fraction! * 100).round()}%',
-                      style: const TextStyle(color: BuddyColors.green, fontSize: 11, fontWeight: FontWeight.w600)),
+                  Text(
+                    '${(fraction! * 100).round()}%',
+                    style: const TextStyle(
+                      color: BuddyColors.green,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
               ],
             ),
           ],
@@ -1440,20 +1820,34 @@ class _CrownFab extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              const Icon(Icons.workspace_premium, color: BuddyColors.black, size: 20),
+              const Icon(
+                Icons.workspace_premium,
+                color: BuddyColors.black,
+                size: 20,
+              ),
               if (count > 0)
                 Positioned(
                   top: 2,
                   right: 2,
                   child: Container(
-                    constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
+                    constraints: const BoxConstraints(
+                      minWidth: 15,
+                      minHeight: 15,
+                    ),
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: const BoxDecoration(color: BuddyColors.red, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                      color: BuddyColors.red,
+                      shape: BoxShape.circle,
+                    ),
                     child: Text(
                       '$count',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                          color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold, height: 1.4),
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ),
