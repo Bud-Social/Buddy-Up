@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:image/image.dart' as img;
@@ -14,6 +15,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
 import '../../../shared/widgets/toast.dart';
+import '../../../shared/widgets/post_share_card.dart';
 import '../providers/feed_provider.dart';
 
 /// Canonical deep link for a post. Video posts land in the fullscreen
@@ -382,6 +384,48 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
     }
   }
 
+  Future<File> _buildCard() async {
+    final link = await _trackedLink('card');
+    return PostShareCardRenderer().render(_post, permalink: link);
+  }
+
+  Future<void> _downloadCard() async {
+    setState(() => _busy = true);
+    try {
+      final file = await _buildCard();
+      if (mounted) {
+        showToast(context, 'Share card saved: ${file.path}', type: ToastType.success);
+      }
+    } catch (_) {
+      if (mounted) {
+        showToast(context, 'Could not build the share card.', type: ToastType.error);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _shareCard() async {
+    setState(() => _busy = true);
+    try {
+      final file = await _buildCard();
+      final link = await _trackedLink('native');
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text: 'Check out this BuddyUp Fit post: $link',
+          subject: 'BuddyUp Fit',
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        showToast(context, 'Could not share the card.', type: ToastType.error);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _openSocial(_SocialTarget target) async {
     final url = await _trackedLink(target.id);
     final ok = await launchUrl(
@@ -469,6 +513,16 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
               icon: Icons.download,
               label: 'Download',
               onTap: _busy ? null : _downloadMedia,
+            ),
+            _Row(
+              icon: Icons.image_outlined,
+              label: 'Download share card',
+              onTap: _busy ? null : _downloadCard,
+            ),
+            _Row(
+              icon: Icons.share_outlined,
+              label: 'Share card',
+              onTap: _busy ? null : _shareCard,
             ),
             _Row(
               icon: Icons.repeat,
