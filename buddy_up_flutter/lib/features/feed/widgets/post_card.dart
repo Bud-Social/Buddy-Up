@@ -370,7 +370,7 @@ class _PostCardState extends ConsumerState<PostCard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.visibility_outlined,
+              LucideIcons.eye,
               size: 14,
               color: BuddyColors.textSecondary,
             ),
@@ -388,7 +388,7 @@ class _PostCardState extends ConsumerState<PostCard> {
         ),
         IconButton(
           icon: const Icon(
-            Icons.more_horiz,
+            LucideIcons.ellipsis,
             color: BuddyColors.textSecondary,
             size: 20,
           ),
@@ -519,7 +519,7 @@ class _PostCardState extends ConsumerState<PostCard> {
           Row(
             children: [
               const Icon(
-                Icons.fitness_center,
+                LucideIcons.dumbbell,
                 color: BuddyColors.green,
                 size: 18,
               ),
@@ -549,7 +549,7 @@ class _PostCardState extends ConsumerState<PostCard> {
   Widget _buildGymTag() {
     return Row(
       children: [
-        const Icon(Icons.fitness_center, size: 14, color: BuddyColors.green),
+        const Icon(LucideIcons.dumbbell, size: 14, color: BuddyColors.green),
         const SizedBox(width: 4),
         Text(
           _displayGymTagName!,
@@ -641,7 +641,8 @@ class _PostMenuSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             _MenuRow(
-              icon: isLiked ? Icons.favorite : Icons.favorite_border,
+              icon: LucideIcons.heart,
+              iconColor: isLiked ? BuddyColors.red : null,
               label: isLiked ? 'Unlike' : 'Like',
               onTap: () {
                 Navigator.of(context).pop();
@@ -653,13 +654,13 @@ class _PostMenuSheet extends ConsumerWidget {
               },
             ),
             _MenuRow(
-              icon: Icons.visibility_off,
+              icon: LucideIcons.eyeOff,
               label: 'Not interested',
               subtitle: 'See fewer posts like this',
               onTap: () => _hidePost(context),
             ),
             _MenuRow(
-              icon: Icons.flag_outlined,
+              icon: LucideIcons.flag,
               label: 'Report',
               subtitle: 'Report this post to moderators',
               onTap: () {
@@ -668,20 +669,20 @@ class _PostMenuSheet extends ConsumerWidget {
               },
             ),
             _MenuRow(
-              icon: Icons.block,
+              icon: LucideIcons.ban,
               label: 'Block @$username',
               subtitle: 'They won\'t be able to find or contact you',
               onTap: () => _confirmBlock(context, username),
             ),
             _MenuRow(
-              icon: Icons.person_off_outlined,
+              icon: LucideIcons.userMinus,
               label: 'Don\'t suggest this creator',
               subtitle: 'Hide all posts from @$username',
               onTap: () => _muteAuthor(context, username),
             ),
             if (onSave != null)
               _MenuRow(
-                icon: live.isSaved ? Icons.bookmark : Icons.bookmark_border,
+                icon: LucideIcons.bookmark,
                 label: live.isSaved ? 'Unsave' : 'Save',
                 onTap: () {
                   Navigator.of(context).pop();
@@ -690,7 +691,7 @@ class _PostMenuSheet extends ConsumerWidget {
               ),
             if (onPin != null)
               _MenuRow(
-                icon: Icons.push_pin_outlined,
+                icon: LucideIcons.pin,
                 label: live.isPinned ? 'Unpin' : 'Pin',
                 onTap: () {
                   Navigator.of(context).pop();
@@ -699,7 +700,7 @@ class _PostMenuSheet extends ConsumerWidget {
               ),
             if (onDelete != null)
               _MenuRow(
-                icon: Icons.delete_outline,
+                icon: LucideIcons.trash2,
                 iconColor: BuddyColors.red,
                 label: 'Delete',
                 destructive: true,

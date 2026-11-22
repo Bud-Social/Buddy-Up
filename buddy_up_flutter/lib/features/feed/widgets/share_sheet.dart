@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -58,14 +59,14 @@ const _socialTargets = [
   _SocialTarget(
     id: 'whatsapp',
     label: 'WhatsApp',
-    icon: Icons.chat_bubble,
+    icon: LucideIcons.messageCircle,
     color: Color(0xFF25D366),
     href: _waHref,
   ),
   _SocialTarget(
     id: 'x',
     label: 'X',
-    icon: Icons.close,
+    icon: LucideIcons.x,
     color: Colors.white,
     href: _xHref,
   ),
@@ -79,7 +80,7 @@ const _socialTargets = [
   _SocialTarget(
     id: 'telegram',
     label: 'Telegram',
-    icon: Icons.send,
+    icon: LucideIcons.send,
     color: Color(0xFF229ED9),
     href: _tgHref,
   ),
@@ -504,28 +505,28 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
               ),
             ),
             _Row(
-              icon: _copied ? Icons.check : Icons.link,
+              icon: _copied ? LucideIcons.check : LucideIcons.link,
               iconColor: _copied ? BuddyColors.green : null,
               label: _copied ? 'Link copied!' : 'Copy link',
               onTap: _busy ? null : _copyLink,
             ),
             _Row(
-              icon: Icons.download,
+              icon: LucideIcons.download,
               label: 'Download',
               onTap: _busy ? null : _downloadMedia,
             ),
             _Row(
-              icon: Icons.image_outlined,
+              icon: LucideIcons.image,
               label: 'Download share card',
               onTap: _busy ? null : _downloadCard,
             ),
             _Row(
-              icon: Icons.share_outlined,
+              icon: LucideIcons.share,
               label: 'Share card',
               onTap: _busy ? null : _shareCard,
             ),
             _Row(
-              icon: Icons.repeat,
+              icon: LucideIcons.repeat2,
               label: _post.isRepostedByMe ? 'Undo repost' : 'Repost',
               trailing: '${_post.repostCount}',
               onTap: () {
@@ -534,7 +535,7 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
               },
             ),
             _Row(
-              icon: _post.isSaved ? Icons.bookmark : Icons.bookmark_border,
+              icon: LucideIcons.bookmark,
               label: _post.isSaved ? 'Saved' : 'Save',
               onTap: () {
                 Navigator.of(context).pop();
@@ -542,7 +543,7 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
               },
             ),
             _Row(
-              icon: Icons.person_outline,
+              icon: LucideIcons.user,
               label: 'View creator profile',
               onTap: () {
                 Navigator.of(context).pop();

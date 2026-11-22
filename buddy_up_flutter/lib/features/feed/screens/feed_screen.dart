@@ -199,9 +199,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           tooltip: 'Menu',
           onPressed: () => AppNav.open(context),
         ),
-        title: const Text(
-          'BuddyUp Fit',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Image.asset(
+          'assets/logo-dark.png',
+          height: 28,
+          fit: BoxFit.contain,
         ),
         actions: [
           IconButton(

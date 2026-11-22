@@ -414,12 +414,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'BuddyUp Fit',
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: BuddyColors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Image.asset(
+                  'assets/logo-dark.png',
+                  height: 44,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 8),
                 Text(

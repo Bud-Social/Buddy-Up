@@ -1049,10 +1049,10 @@ class _AppShellState extends State<_AppShell> {
   static const _railDestinations = <_NavDestination>[
     _NavDestination('/feed', LucideIcons.home, LucideIcons.home, 'Home'),
     _NavDestination(
-      '/discover',
-      LucideIcons.search,
-      LucideIcons.search,
-      'Discover',
+      '/gyms',
+      LucideIcons.dumbbell,
+      LucideIcons.dumbbell,
+      'Gyms',
     ),
     _NavDestination(
       '/buddies/find',
@@ -1139,10 +1139,10 @@ class _AppShellState extends State<_AppShell> {
   static const _phoneDestinations = <_NavDestination>[
     _NavDestination('/feed', LucideIcons.home, LucideIcons.home, 'Home'),
     _NavDestination(
-      '/discover',
-      LucideIcons.search,
-      LucideIcons.search,
-      'Find',
+      '/gyms',
+      LucideIcons.dumbbell,
+      LucideIcons.dumbbell,
+      'Gyms',
     ),
     _NavDestination('/lives', LucideIcons.radio, LucideIcons.radio, 'Live'),
     _NavDestination(

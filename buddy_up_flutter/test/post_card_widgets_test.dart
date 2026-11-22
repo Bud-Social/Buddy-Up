@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:buddy_up_flutter/core/analytics/analytics_service.dart';
 import 'package:buddy_up_flutter/core/auth/auth_provider.dart';
 import 'package:buddy_up_flutter/data/models/post.dart';
@@ -168,8 +169,8 @@ void main() {
         tester.widget<Text>(counter).data,
         '1.2k',
       );
-      expect(find.byIcon(Icons.visibility_outlined), findsWidgets);
-      expect(find.byIcon(Icons.more_horiz), findsOneWidget);
+      expect(find.byIcon(LucideIcons.eye), findsWidgets);
+      expect(find.byIcon(LucideIcons.ellipsis), findsOneWidget);
       await settleTree(tester);
     });
 
@@ -201,7 +202,7 @@ void main() {
       final post = Post.fromJson(postJson('p1'));
       await tester.pumpWidget(wrap(PostCard(post: post)));
 
-      await tester.tap(find.byIcon(Icons.more_horiz));
+      await tester.tap(find.byIcon(LucideIcons.ellipsis));
       await tester.pumpAndSettle();
 
       expect(find.text('Like'), findsOneWidget);
