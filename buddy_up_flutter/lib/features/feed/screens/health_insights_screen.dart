@@ -44,7 +44,7 @@ class _HealthInsightsScreenState extends ConsumerState<HealthInsightsScreen> {
         actions: [
           PopupMenuButton<String>(
             color: BuddyColors.surface,
-            icon: const Icon(Icons.date_range),
+            icon: const Icon(LucideIcons.calendar),
             onSelected: (p) {
               _period = p;
               _load();

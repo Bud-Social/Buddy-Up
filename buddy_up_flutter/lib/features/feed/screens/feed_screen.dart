@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../providers/feed_provider.dart';
 import '../widgets/feed_tab_bar.dart';
 import '../widgets/post_card.dart';
@@ -206,7 +207,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(LucideIcons.search),
             tooltip: 'Search',
             onPressed: () => context.push('/discover'),
           ),
@@ -253,7 +254,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           }
         },
         child: Icon(
-          _composerExpanded ? Icons.close : Icons.edit,
+          _composerExpanded ? LucideIcons.x : LucideIcons.edit,
           color: BuddyColors.black,
         ),
       ),
@@ -268,7 +269,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.groups_outlined,
+              LucideIcons.users,
               size: 64,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -332,7 +333,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                     ? NetworkImage(c.groupAvatarUrl)
                     : null,
                 child: c.groupAvatarUrl.isEmpty
-                    ? const Icon(Icons.groups, color: BuddyColors.green)
+                    ? const Icon(LucideIcons.users, color: BuddyColors.green)
                     : null,
               ),
               title: Text(
@@ -353,7 +354,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                 ),
               ),
               trailing: const Icon(
-                Icons.chevron_right,
+                LucideIcons.chevronRight,
                 color: BuddyColors.green,
               ),
               onTap: () => context.push('/communities/${c.id}'),
@@ -396,7 +397,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                 ),
                 onPressed: _showPendingNewPosts,
                 icon: const Icon(
-                  Icons.arrow_upward,
+                  LucideIcons.arrowUp,
                   size: 14,
                   color: BuddyColors.green,
                 ),
@@ -452,7 +453,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                         TextButton.icon(
                           onPressed: () => notifier.refresh(),
                           icon: const Icon(
-                            Icons.arrow_upward,
+                            LucideIcons.arrowUp,
                             size: 15,
                             color: BuddyColors.green,
                           ),

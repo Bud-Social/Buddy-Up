@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/models/post.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../core/theme/app_theme.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class CommentTile extends StatelessWidget {
   final Comment comment;
@@ -234,7 +235,7 @@ class CommentTile extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) => Container(
             color: BuddyColors.surfaceRaised,
             child: Icon(
-              isGif ? Icons.gif : Icons.image,
+              isGif ? Icons.gif : LucideIcons.image,
               size: 20,
               color: BuddyColors.textSecondary,
             ),

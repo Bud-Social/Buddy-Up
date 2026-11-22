@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_theme.dart';
 
 class AiAnalysisCard extends StatelessWidget {
@@ -37,7 +38,7 @@ class AiAnalysisCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                Icons.shield_outlined,
+                LucideIcons.shield,
                 size: 18,
                 color: allPassed ? BuddyColors.green : BuddyColors.gold,
               ),
@@ -127,7 +128,7 @@ class _CheckTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            check.passed ? Icons.check_circle_outline : Icons.error_outline,
+            check.passed ? LucideIcons.checkCircle : LucideIcons.alertCircle,
             size: 16,
             color: color,
           ),
