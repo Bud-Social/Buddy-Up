@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -129,15 +130,15 @@ class _CreatorInsightsScreenState
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              _Total('Views', _totals['views'] ?? 0, Icons.visibility_outlined),
-                              _Total('Interactions', _totals['interactions'] ?? 0, Icons.bolt_outlined),
-                              _Total('Watch time', _totals['watch_ms'] ?? 0, Icons.play_circle_outline, duration: true),
-                              _Total('Avg focus', _totals['avg_focus_ms'] ?? 0, Icons.timer_outlined, duration: true),
-                              _Total('Likes', _totals['likes'] ?? 0, Icons.favorite_border),
-                              _Total('Comments', _totals['comments'] ?? 0, Icons.chat_bubble_outline),
-                              _Total('Reposts', _totals['reposts'] ?? 0, Icons.repeat),
-                              _Total('Saves', _totals['saves'] ?? 0, Icons.bookmark_border),
-                              _Total('Shares', _totals['shares'] ?? 0, Icons.share_outlined),
+                              _Total('Views', _totals['views'] ?? 0, LucideIcons.eye),
+                              _Total('Interactions', _totals['interactions'] ?? 0, LucideIcons.bolt),
+                              _Total('Watch time', _totals['watch_ms'] ?? 0, LucideIcons.play, duration: true),
+                              _Total('Avg focus', _totals['avg_focus_ms'] ?? 0, LucideIcons.timer, duration: true),
+                              _Total('Likes', _totals['likes'] ?? 0, LucideIcons.heart),
+                              _Total('Comments', _totals['comments'] ?? 0, LucideIcons.messageCircle),
+                              _Total('Reposts', _totals['reposts'] ?? 0, LucideIcons.repeat2),
+                              _Total('Saves', _totals['saves'] ?? 0, LucideIcons.bookmark),
+                              _Total('Shares', _totals['shares'] ?? 0, LucideIcons.share),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -166,7 +167,7 @@ class _CreatorInsightsScreenState
                                   ),
                                 ),
                                 trailing: Icon(
-                                  Icons.chevron_right,
+                                  LucideIcons.chevronRight,
                                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                                 onTap: () => context.push(

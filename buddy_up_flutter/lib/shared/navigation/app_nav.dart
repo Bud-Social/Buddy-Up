@@ -102,7 +102,7 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
                   Text(
                     'BuddyUp Fit',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: BuddyColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -113,8 +113,8 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
                             ? const SizedBox.shrink()
                             : Text(
                                 user.displayName,
-                                style: const TextStyle(
-                                  color: BuddyColors.textSecondary,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                   fontSize: 12,
                                 ),
                               ),
@@ -165,7 +165,9 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
               _section('Staff'),
               _tile(LucideIcons.layoutDashboard, 'Admin', '/admin', location),
             ],
-            const Divider(color: BuddyColors.border),
+            Divider(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
             for (final d in appNavDestinations.where(
               (d) => d.group == 'Footer',
             ))
@@ -175,9 +177,11 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
                 LucideIcons.heartHandshake,
                 color: BuddyColors.green,
               ),
-              title: const Text(
+              title: Text(
                 'Fund Us',
-                style: TextStyle(color: BuddyColors.textPrimary),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               onTap: () {
                 Navigator.of(context).pop();
@@ -194,8 +198,8 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
     padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
     child: Text(
       label.toUpperCase(),
-      style: const TextStyle(
-        color: BuddyColors.textSecondary,
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
         fontSize: 10,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.2,
@@ -208,12 +212,16 @@ class _AppNavDrawerState extends ConsumerState<AppNavDrawer> {
     return ListTile(
       leading: Icon(
         icon,
-        color: selected ? BuddyColors.green : BuddyColors.textSecondary,
+        color: selected
+            ? BuddyColors.green
+            : Theme.of(context).colorScheme.onSurfaceVariant,
       ),
       title: Text(
         label,
         style: TextStyle(
-          color: selected ? BuddyColors.green : BuddyColors.textPrimary,
+          color: selected
+              ? BuddyColors.green
+              : Theme.of(context).colorScheme.onSurface,
           fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),

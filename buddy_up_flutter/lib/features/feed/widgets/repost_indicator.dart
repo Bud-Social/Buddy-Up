@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
 import '../../../shared/widgets/avatar.dart';
@@ -113,7 +114,7 @@ class _RepostIndicatorState extends State<RepostIndicator>
               child: ScaleTransition(
                 scale: _pulseAnimation,
                 child: const Icon(
-                  Icons.repeat,
+                  LucideIcons.repeat2,
                   size: 14,
                   color: BuddyColors.green,
                 ),
@@ -257,7 +258,7 @@ class _RepostIndicatorState extends State<RepostIndicator>
                                     width: 24,
                                     height: 24,
                                     alignment: Alignment.center,
-                                    child: const Icon(Icons.fitness_center, size: 13, color: BuddyColors.green),
+                                    child: const Icon(LucideIcons.dumbbell, size: 13, color: BuddyColors.green),
                                   ),
                           )
                         : Avatar(

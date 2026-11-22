@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../providers/feed_provider.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -69,10 +70,10 @@ class _HealthInsightsScreenState extends ConsumerState<HealthInsightsScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildCard('Workouts', _data!['workouts']?.toString() ?? '0', Icons.fitness_center),
-        _buildCard('Active Days', _data!['active_days']?.toString() ?? '0', Icons.calendar_today),
-        _buildCard('Calories Burned', _data!['calories_burned']?.toString() ?? '0', Icons.local_fire_department),
-        _buildCard('Streak', '${_data!['streak']?.toString() ?? '0'} days', Icons.whatshot),
+        _buildCard('Workouts', _data!['workouts']?.toString() ?? '0', LucideIcons.dumbbell),
+        _buildCard('Active Days', _data!['active_days']?.toString() ?? '0', LucideIcons.calendar),
+        _buildCard('Calories Burned', _data!['calories_burned']?.toString() ?? '0', LucideIcons.flame),
+        _buildCard('Streak', '${_data!['streak']?.toString() ?? '0'} days', LucideIcons.flame),
       ],
     );
   }

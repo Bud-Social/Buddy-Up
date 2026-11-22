@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:uuid/uuid.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -521,7 +522,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             trailing: _visibility == opt
-                ? const Icon(Icons.check, color: BuddyColors.green)
+                ? const Icon(LucideIcons.check, color: BuddyColors.green)
                 : null,
             onTap: () {
               setState(() => _visibility = opt);
@@ -877,7 +878,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               : 'Create Post',
         ),
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(LucideIcons.x),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
@@ -902,7 +903,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               Row(
                 children: [
                   const Icon(
-                    Icons.fitness_center,
+                    LucideIcons.dumbbell,
                     size: 15,
                     color: BuddyColors.green,
                   ),
@@ -939,15 +940,15 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             const SizedBox(height: 16),
             const Divider(),
             _buildOptionTile(
-              Icons.push_pin,
+              LucideIcons.pin,
               _locationLabel.isNotEmpty
                   ? 'Location: $_locationLabel'
                   : 'Add location',
-              Icons.check_circle,
+              LucideIcons.checkCircle,
               () => _pickLocation(),
             ),
             _buildOptionTile(
-              Icons.visibility,
+              LucideIcons.eye,
               'Visibility: $_visibility',
               null,
               _pickVisibility,
@@ -960,10 +961,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
 
   Widget _buildTypeSelector() {
     final types = [
-      ('text', Icons.text_fields, 'Text'),
-      ('photo', Icons.photo, 'Photo'),
-      ('video', Icons.videocam, 'Video'),
-      ('poll', Icons.poll, 'Poll'),
+      ('text', LucideIcons.type, 'Text'),
+      ('photo', LucideIcons.image, 'Photo'),
+      ('video', LucideIcons.video, 'Video'),
+      ('poll', LucideIcons.barChart3, 'Poll'),
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -1068,7 +1069,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                 margin: const EdgeInsets.only(left: 8),
                 child: OutlinedButton.icon(
                   onPressed: _applyCorrectedCaption,
-                  icon: const Icon(Icons.check_circle, size: 16),
+                  icon: const Icon(LucideIcons.checkCircle, size: 16),
                   label: const Text('Apply', style: TextStyle(fontSize: 12)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: BuddyColors.green,
@@ -1093,7 +1094,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: _addMedia,
-          icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+          icon: const Icon(LucideIcons.image, size: 18),
           label: const Text('Add media'),
         ),
       ],
@@ -1102,11 +1103,11 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
 
   Widget _buildMediaKindPills() {
     final kinds = [
-      ('image', Icons.image_outlined, 'Photo'),
-      ('video', Icons.videocam_outlined, 'Video'),
+      ('image', LucideIcons.image, 'Photo'),
+      ('video', LucideIcons.video, 'Video'),
       ('audio', Icons.audiotrack_outlined, 'Audio'),
-      ('text', Icons.text_fields, 'Styled text'),
-      ('file', Icons.insert_drive_file_outlined, 'File'),
+      ('text', LucideIcons.type, 'Styled text'),
+      ('file', LucideIcons.fileText, 'File'),
       ('document', Icons.description_outlined, 'Doc'),
     ];
     return Wrap(
@@ -1179,7 +1180,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                 if (_pollOptionControllers.length > 2)
                   IconButton(
                     icon: const Icon(
-                      Icons.remove_circle,
+                      LucideIcons.minus,
                       color: BuddyColors.red,
                       size: 20,
                     ),
@@ -1199,7 +1200,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               final c = TextEditingController();
               setState(() => _pollOptionControllers.add(c));
             },
-            icon: const Icon(Icons.add),
+            icon: const Icon(LucideIcons.plus),
             label: const Text('Add option'),
           ),
         CheckboxListTile(
@@ -1287,7 +1288,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.add_circle_outline, size: 20),
+          icon: const Icon(LucideIcons.plus, size: 20),
           color: value >= ceiling
               ? Theme.of(context).colorScheme.onSurfaceVariant
               : BuddyColors.green,
@@ -1397,7 +1398,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         color: BuddyColors.surfaceRaised,
         child: Center(
           child: Icon(
-            Icons.play_circle_outline,
+            LucideIcons.play,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             size: 36,
           ),
@@ -1443,7 +1444,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                 color: Colors.black87,
               ),
               padding: const EdgeInsets.all(3),
-              child: const Icon(Icons.close, size: 14, color: Colors.white),
+              child: const Icon(LucideIcons.x, size: 14, color: Colors.white),
             ),
           ),
         ),
@@ -1462,8 +1463,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         children: [
           Icon(
             m.type == 'document'
-                ? Icons.description_outlined
-                : Icons.insert_drive_file_outlined,
+                ? LucideIcons.fileText
+                : LucideIcons.file,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             size: 28,
           ),
@@ -1497,7 +1498,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
       ),
       trailing: Icon(
-        trailingIcon ?? Icons.chevron_right,
+        trailingIcon ?? LucideIcons.chevronRight,
         color: Theme.of(context).colorScheme.onSurfaceVariant,
         size: 20,
       ),
