@@ -196,7 +196,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.menu),
+          icon: const Icon(LucideIcons.menu),
           tooltip: 'Menu',
           onPressed: () => AppNav.open(context),
         ),
@@ -437,7 +437,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                     child: Column(
                       children: [
                         const Icon(
-                          Icons.check_circle,
+                          LucideIcons.checkCircle,
                           size: 26,
                           color: BuddyColors.green,
                         ),

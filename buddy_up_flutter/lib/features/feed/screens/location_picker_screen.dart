@@ -198,7 +198,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               onSubmitted: _search,
               decoration: const InputDecoration(
                 hintText: 'Search for a place…',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: Icon(LucideIcons.search),
               ),
             ),
           ),
@@ -213,7 +213,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   return ListTile(
                     dense: true,
                     leading: const Icon(
-                      Icons.place_outlined,
+                      LucideIcons.mapPin,
                       size: 18,
                       color: BuddyColors.green,
                     ),
@@ -281,7 +281,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                             ),
                           )
                         : const Icon(
-                            Icons.my_location,
+                            LucideIcons.locate,
                             color: BuddyColors.green,
                           ),
                   ),
@@ -296,7 +296,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               color: Theme.of(context).colorScheme.surface,
               child: Row(
                 children: [
-                  const Icon(Icons.place, color: BuddyColors.green, size: 20),
+                  const Icon(LucideIcons.mapPin, color: BuddyColors.green, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(

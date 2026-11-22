@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/models/post.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -102,7 +103,7 @@ class _PollWidgetState extends State<PollWidget> {
               totalVotes: totalVotes,
               // Results view only after voting/closure.
               showResults: isClosed || hasVoted,
-              leadingIcon: isMulti ? Icons.check_box : Icons.radio_button_unchecked,
+              leadingIcon: isMulti ? LucideIcons.check : LucideIcons.radio,
               checked: voted || pending,
               onTap: enabled ? () => isMulti ? _toggle(option.id) : widget.onVote?.call(widget.postId!, [option.id]) : null,
             );
@@ -203,7 +204,7 @@ class _PollOptionBar extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(
-                      checked ? Icons.check_box_outlined : leadingIcon,
+                      checked ? LucideIcons.check : leadingIcon,
                       size: 18,
                       color: checked ? BuddyColors.green : BuddyColors.textSecondary,
                     ),
