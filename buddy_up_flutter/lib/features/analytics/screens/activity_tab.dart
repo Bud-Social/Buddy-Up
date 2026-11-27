@@ -46,7 +46,8 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
-    final duration = int.tryParse(_durationController.text) ?? 0;
+    final durationMinutes = int.tryParse(_durationController.text) ?? 0;
+    final duration = durationMinutes * 60;
     final distanceMeters =
         (double.tryParse(_distanceController.text) ?? 0) * 1000;
     final calories = double.tryParse(_caloriesController.text);
@@ -184,25 +185,11 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
           if (s.byType.isNotEmpty) ...[
             const SizedBox(height: 16),
             const SectionHeader(
-              title: 'By Type',
+              title: 'Activity metrics',
               icon: Icons.pie_chart_outline,
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final t in s.byType)
-                  Chip(
-                    label: Text(
-                      '${t.label} · ${formatNumber(t.distanceKm, decimals: 1)}km',
-                    ),
-                    backgroundColor: cs.surface,
-                    side: BorderSide(color: cs.outlineVariant),
-                    labelStyle: TextStyle(color: cs.onSurface, fontSize: 12),
-                  ),
-              ],
-            ),
+            for (final t in s.byType) _typeMetricCard(t, s),
           ],
           if (s.recent.isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -214,6 +201,43 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
       ),
     );
   }
+
+  Widget _typeMetricCard(ActivityTypeBreakdown metric, ActivitySummary s) {
+    final cs = Theme.of(context).colorScheme;
+    final key = metric.label.toLowerCase();
+    final detail = switch (key) {
+      'walk' || 'walking' =>
+        '${formatNumber(metric.distanceKm, decimals: 1)} km · ${formatDuration(metric.duration.round() * 60)} · ${s.totalSteps} steps total',
+      'run' || 'running' =>
+        '${formatNumber(metric.distanceKm, decimals: 1)} km · ${formatDuration(metric.duration.round() * 60)} · ${s.avgPace == null ? 'pace unavailable' : formatPace(s.avgPace)}',
+      'cycle' || 'cycling' =>
+        '${formatNumber(metric.distanceKm, decimals: 1)} km · ${formatDuration(metric.duration.round() * 60)} · ${metric.duration > 0 ? (metric.distanceKm / (metric.duration / 60)).toStringAsFixed(1) : '0.0'} km/h',
+      'hike' || 'hiking' =>
+        '${formatNumber(metric.distanceKm, decimals: 1)} km · ${formatDuration(metric.duration.round() * 60)} · ${metric.calories.round()} kcal',
+      _ => '${metric.count} sessions · ${formatDuration(metric.duration.round() * 60)} · ${metric.calories.round()} kcal',
+    };
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      color: cs.surface,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: BuddyColors.green.withValues(alpha: 0.14),
+          child: Icon(_iconForActivity(key), color: BuddyColors.green),
+        ),
+        title: Text(metric.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Text(detail, style: TextStyle(color: cs.onSurfaceVariant)),
+        trailing: Text('${metric.count}×', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+
+  IconData _iconForActivity(String type) => switch (type) {
+    'walk' || 'walking' => Icons.directions_walk,
+    'run' || 'running' => Icons.directions_run,
+    'cycle' || 'cycling' => Icons.directions_bike,
+    'hike' || 'hiking' => Icons.terrain,
+    _ => Icons.fitness_center,
+  };
 
   Widget _buildLogForm() {
     final cs = Theme.of(context).colorScheme;

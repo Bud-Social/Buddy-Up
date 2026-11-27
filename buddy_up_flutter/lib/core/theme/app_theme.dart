@@ -43,6 +43,11 @@ ThemeData buildBuddyTheme() {
   final base = ThemeData(
     brightness: Brightness.dark,
     scaffoldBackgroundColor: BuddyColors.black,
+    cardTheme: const CardThemeData(
+      color: BuddyColors.surface,
+      surfaceTintColor: Colors.transparent,
+      margin: EdgeInsets.zero,
+    ),
     colorScheme: const ColorScheme.dark(
       primary: BuddyColors.green,
       secondary: BuddyColors.green,
@@ -137,6 +142,11 @@ ThemeData buildBuddyLightTheme() {
   final base = ThemeData(
     brightness: Brightness.light,
     scaffoldBackgroundColor: BuddyLightColors.surfaceRaised,
+    cardTheme: const CardThemeData(
+      color: BuddyLightColors.surface,
+      surfaceTintColor: Colors.transparent,
+      margin: EdgeInsets.zero,
+    ),
     colorScheme: const ColorScheme.light(
       primary: BuddyColors.green,
       secondary: BuddyColors.green,
@@ -306,6 +316,9 @@ ThemeData buildBuddyAmbientTheme() {
       foregroundColor: Colors.white,
       elevation: 0,
     ),
-    cardTheme: base.cardTheme.copyWith(color: surface),
+    cardTheme: base.cardTheme.copyWith(
+      color: surface,
+      surfaceTintColor: Colors.transparent,
+    ),
   );
 }

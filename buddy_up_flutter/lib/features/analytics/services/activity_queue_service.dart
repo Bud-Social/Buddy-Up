@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../data/repositories/analytics_repository.dart';
+import '../../../data/models/analytics.dart';
 
 /// One activity captured while the device had no usable connection.
 class QueuedActivity {
@@ -64,6 +65,7 @@ class ActivityQueueService {
   ActivityQueueService(this._repository);
 
   static const _prefsKey = 'analytics.pending_activities.v1';
+  static const _localActivityKey = 'analytics.local_activities.v1';
   static const _uuid = Uuid();
 
   final AnalyticsRepository _repository;
@@ -106,6 +108,108 @@ class ActivityQueueService {
     }
   }
 
+  /// Keep a compact local copy of activity facts so the analytics surface is
+  /// useful immediately after recording and while the device is offline.
+  Future<void> recordLocalActivity(
+    Map<String, dynamic> payload, {
+    required String ownerId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_localActivityKey);
+    List<Map<String, dynamic>> items = [];
+    try {
+      final decoded = raw == null ? null : jsonDecode(raw);
+      if (decoded is List) {
+        items = [
+          for (final item in decoded)
+            if (item is Map) Map<String, dynamic>.from(item),
+        ];
+      }
+    } catch (_) {}
+    final id = payload['source_event_id'] as String? ?? newClientId();
+    items.removeWhere((item) =>
+        item['owner_id'] == ownerId && item['source_event_id'] == id);
+    items.add({
+      ...payload,
+      'owner_id': ownerId,
+      'source_event_id': id,
+      'recorded_at': DateTime.now().toIso8601String(),
+    });
+    // Keep the cache bounded; the server remains the source of truth online.
+    if (items.length > 250) items = items.sublist(items.length - 250);
+    await prefs.setString(_localActivityKey, jsonEncode(items));
+  }
+
+  Future<ActivitySummary?> localSummary(String? ownerId) async {
+    if (ownerId == null || ownerId.isEmpty) return null;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_localActivityKey);
+    if (raw == null) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return null;
+      final rows = decoded
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .where((row) => row['owner_id'] == ownerId)
+          .toList();
+      if (rows.isEmpty) return null;
+      final byType = <String, Map<String, dynamic>>{};
+      var distance = 0.0;
+      var duration = 0;
+      var calories = 0.0;
+      var steps = 0;
+      for (final row in rows) {
+        final type = row['activity_type'] as String? ?? 'other';
+        final bucket = byType.putIfAbsent(type, () => {
+              'label': type[0].toUpperCase() + type.substring(1),
+              'count': 0,
+              'calories': 0.0,
+              'distance_km': 0.0,
+              'duration': 0.0,
+            });
+        final rowDistance = (row['distance_meters'] as num?)?.toDouble() ?? 0;
+        final rowDuration = (row['duration_seconds'] as num?)?.toInt() ?? 0;
+        final rowCalories =
+            (row['calories_burned'] as num?)?.toDouble() ?? 0;
+        final rowSteps = (row['steps'] as num?)?.toInt() ?? 0;
+        bucket['count'] = (bucket['count'] as int) + 1;
+        bucket['calories'] = (bucket['calories'] as double) + rowCalories;
+        bucket['distance_km'] =
+            (bucket['distance_km'] as double) + rowDistance / 1000;
+        bucket['duration'] =
+            (bucket['duration'] as double) + rowDuration / 60;
+        distance += rowDistance / 1000;
+        duration += rowDuration;
+        calories += rowCalories;
+        steps += rowSteps;
+      }
+      final recent = rows.reversed.take(20).map((row) => {
+            'id': row['source_event_id'] ?? '',
+            'activity_type': row['activity_type'] ?? 'other',
+            'started_at': row['started_at'] ?? row['recorded_at'],
+            'duration_seconds': row['duration_seconds'] ?? 0,
+            'distance_meters': row['distance_meters'] ?? 0,
+            'distance_km':
+                ((row['distance_meters'] as num?)?.toDouble() ?? 0) / 1000,
+            'avg_pace': row['avg_pace'],
+            'calories_burned': row['calories_burned'],
+            'route': row['route'] ?? const [],
+          });
+      return ActivitySummary.fromJson({
+        'count': rows.length,
+        'total_distance_km': distance,
+        'total_duration_seconds': duration,
+        'total_calories_burned': calories,
+        'total_steps': steps,
+        'by_type': byType.values.toList(),
+        'recent': recent.toList(),
+      });
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<QueuedActivity>> pending(String? ownerId) async {
     if (ownerId == null) return const [];
     final items = (await _readAll()).where((r) => r.ownerId == ownerId).toList()
@@ -137,6 +241,7 @@ class ActivityQueueService {
     items.removeWhere((r) => r.clientId == record.clientId);
     items.add(record);
     await _writeAll(items);
+    await recordLocalActivity(record.payload, ownerId: ownerId);
     await refreshCount(ownerId);
     return record;
   }

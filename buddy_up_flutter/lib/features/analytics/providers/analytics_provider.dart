@@ -66,6 +66,13 @@ class AnalyticsSummaryNotifier extends Notifier<AnalyticsSummaryState> {
       // Keep the last summary visible while reloading, and on failure: an
       // offline device should still show what it already knows.
       final previous = state.summary;
+      final ownerId = ref.read(authProvider).user?.id;
+      final localActivity = await ref
+          .read(activityQueueServiceProvider)
+          .localSummary(ownerId);
+      final local = localActivity == null
+          ? null
+          : AnalyticsSummaryData(activity: localActivity);
       state = AnalyticsSummaryState(summary: previous, isLoading: true);
       try {
         final raw = await _repository.getSummary(period: p);
@@ -75,7 +82,10 @@ class AnalyticsSummaryNotifier extends Notifier<AnalyticsSummaryState> {
           ),
         );
       } catch (e) {
-        state = AnalyticsSummaryState(summary: previous, error: e.toString());
+        state = AnalyticsSummaryState(
+          summary: local ?? previous,
+          error: e.toString(),
+        );
       }
     }
   }
@@ -183,6 +193,9 @@ class AnalyticsLogNotifier extends Notifier<AnalyticsHistoryState> {
     };
     try {
       final raw = await _repository.createActivity(payload);
+      if (ownerId != null) {
+        await queue.recordLocalActivity(payload, ownerId: ownerId);
+      }
       return raw['data'] as Map<String, dynamic>?;
     } catch (e) {
       // An unreachable or failing API should not cost the user their session:

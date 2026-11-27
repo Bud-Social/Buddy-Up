@@ -5,13 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:image/image.dart' as img;
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
@@ -200,191 +196,6 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
     showToast(context, 'Link copied', type: ToastType.success);
   }
 
-  
-  /// Creates a watermark image with the BuddyUp Fit branding.
-  img.Image _createWatermark(int width, int height) {
-    // Create a canvas for the watermark
-    final watermarkWidth = (width * 0.3).clamp(60.0, 200.0).toInt();
-    final watermarkHeight = (watermarkWidth * 0.4).toInt();
-    
-    final watermark = img.Image(width: watermarkWidth, height: watermarkHeight);
-    
-    // Fill background with semi-transparent black
-    // ARGB: alpha=128, RGB=0 (black with 50% opacity)
-    // Fill by drawing a full-size rect
-    img.drawRect(
-      watermark,
-      x1: 0,
-      y1: 0,
-      x2: watermarkWidth,
-      y2: watermarkHeight,
-      color: img.ColorRgba8(0, 0, 0, 128),
-    );
-    
-    // Add "BuddyUp Fit" text (simplified - just a green bar with text indicator)
-    // In a real app, you'd use a font rendering library
-    const barHeight = 4;
-    final barWidth = watermarkWidth - 20;
-    // Green color: alpha=200, red=0, green=200, blue=150
-    final barColor = img.ColorRgba8(0, 200, 150, 200);
-    img.drawRect(
-      watermark,
-      x1: 10,
-      y1: watermarkHeight - 10 - barHeight,
-      x2: 10 + barWidth,
-      y2: watermarkHeight - 10,
-      color: barColor,
-    );
-    
-    // Small "BU" logo/text area
-    // Green color with full opacity
-    final buColor = img.ColorRgba8(0, 200, 150, 255);
-    img.drawRect(
-      watermark,
-      x1: 10,
-      y1: 10,
-      x2: 10 + 30,
-      y2: 10 + 20,
-      color: buColor,
-    );
-    
-    return watermark;
-  }
-
-  /// Creates a temporary PNG watermark image file for use with FFmpeg.
-  Future<File> _createWatermarkImageFile(int width, int height) async {
-    final watermark = _createWatermark(width, height);
-    final pngBytes = img.encodePng(watermark);
-    final tempDir = await getTemporaryDirectory();
-    final file = File('${tempDir.path}/buddyup_watermark_${DateTime.now().millisecondsSinceEpoch}.png');
-    await file.writeAsBytes(pngBytes);
-    return file;
-  }
-
-  /// Burns the BuddyUp watermark into a video using FFmpeg overlay filter.
-  /// Returns the path to the watermarked output file.
-  Future<File> _addVideoWatermark(File inputFile, File watermarkFile) async {
-    final outputDir = await getApplicationDocumentsDirectory();
-    final outputFile = File('${outputDir.path}/buddyup_watermarked_${DateTime.now().millisecondsSinceEpoch}.mp4');
-
-    final session = await FFmpegKit.execute(
-      '-i ${inputFile.path} -i ${watermarkFile.path} '
-      '-filter_complex "overlay=main_w-overlay_w-20:main_h-overlay_h-20" '
-      '-codec:a copy -movflags +faststart ${outputFile.path}',
-    );
-    final returnCode = await session.getReturnCode();
-    if (returnCode == null || !ReturnCode.isSuccess(returnCode)) {
-      final log = await session.getAllLogs();
-      throw Exception('FFmpeg failed (code $returnCode): $log');
-    }
-
-    return outputFile;
-  }
-
-/// Download the post media (image or video) to device storage with watermark.
-  Future<void> _downloadMedia() async {
-    // Find the first downloadable media URL
-    final mediaUrls = _post.mediaUrls;
-    final media = _post.media;
-    final videoMedia = media.where((m) => m.mediaType == 'video').firstOrNull;
-    final imageMedia = media.where((m) => m.mediaType == 'image').firstOrNull;
-
-    String? downloadUrl;
-    bool isVideo = false;
-    if (videoMedia != null) {
-      downloadUrl = videoMedia.url;
-      isVideo = true;
-    } else if (imageMedia != null) {
-      downloadUrl = imageMedia.url;
-      isVideo = false;
-    } else if (mediaUrls.isNotEmpty) {
-      downloadUrl = mediaUrls.first;
-      // Check if it's a video by extension
-      final ext = mediaUrls.first.toLowerCase().split('.').last;
-      isVideo = ['mp4', 'mov', 'webm', 'mkv'].contains(ext.toLowerCase());
-    }
-
-    if (downloadUrl == null || downloadUrl.isEmpty) {
-      if (mounted) showToast(context, 'No media available to download', type: ToastType.error);
-      return;
-    }
-
-    setState(() => _busy = true);
-    try {
-      final dio = ref.read(apiClientProvider).dio;
-
-      // Download to temp file first
-      final tempDir = await getTemporaryDirectory();
-      final ext = downloadUrl.contains('.') ? '.${downloadUrl.split('.').last}' : '.dat';
-      final tempFileName = 'buddyup_temp_${_post.id}$ext';
-      final tempFile = File('${tempDir.path}/$tempFileName');
-
-      await dio.download(downloadUrl, tempFile.path);
-
-      if (!mounted) return;
-
-      if (isVideo) {
-        // Burn BuddyUp watermark into the video using FFmpeg, then save
-        // to app documents. The watermark PNG is generated at 30% of the
-        // video width (clamped 60-200px) and placed in the bottom-right
-        // corner, matching the image-watermark placement.
-        try {
-          // Use a fixed watermark size scaled to a typical video width.
-          final watermarkFile = await _createWatermarkImageFile(1280, 720);
-          final watermarkedFile = await _addVideoWatermark(tempFile, watermarkFile);
-          // Clean up temp watermark
-          try { await watermarkFile.delete(); } catch (_) {}
-          if (!mounted) return;
-          showToast(context, 'Video downloaded with watermark: ${watermarkedFile.path}', type: ToastType.success);
-        } catch (e) {
-          // Fallback: save original video without watermark
-          final dir = await getApplicationDocumentsDirectory();
-          final fileName = 'buddyup_${_post.id}$ext';
-          final file = File('${dir.path}/$fileName');
-          await file.writeAsBytes(await tempFile.readAsBytes());
-          if (mounted) showToast(context, 'Video saved to ${file.path}', type: ToastType.success);
-        }
-      } else {
-        // For images, add watermark using image package
-        final bytes = await tempFile.readAsBytes();
-        final image = img.decodeImage(bytes);
-
-        if (image != null) {
-          // Create watermark
-          final watermark = _createWatermark(image.width, image.height);
-          // Draw watermark on image (bottom right)
-          img.compositeImage(image, watermark, dstX: image.width - watermark.width - 20, dstY: image.height - watermark.height - 20);
-
-          // Save watermarked image
-          final watermarkedBytes = img.encodeJpg(image, quality: 90);
-          final dir = await getApplicationDocumentsDirectory();
-          final ext = downloadUrl.contains('.') ? '.${downloadUrl.split('.').last}' : '.jpg';
-          final fileName = 'buddyup_${_post.id}$ext';
-          final file = File('${dir.path}/$fileName');
-          await file.writeAsBytes(watermarkedBytes);
-
-          // Also save to gallery
-          // GallerySaver removed for compatibility; image saved to app documents
-
-          if (!mounted) return;
-          showToast(context, 'Downloaded with watermark to gallery', type: ToastType.success);
-        } else {
-          // Fallback: save original
-          final dir = await getApplicationDocumentsDirectory();
-          final ext = downloadUrl.contains('.') ? '.${downloadUrl.split('.').last}' : '.dat';
-          final fileName = 'buddyup_${_post.id}$ext';
-          final file = File('${dir.path}/$fileName');
-          await file.writeAsBytes(bytes);
-          if (mounted) showToast(context, 'Downloaded to ${file.path}', type: ToastType.success);
-        }
-      }
-    } catch (e) {
-      if (mounted) showToast(context, 'Failed to download media: $e', type: ToastType.error);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   Future<File> _buildCard() async {
     final link = await _trackedLink('card');
     return PostShareCardRenderer().render(_post, permalink: link);
@@ -512,8 +323,8 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
             ),
             _Row(
               icon: LucideIcons.download,
-              label: 'Download',
-              onTap: _busy ? null : _downloadMedia,
+              label: 'Download card',
+              onTap: _busy ? null : _downloadCard,
             ),
             _Row(
               icon: LucideIcons.image,
@@ -666,3 +477,4 @@ class _Row extends StatelessWidget {
     );
   }
 }
+

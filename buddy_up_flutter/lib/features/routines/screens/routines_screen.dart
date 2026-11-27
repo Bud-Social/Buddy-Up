@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/routine.dart';
@@ -11,6 +12,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../providers/routines_provider.dart';
+import '../utils/routine_share_card.dart';
 
 const List<String> _dayShort = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -475,6 +477,35 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
             });
           }
 
+          Future<void> shareCard() async {
+            setSheetState(() => busy = true);
+            try {
+              final file = await RoutineShareCardRenderer().render(routine);
+              await SharePlus.instance.share(ShareParams(
+                files: [XFile(file.path)],
+                text: 'My ${routine.displayName} routine on BuddyUp Fit',
+                subject: 'BuddyUp Fit routine',
+              ));
+              if (ctx.mounted) setSheetState(() => message = 'Routine card ready to share.');
+            } catch (_) {
+              if (ctx.mounted) setSheetState(() => message = 'Could not build the routine card.');
+            } finally {
+              if (ctx.mounted) setSheetState(() => busy = false);
+            }
+          }
+
+          Future<void> downloadCard() async {
+            setSheetState(() => busy = true);
+            try {
+              final file = await RoutineShareCardRenderer().render(routine);
+              if (ctx.mounted) setSheetState(() => message = 'Card saved: ${file.path}');
+            } catch (_) {
+              if (ctx.mounted) setSheetState(() => message = 'Could not save the routine card.');
+            } finally {
+              if (ctx.mounted) setSheetState(() => busy = false);
+            }
+          }
+
           return SafeArea(
             child: Padding(
               padding: EdgeInsets.only(
@@ -570,6 +601,26 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                         ),
                       ),
                     ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: busy ? null : downloadCard,
+                            icon: const Icon(Icons.download_outlined),
+                            label: const Text('Save card'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: busy ? null : shareCard,
+                            icon: const Icon(Icons.ios_share_outlined),
+                            label: const Text('Share card'),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
                     if (message != null)
                       Padding(
