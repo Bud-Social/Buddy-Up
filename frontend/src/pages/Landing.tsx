@@ -41,7 +41,12 @@ import { Card } from '@/components/ui/Card';
 import { Logo } from '@/components/ui/Logo';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { isReducedMotionEnabled } from '@/lib/reducedMotion';
-import { APP_URL, GITHUB_RELEASE_APK_URL } from '@/config/downloads';
+import {
+  APP_URL,
+  detectAndroidAbi,
+  getAndroidApkUrl,
+  type AndroidAbi,
+} from '@/config/downloads';
 import {
   FUNDRAISER_URL,
   PLEDGE_FORM_URL,
@@ -343,7 +348,10 @@ export default function Landing() {
   const { isMobile, isTablet, isDesktop, os } = useDeviceType();
   const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [androidAbi, setAndroidAbi] = useState<AndroidAbi>(() => detectAndroidAbi());
   const deferredPrompt = useRef<{ prompt: () => void } | null>(null);
+
+  const androidApkUrl = getAndroidApkUrl(androidAbi);
 
   const installPwa = async () => {
     const prompt = deferredPrompt.current;
@@ -383,6 +391,35 @@ export default function Landing() {
       window.removeEventListener('appinstalled', installedHandler);
     };
   }, []);
+
+  // Chromium exposes the real CPU architecture through userAgentData only
+  // after an asynchronous high-entropy permission-free lookup. Use the
+  // synchronous user-agent result above immediately, then correct it when the
+  // browser provides a more precise value (important for 32-bit Android).
+  useEffect(() => {
+    if (os !== 'android') return;
+    type UserAgentData = {
+      getHighEntropyValues?: (hints: string[]) => Promise<{ architecture?: string }>;
+    };
+    const data = (navigator as Navigator & { userAgentData?: UserAgentData }).userAgentData;
+    if (!data?.getHighEntropyValues) return;
+    let active = true;
+    data
+      .getHighEntropyValues(['architecture'])
+      .then(({ architecture }) => {
+        if (!active) return;
+        const value = architecture?.toLowerCase() || '';
+        if (value.includes('arm64') || value.includes('aarch64')) setAndroidAbi('arm64-v8a');
+        else if (value.includes('arm') || value.includes('armv7')) setAndroidAbi('armeabi-v7a');
+        else if (value.includes('x86_64') || value.includes('amd64')) setAndroidAbi('x86_64');
+      })
+      .catch(() => {
+        /* The synchronous user-agent fallback is already usable. */
+      });
+    return () => {
+      active = false;
+    };
+  }, [os]);
 
   // Auto-rotate the "Everything in one place" tabs every 5s. Honours the
   // reduced-motion preference (device + app setting), pauses on hover/focus,
@@ -1006,17 +1043,24 @@ export default function Landing() {
               </div>
             )}
           </div>
-          {/* Android direct download — the GitHub release APK is the canonical
-              sideloaded-install download link. */}
-          <div className="mt-8 text-center">
-            <a
-              href={GITHUB_RELEASE_APK_URL}
-              className="inline-flex items-center gap-2 bg-buddy-green text-buddy-black rounded-2xl px-6 py-4 hover:brightness-110 transition-all"
-            >
-              <Download size={20} />
-              <span className="font-heading font-semibold">Android direct download · APK</span>
-            </a>
-          </div>
+          {/* Android direct download — resolve the latest compatible split APK. */}
+          {os === 'android' && (
+            <div className="mt-8 text-center">
+              <a
+                href={androidApkUrl}
+                download
+                className="inline-flex items-center gap-2 bg-buddy-green text-buddy-black rounded-2xl px-6 py-4 hover:brightness-110 transition-all"
+              >
+                <Download size={20} />
+                <span className="font-heading font-semibold">
+                  Download BuddyUp Fit · {androidAbi} APK
+                </span>
+              </a>
+              <p className="text-xs text-buddy-text-secondary mt-3">
+                Latest compatible Android release · under 90 MB
+              </p>
+            </div>
+          )}
           {isDesktop && !canInstall && (
             <p className="text-xs text-buddy-text-secondary mt-6">
               On desktop you can install BuddyUp Fit as a PWA from your browser's address bar, or
