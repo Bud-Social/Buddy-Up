@@ -61,6 +61,8 @@ INSTALLED_APPS = [
     # Owns the scope definitions that admin_portal's ScopedPlatformAdmin
     # enforces, so it must load after admin_portal's permission class imports it.
     'apps.governance',
+    # Self-hosted LiveKit control-plane webhooks and operator health probe.
+    'apps.realtime',
 ]
 
 MIDDLEWARE = [
@@ -505,6 +507,13 @@ LIVEKIT_URL = os.environ.get('LIVEKIT_URL', '')
 LIVEKIT_INTERNAL_URL = os.environ.get('LIVEKIT_INTERNAL_URL', LIVEKIT_URL)
 LIVEKIT_API_KEY = os.environ.get('LIVEKIT_API_KEY', '')
 LIVEKIT_API_SECRET = os.environ.get('LIVEKIT_API_SECRET', '')
+
+# Self-hosted realtime policy. Clients receive the selected transport in each
+# credential envelope; no provider secret is ever sent to them.
+REALTIME_TRANSPORT = os.environ.get('REALTIME_TRANSPORT', 'livekit').lower()
+REALTIME_TOKEN_TTL = int(os.environ.get('REALTIME_TOKEN_TTL', '900'))
+REALTIME_WEBHOOK_ENABLED = os.environ.get('REALTIME_WEBHOOK_ENABLED', 'true').lower() == 'true'
+REALTIME_HEALTH_TOKEN = os.environ.get('REALTIME_HEALTH_TOKEN', '')
 
 # Self-hosted, S3-compatible replay storage (MinIO in the production compose stack).
 LIVE_RECORDING_S3_ENDPOINT = os.environ.get('LIVE_RECORDING_S3_ENDPOINT', '')

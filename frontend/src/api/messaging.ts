@@ -199,6 +199,7 @@ export interface CallSessionCredentials {
   status: string;
   call_type: 'audio' | 'video';
   livekit: {
+    provider?: 'livekit';
     url: string;
     room: string;
     token: string;

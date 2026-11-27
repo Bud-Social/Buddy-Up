@@ -1053,7 +1053,7 @@ class ConversationCallSessionView(views.APIView):
             display_name=profile.display_name,
             avatar_url=getattr(profile, 'avatar_url', '') or '',
             can_publish=True,
-            token_expire_sec=600,
+            token_expire_sec=int(getattr(settings, 'REALTIME_TOKEN_TTL', 900)),
         )
         participants = (
             session.participants.filter(left_at__isnull=True)
@@ -1064,6 +1064,7 @@ class ConversationCallSessionView(views.APIView):
             'status': session.status,
             'call_type': session.call_type,
             'livekit': {
+                'provider': getattr(settings, 'REALTIME_TRANSPORT', 'livekit'),
                 'url': get_livekit_url(),
                 'room': session.room_name,
                 'token': token,

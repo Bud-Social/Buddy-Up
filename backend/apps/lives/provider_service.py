@@ -91,13 +91,16 @@ def generate_agora_token(channel_name, uid=0, role='publisher', token_expire_sec
     return '007' + base64.b64encode(compressed).decode('utf-8')
 
 
-def generate_livekit_token(room_name, identity, display_name='', avatar_url='', metadata='', can_publish=False, token_expire_sec=86400):
+def generate_livekit_token(room_name, identity, display_name='', avatar_url='', metadata='', can_publish=False, token_expire_sec=None):
     api_key = getattr(settings, 'LIVEKIT_API_KEY', '')
     api_secret = getattr(settings, 'LIVEKIT_API_SECRET', '')
 
     if not api_key or not api_secret:
         logger.warning('LIVEKIT_API_KEY or LIVEKIT_API_SECRET not configured')
         return ''
+
+    if token_expire_sec is None:
+        token_expire_sec = int(getattr(settings, 'REALTIME_TOKEN_TTL', 900))
 
     from livekit import api as livekit_api
 
@@ -151,6 +154,7 @@ def get_live_credentials(live, request=None, uid=None, can_publish=False):
     livekit_token = generate_livekit_token(
         livekit_room, identity=identity, display_name=display_name,
         avatar_url=avatar_url, can_publish=can_publish,
+        token_expire_sec=int(getattr(settings, 'REALTIME_TOKEN_TTL', 900)),
     )
 
     return {
@@ -158,6 +162,7 @@ def get_live_credentials(live, request=None, uid=None, can_publish=False):
             'app_id': '', 'channel': agora_channel, 'token': None,
         },
         'livekit': {
+            'provider': getattr(settings, 'REALTIME_TRANSPORT', 'livekit'),
             'url': get_livekit_url(),
             'room': livekit_room,
             'token': livekit_token,

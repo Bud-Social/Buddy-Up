@@ -9,6 +9,8 @@ export interface AgoraCredentials {
 }
 
 export interface LiveKitCredentials {
+  /** Always `livekit` for the BuddyUp-operated SFU; kept explicit for rollout flags. */
+  provider?: 'livekit';
   url: string;
   room: string;
   token: string;

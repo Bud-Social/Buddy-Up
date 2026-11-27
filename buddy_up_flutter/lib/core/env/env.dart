@@ -12,7 +12,8 @@ class Env {
 
   static const String prodApiBaseUrl = 'https://backend.buddyupfit.com/api/v1';
   static const String prodWsBaseUrl = 'wss://backend.buddyupfit.com';
-  static const String prodLivekitUrl = 'wss://buddy-up-hf40obqn.livekit.cloud';
+  // BuddyUp-operated SFU endpoint. Override with LIVEKIT_URL for staging.
+  static const String prodLivekitUrl = 'wss://rtc.buddyup.app';
 
   static const String localApiBaseUrl = 'http://localhost:8002/api/v1';
   static const String localWsBaseUrl = 'ws://localhost:8002';

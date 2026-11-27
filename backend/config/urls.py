@@ -17,6 +17,7 @@ urlpatterns = [
     path('api/v1/sounds/', include('apps.feed.urls_sounds')),
     path('api/v1/gyms/', include('apps.gyms.urls')),
     path('api/v1/lives/', include('apps.lives.urls')),
+    path('api/v1/realtime/', include('apps.realtime.urls')),
     path('api/v1/sessions/', include('apps.sessions.urls')),
     path('api/v1/messaging/', include('apps.messaging.urls')),
     path('api/v1/guardians/', include('apps.guardians.urls')),

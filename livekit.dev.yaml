@@ -14,3 +14,7 @@ logging:
   level: info
 turn:
   enabled: false
+webhook:
+  urls:
+    - http://backend:8002/api/v1/realtime/webhooks/livekit/
+  api_key: ${LIVEKIT_API_KEY}
