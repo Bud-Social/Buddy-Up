@@ -7,6 +7,7 @@ import '../../../data/models/admin_portal.dart';
 import '../../notifications/providers/notification_provider.dart';
 import '../providers/moderation_provider.dart';
 import '../providers/settings_providers.dart';
+import '../../../shared/navigation/main_header.dart';
 
 /// Settings → Help & Safety → your moderation record.
 ///
@@ -53,7 +54,7 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
     final commendations = ref.watch(myCommendationsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Help & Safety')),
+      appBar: const MainAppBar(title: 'Help & Safety'),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(myModerationNoticesProvider);
@@ -66,7 +67,8 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
           children: [
             const _SectionHeading(
               title: 'Your moderation record',
-              blurb: 'Every action taken against your account, with the reason '
+              blurb:
+                  'Every action taken against your account, with the reason '
                   'a moderator recorded.',
             ),
             const SizedBox(height: 12),
@@ -81,17 +83,20 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
             ...notices.when(
               loading: () => const [_LoadingCard()],
               error: (e, _) => [
-                _ErrorCard(message: apiErrorMessage(
-                  e,
-                  fallback: 'Could not load your moderation record.',
-                )),
+                _ErrorCard(
+                  message: apiErrorMessage(
+                    e,
+                    fallback: 'Could not load your moderation record.',
+                  ),
+                ),
               ],
               data: (rows) => [
                 if (rows.isEmpty)
                   const _EmptyCard(
                     icon: Icons.verified_user_outlined,
                     title: 'Nothing on your record.',
-                    hint: 'Warnings, removals, suspensions and bans appear '
+                    hint:
+                        'Warnings, removals, suspensions and bans appear '
                         'here with their reason, and you can appeal any of them.',
                   )
                 else
@@ -101,24 +106,28 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
             const SizedBox(height: 24),
             const _SectionHeading(
               title: 'Your appeals',
-              blurb: 'An appeal is reviewed by a moderator who was not the one '
+              blurb:
+                  'An appeal is reviewed by a moderator who was not the one '
                   'who issued the action.',
             ),
             const SizedBox(height: 12),
             ...appeals.when(
               loading: () => const [_LoadingCard()],
               error: (e, _) => [
-                _ErrorCard(message: apiErrorMessage(
-                  e,
-                  fallback: 'Could not load your appeals.',
-                )),
+                _ErrorCard(
+                  message: apiErrorMessage(
+                    e,
+                    fallback: 'Could not load your appeals.',
+                  ),
+                ),
               ],
               data: (page) => [
                 if (page.items.isEmpty)
                   const _EmptyCard(
                     icon: Icons.balance_outlined,
                     title: 'You have not appealed anything.',
-                    hint: 'If you think a decision was wrong, open the action '
+                    hint:
+                        'If you think a decision was wrong, open the action '
                         'above and tap Appeal.',
                   )
                 else
@@ -134,17 +143,20 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
             ...commendations.when(
               loading: () => const [_LoadingCard()],
               error: (e, _) => [
-                _ErrorCard(message: apiErrorMessage(
-                  e,
-                  fallback: 'Could not load your commendations.',
-                )),
+                _ErrorCard(
+                  message: apiErrorMessage(
+                    e,
+                    fallback: 'Could not load your commendations.',
+                  ),
+                ),
               ],
               data: (page) => [
                 if (page.items.isEmpty)
                   const _EmptyCard(
                     icon: Icons.workspace_premium_outlined,
                     title: 'No commendations yet.',
-                    hint: 'Staff record commendations here when you have done '
+                    hint:
+                        'Staff record commendations here when you have done '
                         'something the platform wants to mark.',
                   )
                 else
@@ -167,8 +179,8 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
     final tint = notice.reversed
         ? Theme.of(context).colorScheme.onSurfaceVariant
         : notice.restrictsAccess
-            ? BuddyColors.red
-            : BuddyColors.gold;
+        ? BuddyColors.red
+        : BuddyColors.gold;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -255,8 +267,10 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
                   visualDensity: VisualDensity.compact,
                 ),
                 icon: const Icon(Icons.balance_outlined, size: 14),
-                label: const Text('Appeal this decision',
-                    style: TextStyle(fontSize: 12)),
+                label: const Text(
+                  'Appeal this decision',
+                  style: TextStyle(fontSize: 12),
+                ),
               ),
             ),
             if (!notice.isAppealable)
@@ -315,14 +329,19 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
                 child: Text(
                   appeal.status.replaceAll('_', ' ').toUpperCase(),
                   style: TextStyle(
-                      fontSize: 10, fontWeight: FontWeight.bold, color: tint),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: tint,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text('You said: ${appeal.reason}',
-              style: TextStyle(fontSize: 12, color: cs.onSurface, height: 1.4)),
+          Text(
+            'You said: ${appeal.reason}',
+            style: TextStyle(fontSize: 12, color: cs.onSurface, height: 1.4),
+          ),
           if (appeal.resolutionNote.isNotEmpty) ...[
             const SizedBox(height: 8),
             Container(
@@ -335,14 +354,19 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Moderator replied',
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurfaceVariant)),
+                  Text(
+                    'Moderator replied',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(appeal.resolutionNote,
-                      style: TextStyle(fontSize: 12, color: cs.onSurface)),
+                  Text(
+                    appeal.resolutionNote,
+                    style: TextStyle(fontSize: 12, color: cs.onSurface),
+                  ),
                 ],
               ),
             ),
@@ -350,8 +374,10 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
           if (appeal.reviewedAt != null)
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Text('Reviewed ${_shortDateTime(appeal.reviewedAt)}',
-                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+              child: Text(
+                'Reviewed ${_shortDateTime(appeal.reviewedAt)}',
+                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+              ),
             ),
           if (open)
             Padding(
@@ -385,8 +411,11 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.workspace_premium_outlined,
-                  size: 18, color: BuddyColors.green),
+              const Icon(
+                Icons.workspace_premium_outlined,
+                size: 18,
+                color: BuddyColors.green,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -408,11 +437,15 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          Text(commendation.message,
-              style: TextStyle(fontSize: 13, color: cs.onSurface, height: 1.4)),
+          Text(
+            commendation.message,
+            style: TextStyle(fontSize: 13, color: cs.onSurface, height: 1.4),
+          ),
           const SizedBox(height: 6),
-          Text(_shortDateTime(commendation.createdAt),
-              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+          Text(
+            _shortDateTime(commendation.createdAt),
+            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -437,16 +470,20 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
         'reason': reason.trim(),
       });
       if (!mounted) return;
-      setState(() => _notice =
-          'Appeal submitted. A moderator other than the one who issued the '
-          'decision will review it.');
+      setState(
+        () => _notice =
+            'Appeal submitted. A moderator other than the one who issued the '
+            'decision will review it.',
+      );
       ref.invalidate(myAppealsProvider);
     } catch (e) {
       if (mounted) {
-        setState(() => _error = apiErrorMessage(
-              e,
-              fallback: 'Could not submit the appeal.',
-            ));
+        setState(
+          () => _error = apiErrorMessage(
+            e,
+            fallback: 'Could not submit the appeal.',
+          ),
+        );
       }
     }
   }
@@ -490,20 +527,22 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
       ref.invalidate(myCommendationsProvider);
     } catch (e) {
       if (mounted) {
-        setState(() => _error = apiErrorMessage(
-              e,
-              fallback: 'Could not remove the commendation.',
-            ));
+        setState(
+          () => _error = apiErrorMessage(
+            e,
+            fallback: 'Could not remove the commendation.',
+          ),
+        );
       }
     }
   }
 
   static IconData _iconFor(ModerationNoticeKind kind) => switch (kind) {
-        ModerationNoticeKind.warning => Icons.report_problem_outlined,
-        ModerationNoticeKind.contentRemoved => Icons.delete_outline,
-        ModerationNoticeKind.suspension => Icons.pause_circle_outline,
-        ModerationNoticeKind.ban => Icons.block,
-      };
+    ModerationNoticeKind.warning => Icons.report_problem_outlined,
+    ModerationNoticeKind.contentRemoved => Icons.delete_outline,
+    ModerationNoticeKind.suspension => Icons.pause_circle_outline,
+    ModerationNoticeKind.ban => Icons.block,
+  };
 
   static String _shortDateTime(String? iso) {
     if (iso == null || iso.isEmpty) return '—';
@@ -523,9 +562,14 @@ class _SectionHeading extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title,
-            style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w700, color: cs.onSurface)),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: cs.onSurface,
+          ),
+        ),
         const SizedBox(height: 2),
         Text(blurb, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
       ],
@@ -538,7 +582,11 @@ class _EmptyCard extends StatelessWidget {
   final String title;
   final String hint;
 
-  const _EmptyCard({required this.icon, required this.title, required this.hint});
+  const _EmptyCard({
+    required this.icon,
+    required this.title,
+    required this.hint,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -554,13 +602,17 @@ class _EmptyCard extends StatelessWidget {
         children: [
           Icon(icon, size: 26, color: BuddyColors.green.withValues(alpha: 0.5)),
           const SizedBox(height: 10),
-          Text(title,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: cs.onSurface)),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: cs.onSurface),
+          ),
           const SizedBox(height: 4),
-          Text(hint,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+          Text(
+            hint,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -600,8 +652,14 @@ class _ErrorCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: BuddyColors.red.withValues(alpha: 0.25)),
       ),
-      child: Text(message,
-          style: const TextStyle(fontSize: 12, color: BuddyColors.red, height: 1.4)),
+      child: Text(
+        message,
+        style: const TextStyle(
+          fontSize: 12,
+          color: BuddyColors.red,
+          height: 1.4,
+        ),
+      ),
     );
   }
 }
@@ -621,8 +679,14 @@ class _NoticeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: BuddyColors.green.withValues(alpha: 0.25)),
       ),
-      child: Text(message,
-          style: const TextStyle(fontSize: 12, color: BuddyColors.green, height: 1.4)),
+      child: Text(
+        message,
+        style: const TextStyle(
+          fontSize: 12,
+          color: BuddyColors.green,
+          height: 1.4,
+        ),
+      ),
     );
   }
 }
@@ -670,9 +734,14 @@ class _AppealSheetState extends State<_AppealSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Appeal this decision',
-              style: TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w700, color: cs.onSurface)),
+          Text(
+            'Appeal this decision',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: cs.onSurface,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             'Action ${widget.actionId.substring(0, widget.actionId.length > 8 ? 8 : widget.actionId.length)}. '
@@ -687,9 +756,12 @@ class _AppealSheetState extends State<_AppealSheet> {
             minLines: 3,
             autofocus: true,
             decoration: InputDecoration(
-              hintText: 'Why this decision is wrong, and what the moderator '
+              hintText:
+                  'Why this decision is wrong, and what the moderator '
                   'should look at again.',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -697,22 +769,27 @@ class _AppealSheetState extends State<_AppealSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: !_ready ? null : () => Navigator.pop(context, _controller.text),
+              onPressed: !_ready
+                  ? null
+                  : () => Navigator.pop(context, _controller.text),
               style: FilledButton.styleFrom(
                 backgroundColor: BuddyColors.green,
                 foregroundColor: Theme.of(context).colorScheme.surface,
               ),
               icon: const Icon(Icons.send, size: 16),
-              label: const Text('Submit appeal', style: TextStyle(fontSize: 13)),
+              label: const Text(
+                'Submit appeal',
+                style: TextStyle(fontSize: 13),
+              ),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             _ready
                 ? 'One appeal per decision. If it is declined this cannot be '
-                    'resubmitted.'
+                      'resubmitted.'
                 : 'Write at least $minReason characters — a short appeal has '
-                    'nothing for a reviewer to work with.',
+                      'nothing for a reviewer to work with.',
             style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
           ),
         ],

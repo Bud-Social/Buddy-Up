@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/messaging.dart';
 import '../../messaging/providers/messaging_provider.dart';
 import '../providers/community_provider.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class CommunitiesScreen extends ConsumerStatefulWidget {
   const CommunitiesScreen({super.key});
@@ -47,8 +48,10 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Create Community',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Create Community',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -78,15 +81,26 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
                                 try {
                                   final dio = ref.read(apiClientProvider4).dio;
                                   final form = FormData.fromMap({
-                                    'file': await MultipartFile.fromFile(picked.path, filename: picked.name),
+                                    'file': await MultipartFile.fromFile(
+                                      picked.path,
+                                      filename: picked.name,
+                                    ),
                                   });
-                                  final res = await dio.post('/messaging/upload/', data: form);
-                                  final url = (res.data['data'] as Map<String, dynamic>)['url'] as String;
+                                  final res = await dio.post(
+                                    '/messaging/upload/',
+                                    data: form,
+                                  );
+                                  final url =
+                                      (res.data['data']
+                                              as Map<String, dynamic>)['url']
+                                          as String;
                                   setSheetState(() => avatarUrl = url);
                                 } catch (_) {
                                   if (ctx.mounted) {
                                     ScaffoldMessenger.of(ctx).showSnackBar(
-                                      const SnackBar(content: Text('Image upload failed')),
+                                      const SnackBar(
+                                        content: Text('Image upload failed'),
+                                      ),
                                     );
                                   }
                                 } finally {
@@ -94,11 +108,13 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
                                 }
                               },
                         icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                        label: Text(uploadingAvatar
-                            ? 'Uploading...'
-                            : (avatarUrl?.isNotEmpty ?? false)
-                                ? 'Change picture'
-                                : 'Add a community picture'),
+                        label: Text(
+                          uploadingAvatar
+                              ? 'Uploading...'
+                              : (avatarUrl?.isNotEmpty ?? false)
+                              ? 'Change picture'
+                              : 'Add a community picture',
+                        ),
                       ),
                     ),
                   ],
@@ -119,7 +135,8 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
                   children: [
                     Checkbox(
                       value: isPublic,
-                      onChanged: (v) => setSheetState(() => isPublic = v ?? true),
+                      onChanged: (v) =>
+                          setSheetState(() => isPublic = v ?? true),
                     ),
                     const Text('Public community'),
                   ],
@@ -128,11 +145,16 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: Theme.of(context).colorScheme.surface),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: BuddyColors.green,
+                      foregroundColor: Theme.of(context).colorScheme.surface,
+                    ),
                     onPressed: () {
                       if (name.text.trim().isEmpty) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('Enter a community name')),
+                          const SnackBar(
+                            content: Text('Enter a community name'),
+                          ),
                         );
                         return;
                       }
@@ -151,11 +173,20 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
     try {
       final created = await ref
           .read(communitiesListProvider.notifier)
-          .create(name.text.trim(), description: desc.text.trim(), isPublic: isPublic, groupAvatarUrl: avatarUrl);
-      if (created != null && mounted) context.push('/communities/${created.id}');
+          .create(
+            name.text.trim(),
+            description: desc.text.trim(),
+            isPublic: isPublic,
+            groupAvatarUrl: avatarUrl,
+          );
+      if (created != null && mounted) {
+        context.push('/communities/${created.id}');
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     }
   }
@@ -171,8 +202,10 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Join by Invite Code',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'Join by Invite Code',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _inviteCode,
@@ -183,7 +216,10 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: Theme.of(context).colorScheme.surface),
+                style: FilledButton.styleFrom(
+                  backgroundColor: BuddyColors.green,
+                  foregroundColor: Theme.of(context).colorScheme.surface,
+                ),
                 onPressed: () => Navigator.pop(ctx, _inviteCode.text.trim()),
                 child: const Text('Join'),
               ),
@@ -194,20 +230,25 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
     );
     if (code == null || code.isEmpty || !mounted) return;
     try {
-      final joined = await ref.read(communitiesListProvider.notifier).joinByCode(code);
+      final joined = await ref
+          .read(communitiesListProvider.notifier)
+          .joinByCode(code);
       if (joined != null && mounted) context.push('/communities/${joined.id}');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid invite code')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Invalid invite code')));
       }
     }
   }
 
   Widget _communityCard(Conversation c) {
-    final isManager = c.membershipRole == 'owner' || c.membershipRole == 'admin';
-    final imageUrl = c.groupAvatarUrl.isNotEmpty ? c.groupAvatarUrl : c.coverUrl;
+    final isManager =
+        c.membershipRole == 'owner' || c.membershipRole == 'admin';
+    final imageUrl = c.groupAvatarUrl.isNotEmpty
+        ? c.groupAvatarUrl
+        : c.coverUrl;
     return Card(
       color: BuddyColors.surfaceRaised,
       margin: const EdgeInsets.only(bottom: 10),
@@ -215,7 +256,12 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
         leading: imageUrl.isNotEmpty
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.network(imageUrl, width: 48, height: 48, fit: BoxFit.cover),
+                child: Image.network(
+                  imageUrl,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                ),
               )
             : Container(
                 width: 48,
@@ -224,19 +270,32 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
                   color: BuddyColors.surface,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.groups_outlined, color: BuddyColors.green),
+                child: const Icon(
+                  Icons.groups_outlined,
+                  color: BuddyColors.green,
+                ),
               ),
         title: Row(
           children: [
             Expanded(
-              child: Text(c.groupName,
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(
+                c.groupName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             if (isManager)
               Padding(
                 padding: const EdgeInsets.only(left: 6),
-                child: Text(c.membershipRole!.toUpperCase(),
-                    style: const TextStyle(fontSize: 9, color: BuddyColors.green, fontWeight: FontWeight.bold)),
+                child: Text(
+                  c.membershipRole!.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: BuddyColors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
           ],
         ),
@@ -244,7 +303,10 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
           c.description.isEmpty ? '${c.memberCount} members' : c.description,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 12,
+          ),
         ),
         onTap: () => context.push('/communities/${c.id}'),
       ),
@@ -256,8 +318,8 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
     final asyncState = ref.watch(communitiesListProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Communities', style: TextStyle(fontWeight: FontWeight.bold)),
+      appBar: MainAppBar(
+        title: 'Communities',
         actions: [
           IconButton(
             icon: const Icon(Icons.link),
@@ -272,17 +334,29 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
         ],
       ),
       body: asyncState.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: BuddyColors.green)),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: BuddyColors.green),
+        ),
         error: (e, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(height: 12),
-              Text('$e', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              Text(
+                '$e',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: () => ref.read(communitiesListProvider.notifier).refresh(),
+                onPressed: () =>
+                    ref.read(communitiesListProvider.notifier).refresh(),
                 child: const Text('Retry'),
               ),
             ],
@@ -292,27 +366,46 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
           final mine = state.mine;
           final discover = state.discover;
           return RefreshIndicator(
-            onRefresh: () => ref.read(communitiesListProvider.notifier).refresh(),
+            onRefresh: () =>
+                ref.read(communitiesListProvider.notifier).refresh(),
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Text('MY COMMUNITIES',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant, letterSpacing: 0.5)),
+                Text(
+                  'MY COMMUNITIES',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.5,
+                  ),
+                ),
                 const SizedBox(height: 10),
                 if (mine.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24),
                     child: Center(
-                      child: Text('No communities yet — create one or join with a code',
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                      child: Text(
+                        'No communities yet — create one or join with a code',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                   )
                 else
                   ...mine.map(_communityCard),
                 if (discover.isNotEmpty) ...[
                   const SizedBox(height: 24),
-                  Text('DISCOVER',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant, letterSpacing: 0.5)),
+                  Text(
+                    'DISCOVER',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   ...discover.map(_communityCard),
                 ],

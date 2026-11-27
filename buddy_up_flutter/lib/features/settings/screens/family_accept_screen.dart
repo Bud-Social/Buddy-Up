@@ -182,7 +182,9 @@ class _FamilyAcceptScreenState extends ConsumerState<FamilyAcceptScreen> {
                               Text(
                                 'Welcome to BuddyUp Fit! Set a password to activate the account linked to your guardian.',
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                   fontSize: 13,
                                   height: 1.5,
                                 ),

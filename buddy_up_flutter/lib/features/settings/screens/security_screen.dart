@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/auth/biometric_provider.dart';
 import '../providers/settings_providers.dart';
@@ -58,15 +59,15 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
       await ref.read(settingsAuthRepoProvider).revokeSession(session.id);
       await _loadSessions();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Session revoked')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Session revoked')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     }
   }
@@ -77,9 +78,14 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: BuddyColors.surface,
         title: const Text('Sign out all devices?'),
-        content: const Text('Every signed-in session will be revoked, including this one.'),
+        content: const Text(
+          'Every signed-in session will be revoked, including this one.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: BuddyColors.red),
             onPressed: () => Navigator.pop(ctx, true),
@@ -101,9 +107,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSigningOutAll = false);
@@ -124,16 +130,16 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             .setUserAndProfile(user.copyWith(totpEnabled: false), profile);
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('2FA disabled')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('2FA disabled')));
         _totpPasswordCtrl.clear();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isDisablingTotp = false);
@@ -147,7 +153,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     final biometric = ref.watch(biometricProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Security')),
+      appBar: const MainAppBar(title: 'Security'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -159,14 +165,27 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.smartphone, size: 20, color: BuddyColors.green),
+                      const Icon(
+                        Icons.smartphone,
+                        size: 20,
+                        color: BuddyColors.green,
+                      ),
                       const SizedBox(width: 10),
                       const Expanded(
-                        child: Text('Two-Factor Authentication (2FA)',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                        child: Text(
+                          'Two-Factor Authentication (2FA)',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                       if (totpEnabled)
-                        const Icon(Icons.check_circle, size: 20, color: BuddyColors.green),
+                        const Icon(
+                          Icons.check_circle,
+                          size: 20,
+                          color: BuddyColors.green,
+                        ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -174,7 +193,10 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                     totpEnabled
                         ? 'Your account is protected with an authenticator app.'
                         : 'Add an extra layer of security to your account.',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   if (totpEnabled) ...[
@@ -208,21 +230,35 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
               _sectionCard(
                 child: SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  secondary: const Icon(Icons.fingerprint, size: 22, color: BuddyColors.green),
-                  title: const Text('Biometric App Lock',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  secondary: const Icon(
+                    Icons.fingerprint,
+                    size: 22,
+                    color: BuddyColors.green,
+                  ),
+                  title: const Text(
+                    'Biometric App Lock',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
                   subtitle: Text(
                     'Require fingerprint or face unlock when opening BuddyUp.',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
                   ),
                   value: biometric.enabled,
                   onChanged: (on) async {
                     final messenger = ScaffoldMessenger.of(context);
-                    final ok = await ref.read(biometricProvider.notifier).setEnabled(on);
+                    final ok = await ref
+                        .read(biometricProvider.notifier)
+                        .setEnabled(on);
                     if (!ok) {
                       messenger.showSnackBar(
                         const SnackBar(
-                            content: Text('Biometric authentication failed — lock not enabled')),
+                          content: Text(
+                            'Biometric authentication failed — lock not enabled',
+                          ),
+                        ),
                       );
                     }
                   },
@@ -233,8 +269,10 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             Row(
               children: [
                 const Expanded(
-                  child: Text('Device Sessions',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    'Device Sessions',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 TextButton.icon(
                   onPressed: _isLoadingSessions ? null : _loadSessions,
@@ -245,16 +283,25 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
             ),
             const SizedBox(height: 8),
             if (_isLoadingSessions)
-              const Center(child: Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator(),
-              ))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
+                ),
+              )
             else if (_sessionsError != null)
-              Text('Could not load sessions: $_sessionsError',
-                  style: const TextStyle(color: BuddyColors.red, fontSize: 13))
+              Text(
+                'Could not load sessions: $_sessionsError',
+                style: const TextStyle(color: BuddyColors.red, fontSize: 13),
+              )
             else if (_sessions.isEmpty)
-              Text('No other sessions found.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13))
+              Text(
+                'No other sessions found.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 13,
+                ),
+              )
             else
               ..._sessions.map(_sessionTile),
             const SizedBox(height: 12),
@@ -285,7 +332,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
           Icon(
             session.isCurrent ? Icons.phone_android : Icons.devices_other,
             size: 22,
-            color: session.isCurrent ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
+            color: session.isCurrent
+                ? BuddyColors.green
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -293,17 +342,26 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  session.isCurrent ? '${session.deviceName} (this device)' : session.deviceName,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  session.isCurrent
+                      ? '${session.deviceName} (this device)'
+                      : session.deviceName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   [
                     if (session.location.isNotEmpty) session.location,
                     if (session.ipAddress.isNotEmpty) session.ipAddress,
-                    if (session.lastActive.isNotEmpty) 'Last active ${_formatDate(session.lastActive)}',
+                    if (session.lastActive.isNotEmpty)
+                      'Last active ${_formatDate(session.lastActive)}',
                   ].join(' · '),
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),

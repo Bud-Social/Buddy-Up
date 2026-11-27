@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../providers/settings_providers.dart';
 
 /// Appearance: theme mode picker wired to the existing themeModeProvider.
@@ -12,7 +13,7 @@ class AppearanceScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Appearance')),
+      appBar: const MainAppBar(title: 'Appearance'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -80,13 +81,29 @@ class AppearanceScreen extends ConsumerWidget {
       ),
       child: ListTile(
         onTap: () => ref.read(themeModeProvider.notifier).setTheme(value),
-        leading: Icon(icon, color: selected ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-        subtitle: Text(subtitle,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
+        leading: Icon(
+          icon,
+          color: selected
+              ? BuddyColors.green
+              : Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 12,
+          ),
+        ),
         trailing: selected
             ? const Icon(Icons.check_circle, color: BuddyColors.green)
-            : Icon(Icons.circle_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            : Icon(
+                Icons.circle_outlined,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
       ),
     );
   }
@@ -110,30 +127,41 @@ class _AccessibilityCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Left-handed mode',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
+                      const Text(
+                        'Left-handed mode',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
                       const SizedBox(height: 2),
                       Text(
                         'Mirror post interaction buttons so they sit under a '
                         'left thumb.',
                         style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 Switch(
                   value: leftHanded,
-                  onChanged: (value) =>
-                      ref.read(handednessProvider.notifier).setLeftHanded(value),
+                  onChanged: (value) => ref
+                      .read(handednessProvider.notifier)
+                      .setLeftHanded(value),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            Text('Post interaction preview',
-                style: TextStyle(
-                    fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text(
+              'Post interaction preview',
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -142,23 +170,39 @@ class _AccessibilityCard extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
-                textDirection:
-                    leftHanded ? TextDirection.rtl : TextDirection.ltr,
+                textDirection: leftHanded
+                    ? TextDirection.rtl
+                    : TextDirection.ltr,
                 children: [
-                  Icon(Icons.favorite_border,
-                      size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.favorite_border,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 18),
-                  Icon(Icons.chat_bubble_outline,
-                      size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 18),
-                  Icon(Icons.repeat,
-                      size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.repeat,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 18),
-                  Icon(Icons.bookmark_border,
-                      size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.bookmark_border,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   const Spacer(),
-                  Icon(Icons.share_outlined,
-                      size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.share_outlined,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ],
               ),
             ),

@@ -7,17 +7,24 @@ class AdultContentPolicyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const p = TextStyle(color: BuddyColors.textSecondary, fontSize: 13, height: 1.5);
+    const p = TextStyle(
+      color: BuddyColors.textSecondary,
+      fontSize: 13,
+      height: 1.5,
+    );
     return const LegalPage(
       title: 'Adult Content Policy',
       updatedAt: 'August 2026',
       sections: [
-        LegalSection(title: 'Retired Policy', children: [
-          Text(
-            'The Adult Content Policy (Mature Category) is no longer active. All content standards are now governed by the Community Guidelines.',
-            style: p,
-          ),
-        ]),
+        LegalSection(
+          title: 'Retired Policy',
+          children: [
+            Text(
+              'The Adult Content Policy (Mature Category) is no longer active. All content standards are now governed by the Community Guidelines.',
+              style: p,
+            ),
+          ],
+        ),
       ],
     );
   }

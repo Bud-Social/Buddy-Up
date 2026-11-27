@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../../../data/models/wallet.dart';
 import '../../wallet/providers/wallet_provider.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -22,7 +23,7 @@ class BillingScreen extends ConsumerWidget {
     final balance = ref.watch(billingBalanceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Subscription & Billing')),
+      appBar: const MainAppBar(title: 'Subscription & Billing'),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(billingBalanceProvider),
         child: ListView(
@@ -47,22 +48,29 @@ class BillingScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Wallet balance',
-                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          const Text(
+                            'Wallet balance',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             '${data.fiatCurrency} '
                             '${data.totalFiat.toStringAsFixed(2)}',
                             style: const TextStyle(
-                                fontSize: 26, fontWeight: FontWeight.w800),
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Spendable: ${data.fiatCurrency} '
                             '${data.regularTotalFiat.toStringAsFixed(2)}',
                             style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant),
+                              fontSize: 12,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
                           ),
                           if (data.creatorTotalFiat > 0) ...[
                             const SizedBox(height: 4),
@@ -70,8 +78,11 @@ class BillingScreen extends ConsumerWidget {
                               'Creator earnings: ${data.fiatCurrency} '
                               '${data.creatorTotalFiat.toStringAsFixed(2)}',
                               style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                fontSize: 12,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ],
                           const SizedBox(height: 12),
@@ -79,8 +90,10 @@ class BillingScreen extends ConsumerWidget {
                             width: double.infinity,
                             child: OutlinedButton.icon(
                               onPressed: () => context.push('/wallet'),
-                              icon: const Icon(Icons.account_balance_wallet,
-                                  size: 16),
+                              icon: const Icon(
+                                Icons.account_balance_wallet,
+                                size: 16,
+                              ),
                               label: const Text('Open wallet'),
                             ),
                           ),
@@ -91,11 +104,14 @@ class BillingScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   Card(
                     child: ListTile(
-                      leading: const Icon(Icons.workspace_premium,
-                          color: BuddyColors.green),
+                      leading: const Icon(
+                        Icons.workspace_premium,
+                        color: BuddyColors.green,
+                      ),
                       title: const Text('Gym subscriptions'),
                       subtitle: const Text(
-                          'Manage memberships from the gym you joined.'),
+                        'Manage memberships from the gym you joined.',
+                      ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push('/gyms'),
                     ),
@@ -106,7 +122,9 @@ class BillingScreen extends ConsumerWidget {
                     'transaction history, top-ups and withdrawals all live in '
                     'the wallet screen.',
                     style: TextStyle(
-                        fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),

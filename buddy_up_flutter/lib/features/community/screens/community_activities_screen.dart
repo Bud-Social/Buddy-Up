@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/messaging.dart';
 import '../providers/community_activities_provider.dart';
+import '../../../shared/navigation/main_header.dart';
 
 /// Events, lives and schedule slots for a community, mirroring the web
 /// "Activities" tab. Members get read access (plus anyone viewing a public
@@ -32,8 +33,8 @@ class CommunityActivitiesScreen extends ConsumerWidget {
       length: 3,
       initialIndex: initialTab.clamp(0, 2),
       child: Scaffold(
-        appBar: AppBar(
-          title: Text('$communityName · Activities'),
+        appBar: MainAppBar(
+          title: '$communityName · Activities',
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.event), text: 'Events'),
@@ -45,20 +46,24 @@ class CommunityActivitiesScreen extends ConsumerWidget {
         floatingActionButton: canManage
             ? Builder(
                 builder: (context) => FloatingActionButton(
-                      backgroundColor: BuddyColors.green,
-                      foregroundColor: Theme.of(context).colorScheme.surface,
-                      onPressed: () => _openCreate(context, ref),
-                      child: const Icon(Icons.add),
-                    ),
+                  backgroundColor: BuddyColors.green,
+                  foregroundColor: Theme.of(context).colorScheme.surface,
+                  onPressed: () => _openCreate(context, ref),
+                  child: const Icon(Icons.add),
+                ),
               )
             : null,
         body: async.when(
-          loading: () =>
-              const Center(child: CircularProgressIndicator(color: BuddyColors.green)),
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: BuddyColors.green),
+          ),
           error: (e, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Text('Could not load activities: $e', textAlign: TextAlign.center),
+              child: Text(
+                'Could not load activities: $e',
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
           data: (state) => TabBarView(
@@ -110,8 +115,18 @@ class CommunityActivitiesScreen extends ConsumerWidget {
 
   static String _fmtDate(DateTime dt) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final hour12 = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
@@ -149,8 +164,13 @@ class CommunityActivitiesScreen extends ConsumerWidget {
         initialTime: const TimeOfDay(hour: 9, minute: 0),
       );
       if (time == null) return;
-      final picked =
-          DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      final picked = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
       if (isEnd) {
         end = picked;
       } else {
@@ -159,7 +179,12 @@ class CommunityActivitiesScreen extends ConsumerWidget {
       }
     }
 
-    Widget chip(String value, String label, String current, VoidCallback onTap) {
+    Widget chip(
+      String value,
+      String label,
+      String current,
+      VoidCallback onTap,
+    ) {
       final selected = value == current;
       return ChoiceChip(
         label: Text(label),
@@ -167,7 +192,9 @@ class CommunityActivitiesScreen extends ConsumerWidget {
         onSelected: (_) => onTap(),
         selectedColor: BuddyColors.green.withValues(alpha: 0.25),
         labelStyle: TextStyle(
-          color: selected ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
+          color: selected
+              ? BuddyColors.green
+              : Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 11,
         ),
       );
@@ -180,37 +207,57 @@ class CommunityActivitiesScreen extends ConsumerWidget {
         builder: (ctx, setSheetState) {
           return Padding(
             padding: EdgeInsets.fromLTRB(
-              16, 16, 16, MediaQuery.of(ctx).viewInsets.bottom + 16,
+              16,
+              16,
+              16,
+              MediaQuery.of(ctx).viewInsets.bottom + 16,
             ),
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Add community event',
-                      style: Theme.of(ctx).textTheme.titleMedium),
+                  Text(
+                    'Add community event',
+                    style: Theme.of(ctx).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: titleC,
+                    onChanged: (_) => setSheetState(() {}),
                     decoration: const InputDecoration(labelText: 'Title'),
                     textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: descC,
-                    decoration: const InputDecoration(labelText: 'Description (optional)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Description (optional)',
+                    ),
                     maxLines: 2,
                   ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 6,
                     children: [
-                      chip('in_person', 'In person', eventType,
-                          () => setSheetState(() => eventType = 'in_person')),
-                      chip('online', 'Online', eventType,
-                          () => setSheetState(() => eventType = 'online')),
-                      chip('hybrid', 'Hybrid', eventType,
-                          () => setSheetState(() => eventType = 'hybrid')),
+                      chip(
+                        'in_person',
+                        'In person',
+                        eventType,
+                        () => setSheetState(() => eventType = 'in_person'),
+                      ),
+                      chip(
+                        'online',
+                        'Online',
+                        eventType,
+                        () => setSheetState(() => eventType = 'online'),
+                      ),
+                      chip(
+                        'hybrid',
+                        'Hybrid',
+                        eventType,
+                        () => setSheetState(() => eventType = 'hybrid'),
+                      ),
                     ],
                   ),
                   if (eventType != 'online')
@@ -218,7 +265,9 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                       padding: const EdgeInsets.only(top: 8),
                       child: TextField(
                         controller: locationC,
-                        decoration: const InputDecoration(labelText: 'Location'),
+                        decoration: const InputDecoration(
+                          labelText: 'Location',
+                        ),
                       ),
                     ),
                   if (eventType != 'in_person')
@@ -226,16 +275,20 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                       padding: const EdgeInsets.only(top: 8),
                       child: TextField(
                         controller: onlineC,
-                        decoration: const InputDecoration(labelText: 'Online link (optional)'),
+                        decoration: const InputDecoration(
+                          labelText: 'Online link (optional)',
+                        ),
                         keyboardType: TextInputType.url,
                       ),
                     ),
                   const SizedBox(height: 8),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(start == null
-                        ? 'Pick start'
-                        : 'Starts ${_fmtDate(start!)}'),
+                    title: Text(
+                      start == null
+                          ? 'Pick start'
+                          : 'Starts ${_fmtDate(start!)}',
+                    ),
                     trailing: const Icon(Icons.calendar_today, size: 18),
                     onTap: () async {
                       await pickDateTime(ctx, false);
@@ -244,7 +297,9 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                   ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(end == null ? 'Pick end' : 'Ends ${_fmtDate(end!)}'),
+                    title: Text(
+                      end == null ? 'Pick end' : 'Ends ${_fmtDate(end!)}',
+                    ),
                     trailing: const Icon(Icons.calendar_today, size: 18),
                     onTap: () async {
                       await pickDateTime(ctx, true);
@@ -271,13 +326,21 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: BuddyColors.green,
-                            foregroundColor: Theme.of(context).colorScheme.surface,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surface,
                           ),
-                          onPressed: (titleC.text.trim().isEmpty || start == null || end == null)
+                          onPressed:
+                              (titleC.text.trim().isEmpty ||
+                                  start == null ||
+                                  end == null ||
+                                  !end!.isAfter(start!))
                               ? null
                               : () async {
                                   final notifier = ref.read(
-                                    communityActivitiesProvider(communityId).notifier,
+                                    communityActivitiesProvider(
+                                      communityId,
+                                    ).notifier,
                                   );
                                   try {
                                     await notifier.createEvent({
@@ -295,7 +358,11 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                                   } catch (e) {
                                     if (ctx.mounted) {
                                       ScaffoldMessenger.of(ctx).showSnackBar(
-                                        SnackBar(content: Text('Could not add event: $e')),
+                                        SnackBar(
+                                          content: Text(
+                                            'Could not add event: $e',
+                                          ),
+                                        ),
                                       );
                                     }
                                   }
@@ -342,25 +409,40 @@ class CommunityActivitiesScreen extends ConsumerWidget {
               initialTime: const TimeOfDay(hour: 10, minute: 0),
             );
             if (time == null) return;
-            setSheetState(() => scheduled =
-                DateTime(date.year, date.month, date.day, time.hour, time.minute));
+            setSheetState(
+              () => scheduled = DateTime(
+                date.year,
+                date.month,
+                date.day,
+                time.hour,
+                time.minute,
+              ),
+            );
           }
 
           return Padding(
             padding: EdgeInsets.fromLTRB(
-              16, 16, 16, MediaQuery.of(ctx).viewInsets.bottom + 16,
+              16,
+              16,
+              16,
+              MediaQuery.of(ctx).viewInsets.bottom + 16,
             ),
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Schedule a live',
-                      style: Theme.of(ctx).textTheme.titleMedium),
+                  Text(
+                    'Schedule a live',
+                    style: Theme.of(ctx).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: titleC,
-                    decoration: const InputDecoration(labelText: 'Title (e.g. Mobility Q&A)'),
+                    onChanged: (_) => setSheetState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Title (e.g. Mobility Q&A)',
+                    ),
                     textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 8),
@@ -373,11 +455,21 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                     initialValue: liveType,
                     decoration: const InputDecoration(labelText: 'Type'),
                     items: const [
-                      DropdownMenuItem(value: 'buddy_circle', child: Text('Buddy circle')),
-                      DropdownMenuItem(value: 'open_sweat', child: Text('Open sweat')),
-                      DropdownMenuItem(value: 'audio', child: Text('Audio live')),
+                      DropdownMenuItem(
+                        value: 'buddy_circle',
+                        child: Text('Buddy circle'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'open_sweat',
+                        child: Text('Open sweat'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'audio',
+                        child: Text('Audio live'),
+                      ),
                     ],
-                    onChanged: (v) => setSheetState(() => liveType = v ?? 'buddy_circle'),
+                    onChanged: (v) =>
+                        setSheetState(() => liveType = v ?? 'buddy_circle'),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -385,17 +477,26 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                     decoration: const InputDecoration(labelText: 'Audience'),
                     items: const [
                       DropdownMenuItem(value: 'public', child: Text('Public')),
-                      DropdownMenuItem(value: 'buddies', child: Text('Buddies only')),
-                      DropdownMenuItem(value: 'private', child: Text('Only me')),
+                      DropdownMenuItem(
+                        value: 'buddies',
+                        child: Text('Buddies only'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'private',
+                        child: Text('Only me'),
+                      ),
                     ],
-                    onChanged: (v) => setSheetState(() => access = v ?? 'public'),
+                    onChanged: (v) =>
+                        setSheetState(() => access = v ?? 'public'),
                   ),
                   const SizedBox(height: 8),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(scheduled == null
-                        ? 'Pick start time'
-                        : 'Starts ${_fmtDate(scheduled!)}'),
+                    title: Text(
+                      scheduled == null
+                          ? 'Pick start time'
+                          : 'Starts ${_fmtDate(scheduled!)}',
+                    ),
                     trailing: const Icon(Icons.calendar_today, size: 18),
                     onTap: pickScheduled,
                   ),
@@ -413,13 +514,18 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: BuddyColors.green,
-                            foregroundColor: Theme.of(context).colorScheme.surface,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surface,
                           ),
-                          onPressed: titleC.text.trim().isEmpty
+                          onPressed:
+                              titleC.text.trim().isEmpty || scheduled == null
                               ? null
                               : () async {
                                   final notifier = ref.read(
-                                    communityActivitiesProvider(communityId).notifier,
+                                    communityActivitiesProvider(
+                                      communityId,
+                                    ).notifier,
                                   );
                                   try {
                                     await notifier.createLive({
@@ -433,7 +539,11 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                                   } catch (e) {
                                     if (ctx.mounted) {
                                       ScaffoldMessenger.of(ctx).showSnackBar(
-                                        SnackBar(content: Text('Could not schedule: $e')),
+                                        SnackBar(
+                                          content: Text(
+                                            'Could not schedule: $e',
+                                          ),
+                                        ),
                                       );
                                     }
                                   }
@@ -479,8 +589,13 @@ class CommunityActivitiesScreen extends ConsumerWidget {
         initialTime: const TimeOfDay(hour: 9, minute: 0),
       );
       if (time == null) return;
-      final picked =
-          DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      final picked = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
       if (isEnd) {
         end = picked;
       } else {
@@ -496,25 +611,35 @@ class CommunityActivitiesScreen extends ConsumerWidget {
         builder: (ctx, setSheetState) {
           return Padding(
             padding: EdgeInsets.fromLTRB(
-              16, 16, 16, MediaQuery.of(ctx).viewInsets.bottom + 16,
+              16,
+              16,
+              16,
+              MediaQuery.of(ctx).viewInsets.bottom + 16,
             ),
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Add a session',
-                      style: Theme.of(ctx).textTheme.titleMedium),
+                  Text(
+                    'Add a session',
+                    style: Theme.of(ctx).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: titleC,
-                    decoration: const InputDecoration(labelText: 'Session title'),
+                    onChanged: (_) => setSheetState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Session title',
+                    ),
                     textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: contentC,
-                    decoration: const InputDecoration(labelText: 'Details (optional)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Details (optional)',
+                    ),
                     maxLines: 2,
                   ),
                   const SizedBox(height: 8),
@@ -522,23 +647,38 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                     initialValue: activityType,
                     decoration: const InputDecoration(labelText: 'Activity'),
                     items: const [
-                      DropdownMenuItem(value: 'strength', child: Text('Strength')),
+                      DropdownMenuItem(
+                        value: 'strength',
+                        child: Text('Strength'),
+                      ),
                       DropdownMenuItem(value: 'cardio', child: Text('Cardio')),
                       DropdownMenuItem(value: 'yoga', child: Text('Yoga')),
                       DropdownMenuItem(value: 'hiit', child: Text('HIIT')),
-                      DropdownMenuItem(value: 'session', child: Text('Session')),
-                      DropdownMenuItem(value: 'live_stream', child: Text('Live stream')),
-                      DropdownMenuItem(value: 'workshop', child: Text('Workshop')),
+                      DropdownMenuItem(
+                        value: 'session',
+                        child: Text('Session'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'live_stream',
+                        child: Text('Live stream'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'workshop',
+                        child: Text('Workshop'),
+                      ),
                       DropdownMenuItem(value: 'other', child: Text('Other')),
                     ],
-                    onChanged: (v) => setSheetState(() => activityType = v ?? 'other'),
+                    onChanged: (v) =>
+                        setSheetState(() => activityType = v ?? 'other'),
                   ),
                   if (activityType == 'other')
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: TextField(
                         controller: customC,
-                        decoration: const InputDecoration(labelText: 'Custom activity'),
+                        decoration: const InputDecoration(
+                          labelText: 'Custom activity',
+                        ),
                       ),
                     ),
                   const SizedBox(height: 8),
@@ -546,16 +686,22 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                     initialValue: locationMode,
                     decoration: const InputDecoration(labelText: 'Where'),
                     items: const [
-                      DropdownMenuItem(value: 'in_house', child: Text('In person')),
+                      DropdownMenuItem(
+                        value: 'in_house',
+                        child: Text('In person'),
+                      ),
                       DropdownMenuItem(value: 'online', child: Text('Online')),
                       DropdownMenuItem(value: 'hybrid', child: Text('Hybrid')),
                     ],
-                    onChanged: (v) => setSheetState(() => locationMode = v ?? 'in_house'),
+                    onChanged: (v) =>
+                        setSheetState(() => locationMode = v ?? 'in_house'),
                   ),
                   const SizedBox(height: 8),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(start == null ? 'Starts' : 'Starts ${_fmtDate(start!)}'),
+                    title: Text(
+                      start == null ? 'Starts' : 'Starts ${_fmtDate(start!)}',
+                    ),
                     trailing: const Icon(Icons.calendar_today, size: 18),
                     onTap: () async {
                       await pickDateTime(ctx, false);
@@ -564,7 +710,9 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                   ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(end == null ? 'Ends' : 'Ends ${_fmtDate(end!)}'),
+                    title: Text(
+                      end == null ? 'Ends' : 'Ends ${_fmtDate(end!)}',
+                    ),
                     trailing: const Icon(Icons.calendar_today, size: 18),
                     onTap: () async {
                       await pickDateTime(ctx, true);
@@ -575,17 +723,26 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                     initialValue: recurrence,
                     decoration: const InputDecoration(labelText: 'Repeats'),
                     items: const [
-                      DropdownMenuItem(value: 'none', child: Text('Does not repeat')),
+                      DropdownMenuItem(
+                        value: 'none',
+                        child: Text('Does not repeat'),
+                      ),
                       DropdownMenuItem(value: 'daily', child: Text('Daily')),
                       DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
-                      DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                      DropdownMenuItem(
+                        value: 'monthly',
+                        child: Text('Monthly'),
+                      ),
                     ],
-                    onChanged: (v) => setSheetState(() => recurrence = v ?? 'none'),
+                    onChanged: (v) =>
+                        setSheetState(() => recurrence = v ?? 'none'),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: slotsC,
-                    decoration: const InputDecoration(labelText: 'Max slots (0 = unlimited)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Max slots (0 = unlimited)',
+                    ),
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 8),
@@ -603,33 +760,49 @@ class CommunityActivitiesScreen extends ConsumerWidget {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: BuddyColors.green,
-                            foregroundColor: Theme.of(context).colorScheme.surface,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surface,
                           ),
-                          onPressed: () async {
-                            final notifier = ref.read(
-                              communityActivitiesProvider(communityId).notifier,
-                            );
-                            try {
-                              await notifier.createSchedule({
-                                'title': titleC.text.trim(),
-                                'content': contentC.text.trim(),
-                                'activity_type': activityType,
-                                'custom_activity_type': customC.text.trim(),
-                                'location_mode': locationMode,
-                                'start_time': _dtOrNull(start),
-                                'end_time': _dtOrNull(end),
-                                'recurrence': recurrence,
-                                'max_slots': int.tryParse(slotsC.text.trim()) ?? 0,
-                              });
-                              if (ctx.mounted) Navigator.pop(ctx);
-                            } catch (e) {
-                              if (ctx.mounted) {
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(content: Text('Could not add session: $e')),
-                                );
-                              }
-                            }
-                          },
+                          onPressed:
+                              titleC.text.trim().isEmpty ||
+                                  start == null ||
+                                  end == null ||
+                                  !end!.isAfter(start!)
+                              ? null
+                              : () async {
+                                  final notifier = ref.read(
+                                    communityActivitiesProvider(
+                                      communityId,
+                                    ).notifier,
+                                  );
+                                  try {
+                                    await notifier.createSchedule({
+                                      'title': titleC.text.trim(),
+                                      'content': contentC.text.trim(),
+                                      'activity_type': activityType,
+                                      'custom_activity_type': customC.text
+                                          .trim(),
+                                      'location_mode': locationMode,
+                                      'start_time': _dtOrNull(start),
+                                      'end_time': _dtOrNull(end),
+                                      'recurrence': recurrence,
+                                      'max_slots':
+                                          int.tryParse(slotsC.text.trim()) ?? 0,
+                                    });
+                                    if (ctx.mounted) Navigator.pop(ctx);
+                                  } catch (e) {
+                                    if (ctx.mounted) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Could not add session: $e',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
                           child: const Text('Add session'),
                         ),
                       ),
@@ -677,7 +850,8 @@ class _EventList extends ConsumerWidget {
             title: event.title,
             subtitle: [
               CommunityActivitiesScreen._fmtDate(
-                CommunityActivitiesScreen._parse(event.startDatetime) ?? DateTime.now(),
+                CommunityActivitiesScreen._parse(event.startDatetime) ??
+                    DateTime.now(),
               ),
               if (event.location.isNotEmpty) event.location,
               if (event.onlineUrl.isNotEmpty) 'online',
@@ -690,7 +864,9 @@ class _EventList extends ConsumerWidget {
                       context,
                       ref,
                       () => ref
-                          .read(communityActivitiesProvider(communityId).notifier)
+                          .read(
+                            communityActivitiesProvider(communityId).notifier,
+                          )
                           .deleteEvent(event.id),
                     ),
                   )
@@ -717,7 +893,10 @@ class _EventList extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove', style: TextStyle(color: BuddyColors.red)),
+            child: const Text(
+              'Remove',
+              style: TextStyle(color: BuddyColors.red),
+            ),
           ),
         ],
       ),
@@ -761,7 +940,8 @@ class _LiveList extends ConsumerWidget {
               'Live now'
             else if (live.scheduledFor != null)
               CommunityActivitiesScreen._fmtDate(
-                CommunityActivitiesScreen._parse(live.scheduledFor) ?? DateTime.now(),
+                CommunityActivitiesScreen._parse(live.scheduledFor) ??
+                    DateTime.now(),
               ),
             live.liveType.replaceAll('_', ' '),
           ].join(' · '),
@@ -799,7 +979,10 @@ class _LiveList extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove', style: TextStyle(color: BuddyColors.red)),
+            child: const Text(
+              'Remove',
+              style: TextStyle(color: BuddyColors.red),
+            ),
           ),
         ],
       ),
@@ -824,7 +1007,10 @@ class _ScheduleList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (slots.isEmpty) {
-      return const _EmptyState(icon: Icons.schedule, text: 'No sessions scheduled.');
+      return const _EmptyState(
+        icon: Icons.schedule,
+        text: 'No sessions scheduled.',
+      );
     }
     return ListView.builder(
       padding: const EdgeInsets.all(14),
@@ -834,15 +1020,16 @@ class _ScheduleList extends ConsumerWidget {
         final title = slot.title.isNotEmpty
             ? slot.title
             : slot.customActivityType.isNotEmpty
-                ? slot.customActivityType
-                : slot.activityType;
+            ? slot.customActivityType
+            : slot.activityType;
         return _ActivityCard(
           leading: const Icon(Icons.schedule, color: BuddyColors.gold),
           title: title,
           subtitle: [
             if (slot.startTime != null)
               CommunityActivitiesScreen._fmtDate(
-                CommunityActivitiesScreen._parse(slot.startTime) ?? DateTime.now(),
+                CommunityActivitiesScreen._parse(slot.startTime) ??
+                    DateTime.now(),
               ),
             if (slot.recurrence != 'none') 'repeats ${slot.recurrence}',
             if (slot.maxSlots > 0) '${slot.maxSlots} slots',
@@ -881,7 +1068,10 @@ class _ScheduleList extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove', style: TextStyle(color: BuddyColors.red)),
+            child: const Text(
+              'Remove',
+              style: TextStyle(color: BuddyColors.red),
+            ),
           ),
         ],
       ),
@@ -944,9 +1134,18 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 42, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          Icon(
+            icon,
+            size: 42,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(height: 10),
-          Text(text, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Text(
+            text,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );

@@ -10,6 +10,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/toast.dart';
 import '../providers/alarm_providers.dart';
 import '../services/alarm_sound_cache.dart';
+import '../../../shared/navigation/main_header.dart';
 
 /// Settings → Alarm Center: alarms, custom sounds, buddy shares and
 /// suggestions. Mirrors the web Alarm Center against the same API.
@@ -24,7 +25,7 @@ class AlarmCenterScreen extends ConsumerWidget {
     final suggestions = ref.watch(alarmSuggestionsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Alarm Center')),
+      appBar: const MainAppBar(title: 'Alarm Center'),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(alarmsProvider);

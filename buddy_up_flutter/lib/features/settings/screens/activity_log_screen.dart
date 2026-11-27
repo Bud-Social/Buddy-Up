@@ -6,6 +6,7 @@ import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/activity_repository.dart';
 import '../../../shared/widgets/empty_state.dart';
+import '../../../shared/navigation/main_header.dart';
 
 final activityRepositoryProvider = Provider<ActivityRepository>((ref) {
   return ActivityRepository(ref.watch(activityApiClientProvider).dio);
@@ -14,14 +15,17 @@ final activityRepositoryProvider = Provider<ActivityRepository>((ref) {
 final activityApiClientProvider = Provider<ApiClient>((_) => ApiClient());
 
 final activityLogProvider =
-    FutureProvider.family<List<Map<String, dynamic>>, String>((ref, type) async {
-  final raw = await ref
-      .watch(activityRepositoryProvider)
-      .getActivityLog(type: type.isEmpty ? null : type);
-  return ((raw['data'] as List?) ?? const [])
-      .map((e) => (e as Map).cast<String, dynamic>())
-      .toList();
-});
+    FutureProvider.family<List<Map<String, dynamic>>, String>((
+      ref,
+      type,
+    ) async {
+      final raw = await ref
+          .watch(activityRepositoryProvider)
+          .getActivityLog(type: type.isEmpty ? null : type);
+      return ((raw['data'] as List?) ?? const [])
+          .map((e) => (e as Map).cast<String, dynamic>())
+          .toList();
+    });
 
 const _activityTypes = <(String, String)>[
   ('', 'All activity'),
@@ -51,7 +55,7 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
     final events = ref.watch(activityLogProvider(_type));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Activity Log')),
+      appBar: const MainAppBar(title: 'Activity Log'),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(activityLogProvider(_type)),
         child: ListView(
@@ -60,7 +64,9 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
             DropdownButtonFormField<String>(
               initialValue: _type,
               decoration: const InputDecoration(
-                  labelText: 'Filter activity', isDense: true),
+                labelText: 'Filter activity',
+                isDense: true,
+              ),
               items: [
                 for (final (value, label) in _activityTypes)
                   DropdownMenuItem(value: value, child: Text(label)),
@@ -77,10 +83,14 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    apiErrorMessage(e,
-                        fallback: 'Could not load your activity.'),
+                    apiErrorMessage(
+                      e,
+                      fallback: 'Could not load your activity.',
+                    ),
                     style: TextStyle(
-                        fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),
@@ -88,23 +98,30 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
                   ? const EmptyState(
                       icon: Icons.history,
                       title: 'No activity yet',
-                      subtitle: 'Account events will appear here as they happen.',
+                      subtitle:
+                          'Account events will appear here as they happen.',
                     )
                   : Column(
                       children: [
                         for (final event in rows)
                           Card(
                             child: ListTile(
-                              leading: const Icon(Icons.history,
-                                  color: BuddyColors.green, size: 20),
+                              leading: const Icon(
+                                Icons.history,
+                                color: BuddyColors.green,
+                                size: 20,
+                              ),
                               title: Text(
-                                _prettyType(event['event_type']?.toString() ?? ''),
+                                _prettyType(
+                                  event['event_type']?.toString() ?? '',
+                                ),
                                 style: const TextStyle(fontSize: 14),
                               ),
                               subtitle: Text(
                                 [
                                   _prettyDate(event['created_at']?.toString()),
-                                  if ((event['ip_address'] as String?)?.isNotEmpty ??
+                                  if ((event['ip_address'] as String?)
+                                          ?.isNotEmpty ??
                                       false)
                                     event['ip_address'] as String,
                                 ].join(' · '),

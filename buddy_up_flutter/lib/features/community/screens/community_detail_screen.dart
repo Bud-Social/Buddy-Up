@@ -6,6 +6,7 @@ import '../../../data/models/messaging.dart';
 import '../../feed/widgets/post_card.dart';
 import '../../feed/screens/post_composer_screen.dart';
 import '../providers/community_provider.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../providers/community_activities_provider.dart';
 import '../providers/community_gym_requests_provider.dart';
 import '../widgets/community_post_card.dart';
@@ -420,12 +421,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Community',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
+      appBar: const MainAppBar(title: 'Community'),
       floatingActionButton:
           asyncState.value?.detail?.myRole != null && _tab == 0
           ? FloatingActionButton(
@@ -634,16 +630,25 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     );
   }
 
-  int _effectiveTab(bool canManage) =>
-      (!canManage && _tab == 1) ? 0 : _tab;
+  int _effectiveTab(bool canManage) => (!canManage && _tab == 1) ? 0 : _tab;
 
   static String _fmtWhen(String? iso) {
     if (iso == null || iso.isEmpty) return 'No date set';
     final dt = DateTime.tryParse(iso)?.toLocal();
     if (dt == null) return 'No date set';
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final hour12 = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
@@ -723,11 +728,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               ? _allCommunitiesTab(state, canManage)
               : _selectedCommunity == null
               ? const Center(child: Text('Community not found'))
-              : _singleCommunityTab(
-                  _selectedCommunity!,
-                  state,
-                  canManage,
-                ),
+              : _singleCommunityTab(_selectedCommunity!, state, canManage),
         ),
       ],
     );
@@ -774,8 +775,15 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
             decoration: InputDecoration(
               hintText: 'Search members…',
               isDense: true,
-              prefixIcon: Icon(LucideIcons.search, size: 17, color: cs.onSurfaceVariant),
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              prefixIcon: Icon(
+                LucideIcons.search,
+                size: 17,
+                color: cs.onSurfaceVariant,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 10,
+                horizontal: 12,
+              ),
             ),
           ),
         ),
@@ -815,7 +823,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   ),
                   itemBuilder: (_, i) {
                     final m = filtered[i];
-                    final name = m.displayName.isNotEmpty ? m.displayName : m.username;
+                    final name = m.displayName.isNotEmpty
+                        ? m.displayName
+                        : m.username;
                     return ListTile(
                       contentPadding: const EdgeInsets.symmetric(vertical: 2),
                       leading: Avatar(
@@ -833,7 +843,10 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                       ),
                       subtitle: Text(
                         '@${m.username}${m.role != 'member' ? ' · ${m.role}' : ''}',
-                        style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
                     );
                   },
@@ -864,7 +877,8 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
           return const _CommunityNotice(
             icon: LucideIcons.dumbbell,
             title: 'No pending requests',
-            body: 'When a gym asks to link with this community, the request '
+            body:
+                'When a gym asks to link with this community, the request '
                 'appears here for you to approve or decline.',
           );
         }
@@ -873,7 +887,11 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
           children: [
             Row(
               children: [
-                Icon(LucideIcons.dumbbell, size: 12, color: cs.onSurfaceVariant),
+                Icon(
+                  LucideIcons.dumbbell,
+                  size: 12,
+                  color: cs.onSurfaceVariant,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -918,8 +936,11 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
       }
     } catch (_) {
       if (mounted) {
-        showToast(context, 'Could not record that decision.',
-            type: ToastType.error);
+        showToast(
+          context,
+          'Could not record that decision.',
+          type: ToastType.error,
+        );
       }
     }
   }
@@ -962,8 +983,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                         'Remove this event?',
                         () => ref
                             .read(
-                              communityActivitiesProvider(widget.communityId)
-                                  .notifier,
+                              communityActivitiesProvider(
+                                widget.communityId,
+                              ).notifier,
                             )
                             .deleteEvent(event.id),
                       )
@@ -1010,8 +1032,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                         'Remove this session?',
                         () => ref
                             .read(
-                              communityActivitiesProvider(widget.communityId)
-                                  .notifier,
+                              communityActivitiesProvider(
+                                widget.communityId,
+                              ).notifier,
                             )
                             .deleteSchedule(slot.id),
                       )
@@ -1057,8 +1080,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                         'Remove this live?',
                         () => ref
                             .read(
-                              communityActivitiesProvider(widget.communityId)
-                                  .notifier,
+                              communityActivitiesProvider(
+                                widget.communityId,
+                              ).notifier,
                             )
                             .deleteLive(live.id),
                       )
@@ -1172,7 +1196,10 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove', style: TextStyle(color: BuddyColors.red)),
+            child: const Text(
+              'Remove',
+              style: TextStyle(color: BuddyColors.red),
+            ),
           ),
         ],
       ),
@@ -1365,9 +1392,7 @@ class _CommunityTabBar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: cs.outlineVariant.withValues(alpha: 0.4),
-          ),
+          bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
         ),
       ),
       child: SizedBox(
@@ -1461,7 +1486,11 @@ class _CommunityNotice extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 34, color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
+            Icon(
+              icon,
+              size: 34,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
             const SizedBox(height: 12),
             Text(
               title,
@@ -1479,10 +1508,7 @@ class _CommunityNotice extends StatelessWidget {
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 14),
-              OutlinedButton(
-                onPressed: onAction,
-                child: Text(actionLabel!),
-              ),
+              OutlinedButton(onPressed: onAction, child: Text(actionLabel!)),
             ],
           ],
         ),
@@ -1596,7 +1622,11 @@ class _ActivityTile extends StatelessWidget {
           if (onDelete != null)
             IconButton(
               visualDensity: VisualDensity.compact,
-              icon: Icon(LucideIcons.trash2, size: 16, color: cs.onSurfaceVariant),
+              icon: Icon(
+                LucideIcons.trash2,
+                size: 16,
+                color: cs.onSurfaceVariant,
+              ),
               onPressed: onDelete,
             ),
         ],
@@ -1617,7 +1647,8 @@ class _GymRequestCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final meta = [
       '@${request.gymHandle}',
-      if (request.gymCategory.isNotEmpty) request.gymCategory.replaceAll('_', ' '),
+      if (request.gymCategory.isNotEmpty)
+        request.gymCategory.replaceAll('_', ' '),
       if (request.gymMemberCount > 0) '${request.gymMemberCount} members',
     ].join(' · ');
     return Container(

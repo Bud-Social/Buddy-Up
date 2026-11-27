@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import '../utils/event_categories.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class CreateEventScreen extends ConsumerStatefulWidget {
   final String? shopHandle;
@@ -58,7 +59,9 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     if (_currentStep < 4) {
       setState(() => _currentStep++);
       _pageController.nextPage(
-          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -66,13 +69,18 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     if (_currentStep > 0) {
       setState(() => _currentStep--);
       _pageController.previousPage(
-          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
   Future<void> _pickCover() async {
     final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
     if (file != null) setState(() => _coverFile = file);
   }
 
@@ -83,16 +91,29 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
       if (_coverFile != null) {
         final formData = FormData.fromMap({
-          'image': await MultipartFile.fromFile(_coverFile!.path, filename: 'cover.jpg'),
+          'image': await MultipartFile.fromFile(
+            _coverFile!.path,
+            filename: 'cover.jpg',
+          ),
         });
         final result = await repo.uploadImage(formData);
         _uploadedCoverUrl = result['data']['url'] as String?;
       }
 
       final startDt = DateTime(
-          _startDate.year, _startDate.month, _startDate.day, _startTime.hour, _startTime.minute);
+        _startDate.year,
+        _startDate.month,
+        _startDate.day,
+        _startTime.hour,
+        _startTime.minute,
+      );
       final endDt = DateTime(
-          _endDate.year, _endDate.month, _endDate.day, _endTime.hour, _endTime.minute);
+        _endDate.year,
+        _endDate.month,
+        _endDate.day,
+        _endTime.hour,
+        _endTime.minute,
+      );
 
       final data = <String, dynamic>{
         'title': _titleController.text.trim(),
@@ -121,14 +142,18 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🎉 Event created!'), backgroundColor: BuddyColors.green),
+          const SnackBar(
+            content: Text('🎉 Event created!'),
+            backgroundColor: BuddyColors.green,
+          ),
         );
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -137,13 +162,22 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final stepLabels = ['Details', 'Date & Time', 'Location', 'Tickets', 'Review'];
+    final stepLabels = [
+      'Details',
+      'Date & Time',
+      'Location',
+      'Tickets',
+      'Review',
+    ];
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: BuddyColors.surface,
-        title: Text('Create Event — ${stepLabels[_currentStep]}'),
-        leading: IconButton(icon: const Icon(Icons.close), onPressed: () => context.pop()),
+      appBar: MainAppBar(
+        title: 'Create Event — ${stepLabels[_currentStep]}',
+        showMenu: false,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => context.pop(),
+        ),
       ),
       body: Column(
         children: [
@@ -178,223 +212,341 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   Widget _stepDetails() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Event Details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 20),
-        // Cover image
-        GestureDetector(
-          onTap: _pickCover,
-          child: Container(
-            width: double.infinity,
-            height: 150,
-            decoration: BoxDecoration(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Event Details',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          // Cover image
+          GestureDetector(
+            onTap: _pickCover,
+            child: Container(
+              width: double.infinity,
+              height: 150,
+              decoration: BoxDecoration(
                 color: BuddyColors.surfaceRaised,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                    color: _coverFile != null ? BuddyColors.green : BuddyColors.surfaceRaised,
-                    width: 2)),
-            clipBehavior: Clip.antiAlias,
-            child: _coverFile != null
-                ? Image.file(File(_coverFile!.path), fit: BoxFit.cover)
-                : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.add_photo_alternate_outlined,
-                        size: 36, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    const SizedBox(height: 6),
-                    Text('Upload event cover',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
-                  ]),
+                  color: _coverFile != null
+                      ? BuddyColors.green
+                      : BuddyColors.surfaceRaised,
+                  width: 2,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: _coverFile != null
+                  ? Image.file(File(_coverFile!.path), fit: BoxFit.cover)
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_photo_alternate_outlined,
+                          size: 36,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Upload event cover',
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        _field('Title', _titleController, hint: 'e.g. Morning HIIT Bootcamp'),
-        const SizedBox(height: 14),
-        _field('Description', _descriptionController,
-            hint: 'Describe the event...', maxLines: 4),
-        const SizedBox(height: 14),
-        const Text('Category', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: kEventCategories
-              .map((c) => ChoiceChip(
-                    avatar: Icon(c.icon, size: 16, color: _category == c.key ? Theme.of(context).colorScheme.surface : BuddyColors.green),
+          const SizedBox(height: 20),
+          _field('Title', _titleController, hint: 'e.g. Morning HIIT Bootcamp'),
+          const SizedBox(height: 14),
+          _field(
+            'Description',
+            _descriptionController,
+            hint: 'Describe the event...',
+            maxLines: 4,
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Category',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: kEventCategories
+                .map(
+                  (c) => ChoiceChip(
+                    avatar: Icon(
+                      c.icon,
+                      size: 16,
+                      color: _category == c.key
+                          ? Theme.of(context).colorScheme.surface
+                          : BuddyColors.green,
+                    ),
                     label: Text(c.label),
                     selected: _category == c.key,
                     onSelected: (_) => setState(() => _category = c.key),
                     selectedColor: BuddyColors.green,
-                  ))
-              .toList(),
-        ),
-        const SizedBox(height: 14),
-        _field('Tags', _tagsController, hint: 'hiit, cardio, beginners (comma separated)'),
-      ]),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 14),
+          _field(
+            'Tags',
+            _tagsController,
+            hint: 'hiit, cardio, beginners (comma separated)',
+          ),
+        ],
+      ),
     );
   }
 
   Widget _stepDateTime() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Date & Time', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 20),
-        const Text('Event Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: _eventTypes
-              .map((t) => ChoiceChip(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Date & Time',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Event Type',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: _eventTypes
+                .map(
+                  (t) => ChoiceChip(
                     label: Text(t.replaceAll('_', ' ')),
                     selected: _eventType == t,
                     onSelected: (_) => setState(() => _eventType = t),
                     selectedColor: BuddyColors.green,
-                  ))
-              .toList(),
-        ),
-        const SizedBox(height: 20),
-        _DateTimePicker(
-          label: 'Start',
-          date: _startDate,
-          time: _startTime,
-          onDateTap: () async {
-            final d = await showDatePicker(
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 20),
+          _DateTimePicker(
+            label: 'Start',
+            date: _startDate,
+            time: _startTime,
+            onDateTap: () async {
+              final d = await showDatePicker(
                 context: context,
                 initialDate: _startDate,
                 firstDate: DateTime.now(),
-                lastDate: DateTime.now().add(const Duration(days: 365)));
-            if (d != null) setState(() => _startDate = d);
-          },
-          onTimeTap: () async {
-            final t = await showTimePicker(context: context, initialTime: _startTime);
-            if (t != null) setState(() => _startTime = t);
-          },
-        ),
-        const SizedBox(height: 16),
-        _DateTimePicker(
-          label: 'End',
-          date: _endDate,
-          time: _endTime,
-          onDateTap: () async {
-            final d = await showDatePicker(
+                lastDate: DateTime.now().add(const Duration(days: 365)),
+              );
+              if (d != null) setState(() => _startDate = d);
+            },
+            onTimeTap: () async {
+              final t = await showTimePicker(
+                context: context,
+                initialTime: _startTime,
+              );
+              if (t != null) setState(() => _startTime = t);
+            },
+          ),
+          const SizedBox(height: 16),
+          _DateTimePicker(
+            label: 'End',
+            date: _endDate,
+            time: _endTime,
+            onDateTap: () async {
+              final d = await showDatePicker(
                 context: context,
                 initialDate: _endDate,
                 firstDate: _startDate,
-                lastDate: DateTime.now().add(const Duration(days: 365)));
-            if (d != null) setState(() => _endDate = d);
-          },
-          onTimeTap: () async {
-            final t = await showTimePicker(context: context, initialTime: _endTime);
-            if (t != null) setState(() => _endTime = t);
-          },
-        ),
-        const SizedBox(height: 20),
-        _field('Capacity (max attendees)', _capacityController,
-            hint: '50', inputType: TextInputType.number),
-      ]),
+                lastDate: DateTime.now().add(const Duration(days: 365)),
+              );
+              if (d != null) setState(() => _endDate = d);
+            },
+            onTimeTap: () async {
+              final t = await showTimePicker(
+                context: context,
+                initialTime: _endTime,
+              );
+              if (t != null) setState(() => _endTime = t);
+            },
+          ),
+          const SizedBox(height: 20),
+          _field(
+            'Capacity (max attendees)',
+            _capacityController,
+            hint: '50',
+            inputType: TextInputType.number,
+          ),
+        ],
+      ),
     );
   }
 
   Widget _stepLocation() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Location', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 20),
-        if (_eventType == 'in_person' || _eventType == 'hybrid') ...[
-          _field('Venue / Address', _locationController, hint: 'e.g. 123 Fitness St, Nairobi'),
-          const SizedBox(height: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Location',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          if (_eventType == 'in_person' || _eventType == 'hybrid') ...[
+            _field(
+              'Venue / Address',
+              _locationController,
+              hint: 'e.g. 123 Fitness St, Nairobi',
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (_eventType == 'online' || _eventType == 'hybrid') ...[
+            _field(
+              'Online Meeting URL',
+              _onlineUrlController,
+              hint: 'https://zoom.us/j/...',
+            ),
+          ],
         ],
-        if (_eventType == 'online' || _eventType == 'hybrid') ...[
-          _field('Online Meeting URL', _onlineUrlController, hint: 'https://zoom.us/j/...'),
-        ],
-      ]),
+      ),
     );
   }
 
   Widget _stepTickets() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Tickets & Pricing', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 20),
-        SwitchListTile(
-          value: _isFree,
-          onChanged: (v) => setState(() => _isFree = v),
-          title: const Text('Free Event'),
-          subtitle: const Text('No tickets required'),
-          activeThumbColor: BuddyColors.green,
-          contentPadding: EdgeInsets.zero,
-        ),
-        if (!_isFree) ...[
-          const SizedBox(height: 16),
-          const Text('Ticket Price (Artifacts)',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-          const SizedBox(height: 8),
-          ..._ticketPrices.entries.map((e) => Padding(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Tickets & Pricing',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          SwitchListTile(
+            value: _isFree,
+            onChanged: (v) => setState(() => _isFree = v),
+            title: const Text('Free Event'),
+            subtitle: const Text('No tickets required'),
+            activeThumbColor: BuddyColors.green,
+            contentPadding: EdgeInsets.zero,
+          ),
+          if (!_isFree) ...[
+            const SizedBox(height: 16),
+            const Text(
+              'Ticket Price (Artifacts)',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            ..._ticketPrices.entries.map(
+              (e) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
                     Expanded(
-                        child: Text(e.key,
-                            style: const TextStyle(fontWeight: FontWeight.w500))),
-                    Text('${e.value}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text(
+                        e.key,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    Text(
+                      '${e.value}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     IconButton(
-                      icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                      icon: const Icon(
+                        Icons.remove_circle_outline,
+                        color: Colors.red,
+                      ),
                       onPressed: () {
                         setState(() => _ticketPrices.remove(e.key));
                       },
                     ),
                   ],
                 ),
-              )),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.add),
-            label: const Text('Add Ticket Tier'),
-            onPressed: () => _showAddTierDialog(),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: BuddyColors.green),
-              foregroundColor: BuddyColors.green,
+              ),
             ),
-          ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('Add Ticket Tier'),
+              onPressed: () => _showAddTierDialog(),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: BuddyColors.green),
+                foregroundColor: BuddyColors.green,
+              ),
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 
   Widget _stepReview() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Review Event', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 20),
-        if (_coverFile != null) ...[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Image.file(File(_coverFile!.path), height: 140, width: double.infinity, fit: BoxFit.cover),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Review Event',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
+          if (_coverFile != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.file(
+                File(_coverFile!.path),
+                height: 140,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          Card(
+            color: BuddyColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _reviewRow('Title', _titleController.text),
+                  _reviewRow('Type', _eventType),
+                  _reviewRow('Category', _category),
+                  _reviewRow(
+                    'Start',
+                    '${_startDate.day}/${_startDate.month}/${_startDate.year} at ${_startTime.format(context)}',
+                  ),
+                  _reviewRow(
+                    'End',
+                    '${_endDate.day}/${_endDate.month}/${_endDate.year} at ${_endTime.format(context)}',
+                  ),
+                  _reviewRow('Capacity', _capacityController.text),
+                  _reviewRow('Pricing', _isFree ? 'Free' : '$_ticketPrices'),
+                  if (_locationController.text.isNotEmpty)
+                    _reviewRow('Location', _locationController.text),
+                ],
+              ),
+            ),
+          ),
         ],
-        Card(
-          color: BuddyColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(children: [
-              _reviewRow('Title', _titleController.text),
-              _reviewRow('Type', _eventType),
-              _reviewRow('Category', _category),
-              _reviewRow('Start', '${_startDate.day}/${_startDate.month}/${_startDate.year} at ${_startTime.format(context)}'),
-              _reviewRow('End', '${_endDate.day}/${_endDate.month}/${_endDate.year} at ${_endTime.format(context)}'),
-              _reviewRow('Capacity', _capacityController.text),
-              _reviewRow('Pricing', _isFree ? 'Free' : '$_ticketPrices'),
-              if (_locationController.text.isNotEmpty)
-                _reviewRow('Location', _locationController.text),
-            ]),
-          ),
-        ),
-      ]),
+      ),
     );
   }
 
@@ -405,34 +557,61 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-              width: 80,
-              child: Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13))),
+            width: 80,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
+            ),
+          ),
           Expanded(
-              child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _field(String label, TextEditingController ctrl,
-      {String? hint, int maxLines = 1, TextInputType? inputType}) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-      const SizedBox(height: 6),
-      TextFormField(
-        controller: ctrl,
-        maxLines: maxLines,
-        keyboardType: inputType,
-        decoration: InputDecoration(
-          hintText: hint,
-          filled: true,
-          fillColor: BuddyColors.surface,
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  Widget _field(
+    String label,
+    TextEditingController ctrl, {
+    String? hint,
+    int maxLines = 1,
+    TextInputType? inputType,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         ),
-      ),
-    ]);
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: ctrl,
+          maxLines: maxLines,
+          keyboardType: inputType,
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: BuddyColors.surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   void _showAddTierDialog() {
@@ -442,16 +621,30 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Add Ticket Tier'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Tier name (e.g. VIP)')),
-          const SizedBox(height: 8),
-          TextField(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Tier name (e.g. VIP)',
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
               controller: priceCtrl,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Price in artifacts')),
-        ]),
+              decoration: const InputDecoration(
+                labelText: 'Price in artifacts',
+              ),
+            ),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               final name = nameCtrl.text.trim();
@@ -468,7 +661,6 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
   }
 }
-
 
 class _DateTimePicker extends StatelessWidget {
   final String label;
@@ -490,43 +682,66 @@ class _DateTimePicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        ),
         const SizedBox(height: 8),
-        Row(children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: onDateTap,
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: onDateTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: BuddyColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Text('${date.day}/${date.month}/${date.year}'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: onTimeTap,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: BuddyColors.surface,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(children: [
-                  Icon(Icons.calendar_today, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 8),
-                  Text('${date.day}/${date.month}/${date.year}'),
-                ]),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(time.format(context)),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: onTimeTap,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: BuddyColors.surface,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(children: [
-                Icon(Icons.access_time, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                const SizedBox(width: 8),
-                Text(time.format(context)),
-              ]),
-            ),
-          ),
-        ]),
+          ],
+        ),
       ],
     );
   }

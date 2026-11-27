@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../providers/settings_providers.dart';
 import '../../../data/models/guardian.dart';
@@ -51,9 +52,9 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
       final linksMap = _payload(rawLinks);
       List<GuardianLink> parseList(dynamic raw) => raw is List
           ? raw
-              .whereType<Map<String, dynamic>>()
-              .map(GuardianLink.fromJson)
-              .toList()
+                .whereType<Map<String, dynamic>>()
+                .map(GuardianLink.fromJson)
+                .toList()
           : <GuardianLink>[];
       _asGuardian = parseList(linksMap?['as_guardian']);
       _asTeen = parseList(linksMap?['as_teen']);
@@ -100,9 +101,9 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
               '${_teenDob!.year.toString().padLeft(4, '0')}-${_teenDob!.month.toString().padLeft(2, '0')}-${_teenDob!.day.toString().padLeft(2, '0')}',
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Invite sent to $email')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Invite sent to $email')));
         _teenEmailCtrl.clear();
         _teenNameCtrl.clear();
         setState(() => _teenDob = null);
@@ -110,9 +111,9 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
       await _load();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isInviting = false);
@@ -136,9 +137,9 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
       await _load();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     }
   }
@@ -149,25 +150,28 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
       await _load();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     }
   }
 
-  Future<void> _togglePermission(GuardianLink link, String key, bool value) async {
+  Future<void> _togglePermission(
+    GuardianLink link,
+    String key,
+    bool value,
+  ) async {
     try {
-      await ref.read(settingsGuardianRepoProvider).updatePermissions(
-        link.id,
-        {key: value},
-      );
+      await ref.read(settingsGuardianRepoProvider).updatePermissions(link.id, {
+        key: value,
+      });
       await _load();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     }
   }
@@ -176,7 +180,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
   Widget build(BuildContext context) {
     final isAdult = ref.watch(authProvider).user?.isAdult == true;
     return Scaffold(
-      appBar: AppBar(title: const Text('Family')),
+      appBar: const MainAppBar(title: 'Family'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -187,8 +191,13 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Text('Could not load: $_error',
-                          style: const TextStyle(color: BuddyColors.red, fontSize: 13)),
+                      child: Text(
+                        'Could not load: $_error',
+                        style: const TextStyle(
+                          color: BuddyColors.red,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                   if (isAdult) ...[
                     _inviteCard(),
@@ -199,17 +208,28 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                     if (_asGuardian.isEmpty && _dashboard.isEmpty)
                       Text(
                         'No linked teens yet. Send an invite to get started.',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
                       ),
                   ] else ...[
-                    const Text('Guardian Links',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Guardian Links',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     ..._asTeen.map(_teenLinkCard),
                     if (_asTeen.isEmpty)
                       Text(
                         'No guardians linked to your account. A parent or guardian can invite you by email.',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
                       ),
                   ],
                 ],
@@ -223,8 +243,10 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Invite a Teen',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const Text(
+            'Invite a Teen',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 12),
           BuddyInput(
             label: 'Teen Email',
@@ -233,21 +255,25 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 8),
-          BuddyInput(
-            label: 'Teen Name (optional)',
-            controller: _teenNameCtrl,
-          ),
+          BuddyInput(label: 'Teen Name (optional)', controller: _teenNameCtrl),
           const SizedBox(height: 8),
           Row(
             children: [
-              Text('Date of birth (optional)',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
+              Text(
+                'Date of birth (optional)',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 13,
+                ),
+              ),
               const Spacer(),
               TextButton(
                 onPressed: _pickTeenDob,
-                child: Text(_teenDob == null
-                    ? 'Pick date'
-                    : '${_teenDob!.year}-${_teenDob!.month.toString().padLeft(2, '0')}-${_teenDob!.day.toString().padLeft(2, '0')}'),
+                child: Text(
+                  _teenDob == null
+                      ? 'Pick date'
+                      : '${_teenDob!.year}-${_teenDob!.month.toString().padLeft(2, '0')}-${_teenDob!.day.toString().padLeft(2, '0')}',
+                ),
               ),
             ],
           ),
@@ -283,14 +309,21 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                             ? entry.teen.displayName[0].toUpperCase()
                             : '?',
                         style: const TextStyle(
-                            color: BuddyColors.green, fontWeight: FontWeight.bold),
+                          color: BuddyColors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
                       )
                     : null,
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(entry.teen.displayName,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                child: Text(
+                  entry.teen.displayName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
@@ -300,7 +333,10 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             'Last active: ${entry.lastActive.isEmpty ? '—' : entry.lastActive}\n'
             'Posts (7d): ${entry.postsLast7d} · Workouts (7d): ${entry.workoutsLast7d} · '
             'Upcoming sessions: ${entry.upcomingSessions}',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 13,
+            ),
           ),
         ],
       ),
@@ -318,14 +354,19 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
               Expanded(
                 child: Text(
                   teen?.displayName ?? link.inviteEmail,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               Text(
                 link.status,
                 style: TextStyle(
                   fontSize: 12,
-                  color: link.status == 'accepted' ? BuddyColors.green : BuddyColors.gold,
+                  color: link.status == 'accepted'
+                      ? BuddyColors.green
+                      : BuddyColors.gold,
                 ),
               ),
             ],
@@ -335,9 +376,13 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               dense: true,
-              title: const Text('Allow direct messages', style: TextStyle(fontSize: 13)),
+              title: const Text(
+                'Allow direct messages',
+                style: TextStyle(fontSize: 13),
+              ),
               value: link.permissions['allow_direct_messages'] == true,
-              onChanged: (v) => _togglePermission(link, 'allow_direct_messages', v),
+              onChanged: (v) =>
+                  _togglePermission(link, 'allow_direct_messages', v),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -372,8 +417,13 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            pending ? 'Pending invite' : 'Linked since ${link.acceptedAt ?? link.createdAt}',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+            pending
+                ? 'Pending invite'
+                : 'Linked since ${link.acceptedAt ?? link.createdAt}',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
           ),
           if (pending) ...[
             const SizedBox(height: 12),

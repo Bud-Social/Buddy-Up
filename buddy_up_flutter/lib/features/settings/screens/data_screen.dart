@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../providers/settings_providers.dart';
 import '../../../shared/widgets/button.dart';
@@ -59,15 +60,17 @@ class _DataScreenState extends ConsumerState<DataScreen> {
       await repo.exportData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Data export requested. Check your email.')),
+          const SnackBar(
+            content: Text('Data export requested. Check your email.'),
+          ),
         );
       }
       await _loadStatuses();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isExporting = false);
@@ -81,10 +84,17 @@ class _DataScreenState extends ConsumerState<DataScreen> {
         backgroundColor: BuddyColors.surface,
         title: const Text('Deactivate Account?'),
         content: const Text(
-            'This will deactivate your account. You can reactivate by logging in again.'),
+          'This will deactivate your account. You can reactivate by logging in again.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          BuddyButton(label: 'Deactivate', onPressed: () => Navigator.pop(ctx, true)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          BuddyButton(
+            label: 'Deactivate',
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
         ],
       ),
     );
@@ -94,16 +104,16 @@ class _DataScreenState extends ConsumerState<DataScreen> {
       final repo = ref.read(settingsAuthRepoProvider);
       await repo.deactivateAccount();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account deactivated')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Account deactivated')));
         ref.read(authProvider.notifier).logout();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isDeactivating = false);
@@ -132,7 +142,9 @@ class _DataScreenState extends ConsumerState<DataScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  onChanged: (v) => setDialogState(() => phraseOk = v.trim() == 'delete my account'),
+                  onChanged: (v) => setDialogState(
+                    () => phraseOk = v.trim() == 'delete my account',
+                  ),
                   decoration: const InputDecoration(
                     labelText: "Type 'delete my account' to confirm",
                     border: OutlineInputBorder(),
@@ -142,7 +154,8 @@ class _DataScreenState extends ConsumerState<DataScreen> {
                 TextField(
                   controller: passwordCtrl,
                   obscureText: true,
-                  onChanged: (v) => setDialogState(() => passwordOk = v.isNotEmpty),
+                  onChanged: (v) =>
+                      setDialogState(() => passwordOk = v.isNotEmpty),
                   decoration: const InputDecoration(
                     labelText: 'Current password',
                     border: OutlineInputBorder(),
@@ -152,11 +165,16 @@ class _DataScreenState extends ConsumerState<DataScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
             BuddyButton(
               label: 'Delete Forever',
               variant: BuddyButtonVariant.destructive,
-              onPressed: (phraseOk && passwordOk) ? () => Navigator.pop(ctx, true) : null,
+              onPressed: (phraseOk && passwordOk)
+                  ? () => Navigator.pop(ctx, true)
+                  : null,
             ),
           ],
         ),
@@ -182,9 +200,9 @@ class _DataScreenState extends ConsumerState<DataScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isDeleting = false);
@@ -200,7 +218,7 @@ class _DataScreenState extends ConsumerState<DataScreen> {
       ..removeWhere((k, v) => v is! bool);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Data & Privacy')),
+      appBar: const MainAppBar(title: 'Data & Privacy'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -208,20 +226,28 @@ class _DataScreenState extends ConsumerState<DataScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Export Your Data',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Export Your Data',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 if (_exportStatus != null)
                   Text(
                     exportReady
                         ? 'Your export is ready: $exportFilename${exportCreated.isNotEmpty ? ' (generated $exportCreated)' : ''}'
                         : 'No export ready yet. Request one and it will be emailed to you.',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
                   )
                 else
                   Text(
                     'Request a copy of your data. It will be emailed to you.',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
                   ),
                 const SizedBox(height: 12),
                 BuddyButton(
@@ -241,8 +267,10 @@ class _DataScreenState extends ConsumerState<DataScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Consents',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Consents',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
                   ...consents.entries.map(
                     (e) => Padding(
@@ -252,7 +280,9 @@ class _DataScreenState extends ConsumerState<DataScreen> {
                           Icon(
                             e.value == true ? Icons.check_circle : Icons.cancel,
                             size: 16,
-                            color: e.value == true ? BuddyColors.green : BuddyColors.red,
+                            color: e.value == true
+                                ? BuddyColors.green
+                                : BuddyColors.red,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -274,8 +304,14 @@ class _DataScreenState extends ConsumerState<DataScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Danger Zone',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: BuddyColors.red)),
+                const Text(
+                  'Danger Zone',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: BuddyColors.red,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 BuddyButton(
                   label: 'Deactivate Account',

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/messaging.dart';
 import '../providers/community_provider.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class CommunityMembersScreen extends ConsumerStatefulWidget {
   final String communityId;
@@ -15,10 +16,12 @@ class CommunityMembersScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CommunityMembersScreen> createState() => _CommunityMembersScreenState();
+  ConsumerState<CommunityMembersScreen> createState() =>
+      _CommunityMembersScreenState();
 }
 
-class _CommunityMembersScreenState extends ConsumerState<CommunityMembersScreen> {
+class _CommunityMembersScreenState
+    extends ConsumerState<CommunityMembersScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -39,20 +42,37 @@ class _CommunityMembersScreenState extends ConsumerState<CommunityMembersScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.shield_outlined, color: BuddyColors.green),
-              title: Text(member.role == 'admin' ? 'Demote to Member' : 'Promote to Admin'),
+              leading: const Icon(
+                Icons.shield_outlined,
+                color: BuddyColors.green,
+              ),
+              title: Text(
+                member.role == 'admin'
+                    ? 'Demote to Member'
+                    : 'Promote to Admin',
+              ),
               onTap: () async {
                 Navigator.pop(ctx);
                 final newRole = member.role == 'admin' ? 'member' : 'admin';
-                await ref.read(communityFeedProvider(widget.communityId).notifier).setRole(member.userId, newRole);
+                await ref
+                    .read(communityFeedProvider(widget.communityId).notifier)
+                    .setRole(member.userId, newRole);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.person_remove_outlined, color: BuddyColors.red),
-              title: const Text('Remove from Community', style: TextStyle(color: BuddyColors.red)),
+              leading: const Icon(
+                Icons.person_remove_outlined,
+                color: BuddyColors.red,
+              ),
+              title: const Text(
+                'Remove from Community',
+                style: TextStyle(color: BuddyColors.red),
+              ),
               onTap: () async {
                 Navigator.pop(ctx);
-                await ref.read(communityFeedProvider(widget.communityId).notifier).removeMember(member.userId);
+                await ref
+                    .read(communityFeedProvider(widget.communityId).notifier)
+                    .removeMember(member.userId);
               },
             ),
           ],
@@ -67,9 +87,7 @@ class _CommunityMembersScreenState extends ConsumerState<CommunityMembersScreen>
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Members'),
-      ),
+      appBar: const MainAppBar(title: 'Members'),
       body: stateAsync.when(
         data: (state) {
           final detail = state.detail;
@@ -81,7 +99,10 @@ class _CommunityMembersScreenState extends ConsumerState<CommunityMembersScreen>
           // with `member_count` instead, so an empty roster on a community with
           // members means "not yours to see", not "nobody is here".
           if (members.isEmpty && memberCount > 0 && !isMember) {
-            return _JoinToSeeMembers(count: memberCount, isPublic: detail?.isPublic ?? false);
+            return _JoinToSeeMembers(
+              count: memberCount,
+              isPublic: detail?.isPublic ?? false,
+            );
           }
 
           final filtered = members.where((m) {
@@ -117,8 +138,12 @@ class _CommunityMembersScreenState extends ConsumerState<CommunityMembersScreen>
                 child: filtered.isEmpty
                     ? Center(
                         child: Text(
-                          _searchQuery.isEmpty ? 'No members found.' : 'No matching members.',
-                          style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6)),
+                          _searchQuery.isEmpty
+                              ? 'No members found.'
+                              : 'No matching members.',
+                          style: TextStyle(
+                            color: cs.onSurface.withValues(alpha: 0.6),
+                          ),
                         ),
                       )
                     : ListView.separated(
@@ -132,44 +157,77 @@ class _CommunityMembersScreenState extends ConsumerState<CommunityMembersScreen>
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor: cs.surfaceContainerHighest,
-                              backgroundImage: m.avatarUrl.isNotEmpty ? NetworkImage(m.avatarUrl) : null,
+                              backgroundImage: m.avatarUrl.isNotEmpty
+                                  ? NetworkImage(m.avatarUrl)
+                                  : null,
                               child: m.avatarUrl.isEmpty
-                                  ? Icon(Icons.person, color: cs.onSurface.withValues(alpha: 0.6))
+                                  ? Icon(
+                                      Icons.person,
+                                      color: cs.onSurface.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                    )
                                   : null,
                             ),
                             title: Text(
-                              m.displayName.isEmpty ? m.username : m.displayName,
-                              style: TextStyle(fontWeight: FontWeight.w600, color: cs.onSurface),
+                              m.displayName.isEmpty
+                                  ? m.username
+                                  : m.displayName,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: cs.onSurface,
+                              ),
                             ),
                             subtitle: Text(
                               '@${m.username}',
-                              style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6), fontSize: 12),
+                              style: TextStyle(
+                                color: cs.onSurface.withValues(alpha: 0.6),
+                                fontSize: 12,
+                              ),
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (isOwner)
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: BuddyColors.gold.withValues(alpha: 0.2),
+                                      color: BuddyColors.gold.withValues(
+                                        alpha: 0.2,
+                                      ),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Text(
                                       'Owner',
-                                      style: TextStyle(color: BuddyColors.gold, fontSize: 11, fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                        color: BuddyColors.gold,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   )
                                 else if (isAdmin)
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: BuddyColors.green.withValues(alpha: 0.2),
+                                      color: BuddyColors.green.withValues(
+                                        alpha: 0.2,
+                                      ),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Text(
                                       'Admin',
-                                      style: TextStyle(color: BuddyColors.green, fontSize: 11, fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                        color: BuddyColors.green,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 if (widget.canManage && !isOwner)
@@ -179,7 +237,9 @@ class _CommunityMembersScreenState extends ConsumerState<CommunityMembersScreen>
                                   ),
                               ],
                             ),
-                            onLongPress: isOwner ? null : () => _showMemberActions(m),
+                            onLongPress: isOwner
+                                ? null
+                                : () => _showMemberActions(m),
                           );
                         },
                       ),

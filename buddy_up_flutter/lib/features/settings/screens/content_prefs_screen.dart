@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../data/models/profile.dart';
 import '../../../shared/widgets/toast.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../providers/settings_providers.dart';
 
 /// Settings → Content Preferences: mature-content rating (synced to the
@@ -21,8 +22,11 @@ class _ContentPrefsScreenState extends ConsumerState<ContentPrefsScreen> {
   Future<void> _setMature(bool value) async {
     final auth = ref.read(authProvider);
     if (auth.user?.isAdult != true) {
-      showToast(context, 'Mature content requires age verification as 18+.',
-          type: ToastType.error);
+      showToast(
+        context,
+        'Mature content requires age verification as 18+.',
+        type: ToastType.error,
+      );
       return;
     }
     final profile = auth.profile;
@@ -31,14 +35,17 @@ class _ContentPrefsScreenState extends ConsumerState<ContentPrefsScreen> {
     try {
       final updated = await ref
           .read(settingsProfileRepoProvider)
-          .updateProfile(ProfileUpdatePayload(
-            contentRating: value ? 'mature' : 'general',
-          ));
+          .updateProfile(
+            ProfileUpdatePayload(contentRating: value ? 'mature' : 'general'),
+          );
       await ref.read(authProvider.notifier).updateProfile(updated);
     } catch (_) {
       if (mounted) {
-        showToast(context, 'Failed to update mature content setting',
-            type: ToastType.error);
+        showToast(
+          context,
+          'Failed to update mature content setting',
+          type: ToastType.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -53,7 +60,7 @@ class _ContentPrefsScreenState extends ConsumerState<ContentPrefsScreen> {
     final profanity = ref.watch(profanityFilterProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Content Preferences')),
+      appBar: const MainAppBar(title: 'Content Preferences'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -63,8 +70,10 @@ class _ContentPrefsScreenState extends ConsumerState<ContentPrefsScreen> {
                 SwitchListTile(
                   value: mature,
                   onChanged: (!isAdult || _saving) ? null : _setMature,
-                  title: const Text('Mature content',
-                      style: TextStyle(fontSize: 14)),
+                  title: const Text(
+                    'Mature content',
+                    style: TextStyle(fontSize: 14),
+                  ),
                   subtitle: Text(
                     isAdult
                         ? 'Show sensitive health & transformation content (18+)'
@@ -80,7 +89,9 @@ class _ContentPrefsScreenState extends ConsumerState<ContentPrefsScreen> {
                       'Confirm your age with an ID or passport in Settings → '
                       'Verifications if this is incorrect.',
                       style: TextStyle(
-                          fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 const Divider(height: 1),
@@ -89,8 +100,10 @@ class _ContentPrefsScreenState extends ConsumerState<ContentPrefsScreen> {
                   onChanged: (value) => ref
                       .read(profanityFilterProvider.notifier)
                       .setEnabled(value),
-                  title: const Text('Profanity filter',
-                      style: TextStyle(fontSize: 14)),
+                  title: const Text(
+                    'Profanity filter',
+                    style: TextStyle(fontSize: 14),
+                  ),
                   subtitle: const Text(
                     'Mask explicit language in post text on this device',
                     style: TextStyle(fontSize: 12),
@@ -103,7 +116,10 @@ class _ContentPrefsScreenState extends ConsumerState<ContentPrefsScreen> {
           Text(
             'The mature-content rating syncs to your account. The profanity '
             'filter applies to this device only.',
-            style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

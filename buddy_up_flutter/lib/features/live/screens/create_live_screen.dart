@@ -5,6 +5,7 @@ import '../providers/live_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/constants.dart';
 import '../../../shared/widgets/input.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class CreateLiveScreen extends ConsumerStatefulWidget {
   const CreateLiveScreen({super.key});
@@ -35,8 +36,8 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Go Live'),
+      appBar: MainAppBar(
+        title: 'Go Live',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -238,8 +239,12 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
                     ),
                     decoration: InputDecoration(
                       hintText: '0',
-                      hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                      labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                       border: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                       ),
@@ -307,7 +312,9 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
             Text(
               title,
               style: TextStyle(
-                color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurface,
+                color: isActive
+                    ? BuddyColors.green
+                    : Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -334,7 +341,9 @@ class _CreateLiveScreenState extends ConsumerState<CreateLiveScreen> {
       onSelected: (_) => setState(() => _liveType = value),
       selectedColor: BuddyColors.green.withValues(alpha: 0.2),
       labelStyle: TextStyle(
-        color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
+        color: isActive
+            ? BuddyColors.green
+            : Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }

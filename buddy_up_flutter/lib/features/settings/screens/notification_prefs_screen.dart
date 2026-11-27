@@ -5,6 +5,7 @@ import '../../notifications/providers/notification_provider.dart';
 import '../../../data/models/notification.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/input.dart';
+import '../../../shared/navigation/main_header.dart';
 
 /// Notification preferences — mirrors the backend serializer:
 /// channels (push/email/in-app), 12 per-type toggles, quiet hours and
@@ -18,7 +19,8 @@ class NotificationPrefsScreen extends ConsumerStatefulWidget {
       _NotificationPrefsScreenState();
 }
 
-class _NotificationPrefsScreenState extends ConsumerState<NotificationPrefsScreen> {
+class _NotificationPrefsScreenState
+    extends ConsumerState<NotificationPrefsScreen> {
   bool? _pushEnabled;
   bool? _emailEnabled;
   bool? _inAppEnabled;
@@ -73,20 +75,20 @@ class _NotificationPrefsScreenState extends ConsumerState<NotificationPrefsScree
   }
 
   bool _typeBool(NotificationPreference p, String key) => switch (key) {
-        'buddy_request_push' => p.buddyRequestPush,
-        'buddy_accepted_push' => p.buddyAcceptedPush,
-        'new_follower_push' => p.newFollowerPush,
-        'comment_push' => p.commentPush,
-        'live_starting_push' => p.liveStartingPush,
-        'session_reminder_push' => p.sessionReminderPush,
-        'streak_milestone_push' => p.streakMilestonePush,
-        'accountability_ping_push' => p.accountabilityPingPush,
-        'programme_reminder_push' => p.programmeReminderPush,
-        'meal_reminder_push' => p.mealReminderPush,
-        'shop_cert_push' => p.shopCertPush,
-        'new_purchase_push' => p.newPurchasePush,
-        _ => true,
-      };
+    'buddy_request_push' => p.buddyRequestPush,
+    'buddy_accepted_push' => p.buddyAcceptedPush,
+    'new_follower_push' => p.newFollowerPush,
+    'comment_push' => p.commentPush,
+    'live_starting_push' => p.liveStartingPush,
+    'session_reminder_push' => p.sessionReminderPush,
+    'streak_milestone_push' => p.streakMilestonePush,
+    'accountability_ping_push' => p.accountabilityPingPush,
+    'programme_reminder_push' => p.programmeReminderPush,
+    'meal_reminder_push' => p.mealReminderPush,
+    'shop_cert_push' => p.shopCertPush,
+    'new_purchase_push' => p.newPurchasePush,
+    _ => true,
+  };
 
   String _deviceTimezone() {
     final name = DateTime.now().timeZoneName;
@@ -155,9 +157,9 @@ class _NotificationPrefsScreenState extends ConsumerState<NotificationPrefsScree
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -168,7 +170,7 @@ class _NotificationPrefsScreenState extends ConsumerState<NotificationPrefsScree
   Widget build(BuildContext context) {
     final prefsAsync = ref.watch(notificationPreferencesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Notification Preferences')),
+      appBar: const MainAppBar(title: 'Notification Preferences'),
       body: prefsAsync.when(
         data: (prefs) {
           _hydrate(prefs);
@@ -179,19 +181,28 @@ class _NotificationPrefsScreenState extends ConsumerState<NotificationPrefsScree
               _card([
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Push Notifications', style: TextStyle(fontSize: 14)),
+                  title: const Text(
+                    'Push Notifications',
+                    style: TextStyle(fontSize: 14),
+                  ),
                   value: _pushEnabled ?? true,
                   onChanged: (v) => setState(() => _pushEnabled = v),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Email Notifications', style: TextStyle(fontSize: 14)),
+                  title: const Text(
+                    'Email Notifications',
+                    style: TextStyle(fontSize: 14),
+                  ),
                   value: _emailEnabled ?? true,
                   onChanged: (v) => setState(() => _emailEnabled = v),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('In-App Notifications', style: TextStyle(fontSize: 14)),
+                  title: const Text(
+                    'In-App Notifications',
+                    style: TextStyle(fontSize: 14),
+                  ),
                   value: _inAppEnabled ?? true,
                   onChanged: (v) => setState(() => _inAppEnabled = v),
                 ),
@@ -254,7 +265,10 @@ class _NotificationPrefsScreenState extends ConsumerState<NotificationPrefsScree
   Widget _sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
     );
   }
 
@@ -289,24 +303,32 @@ class _NotificationPrefsScreenState extends ConsumerState<NotificationPrefsScree
           ),
           Expanded(
             child: Text(
-              value == null
-                  ? 'Not set'
-                  : value.split(':').take(2).join(':'),
+              value == null ? 'Not set' : value.split(':').take(2).join(':'),
               style: TextStyle(
                 fontSize: 14,
-                color: value == null ? Theme.of(context).colorScheme.onSurfaceVariant : null,
+                color: value == null
+                    ? Theme.of(context).colorScheme.onSurfaceVariant
+                    : null,
               ),
             ),
           ),
           IconButton(
             tooltip: 'Pick time',
-            icon: const Icon(Icons.access_time, size: 20, color: BuddyColors.green),
+            icon: const Icon(
+              Icons.access_time,
+              size: 20,
+              color: BuddyColors.green,
+            ),
             onPressed: onPick,
           ),
           if (value != null)
             IconButton(
               tooltip: 'Clear',
-              icon: Icon(Icons.close, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              icon: Icon(
+                Icons.close,
+                size: 20,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               onPressed: onClear,
             ),
         ],

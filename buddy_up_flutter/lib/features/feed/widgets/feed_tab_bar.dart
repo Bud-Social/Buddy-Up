@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/constants.dart';
 
 class FeedTabBar extends StatelessWidget {
@@ -24,6 +23,7 @@ class FeedTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveTabs = tabs ?? feedTabs;
+    final cs = Theme.of(context).colorScheme;
     // Web parity: a rounded surface rail of pill tabs. Active pill is solid
     // green with black text; inactive pills are secondary text on transparent.
     return Padding(
@@ -48,7 +48,7 @@ class FeedTabBar extends StatelessWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: isActive ? BuddyColors.green : Colors.transparent,
+                    color: isActive ? cs.primary : Colors.transparent,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -57,9 +57,7 @@ class FeedTabBar extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: isActive
-                          ? BuddyColors.black
-                          : BuddyColors.textSecondary,
+                      color: isActive ? cs.onPrimary : cs.onSurfaceVariant,
                       fontWeight: FontWeight.w500,
                       fontSize: 13,
                     ),

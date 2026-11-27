@@ -54,6 +54,9 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showSearch = true,
     this.actions = const [],
     this.onSearch,
+    this.leading,
+    this.bottom,
+    this.showMenu = true,
   });
 
   final String? title;
@@ -65,20 +68,29 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// Overrides the default search action (navigate to `/discover`).
   final VoidCallback? onSearch;
+  final Widget? leading;
+  final PreferredSizeWidget? bottom;
+  final bool showMenu;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize =>
+      Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0));
 
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      leading: IconButton(
-        icon: const Icon(LucideIcons.menu),
-        tooltip: 'Menu',
-        onPressed: () => AppNav.open(context),
-      ),
+      leading:
+          leading ??
+          (showMenu
+              ? IconButton(
+                  icon: const Icon(LucideIcons.menu),
+                  tooltip: 'Menu',
+                  onPressed: () => AppNav.open(context),
+                )
+              : null),
       centerTitle: true,
       title: _BrandTitle(label: title ?? 'BuddyUp Fit'),
+      bottom: bottom,
       actions: [
         ...actions,
         if (showSearch)

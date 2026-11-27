@@ -7,6 +7,7 @@ import '../providers/settings_providers.dart';
 import '../../../shared/navigation/business_roles.dart';
 import '../../../shared/navigation/business_roles_provider.dart';
 import '../../../shared/widgets/toast.dart';
+import '../../../shared/navigation/main_header.dart';
 
 /// Settings hub. Each section lives in its own sub-screen under
 /// /settings/<section>; this page is a navigation list only.
@@ -196,7 +197,7 @@ class SettingsScreen extends ConsumerWidget {
     final tileColor = Theme.of(context).colorScheme.surface;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: const MainAppBar(title: 'Settings'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

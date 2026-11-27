@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../providers/settings_providers.dart';
 import '../../../data/models/profile.dart';
@@ -59,14 +60,16 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
     });
     try {
       final repo = ref.read(settingsProfileRepoProvider);
-      final updated = await repo.updateProfile(ProfileUpdatePayload(
-        privacyLevel: _privacyLevel,
-        showActiveStatus: _showActiveStatus,
-        // Only send when the user touched it, so we never overwrite the
-        // server value with a default.
-        isAnonymousPosting: _anonymousPosting,
-        autoRoutinesEnabled: _autoRoutines,
-      ));
+      final updated = await repo.updateProfile(
+        ProfileUpdatePayload(
+          privacyLevel: _privacyLevel,
+          showActiveStatus: _showActiveStatus,
+          // Only send when the user touched it, so we never overwrite the
+          // server value with a default.
+          isAnonymousPosting: _anonymousPosting,
+          autoRoutinesEnabled: _autoRoutines,
+        ),
+      );
       await repo.updateSearchProfile({
         'visibility': _buddyVisibility,
         'incognito': _incognito,
@@ -75,9 +78,9 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
       if (mounted) setState(() => _privacySaved = true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSavingPrivacy = false);
@@ -87,7 +90,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Privacy')),
+      appBar: const MainAppBar(title: 'Privacy'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -103,8 +106,10 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Profile Visibility',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Profile Visibility',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
                   SegmentedButton<String>(
                     segments: const [
@@ -118,36 +123,59 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                   const SizedBox(height: 12),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Show Active Status', style: TextStyle(fontSize: 14)),
-                    subtitle: Text('Display when you are online',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
+                    title: const Text(
+                      'Show Active Status',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      'Display when you are online',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
                     value: _showActiveStatus,
                     onChanged: (v) => setState(() => _showActiveStatus = v),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Anonymous Posting', style: TextStyle(fontSize: 14)),
+                    title: const Text(
+                      'Anonymous Posting',
+                      style: TextStyle(fontSize: 14),
+                    ),
                     subtitle: Text(
                       'Post to the feed without showing your name',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
                     ),
                     value: _anonymousPosting ?? false,
-                    onChanged: _loadedFromProfile ? (v) => setState(() => _anonymousPosting = v) : null,
+                    onChanged: _loadedFromProfile
+                        ? (v) => setState(() => _anonymousPosting = v)
+                        : null,
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Suggest routines automatically',
-                        style: TextStyle(fontSize: 14)),
+                    title: const Text(
+                      'Suggest routines automatically',
+                      style: TextStyle(fontSize: 14),
+                    ),
                     subtitle: Text(
                       'Offer a routine when the same activity repeats on three different days',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
                     ),
                     value: _autoRoutines,
                     onChanged: (v) => setState(() => _autoRoutines = v),
                   ),
                   const Divider(height: 24),
-                  const Text('Buddy Search',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Buddy Search',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
                   SegmentedButton<String>(
                     segments: const [
@@ -161,10 +189,16 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Incognito Browsing', style: TextStyle(fontSize: 14)),
+                    title: const Text(
+                      'Incognito Browsing',
+                      style: TextStyle(fontSize: 14),
+                    ),
                     subtitle: Text(
                       'Browse unseen — hides your online status and last seen',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
                     ),
                     value: _incognito,
                     onChanged: (v) => setState(() => _incognito = v),
@@ -179,8 +213,10 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                   ),
                   if (_privacySaved) ...[
                     const SizedBox(height: 8),
-                    const Text('Privacy settings saved',
-                        style: TextStyle(color: BuddyColors.green, fontSize: 12)),
+                    const Text(
+                      'Privacy settings saved',
+                      style: TextStyle(color: BuddyColors.green, fontSize: 12),
+                    ),
                   ],
                 ],
               ),

@@ -28,10 +28,12 @@ class CommunitySettingsScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CommunitySettingsScreen> createState() => _CommunitySettingsScreenState();
+  ConsumerState<CommunitySettingsScreen> createState() =>
+      _CommunitySettingsScreenState();
 }
 
-class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScreen> {
+class _CommunitySettingsScreenState
+    extends ConsumerState<CommunitySettingsScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _descController;
   late bool _isPublic;
@@ -67,16 +69,19 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
     try {
       final dio = ref.read(apiClientProvider4).dio;
       final form = FormData.fromMap({
-        'file': await MultipartFile.fromFile(picked.path, filename: picked.name),
+        'file': await MultipartFile.fromFile(
+          picked.path,
+          filename: picked.name,
+        ),
       });
       final res = await dio.post('/messaging/upload/', data: form);
       final url = (res.data['data'] as Map<String, dynamic>)['url'] as String;
       setState(() => _avatarUrl = url);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Image upload failed')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Image upload failed')));
       }
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
@@ -89,12 +94,14 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
 
     setState(() => _isSaving = true);
     try {
-      await ref.read(communityFeedProvider(widget.communityId).notifier).updateSettings(
-        name,
-        _descController.text.trim(),
-        _isPublic,
-        groupAvatarUrl: _avatarUrl,
-      );
+      await ref
+          .read(communityFeedProvider(widget.communityId).notifier)
+          .updateSettings(
+            name,
+            _descController.text.trim(),
+            _isPublic,
+            groupAvatarUrl: _avatarUrl,
+          );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Settings saved successfully.')),
@@ -103,9 +110,9 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save settings: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save settings: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -121,7 +128,10 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
           'Are you sure you want to permanently delete this community? All posts, members, and chat history will be removed.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: BuddyColors.red),
             onPressed: () => Navigator.pop(ctx, true),
@@ -133,7 +143,9 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
 
     if (confirm == true && mounted) {
       try {
-        await ref.read(communityFeedProvider(widget.communityId).notifier).leave();
+        await ref
+            .read(communityFeedProvider(widget.communityId).notifier)
+            .leave();
         if (mounted) {
           context.go('/feed');
         }
@@ -152,8 +164,18 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
           TextButton(
             onPressed: _isSaving ? null : _save,
             child: _isSaving
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Save', style: TextStyle(color: BuddyColors.green, fontWeight: FontWeight.bold)),
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text(
+                    'Save',
+                    style: TextStyle(
+                      color: BuddyColors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -164,7 +186,9 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
           GestureDetector(
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Select cover photo from gallery.')),
+                const SnackBar(
+                  content: Text('Select cover photo from gallery.'),
+                ),
               );
             },
             child: Container(
@@ -178,9 +202,19 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.add_photo_alternate_outlined, size: 32, color: cs.onSurface.withValues(alpha: 0.6)),
+                    Icon(
+                      Icons.add_photo_alternate_outlined,
+                      size: 32,
+                      color: cs.onSurface.withValues(alpha: 0.6),
+                    ),
                     const SizedBox(height: 6),
-                    Text('Change Cover Photo', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.7), fontSize: 13)),
+                    Text(
+                      'Change Cover Photo',
+                      style: TextStyle(
+                        color: cs.onSurface.withValues(alpha: 0.7),
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -197,24 +231,37 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
                   CircleAvatar(
                     radius: 40,
                     backgroundColor: cs.surfaceContainerHighest,
-                    backgroundImage: (_avatarUrl?.isNotEmpty ?? false) ? NetworkImage(_avatarUrl!) : null,
+                    backgroundImage: (_avatarUrl?.isNotEmpty ?? false)
+                        ? NetworkImage(_avatarUrl!)
+                        : null,
                     child: (_avatarUrl?.isEmpty ?? true)
-                        ? Icon(Icons.groups, size: 40, color: cs.onSurface.withValues(alpha: 0.6))
+                        ? Icon(
+                            Icons.groups,
+                            size: 40,
+                            color: cs.onSurface.withValues(alpha: 0.6),
+                          )
                         : _uploadingAvatar
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : null,
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : null,
                   ),
                   Positioned(
                     bottom: 0,
                     right: 0,
                     child: Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(color: BuddyColors.green, shape: BoxShape.circle),
-                      child: Icon(Icons.camera_alt, size: 16, color: Theme.of(context).colorScheme.surface),
+                      decoration: const BoxDecoration(
+                        color: BuddyColors.green,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.camera_alt,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.surface,
+                      ),
                     ),
                   ),
                 ],
@@ -249,7 +296,9 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
           // Switches
           SwitchListTile(
             title: const Text('Public Community'),
-            subtitle: const Text('Anyone can discover and join without invite code'),
+            subtitle: const Text(
+              'Anyone can discover and join without invite code',
+            ),
             value: _isPublic,
             activeThumbColor: BuddyColors.green,
             onChanged: (v) => setState(() => _isPublic = v),
@@ -275,7 +324,14 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
           const SizedBox(height: 16),
 
           // Danger zone
-          const Text('Danger Zone', style: TextStyle(color: BuddyColors.red, fontWeight: FontWeight.bold, fontSize: 14)),
+          const Text(
+            'Danger Zone',
+            style: TextStyle(
+              color: BuddyColors.red,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
@@ -330,9 +386,9 @@ class _GymLinkRequestsSectionState
       setState(() {
         _requests = rows is List
             ? rows
-                .whereType<Map>()
-                .map((row) => Map<String, dynamic>.from(row))
-                .toList()
+                  .whereType<Map>()
+                  .map((row) => Map<String, dynamic>.from(row))
+                  .toList()
             : const [];
         _loading = false;
       });
@@ -360,12 +416,18 @@ class _GymLinkRequestsSectionState
             .toList();
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(decision == 'approved' ? 'Gym linked' : 'Request declined')),
+        SnackBar(
+          content: Text(
+            decision == 'approved' ? 'Gym linked' : 'Request declined',
+          ),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not record that decision. Try again.')),
+        const SnackBar(
+          content: Text('Could not record that decision. Try again.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busyId = null);
@@ -378,21 +440,41 @@ class _GymLinkRequestsSectionState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Gym Requests',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(
+          'Gym Requests',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
         const SizedBox(height: 2),
         Text(
           'Gyms asking to link with this community. Approve to connect them; decline to turn the ask down.',
-          style: TextStyle(fontSize: 11, color: cs.onSurface.withValues(alpha: 0.6)),
+          style: TextStyle(
+            fontSize: 11,
+            color: cs.onSurface.withValues(alpha: 0.6),
+          ),
         ),
         const SizedBox(height: 10),
         if (_loading)
-          const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)))
+          const Center(
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          )
         else if (_requests == null || _requests!.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text('No pending gym requests.',
-                style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6))),
+            child: Text(
+              'No pending gym requests.',
+              style: TextStyle(
+                fontSize: 12,
+                color: cs.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
           )
         else
           for (final request in _requests!)
@@ -440,54 +522,87 @@ class _GymLinkRequestTile extends StatelessWidget {
             radius: 24,
             backgroundColor: cs.surface,
             backgroundImage: logo.isNotEmpty ? NetworkImage(logo) : null,
-            child: logo.isEmpty ? const Icon(Icons.fitness_center, size: 22) : null,
+            child: logo.isEmpty
+                ? const Icon(Icons.fitness_center, size: 22)
+                : null,
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
                 Text(
                   [
                     if (handle.isNotEmpty) '@$handle',
                     if (category.isNotEmpty) category,
                     if (members != null) '$members members',
                   ].join(' · '),
-                  style: TextStyle(fontSize: 11, color: cs.onSurface.withValues(alpha: 0.65)),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: cs.onSurface.withValues(alpha: 0.65),
+                  ),
                 ),
                 if (requestedBy.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text('Asked by $requestedBy',
-                        style: TextStyle(fontSize: 10, color: cs.onSurface.withValues(alpha: 0.5))),
+                    child: Text(
+                      'Asked by $requestedBy',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: cs.onSurface.withValues(alpha: 0.5),
+                      ),
+                    ),
                   ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     FilledButton.icon(
-                      onPressed: busy ? null : () => onDecide(request, 'approved'),
+                      onPressed: busy
+                          ? null
+                          : () => onDecide(request, 'approved'),
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(0, 30),
                         backgroundColor: BuddyColors.green,
                         foregroundColor: Theme.of(context).colorScheme.surface,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
-                        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                        textStyle: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       icon: busy
-                          ? SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, color: Theme.of(context).colorScheme.surface))
+                          ? SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: Theme.of(context).colorScheme.surface,
+                              ),
+                            )
                           : const Icon(Icons.check, size: 14),
                       label: const Text('Approve'),
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
-                      onPressed: busy ? null : () => onDecide(request, 'declined'),
+                      onPressed: busy
+                          ? null
+                          : () => onDecide(request, 'declined'),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 30),
                         foregroundColor: BuddyColors.red,
                         side: const BorderSide(color: BuddyColors.red),
                         padding: const EdgeInsets.symmetric(horizontal: 12),
-                        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                        textStyle: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       icon: const Icon(Icons.close, size: 14),
                       label: const Text('Decline'),
