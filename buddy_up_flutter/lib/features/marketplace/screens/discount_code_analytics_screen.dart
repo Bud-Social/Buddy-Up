@@ -55,7 +55,7 @@ class _DiscountCodeAnalyticsScreenState
             return const PageLoader();
           }
           if (snapshot.hasError || !snapshot.hasData) {
-            return EmptyState(
+            return const EmptyState(
               icon: LucideIcons.chartNoAxesCombined,
               title: 'Analytics not found',
               subtitle: 'We could not load this discount code report.',
