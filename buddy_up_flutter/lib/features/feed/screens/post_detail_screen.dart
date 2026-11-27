@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gallery_media_picker/gallery_media_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import '../providers/feed_provider.dart';
 import '../widgets/post_card.dart';
@@ -524,11 +525,54 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       }
       return;
     }
-    // GIF files selected from the device retain their animation and are sent
-    // through the same media endpoint as web-uploaded GIFs.
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-    await _submitMediaComment(postId, type, picked.path);
+    // Use the Instagram-style device gallery for GIFs. It includes animated
+    // GIFs in the image view and gives the upload endpoint the original file,
+    // so animation is preserved rather than reduced to a still frame.
+    await _pickGifComment(postId);
+  }
+
+  Future<void> _pickGifComment(String postId) async {
+    var submitted = false;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (pickerContext) => Dialog.fullscreen(
+        child: GalleryMediaPicker(
+          appBarLeadingWidget: IconButton(
+            tooltip: 'Close',
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.of(pickerContext).pop(),
+          ),
+          pathList: (paths) async {
+            if (submitted || paths.isEmpty) return;
+            final asset = paths.first;
+            final path = asset.path.isNotEmpty
+                ? asset.path
+                : asset.file?.path;
+            if (path == null || path.isEmpty) return;
+            submitted = true;
+            Navigator.of(pickerContext).pop();
+            await _submitMediaComment(postId, 'gif', path);
+          },
+          mediaPickerParams: MediaPickerParamsModel(
+            singlePick: true,
+            maxPickImages: 1,
+            mediaType: GalleryMediaType.image,
+            thumbnailQuality: ThumbnailQuality.high,
+            appBarColor: Theme.of(context).colorScheme.surface,
+            gridViewBgColor: Theme.of(context).colorScheme.surface,
+            thumbnailBgColor: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest,
+            albumTextColor: Theme.of(context).colorScheme.onSurface,
+            albumSelectTextColor: Theme.of(context).colorScheme.onSurface,
+            albumSelectIconColor: Theme.of(context).colorScheme.onSurface,
+            selectedCheckColor: Theme.of(context).colorScheme.onPrimary,
+            selectedCheckBgColor: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _pickImageComment(String postId) async {

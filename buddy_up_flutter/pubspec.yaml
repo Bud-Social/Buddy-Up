@@ -1,7 +1,7 @@
 name: buddy_up_flutter
 description: Buddy-Up health & fitness social platform
 publish_to: 'none'
-version: 1.2.19+27
+version: 1.2.20+28
 
 environment:
   sdk: ^3.8.0
@@ -53,6 +53,7 @@ dependencies:
   google_fonts: ^8.2.1
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
+  gallery_media_picker: ^0.3.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
