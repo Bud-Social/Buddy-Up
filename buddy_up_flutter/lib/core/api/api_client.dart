@@ -6,6 +6,7 @@ import '../env/env.dart';
 import '../../router.dart' show rootNavigatorKey;
 
 class ApiClient {
+  static Future<String?>? _refreshInFlight;
   late final Dio dio;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
@@ -76,24 +77,20 @@ class ApiClient {
           final refreshToken = await _storage.read(key: 'refresh_token');
           if (refreshToken != null) {
             try {
-              final response = await Dio(
-                BaseOptions(baseUrl: Env.apiBaseUrl),
-              ).post('/auth/token/refresh/', data: {'refresh': refreshToken});
-              // The refresh endpoint also returns the envelope — unwrap it.
-              final raw = response.data;
-              final body = (raw is Map && raw['data'] is Map)
-                  ? raw['data'] as Map<String, dynamic>
-                  : raw as Map<String, dynamic>;
-              final newAccess = body['access'] as String;
-              final newRefresh = body['refresh'] as String? ?? refreshToken;
-              await _storage.write(key: 'access_token', value: newAccess);
-              await _storage.write(key: 'refresh_token', value: newRefresh);
+              final newAccess = await (_refreshInFlight ??= _refresh(
+                refreshToken,
+              ));
+              _refreshInFlight = null;
+              if (newAccess == null) {
+                throw StateError('Token refresh returned no access token');
+              }
               error.requestOptions.headers['Authorization'] =
                   'Bearer $newAccess';
               final retry = await dio.fetch(error.requestOptions);
               handler.resolve(retry);
               return;
             } catch (_) {
+              _refreshInFlight = null;
               await _storage.deleteAll();
             }
           }
@@ -101,5 +98,23 @@ class ApiClient {
         handler.next(error);
       },
     );
+  }
+
+  Future<String?> _refresh(String refreshToken) async {
+    final response = await Dio(
+      BaseOptions(baseUrl: Env.apiBaseUrl),
+    ).post('/auth/token/refresh/', data: {'refresh': refreshToken});
+    final raw = response.data;
+    final body = (raw is Map && raw['data'] is Map)
+        ? raw['data'] as Map<String, dynamic>
+        : raw as Map<String, dynamic>;
+    final newAccess = body['access'] as String?;
+    if (newAccess == null) return null;
+    await _storage.write(key: 'access_token', value: newAccess);
+    await _storage.write(
+      key: 'refresh_token',
+      value: body['refresh'] as String? ?? refreshToken,
+    );
+    return newAccess;
   }
 }

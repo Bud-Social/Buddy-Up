@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../features/notifications/providers/notification_provider.dart';
@@ -76,13 +77,8 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
         tooltip: 'Menu',
         onPressed: () => AppNav.open(context),
       ),
-      title: showLogo
-          ? Image.asset(
-              'assets/logo-dark.png',
-              height: 28,
-              fit: BoxFit.contain,
-            )
-          : (title == null ? null : Text(title!)),
+      centerTitle: true,
+      title: _BrandTitle(label: title ?? 'BuddyUp Fit'),
       actions: [
         ...actions,
         if (showSearch)
@@ -92,6 +88,32 @@ class MainAppBar extends StatelessWidget implements PreferredSizeWidget {
             onPressed: onSearch ?? () => context.go('/discover'),
           ),
         const NotificationBellButton(),
+      ],
+    );
+  }
+}
+
+class _BrandTitle extends StatelessWidget {
+  const _BrandTitle({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Image.asset('assets/logo-dark.png', height: 28, width: 28),
+        const SizedBox(width: 7),
+        Text(
+          label,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.syne(
+            color: Theme.of(context).appBarTheme.foregroundColor,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ],
     );
   }

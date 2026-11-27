@@ -135,7 +135,16 @@ ThemeData buildBuddyTheme() {
     ),
   );
 
-  return base.copyWith(textTheme: _applyWebFonts(base.textTheme));
+  return base.copyWith(
+    textTheme: _applyWebFonts(base.textTheme),
+    appBarTheme: base.appBarTheme.copyWith(
+      titleTextStyle: GoogleFonts.syne(
+        color: BuddyColors.textPrimary,
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  );
 }
 
 ThemeData buildBuddyLightTheme() {
@@ -239,7 +248,16 @@ ThemeData buildBuddyLightTheme() {
     ),
   );
 
-  return base.copyWith(textTheme: _applyWebFonts(base.textTheme));
+  return base.copyWith(
+    textTheme: _applyWebFonts(base.textTheme),
+    appBarTheme: base.appBarTheme.copyWith(
+      titleTextStyle: GoogleFonts.syne(
+        color: BuddyLightColors.textPrimary,
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  );
 }
 
 ThemeData buildBuddyHighContrastTheme() {

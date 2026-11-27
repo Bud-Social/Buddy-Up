@@ -210,95 +210,100 @@ class _PostCardState extends ConsumerState<PostCard> {
   Widget build(BuildContext context) {
     final viewer = ref.watch(authProvider).profile;
     final viewerUserId = viewer?.userId ?? ref.read(authProvider).user?.id;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        textDirection: ref.watch(handednessProvider)
-            ? ui.TextDirection.rtl
-            : ui.TextDirection.ltr,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_post.isRepostedByMe)
-                  RepostIndicator(
-                    reposters: _post.reposters,
-                    username: 'You',
-                    viewerReposted: true,
-                    viewerAvatarUrl: viewer?.avatarUrl,
-                    viewerDisplayName: viewer?.displayName,
-                    viewerUserId: viewerUserId,
-                    gymActor: widget.gymActor,
-                  ),
-
-                if (_post.isPinned) ...[
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Text('📌', style: TextStyle(fontSize: 12)),
-                        SizedBox(width: 6),
-                        Text(
-                          'Pinned post',
-                          style: TextStyle(
-                            color: BuddyColors.gold,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                _buildHeader(context),
-                if (_displayBody.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _buildBody(context),
-                ],
-                if (_displayMediaUrls.isNotEmpty ||
-                    _displayMedia.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  MediaGallery(
-                    urls: _displayMediaUrls,
-                    media: _displayMedia.isEmpty ? null : _displayMedia,
-                    postId: _post.id,
-                  ),
-                ],
-                if (_displayPoll != null) ...[
-                  const SizedBox(height: 8),
-                  PollWidget(
-                    poll: _displayPoll!,
-                    postId: _post.id,
-                    onVote: widget.onPollVote,
-                  ),
-                ],
-                if (_displayWorkoutLogData != null) ...[
-                  const SizedBox(height: 8),
-                  _buildWorkoutLog(context),
-                ],
-                AiAnalysisCard(analysis: _post.aiAnalysis),
-                if (_displayGymTagName != null) ...[
-                  const SizedBox(height: 6),
-                  _buildGymTag(),
-                ],
-              ],
-            ),
+    return GestureDetector(
+      onDoubleTap: _userReaction == null
+          ? () => widget.onReact?.call(_post.id, '💪')
+          : null,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+            width: 1,
           ),
-          const SizedBox(width: 8),
-          _buildActionBar(context, viewer),
-        ],
+        ),
+        child: Row(
+          textDirection: ref.watch(handednessProvider)
+              ? ui.TextDirection.rtl
+              : ui.TextDirection.ltr,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_post.isRepostedByMe)
+                    RepostIndicator(
+                      reposters: _post.reposters,
+                      username: 'You',
+                      viewerReposted: true,
+                      viewerAvatarUrl: viewer?.avatarUrl,
+                      viewerDisplayName: viewer?.displayName,
+                      viewerUserId: viewerUserId,
+                      gymActor: widget.gymActor,
+                    ),
+
+                  if (_post.isPinned) ...[
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Text('📌', style: TextStyle(fontSize: 12)),
+                          SizedBox(width: 6),
+                          Text(
+                            'Pinned post',
+                            style: TextStyle(
+                              color: BuddyColors.gold,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  _buildHeader(context),
+                  if (_displayBody.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _buildBody(context),
+                  ],
+                  if (_displayMediaUrls.isNotEmpty ||
+                      _displayMedia.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    MediaGallery(
+                      urls: _displayMediaUrls,
+                      media: _displayMedia.isEmpty ? null : _displayMedia,
+                      postId: _post.id,
+                    ),
+                  ],
+                  if (_displayPoll != null) ...[
+                    const SizedBox(height: 8),
+                    PollWidget(
+                      poll: _displayPoll!,
+                      postId: _post.id,
+                      onVote: widget.onPollVote,
+                    ),
+                  ],
+                  if (_displayWorkoutLogData != null) ...[
+                    const SizedBox(height: 8),
+                    _buildWorkoutLog(context),
+                  ],
+                  AiAnalysisCard(analysis: _post.aiAnalysis),
+                  if (_displayGymTagName != null) ...[
+                    const SizedBox(height: 6),
+                    _buildGymTag(),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            _buildActionBar(context, viewer),
+          ],
+        ),
       ),
     );
   }
@@ -392,6 +397,15 @@ class _PostCardState extends ConsumerState<PostCard> {
             ),
           ],
         ),
+        if (_post.authorData.userId != ref.watch(authProvider).user?.id &&
+            !_post.authorData.followedByViewer) ...[
+          const SizedBox(width: 6),
+          _HeaderFollowButton(
+            following: _post.authorData.followedByViewer,
+            onTap: () =>
+                ref.read(feedProvider.notifier).toggleFollowById(_post.id),
+          ),
+        ],
         IconButton(
           icon: const Icon(
             LucideIcons.ellipsis,
@@ -419,7 +433,9 @@ class _PostCardState extends ConsumerState<PostCard> {
 
   /// Web parity: tap the rail heart for 💪, long-press for the full picker.
   void _showReactionPicker(BuildContext context) {
-    final current = _userReaction == null ? null : toReactionEmoji(_userReaction!);
+    final current = _userReaction == null
+        ? null
+        : toReactionEmoji(_userReaction!);
     showModalBottomSheet(
       context: context,
       backgroundColor: BuddyColors.surface,
@@ -473,7 +489,10 @@ class _PostCardState extends ConsumerState<PostCard> {
                                 : Colors.transparent,
                           ),
                         ),
-                        child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 24),
+                        ),
                       ),
                     ),
                 ],
@@ -533,24 +552,6 @@ class _PostCardState extends ConsumerState<PostCard> {
               widget.onSave?.call(_post.id);
             },
           ),
-          if (_post.authorData.userId != viewer?.userId) ...[
-            const SizedBox(height: 12),
-            _ActionButton(
-              icon: _post.authorData.followedByViewer
-                  ? LucideIcons.userRoundMinus
-                  : LucideIcons.userRoundPlus,
-              color: _post.authorData.followedByViewer
-                  ? BuddyColors.green
-                  : idle,
-              label: _post.authorData.followedByViewer ? 'Following' : 'Follow',
-              onTap: () {
-                _trackPostInteraction(
-                  _post.authorData.followedByViewer ? 'unfollow' : 'follow',
-                );
-                ref.read(feedProvider.notifier).toggleFollowById(_post.id);
-              },
-            ),
-          ],
           const SizedBox(height: 12),
           _ActionButton(
             icon: LucideIcons.share2,
@@ -611,15 +612,46 @@ class _PostCardState extends ConsumerState<PostCard> {
           if (data['sets'] != null || data['reps'] != null)
             Text(
               '${data['sets'] ?? '?'} sets × ${data['reps'] ?? '?'} reps',
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
               ),
             ),
+          if (data.entries.any(
+            (entry) => entry.key != 'exercise' && entry.value != null,
+          )) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final entry in data.entries)
+                  if (!{'exercise', 'sets', 'reps'}.contains(entry.key) &&
+                      entry.value != null)
+                    Chip(
+                      label: Text('${_metricLabel(entry.key)}: ${entry.value}'),
+                      visualDensity: VisualDensity.compact,
+                    ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
+
+  String _metricLabel(String key) => switch (key) {
+    'duration_minutes' => 'Duration (min)',
+    'distance_km' => 'Distance (km)',
+    'distance_meters' => 'Distance (m)',
+    'calories_burned' => 'Calories',
+    'avg_pace' => 'Avg pace',
+    'avg_speed_kmh' => 'Avg speed',
+    'steps' => 'Steps',
+    'weight_kg' => 'Weight (kg)',
+    'rounds' => 'Rounds',
+    _ => key.replaceAll('_', ' '),
+  };
 
   Widget _buildGymTag() {
     return Row(
@@ -1101,6 +1133,40 @@ class _ActionButton extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _HeaderFollowButton extends StatelessWidget {
+  const _HeaderFollowButton({required this.following, required this.onTap});
+
+  final bool following;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: following
+              ? BuddyColors.green.withValues(alpha: 0.14)
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(
+          following ? 'Following' : 'Follow',
+          style: TextStyle(
+            color: following
+                ? BuddyColors.green
+                : Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

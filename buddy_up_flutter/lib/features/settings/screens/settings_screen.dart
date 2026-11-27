@@ -21,7 +21,10 @@ class SettingsScreen extends ConsumerWidget {
         title: const Text('Sign Out?'),
         content: const Text('You will need to sign in again to use BuddyUp.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: BuddyColors.red),
             onPressed: () => Navigator.pop(ctx, true),
@@ -58,22 +61,36 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Text('Help & Safety', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(
+                'Help & Safety',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             // Above the policy links, not below them: this is the entry point
             // for "a moderator did something to my account and I want to see
             // why and challenge it", which is a help-and-safety question
             // rather than a documents question.
             ListTile(
-              leading: const Icon(Icons.gavel_outlined, color: BuddyColors.green),
-              title: const Text('Moderation & appeals',
-                  style: TextStyle(color: BuddyColors.green)),
+              leading: const Icon(
+                Icons.gavel_outlined,
+                color: BuddyColors.green,
+              ),
+              title: const Text(
+                'Moderation & appeals',
+                style: TextStyle(color: BuddyColors.green),
+              ),
               subtitle: Text(
                 'Warnings, suspensions and bans on your account — and how to '
                 'appeal one',
-                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
-              trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               onTap: () {
                 Navigator.pop(sheetCtx);
                 context.push('/settings/moderation');
@@ -82,8 +99,14 @@ class SettingsScreen extends ConsumerWidget {
             const Divider(height: 1),
             for (final (label, route) in links)
               ListTile(
-                title: Text(label, style: const TextStyle(color: BuddyColors.green)),
-                trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                title: Text(
+                  label,
+                  style: const TextStyle(color: BuddyColors.green),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 onTap: () {
                   Navigator.pop(sheetCtx);
                   context.push(route);
@@ -100,12 +123,16 @@ class SettingsScreen extends ConsumerWidget {
   ///
   /// Built from the same [businessEntries] list the "Your business" tiles use, so
   /// a destination can never be reachable from one and missing from the other.
-  void _showBusinessSwitcher(BuildContext context, List<BusinessEntry> entries) {
+  void _showBusinessSwitcher(
+    BuildContext context,
+    List<BusinessEntry> entries,
+  ) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetCtx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -116,22 +143,35 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   Icon(Icons.swap_horiz, color: BuddyColors.green, size: 20),
                   SizedBox(width: 10),
-                  Text('Your business',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(
+                    'Your business',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
                 ],
               ),
             ),
             for (final entry in entries)
               ListTile(
-                leading: Icon(_businessIcon(entry.key), color: BuddyColors.green),
-                title: Text(entry.label,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(entry.subtitle,
-                    style: TextStyle(
-                        fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                trailing: Icon(Icons.chevron_right,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
+                leading: Icon(
+                  _businessIcon(entry.key),
+                  color: BuddyColors.green,
+                ),
+                title: Text(
+                  entry.label,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  entry.subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: 20,
+                ),
                 onTap: () {
                   Navigator.pop(sheetCtx);
                   context.push(entry.route);
@@ -163,7 +203,9 @@ class SettingsScreen extends ConsumerWidget {
           // Account header row → profile.
           Card(
             color: tileColor,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: ListTile(
               leading: CircleAvatar(
                 radius: 24,
@@ -174,7 +216,9 @@ class SettingsScreen extends ConsumerWidget {
                 child: (profile?.avatarUrl.isNotEmpty ?? false)
                     ? null
                     : Text(
-                        displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+                        displayName.isNotEmpty
+                            ? displayName[0].toUpperCase()
+                            : '?',
                         style: const TextStyle(
                           color: BuddyColors.green,
                           fontWeight: FontWeight.bold,
@@ -182,50 +226,141 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                       ),
               ),
-              title: Text(displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
+              title: Text(
+                displayName,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               subtitle: subtitle.isNotEmpty ? Text(subtitle) : null,
-              trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               onTap: () => context.push('/profile'),
             ),
           ),
           const SizedBox(height: 12),
-          _tile(context, tileColor, Icons.person_outline, 'Account',
-              'Profile details, email, password', () => context.push('/settings/account')),
-          _tile(context, tileColor, Icons.shield_outlined, 'Security',
-              '2FA, biometric lock, device sessions', () => context.push('/settings/security')),
-          _tile(context, tileColor, Icons.lock_outline, 'Privacy',
-              'Visibility, active status, anonymous posting', () => context.push('/settings/privacy')),
-          _tile(context, tileColor, Icons.verified_user_outlined, 'Verifications',
-              'Age, identity and professional verification',
-              () => context.push('/verification')),
-          _tile(context, tileColor, Icons.notifications_outlined, 'Notifications',
-              'Channels, per-type alerts, quiet hours',
-              () => context.push('/settings/notifications')),
-          _tile(context, tileColor, Icons.alarm, 'Alarm Center',
-              'Wake-up alarms, sounds, buddy shares',
-              () => context.push('/settings/alarms')),
-          _tile(context, tileColor, Icons.history, 'Activity Log',
-              'View your account activity history',
-              () => context.push('/settings/activity')),
-          _tile(context, tileColor, Icons.public, 'Content Preferences',
-              'Mature content, profanity filter',
-              () => context.push('/settings/content')),
-          _tile(context, tileColor, Icons.credit_card, 'Subscription & Billing',
-              'Wallet balance and gym subscriptions',
-              () => context.push('/settings/billing')),
-          _tile(context, tileColor, Icons.family_restroom, 'Family',
-              user?.isAdult == true
-                  ? 'Linked teens, activity, permissions'
-                  : 'Guardian links and invites',
-              () => context.push('/settings/family')),
-          _tile(context, tileColor, Icons.palette_outlined, 'Appearance',
-              'System, light or dark theme', () => context.push('/settings/appearance')),
-          _tile(context, tileColor, Icons.folder_shared_outlined, 'Data & Privacy',
-              'Export, consents, deactivate, delete', () => context.push('/settings/data')),
-          _tile(context, tileColor, Icons.help_outline, 'Help & Safety',
-              'Policies and guidelines', () => _showHelpSheet(context)),
-          _tile(context, tileColor, Icons.block_outlined, 'Blocked Accounts',
-              'People you have blocked', () => context.push('/settings/blocked')),
+          _tile(
+            context,
+            tileColor,
+            Icons.person_outline,
+            'Account',
+            'Profile details, email, password',
+            () => context.push('/settings/account'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.shield_outlined,
+            'Security',
+            '2FA, biometric lock, device sessions',
+            () => context.push('/settings/security'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.lock_outline,
+            'Privacy',
+            'Visibility, active status, anonymous posting',
+            () => context.push('/settings/privacy'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.verified_user_outlined,
+            'Verifications',
+            'Age, identity and professional verification',
+            () => context.push('/verification'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.notifications_outlined,
+            'Notifications',
+            'Channels, per-type alerts, quiet hours',
+            () => context.push('/settings/notifications'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.alarm,
+            'Alarm Center',
+            'Wake-up alarms, sounds, buddy shares',
+            () => context.push('/settings/alarms'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.history,
+            'Activity Log',
+            'View your account activity history',
+            () => context.push('/settings/activity'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.public,
+            'Content Preferences',
+            'Mature content, profanity filter',
+            () => context.push('/settings/content'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.credit_card,
+            'Subscription & Billing',
+            'Wallet balance and gym subscriptions',
+            () => context.push('/settings/billing'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.family_restroom,
+            'Family',
+            user?.isAdult == true
+                ? 'Linked teens, activity, permissions'
+                : 'Guardian links and invites',
+            () => context.push('/settings/family'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.palette_outlined,
+            'Appearance',
+            'System, light or dark theme',
+            () => context.push('/settings/appearance'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.folder_shared_outlined,
+            'Data & Privacy',
+            'Export, consents, deactivate, delete',
+            () => context.push('/settings/data'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.help_outline,
+            'Help & Safety',
+            'Policies and guidelines',
+            () => _showHelpSheet(context),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.block_outlined,
+            'Blocked Accounts',
+            'People you have blocked',
+            () => context.push('/settings/blocked'),
+          ),
+          _tile(
+            context,
+            tileColor,
+            Icons.people_outline,
+            'Connections',
+            'Followers, following and buddies',
+            () => context.push('/buddies'),
+          ),
           // Role-driven group. Every entry is derived from real ownership data by
           // `businessRolesProvider`, and each of those probes resolves false on
           // failure — so this group can only ever *hide* an entry for a
@@ -259,10 +394,14 @@ class SettingsScreen extends ConsumerWidget {
           if (user?.isStaff ?? false) ...[
             const SizedBox(height: 4),
             _groupLabel(context, 'Staff'),
-            _tile(context, tileColor, Icons.admin_panel_settings_outlined,
-                'Admin Console',
-                'Staff only · users, orders, moderation, approvals, audit',
-                () => context.push('/admin')),
+            _tile(
+              context,
+              tileColor,
+              Icons.admin_panel_settings_outlined,
+              'Admin Console',
+              'Staff only · users, orders, moderation, approvals, audit',
+              () => context.push('/admin'),
+            ),
           ],
           const SizedBox(height: 12),
           _tile(
@@ -320,9 +459,15 @@ class SettingsScreen extends ConsumerWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 12,
+          ),
         ),
-        trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         onTap: onTap,
       ),
     );

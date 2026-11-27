@@ -20,10 +20,12 @@ class ConversationListScreen extends ConsumerStatefulWidget {
   const ConversationListScreen({super.key});
 
   @override
-  ConsumerState<ConversationListScreen> createState() => _ConversationListScreenState();
+  ConsumerState<ConversationListScreen> createState() =>
+      _ConversationListScreenState();
 }
 
-class _ConversationListScreenState extends ConsumerState<ConversationListScreen> {
+class _ConversationListScreenState
+    extends ConsumerState<ConversationListScreen> {
   final _searchController = TextEditingController();
   String _listTab = 'messages';
   Set<String> _seenStories = {};
@@ -43,13 +45,25 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
   @override
   void initState() {
     super.initState();
+    ref.listenManual<AuthState>(authProvider, (previous, next) {
+      if (previous?.isLoading == true &&
+          !next.isLoading &&
+          next.isAuthenticated) {
+        _loadInbox();
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(conversationsProvider.notifier).load(clearFilter: true);
-      ref.read(storiesProvider.notifier).load();
+      if (!ref.read(authProvider).isLoading) _loadInbox();
       loadSeenStories().then((ids) {
         if (mounted) setState(() => _seenStories = ids);
       });
     });
+  }
+
+  void _loadInbox() {
+    if (!ref.read(authProvider).isAuthenticated) return;
+    ref.read(conversationsProvider.notifier).load(clearFilter: true);
+    ref.read(storiesProvider.notifier).load();
   }
 
   @override
@@ -61,10 +75,9 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
   void _openTab(String tab) {
     setState(() => _listTab = tab);
     if (tab == 'messages' || tab == 'archived') {
-      ref.read(conversationsProvider.notifier).load(
-        clearFilter: true,
-        archived: tab == 'archived',
-      );
+      ref
+          .read(conversationsProvider.notifier)
+          .load(clearFilter: true, archived: tab == 'archived');
     } else if (tab == 'communities' && !_communitiesLoaded) {
       _communitiesLoaded = true;
       ref.read(communityConversationsProvider.notifier).load();
@@ -139,8 +152,12 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                           duration: const Duration(milliseconds: 160),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: _listTab == key ? Theme.of(context).colorScheme.surface : Colors.transparent,
-                            borderRadius: const BorderRadius.all(Radius.circular(12)),
+                            color: _listTab == key
+                                ? Theme.of(context).colorScheme.surface
+                                : Colors.transparent,
+                            borderRadius: const BorderRadius.all(
+                              Radius.circular(12),
+                            ),
                           ),
                           child: Text(
                             label,
@@ -148,7 +165,11 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: _listTab == key ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: _listTab == key
+                                  ? BuddyColors.green
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -168,9 +189,13 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                   hintText: _listTab == 'calls'
                       ? 'Search calls...'
                       : _listTab == 'communities'
-                          ? 'Search communities...'
-                          : 'Search conversations...',
-                  prefixIcon: Icon(Icons.search, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      ? 'Search communities...'
+                      : 'Search conversations...',
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear, size: 18),
@@ -180,7 +205,10 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                           },
                         )
                       : null,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                 ),
               ),
             ),
@@ -201,15 +229,15 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
               'communities' => _CommunityTab(query: query, myUserId: _myUserId),
               'calls' => _CallsTab(query: query),
               'stories' => _StoriesTab(
-                  seenIds: _seenStories,
-                  onOpen: _openStory,
-                  onAddStory: () => context.go('/messages/story/create'),
-                ),
+                seenIds: _seenStories,
+                onOpen: _openStory,
+                onAddStory: () => context.go('/messages/story/create'),
+              ),
               _ => _MessagesTab(
-                  query: query,
-                  myUserId: _myUserId,
-                  onNewConversation: () => _showNewConversationSheet(context),
-                ),
+                query: query,
+                myUserId: _myUserId,
+                onNewConversation: () => _showNewConversationSheet(context),
+              ),
             },
           ),
         ],
@@ -231,16 +259,23 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 20),
             Text(
               'New Conversation',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 20),
             TextField(
@@ -253,10 +288,14 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                 Navigator.pop(context);
                 try {
                   final repo = ref.read(messagingRepositoryProvider);
-                  final result = await repo.startConversation({'participants': [value.trim()]});
+                  final result = await repo.startConversation({
+                    'participants': [value.trim()],
+                  });
                   final data = result['data'] as Map<String, dynamic>;
                   final convo = Conversation.fromJson(data);
-                  ref.read(conversationsProvider.notifier).updateConversation(convo);
+                  ref
+                      .read(conversationsProvider.notifier)
+                      .updateConversation(convo);
                   if (context.mounted) context.push('/messages/${convo.id}');
                 } catch (e) {
                   if (context.mounted) {
@@ -282,7 +321,11 @@ class _MessagesTab extends ConsumerWidget {
   final String? myUserId;
   final VoidCallback onNewConversation;
 
-  const _MessagesTab({required this.query, required this.myUserId, required this.onNewConversation});
+  const _MessagesTab({
+    required this.query,
+    required this.myUserId,
+    required this.onNewConversation,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -290,23 +333,38 @@ class _MessagesTab extends ConsumerWidget {
     final conversations = state.conversations;
     final filtered = query.isEmpty
         ? conversations
-        : conversations.where((c) => conversationSearchText(c).contains(query)).toList();
+        : conversations
+              .where((c) => conversationSearchText(c).contains(query))
+              .toList();
 
     if (state.isLoading) {
-      return const Center(child: CircularProgressIndicator(color: BuddyColors.green));
+      return const Center(
+        child: CircularProgressIndicator(color: BuddyColors.green),
+      );
     }
     if (state.error != null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 12),
-            Text(state.error!, textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text(
+              state.error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 16),
             TextButton(
-              onPressed: () => ref.read(conversationsProvider.notifier).load(clearFilter: true),
+              onPressed: () => ref
+                  .read(conversationsProvider.notifier)
+                  .load(clearFilter: true),
               child: const Text('Retry'),
             ),
           ],
@@ -318,15 +376,26 @@ class _MessagesTab extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.chat_bubble_outline, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
+            Icon(
+              Icons.chat_bubble_outline,
+              size: 64,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+            ),
             const SizedBox(height: 16),
             Text(
               query.isEmpty ? 'No conversations yet' : 'No conversations found',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             if (query.isEmpty) ...[
               const SizedBox(height: 8),
-              TextButton(onPressed: onNewConversation, child: const Text('Start a conversation')),
+              TextButton(
+                onPressed: onNewConversation,
+                child: const Text('Start a conversation'),
+              ),
             ],
           ],
         ),
@@ -334,7 +403,8 @@ class _MessagesTab extends ConsumerWidget {
     }
     return RefreshIndicator(
       color: BuddyColors.green,
-      onRefresh: () => ref.read(conversationsProvider.notifier).load(clearFilter: true),
+      onRefresh: () =>
+          ref.read(conversationsProvider.notifier).load(clearFilter: true),
       child: ListView.builder(
         itemCount: filtered.length,
         itemBuilder: (_, i) {
@@ -363,15 +433,20 @@ class _CommunityTab extends ConsumerWidget {
     final state = ref.watch(communityConversationsProvider);
     final filtered = query.isEmpty
         ? state.conversations
-        : state.conversations.where((c) => conversationSearchText(c).contains(query)).toList();
+        : state.conversations
+              .where((c) => conversationSearchText(c).contains(query))
+              .toList();
 
     if (state.isLoading && state.conversations.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: BuddyColors.green));
+      return const Center(
+        child: CircularProgressIndicator(color: BuddyColors.green),
+      );
     }
     if (state.error != null && state.conversations.isEmpty) {
       return Center(
         child: TextButton(
-          onPressed: () => ref.read(communityConversationsProvider.notifier).load(),
+          onPressed: () =>
+              ref.read(communityConversationsProvider.notifier).load(),
           child: const Text('Retry loading communities'),
         ),
       );
@@ -381,12 +456,20 @@ class _CommunityTab extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.forum_outlined, size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.35)),
+            Icon(
+              Icons.forum_outlined,
+              size: 56,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
+            ),
             const SizedBox(height: 12),
             Text(
               'No communities yet. Join one from the Communities page.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -422,12 +505,18 @@ class _CallsTab extends ConsumerWidget {
     final state = ref.watch(callHistoryProvider);
     final entries = query.isEmpty
         ? state.entries
-        : state.entries.where((c) =>
-                '${c.conversationLabel} ${c.counterpartName}'.toLowerCase().contains(query))
-            .toList();
+        : state.entries
+              .where(
+                (c) => '${c.conversationLabel} ${c.counterpartName}'
+                    .toLowerCase()
+                    .contains(query),
+              )
+              .toList();
 
     if (state.isLoading && state.entries.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: BuddyColors.green));
+      return const Center(
+        child: CircularProgressIndicator(color: BuddyColors.green),
+      );
     }
     if (state.error != null && state.entries.isEmpty) {
       return Center(
@@ -442,10 +531,20 @@ class _CallsTab extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.phone_outlined, size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.35)),
+            Icon(
+              Icons.phone_outlined,
+              size: 56,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
+            ),
             const SizedBox(height: 12),
-            Text('No calls yet. Start one from any chat.',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text(
+              'No calls yet. Start one from any chat.',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       );
@@ -474,19 +573,21 @@ class _CallRow extends StatelessWidget {
     final isVideo = entry.callType == 'video';
     final when = DateTime.tryParse(entry.createdAt)?.toLocal();
     final now = DateTime.now();
-    final sameDay = when != null &&
+    final sameDay =
+        when != null &&
         when.year == now.year &&
         when.month == now.month &&
         when.day == now.day;
     final whenLabel = when == null
         ? ''
         : sameDay
-            ? TimeOfDay.fromDateTime(when).format(context)
-            : '${when.month}/${when.day}';
+        ? TimeOfDay.fromDateTime(when).format(context)
+        : '${when.month}/${when.day}';
     final dur =
         '${entry.durationSeconds ~/ 60}:${(entry.durationSeconds % 60).toString().padLeft(2, '0')}';
     final active = entry.activeCall;
-    final canRejoin = active != null &&
+    final canRejoin =
+        active != null &&
         (active['status'] == 'ringing' || active['status'] == 'active');
 
     return InkWell(
@@ -530,11 +631,18 @@ class _CallRow extends StatelessWidget {
                       if (canRejoin)
                         GestureDetector(
                           onTap: () {
-                            final type = active['call_type'] == 'video' ? 'video' : 'audio';
-                            context.push('/messages/${entry.conversationId}?call=$type');
+                            final type = active['call_type'] == 'video'
+                                ? 'video'
+                                : 'audio';
+                            context.push(
+                              '/messages/${entry.conversationId}?call=$type',
+                            );
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: BuddyColors.green,
                               borderRadius: BorderRadius.circular(12),
@@ -542,34 +650,53 @@ class _CallRow extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.phone, size: 11, color: Theme.of(context).colorScheme.surface),
+                                Icon(
+                                  Icons.phone,
+                                  size: 11,
+                                  color: Theme.of(context).colorScheme.surface,
+                                ),
                                 const SizedBox(width: 3),
-                                Text('Rejoin',
-                                    style: TextStyle(
-                                        color: Theme.of(context).colorScheme.surface,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold)),
+                                Text(
+                                  'Rejoin',
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.surface,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         ),
                       const SizedBox(width: 6),
-                      Text(whenLabel,
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
+                      Text(
+                        whenLabel,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 11,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 2),
                   Row(
                     children: [
                       Icon(
-                        entry.isOutgoing ? Icons.call_made : Icons.call_received,
+                        entry.isOutgoing
+                            ? Icons.call_made
+                            : Icons.call_received,
                         size: 11,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 3),
                       Text(
                         '${missed ? (entry.status == 'declined' ? 'Declined' : 'Missed') : 'Answered'} · $dur',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
@@ -578,7 +705,12 @@ class _CallRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.end,
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10),
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                            fontSize: 10,
+                          ),
                         ),
                       ),
                     ],
@@ -600,14 +732,20 @@ class _StoriesTab extends ConsumerWidget {
   final void Function(int reelIndex) onOpen;
   final VoidCallback? onAddStory;
 
-  const _StoriesTab({required this.seenIds, required this.onOpen, this.onAddStory});
+  const _StoriesTab({
+    required this.seenIds,
+    required this.onOpen,
+    this.onAddStory,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(storiesProvider);
 
     if (state.isLoading && state.reels.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: BuddyColors.green));
+      return const Center(
+        child: CircularProgressIndicator(color: BuddyColors.green),
+      );
     }
     if (state.reels.isEmpty) {
       return Center(
@@ -617,14 +755,24 @@ class _StoriesTab extends ConsumerWidget {
             Container(
               width: 72,
               height: 72,
-              decoration: const BoxDecoration(color: BuddyColors.surface, shape: BoxShape.circle),
-              child: Icon(Icons.camera_alt_outlined, size: 26, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              decoration: const BoxDecoration(
+                color: BuddyColors.surface,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.camera_alt_outlined,
+                size: 26,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 14),
             Text(
               'No stories right now.\nBuddies and people you follow show up here.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.4),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -662,11 +810,26 @@ class _StoriesTab extends ConsumerWidget {
                             Container(
                               width: 54,
                               height: 54,
-                              decoration: const BoxDecoration(color: BuddyColors.surfaceRaised, shape: BoxShape.circle),
-                              child: const Icon(Icons.add, size: 28, color: Colors.green),
+                              decoration: const BoxDecoration(
+                                color: BuddyColors.surfaceRaised,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                size: 28,
+                                color: Colors.green,
+                              ),
                             ),
                             const SizedBox(height: 8),
-                            Text('Add story', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
+                            Text(
+                              'Add story',
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -690,7 +853,8 @@ class _StoriesTab extends ConsumerWidget {
                     CachedNetworkImage(
                       imageUrl: thumb,
                       fit: BoxFit.cover,
-                      errorWidget: (_, _, _) => const ColoredBox(color: BuddyColors.surface),
+                      errorWidget: (_, _, _) =>
+                          const ColoredBox(color: BuddyColors.surface),
                     )
                   else
                     const ColoredBox(color: BuddyColors.surface),

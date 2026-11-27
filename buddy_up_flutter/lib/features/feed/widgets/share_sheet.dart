@@ -6,8 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
@@ -18,7 +16,8 @@ import '../providers/feed_provider.dart';
 /// Canonical deep link for a post. Video posts land in the fullscreen
 /// player; everything else lands on the post detail route.
 String canonicalPostUrl(Post post, {String origin = ''}) {
-  final isVideo = post.media.any((m) => m.isVideo) ||
+  final isVideo =
+      post.media.any((m) => m.isVideo) ||
       post.mediaUrls.any((u) {
         final lower = u.toLowerCase();
         return lower.endsWith('.mp4') ||
@@ -105,11 +104,11 @@ class _Sharer {
   });
 
   factory _Sharer.fromJson(Map<String, dynamic> json) => _Sharer(
-        username: json['username'] as String? ?? '',
-        displayName: json['display_name'] as String? ?? '',
-        avatarUrl: json['avatar_url'] as String? ?? '',
-        followed: json['followed_by_viewer'] == true,
-      );
+    username: json['username'] as String? ?? '',
+    displayName: json['display_name'] as String? ?? '',
+    avatarUrl: json['avatar_url'] as String? ?? '',
+    followed: json['followed_by_viewer'] == true,
+  );
 }
 
 /// Bottom sheet: social targets, copy link, repost, save, creator profile,
@@ -143,10 +142,6 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
   bool _sharersLoaded = false;
 
   Post get _post => widget.post;
-  String get _shareText => _post.body.isNotEmpty
-      ? (_post.body.length > 120 ? _post.body.substring(0, 120) : _post.body)
-      : 'Check out this post by @${_post.authorData.username}';
-
   @override
   void initState() {
     super.initState();
@@ -155,8 +150,9 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
 
   Future<void> _loadSharers() async {
     try {
-      final raw =
-          await ref.read(feedRepositoryProvider).getPostShares(_post.id);
+      final raw = await ref
+          .read(feedRepositoryProvider)
+          .getPostShares(_post.id);
       final data = raw['data'];
       if (!mounted || data is! List) return;
       setState(() {
@@ -172,7 +168,6 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
   }
 
   Future<String> _trackedLink(String channel) async {
-    if (_busy) return canonicalPostUrl(_post);
     setState(() {
       _busy = true;
       _error = null;
@@ -182,7 +177,9 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
           .read(feedProvider.notifier)
           .shareWithCode(_post.id, channel);
       final base = canonicalPostUrl(_post);
-      return code != null && code.isNotEmpty ? trackedShareUrl(base, code) : base;
+      return code != null && code.isNotEmpty
+          ? trackedShareUrl(base, code)
+          : base;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -205,12 +202,26 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
     setState(() => _busy = true);
     try {
       final file = await _buildCard();
+      // Android/iOS keep app-document files private. Opening the native share
+      // sheet gives the user the platform's real Save to device/gallery action
+      // while retaining the generated PNG as an offline app copy.
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], subject: 'BuddyUp Fit card'),
+      );
       if (mounted) {
-        showToast(context, 'Share card saved: ${file.path}', type: ToastType.success);
+        showToast(
+          context,
+          'Choose Save to keep the card on your device.',
+          type: ToastType.success,
+        );
       }
     } catch (_) {
       if (mounted) {
-        showToast(context, 'Could not build the share card.', type: ToastType.error);
+        showToast(
+          context,
+          'Could not build the share card.',
+          type: ToastType.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -239,13 +250,23 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
   }
 
   Future<void> _openSocial(_SocialTarget target) async {
-    final url = await _trackedLink(target.id);
-    final ok = await launchUrl(
-      Uri.parse(target.href(url, _shareText)),
-      mode: LaunchMode.externalApplication,
-    );
-    if (!ok && mounted) {
-      setState(() => _error = 'Could not open ${target.label}.');
+    setState(() => _busy = true);
+    try {
+      final link = await _trackedLink(target.id);
+      final file = await PostShareCardRenderer().render(_post, permalink: link);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text: 'Check out this BuddyUp Fit post: $link',
+          subject: 'BuddyUp Fit',
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Could not share to ${target.label}.');
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -292,13 +313,20 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
                     onTap: _busy ? null : () => _openSocial(target),
                     borderRadius: BorderRadius.circular(12),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           CircleAvatar(
                             backgroundColor: BuddyColors.surface,
-                            child: Icon(target.icon, color: target.color, size: 22),
+                            child: Icon(
+                              target.icon,
+                              color: target.color,
+                              size: 22,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -471,10 +499,12 @@ class _Row extends StatelessWidget {
           ? null
           : Text(
               trailing!,
-              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 13,
+              ),
             ),
       onTap: onTap,
     );
   }
 }
-
