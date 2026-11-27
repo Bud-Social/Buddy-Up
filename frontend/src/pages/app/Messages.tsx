@@ -678,7 +678,12 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   const fetchConversations = useCallback(async () => {
     try {
       // Buddy chats have their own inbox; the server decides what is in it.
-      const res = await messagingApi.getConversations(isDiscovery ? 'buddy' : 'main', archivedOnly);
+      // Keep the common request shape compact (and compatible with native
+      // clients/mocks); only send the archived flag when it is actually used.
+      const kind = isDiscovery ? 'buddy' : 'main';
+      const res = archivedOnly
+        ? await messagingApi.getConversations(kind, true)
+        : await messagingApi.getConversations(kind);
       setConversations(res.data ?? []);
     } catch { /* silent */ }
     finally { setIsLoading(false); }
