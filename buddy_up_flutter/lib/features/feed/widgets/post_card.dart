@@ -81,8 +81,10 @@ class PostCard extends ConsumerStatefulWidget {
 
 class _PostCardState extends ConsumerState<PostCard> {
   Timer? _viewTimer;
+  Timer? _likeTapTimer;
   DateTime? _focusStart;
   String? _trackedPostId;
+  DateTime? _lastLikeTap;
   bool _viewRecorded = false;
   bool _showLikeBurst = false;
 
@@ -130,6 +132,7 @@ class _PostCardState extends ConsumerState<PostCard> {
   @override
   void dispose() {
     _viewTimer?.cancel();
+    _likeTapTimer?.cancel();
     _reportFocus();
     super.dispose();
   }
@@ -183,6 +186,25 @@ class _PostCardState extends ConsumerState<PostCard> {
     });
   }
 
+  /// Detects a double tap without putting a parent gesture recognizer into
+  /// competition with buttons inside the card (menu, follow, and reactions).
+  void _handleCardPointerUp(PointerUpEvent event) {
+    final now = DateTime.now();
+    final previous = _lastLikeTap;
+    if (previous != null &&
+        now.difference(previous) <= const Duration(milliseconds: 300)) {
+      _likeTapTimer?.cancel();
+      _lastLikeTap = null;
+      _doubleTapLike();
+      return;
+    }
+    _lastLikeTap = now;
+    _likeTapTimer?.cancel();
+    _likeTapTimer = Timer(const Duration(milliseconds: 300), () {
+      _lastLikeTap = null;
+    });
+  }
+
   void _openPostMenu() {
     final messenger = ScaffoldMessenger.of(context);
     final notifier = ref.read(feedProvider.notifier);
@@ -222,8 +244,8 @@ class _PostCardState extends ConsumerState<PostCard> {
     final viewer = ref.watch(authProvider).profile;
     final viewerUserId = viewer?.userId ?? ref.read(authProvider).user?.id;
     final workoutRoute = _displayWorkoutLogData?['route'];
-    return GestureDetector(
-      onDoubleTap: _doubleTapLike,
+    return Listener(
+      onPointerUp: _handleCardPointerUp,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -446,16 +468,15 @@ class _PostCardState extends ConsumerState<PostCard> {
         Semantics(
           button: true,
           label: 'Post options',
-          child: GestureDetector(
-            onTap: _openPostMenu,
-            behavior: HitTestBehavior.opaque,
-            child: const Padding(
-              padding: EdgeInsets.all(6),
-              child: Icon(
-                LucideIcons.ellipsis,
-                color: BuddyColors.textSecondary,
-                size: 20,
-              ),
+          child: IconButton(
+            onPressed: _openPostMenu,
+            tooltip: 'Post options',
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            icon: const Icon(
+              LucideIcons.ellipsis,
+              color: BuddyColors.textSecondary,
+              size: 20,
             ),
           ),
         ),

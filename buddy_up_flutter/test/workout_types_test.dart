@@ -44,56 +44,93 @@ void main() {
       }
     });
 
-    test('leaves cardio, the distance sports and the described types uncategorised', () {
-      for (final key in [
-        'cardio',
-        'running',
-        'walking',
-        'cycling',
-        'swimming',
-        'climbing',
-        'rowing',
-        'dance',
-        'boxing',
-        'martial_arts',
-        'other',
-      ]) {
-        expect(_categoriesOf(key), isEmpty, reason: key);
-      }
-    });
+    test(
+      'leaves cardio, the distance sports and the described types uncategorised',
+      () {
+        for (final key in [
+          'cardio',
+          'running',
+          'walking',
+          'cycling',
+          'swimming',
+          'climbing',
+          'rowing',
+          'dance',
+          'boxing',
+          'martial_arts',
+          'other',
+        ]) {
+          expect(_categoriesOf(key), isEmpty, reason: key);
+        }
+      },
+    );
 
     test('mirrors the taxonomy category lists exactly', () {
-      expect(_categoriesOf('strength'),
-          ['upper', 'lower', 'push', 'pull', 'legs', 'arms', 'core', 'full']);
-      expect(_categoriesOf('hiit'), ['full', 'upper', 'lower', 'core', 'cardio']);
-      expect(_categoriesOf('yoga'),
-          ['flexibility', 'mobility', 'balance', 'strength', 'mindfulness']);
-      expect(_categoriesOf('pilates'),
-          ['core', 'posture', 'flexibility', 'mobility', 'full']);
-      expect(_categoriesOf('mobility'),
-          ['hips', 'shoulders', 'spine', 'ankles', 'full']);
-      expect(
-        _categoriesOf('sport'),
-        [
-          'football',
-          'basketball',
-          'tennis',
-          'cricket',
-          'rugby',
-          'netball',
-          'volleyball',
-          'other',
-        ],
-      );
+      expect(_categoriesOf('strength'), [
+        'upper',
+        'lower',
+        'push',
+        'pull',
+        'legs',
+        'arms',
+        'core',
+        'full',
+      ]);
+      expect(_categoriesOf('hiit'), [
+        'full',
+        'upper',
+        'lower',
+        'core',
+        'cardio',
+      ]);
+      expect(_categoriesOf('yoga'), [
+        'flexibility',
+        'mobility',
+        'balance',
+        'strength',
+        'mindfulness',
+      ]);
+      expect(_categoriesOf('pilates'), [
+        'core',
+        'posture',
+        'flexibility',
+        'mobility',
+        'full',
+      ]);
+      expect(_categoriesOf('mobility'), [
+        'hips',
+        'shoulders',
+        'spine',
+        'ankles',
+        'full',
+      ]);
+      expect(_categoriesOf('sport'), [
+        'football',
+        'basketball',
+        'tennis',
+        'cricket',
+        'rugby',
+        'netball',
+        'volleyball',
+        'other',
+      ]);
     });
 
     test('labels every category the way the backend does', () {
       expect(
-        types.specFor('yoga').categories.firstWhere((c) => c.key == 'mindfulness').label,
+        types
+            .specFor('yoga')
+            .categories
+            .firstWhere((c) => c.key == 'mindfulness')
+            .label,
         'Mindfulness',
       );
       expect(
-        types.specFor('sport').categories.firstWhere((c) => c.key == 'other').label,
+        types
+            .specFor('sport')
+            .categories
+            .firstWhere((c) => c.key == 'other')
+            .label,
         'Other',
       );
     });
@@ -101,15 +138,20 @@ void main() {
 
   group('per-type field visibility', () {
     test('shows sets, reps and weight for strength', () {
-      expect(_fieldsOf('strength'),
-          containsAll(['sets', 'reps', 'weight_kg', 'duration_minutes']));
+      expect(
+        _fieldsOf('strength'),
+        containsAll(['sets', 'reps', 'weight_kg', 'duration_minutes']),
+      );
       expect(types.specFor('strength').measured, isTrue);
     });
 
     test('shows rounds for hiit and distance for cardio', () {
       expect(_fieldsOf('hiit'), contains('rounds'));
-      expect(_fieldsOf('cardio'),
-          ['distance_km', 'calories_burned', 'duration_minutes']);
+      expect(_fieldsOf('cardio'), [
+        'distance_km',
+        'calories_burned',
+        'duration_minutes',
+      ]);
       expect(types.specFor('cardio').measured, isTrue);
     });
 
@@ -133,15 +175,18 @@ void main() {
       }
     });
 
-    test('gives mobility a focus, sport a sport and the combat types a style', () {
-      expect(_fieldsOf('mobility'), ['focus', 'duration_minutes']);
-      expect(_fieldsOf('sport'), ['sport', 'duration_minutes']);
-      for (final key in ['boxing', 'martial_arts']) {
-        expect(_fieldsOf(key), ['style', 'duration_minutes'], reason: key);
-      }
-      expect(_fieldsOf('dance'), ['duration_minutes']);
-      expect(_fieldsOf('other'), ['duration_minutes']);
-    });
+    test(
+      'gives mobility a focus, sport a sport and the combat types a style',
+      () {
+        expect(_fieldsOf('mobility'), ['focus', 'duration_minutes']);
+        expect(_fieldsOf('sport'), ['sport', 'duration_minutes']);
+        for (final key in ['boxing', 'martial_arts']) {
+          expect(_fieldsOf(key), ['style', 'duration_minutes'], reason: key);
+        }
+        expect(_fieldsOf('dance'), ['duration_minutes']);
+        expect(_fieldsOf('other'), ['duration_minutes']);
+      },
+    );
 
     test('always keeps duration, even when a spec omits it', () {
       expect(withDuration(const []), ['duration_minutes']);
@@ -187,10 +232,10 @@ void main() {
           },
         },
       });
-      expect(
-        merged.specFor('yoga').categories.map((c) => c.key).toList(),
-        ['flow', 'restorative'],
-      );
+      expect(merged.specFor('yoga').categories.map((c) => c.key).toList(), [
+        'flow',
+        'restorative',
+      ]);
       expect(merged.specFor('running').categories, isEmpty);
       // Model column names map onto the field the form collects.
       expect(merged.specFor('running').has('distance_km'), isTrue);
@@ -225,13 +270,15 @@ void main() {
 
   group('buildShareText', () {
     test('includes type, category, duration and distance', () {
-      final text = buildShareText(const ShareFacts(
-        label: 'Strength',
-        category: 'Upper',
-        durationMinutes: 45,
-        distanceKm: 5,
-        calories: 320,
-      ));
+      final text = buildShareText(
+        const ShareFacts(
+          label: 'Strength',
+          category: 'Upper',
+          durationMinutes: 45,
+          distanceKm: 5,
+          calories: 320,
+        ),
+      );
       expect(text, contains('Strength · Upper'));
       expect(text, contains('45 min'));
       expect(text, contains('5.0 km'));
@@ -240,12 +287,14 @@ void main() {
     });
 
     test('omits facts the row does not have', () {
-      final text = buildShareText(const ShareFacts(label: 'Yoga', category: 'Balance'));
+      final text = buildShareText(
+        const ShareFacts(label: 'Yoga', category: 'Balance'),
+      );
       expect(text, 'Yoga · Balance. Logged on BuddyUp.');
     });
 
     test('points at the analytics deep link', () {
-      expect(analyticsShareUrl(), 'https://buddyup.app/app/analytics');
+      expect(analyticsShareUrl(), 'https://www.buddyupfit.com/app/analytics');
     });
   });
 }
