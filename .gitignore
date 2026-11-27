@@ -106,3 +106,8 @@ docs/BuddyUp_Security_Posture_*.docx
 # machine, which is the common way one ends up committed.
 *.jks
 *.keystore
+
+# Local seed scripts (not part of the app)
+*.sql
+gen_seed_sql.py
+seed_cloud.py

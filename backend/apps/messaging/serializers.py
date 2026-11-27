@@ -87,7 +87,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
     def get_reactions(self, obj):
         from collections import Counter
-        return dict(Counter(obj.reactions.values_list('emoji', flat=True)))
+        return dict(Counter(reaction.emoji for reaction in obj.reactions.all()))
 
 
 class ConversationSerializer(serializers.ModelSerializer):
@@ -122,6 +122,9 @@ class ConversationSerializer(serializers.ModelSerializer):
     def get_preference(self, obj):
         from .models import ConversationPreference
 
+        prefetched = getattr(obj, '_viewer_prefs', None)
+        if prefetched is not None:
+            return prefetched[0] if prefetched else None
         profile = self._viewer()
         if profile is None:
             return None
@@ -157,10 +160,14 @@ class ConversationSerializer(serializers.ModelSerializer):
         profile = self._viewer()
         if profile is None:
             return []
-        is_participant = obj.participants.filter(pk=profile.pk).exists()
-        if not is_participant and not ConversationMembership.objects.filter(
-            conversation=obj, profile=profile,
-        ).exists():
+        participants = list(obj.participants.all())
+        is_participant = any(p.pk == profile.pk for p in participants)
+        membership = getattr(obj, '_viewer_membership', None)
+        if membership is None:
+            membership = ConversationMembership.objects.filter(
+                conversation=obj, profile=profile,
+            ).first()
+        if not is_participant and membership is None:
             return []
         return [{
             'user_id': str(p.user_id),
@@ -169,31 +176,37 @@ class ConversationSerializer(serializers.ModelSerializer):
             'avatar_url': p.avatar_url,
             'verification_status': p.verification_status,
             'role': p.role,
-        } for p in obj.participants.all()]
+        } for p in participants]
 
     def get_membership_role(self, obj):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return None
-        m = ConversationMembership.objects.filter(
-            conversation=obj, profile=request.user.profile
-        ).first()
-        return m.role if m else None
+        membership = getattr(obj, '_viewer_membership', None)
+        if membership is None:
+            membership = ConversationMembership.objects.filter(
+                conversation=obj, profile=request.user.profile
+            ).first()
+        return membership.role if membership else None
 
     def get_invite_code(self, obj):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return None
-        if ConversationMembership.objects.filter(
-            conversation=obj, profile=request.user.profile,
-        ).exists():
-            return obj.invite_code
-        return None
+        membership = getattr(obj, '_viewer_membership', None)
+        if membership is None:
+            membership = ConversationMembership.objects.filter(
+                conversation=obj, profile=request.user.profile,
+            ).first()
+        return obj.invite_code if membership else None
 
     def get_unread_count(self, obj):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return 0
+        annotated = getattr(obj, '_unread_count', None)
+        if annotated is not None:
+            return annotated
         return sum(
             1 for message in obj.messages.filter(is_deleted=False, is_read=False).exclude(
                 sender=request.user.profile,
@@ -213,6 +226,26 @@ class ConversationSerializer(serializers.ModelSerializer):
         except Exception:
             return None
 
+    def _buddy_ids(self):
+        cached = self.context.get('_viewer_buddy_ids')
+        if cached is not None:
+            return cached
+        profile = self._viewer()
+        if profile is None:
+            cached = set()
+        else:
+            from django.db.models import Q
+            from apps.profiles.models import BuddyRelationship
+            cached = set()
+            for from_id, to_id in BuddyRelationship.objects.filter(
+                Q(from_user=profile) | Q(to_user=profile),
+                status='confirmed',
+            ).values_list('from_user_id', 'to_user_id'):
+                cached.add(to_id if from_id == profile.user_id else from_id)
+            cached.discard(profile.user_id)
+        self.context['_viewer_buddy_ids'] = cached
+        return cached
+
     def get_promotable(self, obj):
         """True when the viewer may turn this DM into a buddy relationship."""
         profile = self._viewer()
@@ -222,12 +255,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         other = other_participant(obj, profile)
         if other is None:
             return False
-        from django.db.models import Q
-        from apps.profiles.models import BuddyRelationship
-        return not BuddyRelationship.objects.filter(
-            Q(from_user=profile, to_user=other) | Q(from_user=other, to_user=profile),
-            status='confirmed',
-        ).exists()
+        return other.user_id not in self._buddy_ids()
 
     def get_promotion_status(self, obj):
         promotion = self._promotion(obj)
@@ -248,16 +276,28 @@ class ConversationSerializer(serializers.ModelSerializer):
         return str(promotion.requested_by_id)
 
     def get_last_message(self, obj):
+        # The list view annotates the latest message so the inbox stays one
+        # query. Fall back to a bounded recent window for single-object reads.
+        last_type = getattr(obj, '_last_message_type', None)
+        if last_type is not None:
+            return {
+                'body': (getattr(obj, '_last_message_body', '') or '')[:100],
+                'message_type': last_type,
+                'media_url': getattr(obj, '_last_message_media_url', '') or '',
+                'sender_name': getattr(obj, '_last_message_sender_name', '') or '',
+            }
         request = self.context.get('request')
         hidden_for = None
         if request and request.user.is_authenticated:
             hidden_for = str(request.user.profile.user_id)
-        messages = obj.messages.filter(is_deleted=False)
+        recent = list(
+            obj.messages.filter(is_deleted=False)
+            .select_related('sender')
+            .order_by('-created_at')[:20]
+        )
         if hidden_for:
-            messages = [m for m in messages if hidden_for not in (m.deleted_for or [])]
-            last = messages[-1] if messages else None
-        else:
-            last = messages.last()
+            recent = [m for m in recent if hidden_for not in (m.deleted_for or [])]
+        last = recent[0] if recent else None
         if last:
             return {
                 'body': last.body[:100],

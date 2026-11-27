@@ -358,7 +358,9 @@ class ShopListView(views.APIView):
             if q:
                 qs = qs.filter(name__icontains=q)
 
-        qs = qs.prefetch_related('memberships').order_by('-created_at')
+        qs = qs.annotate(
+            _member_count=db_models.Count('memberships', distinct=True),
+        ).prefetch_related('memberships').order_by('-created_at')
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(qs, request)
         serializer = ShopSerializer(page, many=True, context={'request': request})
@@ -1376,7 +1378,7 @@ class MealPlanListView(views.APIView):
     def get(self, request):
         diet_type = request.query_params.get('diet_type', '')
         profile = request.user.profile
-        qs = MealPlan.objects.filter(is_published=True).select_related('creator')
+        qs = MealPlan.objects.filter(is_published=True).select_related('creator', 'shop')
         # A takedown does not unpublish a meal plan -- `is_published` is the
         # creator's own choice and overwriting it would let a takedown be
         # undone by re-publishing. Hide it in the listing instead.
@@ -1401,7 +1403,11 @@ class MealPlanListView(views.APIView):
         if diet_type:
             qs = qs.filter(diet_type=diet_type)
         qs = gate_mature_queryset(request, qs)
-        qs = qs.order_by('-purchase_count', '-average_rating')
+        qs = qs.annotate(
+            _is_purchased=db_models.Exists(
+                MealPlanPurchase.objects.filter(meal_plan=db_models.OuterRef('pk'), buyer=profile),
+            ),
+        ).order_by('-purchase_count', '-average_rating')
 
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(qs, request)
@@ -1687,6 +1693,11 @@ class TrainingProgrammeListView(views.APIView):
         if category:
             qs = qs.filter(category=category)
         qs = gate_mature_queryset(request, qs)
+        qs = qs.annotate(
+            _is_purchased=db_models.Exists(
+                TrainingProgrammePurchase.objects.filter(programme=db_models.OuterRef('pk'), buyer=request.user.profile),
+            ),
+        )
 
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(qs.order_by('-purchase_count'), request)

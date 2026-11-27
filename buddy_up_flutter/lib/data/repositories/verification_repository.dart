@@ -78,6 +78,21 @@ abstract class VerificationRepository {
   @POST('/verification/submissions/{id}/submit/')
   Future<dynamic> submitSubmission(@Path('id') String submissionId);
 
+  /// Upload one artifact for the multistep ID wizard.
+  ///
+  /// Multipart fields: `file` (required), `step`
+  /// (`id_document` | `selfie_liveness`), and `document_type` on the ID step
+  /// (`id_card` | `passport` | `drivers_license`). Steps must be completed in
+  /// order; the selfie triggers the server-side face match.
+  @MultiPart()
+  @POST('/verification/submissions/{id}/upload_step/')
+  Future<dynamic> uploadStep(
+    @Path('id') String submissionId,
+    @Part(name: 'file') MultipartFile file,
+    @Part(name: 'step') String step,
+    @Part(name: 'document_type') String documentType,
+  );
+
   /// **Asks for a decision. Applies nothing.**
   ///
   /// Answers **202** with the submission plus an `approval_request` block. It

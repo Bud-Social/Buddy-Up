@@ -3,14 +3,29 @@ import '../../../core/theme/app_theme.dart';
 
 class GymTabBar extends StatelessWidget {
   final int activeIndex;
+  final bool showReviews;
   final void Function(int index)? onTabChanged;
 
-  const GymTabBar({super.key, required this.activeIndex, this.onTabChanged});
+  const GymTabBar({
+    super.key,
+    required this.activeIndex,
+    this.showReviews = true,
+    this.onTabChanged,
+  });
 
-  static const tabs = ['Feed', 'Schedule', 'Lives', 'Members', 'Reviews', 'About', 'Events'];
+  static List<String> tabsFor(bool showReviews) => [
+        'Feed',
+        'Schedule',
+        'Events',
+        'Lives',
+        'Members',
+        if (showReviews) 'Reviews',
+        'About',
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final tabs = tabsFor(showReviews);
     return SizedBox(
       height: 44,
       child: ListView.builder(

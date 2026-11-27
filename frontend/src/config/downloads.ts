@@ -1,5 +1,5 @@
 export const GITHUB_RELEASE_APK_URL =
-  'https://github.com/Bud-Social/Buddy-Up/releases/download/v1.2.11/BuddyUp-Fit-v1.2.11-arm64-v8a.apk';
+  'https://github.com/Bud-Social/Buddy-Up/releases/download/v1.2.18/BuddyUp-Fit-v1.2.18-arm64-v8a.apk';
 
 export const APP_DOWNLOAD_URLS = {
   androidApk: GITHUB_RELEASE_APK_URL,

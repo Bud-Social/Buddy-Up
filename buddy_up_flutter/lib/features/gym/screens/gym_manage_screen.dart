@@ -39,7 +39,11 @@ class GymManageScreen extends ConsumerWidget {
   /// Privileged surfaces. Owners, co-owners and moderators see the full
   /// roster (Overview/Members/Team/Requests/...); a regular member only sees
   /// the read-only panels with an explicit notice.
-  static const adminTabs = ['Overview', 'Members', 'Team', 'Requests', 'Posts', 'Schedule', 'Reviews', 'Sessions', 'Messages', 'Community', 'Analytics', 'Logs'];
+  static const adminTabs = [
+    'Overview', 'Members', 'Team', 'Requests', 'Posts', 'Schedule', 'Reviews',
+    'Sessions', 'Messages', 'Community', 'Shops', 'Revenue', 'Events', 'Venues',
+    'Coaching', 'Announce', 'Setup', 'Analytics', 'Logs',
+  ];
   static const memberTabs = ['Members', 'Requests', 'Schedule', 'Reviews'];
 
   @override
@@ -125,6 +129,48 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
               tier: gym.tier,
             ),
           ),
+      'Shops': () => _managementActionTab(
+        context,
+        'Shops',
+        'Open the shop console for the businesses this gym operates.',
+        '/marketplace/shops',
+      ),
+      'Revenue': () => _managementActionTab(
+        context,
+        'Revenue',
+        'Open the wallet and revenue surface tied to this account.',
+        '/wallet',
+      ),
+      'Events': () => _managementActionTab(
+        context,
+        'Events',
+        'Open the organiser dashboard for the events run through this gym.',
+        '/marketplace/events',
+      ),
+      'Venues': () => _managementActionTab(
+        context,
+        'Venues',
+        'Open the venue and location management surface for this gym.',
+        '/marketplace/stations',
+      ),
+      'Coaching': () => _managementActionTab(
+        context,
+        'Coaching',
+        'Open the online coaching programme surface for this gym.',
+        '/marketplace/programmes',
+      ),
+      'Announce': () => _managementActionTab(
+        context,
+        'Announce',
+        'Post an announcement to this gym community.',
+        '/marketplace/creator-studio',
+      ),
+      'Setup': () => _managementActionTab(
+        context,
+        'Setup',
+        'Open the business setup surface for this gym.',
+        '/marketplace/creator-studio',
+      ),
       'Analytics': () => GymAnalyticsTab(slug: widget.slug, gymName: gym.name),
       'Logs': _logsTab,
     };
@@ -172,6 +218,51 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
             panels[_tabIndex].$2(),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Placeholder management panels for admin tabs whose dedicated consoles live
+  /// in another surface of the app (shops, revenue, events, venues, coaching,
+  /// announcements, business setup). Each opens a real route instead of
+  /// inventing a parallel panel inside the gym console.
+  Widget _managementActionTab(
+    BuildContext context,
+    String title,
+    String message,
+    String route,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.tonal(
+            onPressed: () => context.push(route),
+            child: Text('Open $title'),
+          ),
+        ],
       ),
     );
   }

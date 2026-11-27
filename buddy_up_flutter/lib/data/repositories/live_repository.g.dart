@@ -24,12 +24,14 @@ class _LiveRepository implements LiveRepository {
     String? tab,
     String? category,
     String? cursor,
+    bool? mine,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'tab': tab,
       r'category': category,
       r'cursor': cursor,
+      r'mine': mine,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

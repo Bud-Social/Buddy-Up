@@ -12,6 +12,7 @@ abstract class LiveRepository {
     @Query('tab') String? tab,
     @Query('category') String? category,
     @Query('cursor') String? cursor,
+    @Query('mine') bool? mine,
   });
 
   @GET('/lives/{id}/')

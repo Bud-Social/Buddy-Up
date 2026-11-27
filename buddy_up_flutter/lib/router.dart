@@ -22,7 +22,7 @@ import 'features/buddies/buddy_messages_screen.dart';
 import 'features/profile/user_profile_screen.dart';
 import 'features/auth/activate_account_screen.dart';
 import 'features/auth/staff_invite_screen.dart';
-import 'features/discover/discover_people_screen.dart';
+import 'features/discover/discover_screen.dart';
 import 'features/feed/screens/feed_screen.dart';
 import 'features/feed/screens/bud_press_feed_screen.dart';
 import 'features/feed/screens/post_detail_screen.dart';
@@ -62,6 +62,7 @@ import 'features/marketplace/screens/orders_screen.dart';
 import 'features/marketplace/screens/order_detail_screen.dart';
 import 'features/marketplace/screens/creator_studio_screen.dart';
 import 'features/marketplace/screens/discount_codes_screen.dart';
+import 'features/marketplace/screens/discount_code_analytics_screen.dart';
 import 'features/marketplace/screens/create_meal_plan_screen.dart';
 import 'features/marketplace/screens/create_programme_screen.dart';
 import 'features/marketplace/screens/create_event_screen.dart';
@@ -434,7 +435,7 @@ GoRouter buildRouter(WidgetRef ref) {
           ),
           GoRoute(
             path: '/discover',
-            builder: (_, _) => const DiscoverPeopleScreen(),
+            builder: (_, _) => const DiscoverScreen(),
           ),
           GoRoute(path: '/lives', builder: (_, _) => const LiveBrowserScreen()),
           GoRoute(path: '/gyms', builder: (_, _) => const GymListScreen()),
@@ -582,6 +583,21 @@ GoRouter buildRouter(WidgetRef ref) {
             path: '/lives/:liveId',
             builder: (_, state) {
               final liveId = state.pathParameters['liveId'] ?? '';
+              const categories = {
+                'strength',
+                'cardio',
+                'hiit',
+                'yoga',
+                'pilates',
+                'stretching',
+                'nutrition_talk',
+                'q&a',
+                'challenge',
+                'other',
+              };
+              if (categories.contains(liveId)) {
+                return LiveBrowserScreen(initialCategory: liveId);
+              }
               return LiveRoomScreen(liveId: liveId);
             },
           ),
@@ -695,6 +711,12 @@ GoRouter buildRouter(WidgetRef ref) {
             builder: (_, _) => const DiscountCodesScreen(),
           ),
           GoRoute(
+            path: '/marketplace/creator/discount-codes/:codeId/analytics',
+            builder: (_, state) => DiscountCodeAnalyticsScreen(
+              codeId: state.pathParameters['codeId'] ?? '',
+            ),
+          ),
+          GoRoute(
             path: '/marketplace/meal-plans/create',
             builder: (_, state) {
               final shopHandle = state.uri.queryParameters['shop'];
@@ -746,6 +768,15 @@ GoRouter buildRouter(WidgetRef ref) {
             },
           ),
           // Programme activity focus
+          GoRoute(
+            path: '/marketplace/programmes/:programmeId/activity/:weekKey/:dayKey/:activityIndex',
+            builder: (_, state) => ProgrammeActivityFocusScreen(
+              programmeId: state.pathParameters['programmeId'] ?? '',
+              weekIndex: int.tryParse(state.pathParameters['weekKey'] ?? '') ?? 0,
+              day: state.pathParameters['dayKey'] ?? 'Monday',
+              activityIndex: int.tryParse(state.pathParameters['activityIndex'] ?? '') ?? 0,
+            ),
+          ),
           GoRoute(
             path: '/marketplace/programmes/:programmeId/activity',
             builder: (_, state) {
@@ -1048,12 +1079,6 @@ class _AppShellState extends State<_AppShell> {
 
   static const _railDestinations = <_NavDestination>[
     _NavDestination('/feed', LucideIcons.home, LucideIcons.home, 'Home'),
-    _NavDestination(
-      '/gyms',
-      LucideIcons.dumbbell,
-      LucideIcons.dumbbell,
-      'Gyms',
-    ),
     _NavDestination(
       '/buddies/find',
       LucideIcons.footprints,

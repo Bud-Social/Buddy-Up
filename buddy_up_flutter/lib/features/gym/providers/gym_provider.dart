@@ -33,6 +33,10 @@ class GymListState {
   final String? query;
   final String? categoryFilter;
   final String formatFilter;
+  final bool myGyms;
+  final String? city;
+  final bool verifiedOnly;
+  final String ordering;
   final double? lat;
   final double? lng;
   final double? radiusKm;
@@ -45,6 +49,10 @@ class GymListState {
     this.query,
     this.categoryFilter,
     this.formatFilter = 'all',
+    this.myGyms = false,
+    this.city,
+    this.verifiedOnly = false,
+    this.ordering = 'members',
     this.lat,
     this.lng,
     this.radiusKm,
@@ -61,9 +69,15 @@ class GymListState {
     String? categoryFilter,
     bool clearCategory = false,
     String? formatFilter,
+    bool? myGyms,
+    String? city,
+    bool clearCity = false,
+    bool? verifiedOnly,
+    String? ordering,
     double? lat,
     double? lng,
     double? radiusKm,
+    bool clearRadius = false,
     GeoNotice? geo,
     bool clearGeo = false,
     bool clearCoords = false,
@@ -75,9 +89,13 @@ class GymListState {
       query: clearQuery ? null : (query ?? this.query),
       categoryFilter: clearCategory ? null : (categoryFilter ?? this.categoryFilter),
       formatFilter: formatFilter ?? this.formatFilter,
+      myGyms: myGyms ?? this.myGyms,
+      city: clearCity ? null : (city ?? this.city),
+      verifiedOnly: verifiedOnly ?? this.verifiedOnly,
+      ordering: ordering ?? this.ordering,
       lat: clearCoords ? null : (lat ?? this.lat),
       lng: clearCoords ? null : (lng ?? this.lng),
-      radiusKm: radiusKm ?? this.radiusKm,
+      radiusKm: clearRadius ? null : (radiusKm ?? this.radiusKm),
       geo: clearGeo ? null : (geo ?? this.geo),
     );
   }
@@ -95,16 +113,27 @@ class GymListNotifier extends Notifier<GymListState> {
     String? category,
     bool clearCategory = false,
     String? format,
+    bool? my,
+    String? city,
+    bool clearCity = false,
+    bool? verified,
+    String? ordering,
     double? lat,
     double? lng,
     double? radiusKm,
-    String? ordering,
+    bool clearRadius = false,
   }) async {
     final fmt = format ?? state.formatFilter;
     final useLat = lat ?? state.lat;
     final useLng = lng ?? state.lng;
     final useGeo = useLat != null && useLng != null && fmt != 'virtual';
-    final useRadius = radiusKm ?? state.radiusKm;
+    final useRadius = clearRadius ? null : (radiusKm ?? state.radiusKm);
+    final nextMy = my ?? state.myGyms;
+    final nextCity = clearCity ? null : (city ?? state.city);
+    final nextVerified = verified ?? state.verifiedOnly;
+    final nextOrdering = ordering ?? state.ordering;
+    final effectiveOrdering =
+        useGeo && nextOrdering == 'members' ? 'nearest' : nextOrdering;
     state = state.copyWith(
       isLoading: true,
       clearError: true,
@@ -113,20 +142,29 @@ class GymListNotifier extends Notifier<GymListState> {
       categoryFilter: category,
       clearCategory: clearCategory,
       formatFilter: fmt,
+      myGyms: nextMy,
+      city: nextCity,
+      clearCity: clearCity,
+      verifiedOnly: nextVerified,
+      ordering: ordering,
       lat: useLat,
       lng: useLng,
       radiusKm: useRadius,
+      clearRadius: clearRadius,
       clearGeo: !useGeo,
     );
     try {
       final raw = await _repository.getGyms(
         query: clearQuery ? null : (query ?? state.query),
         category: clearCategory ? null : (category ?? state.categoryFilter),
+        my: nextMy ? true : null,
+        city: nextCity,
+        verified: nextVerified ? true : null,
         delivery: fmt == 'all' ? null : fmt,
         lat: useGeo ? useLat : null,
         lng: useGeo ? useLng : null,
         radiusKm: useGeo ? useRadius : null,
-        ordering: ordering ?? (useGeo ? 'nearest' : null),
+        ordering: effectiveOrdering,
       );
       final gyms = _parseGymList(raw['data']);
       if (useGeo) {
@@ -150,7 +188,10 @@ class GymListNotifier extends Notifier<GymListState> {
   }
 
   void setRadius(double? radiusKm) {
-    state = state.copyWith(radiusKm: radiusKm);
+    state = state.copyWith(
+      radiusKm: radiusKm,
+      clearRadius: radiusKm == null,
+    );
   }
 }
 

@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
@@ -106,6 +109,20 @@ class _TicketCard extends StatelessWidget {
   final EventTicket ticket;
   const _TicketCard({required this.ticket});
 
+  Future<void> _downloadTicketQr(EventTicket ticket) async {
+    try {
+      final raw = ticket.qrDataUri!;
+      final base64Part = raw.split(',').length > 1 ? raw.split(',')[1] : raw;
+      final bytes = base64Decode(base64Part);
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/ticket-${ticket.ticketCode}.png');
+      await file.writeAsBytes(bytes);
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path, mimeType: 'image/png')]),
+      );
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final eventName = ticket.eventData?['title'] as String? ?? 'Event';
@@ -146,6 +163,16 @@ class _TicketCard extends StatelessWidget {
               Align(
                 alignment: Alignment.center,
                 child: _QrImage(qrDataUri: ticket.qrDataUri!),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: isUsable
+                      ? () => _downloadTicketQr(ticket)
+                      : null,
+                  icon: const Icon(Icons.download_outlined, size: 14),
+                  label: const Text('Download'),
+                ),
               ),
             ] else if (!isUsable) ...[
               const SizedBox(height: 16),

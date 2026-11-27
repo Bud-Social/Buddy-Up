@@ -10,6 +10,7 @@ from urllib.parse import quote, unquote, urlparse
 
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
+from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404
 from django.utils import timezone
 from django.core.cache import cache
@@ -23,7 +24,8 @@ from rest_framework.throttling import ScopedRateThrottle
 
 from common.utils import validate_file_signature
 from .models import (
-    Conversation, ConversationPromotion, Message, MessageReaction, CallLog,
+    Conversation, ConversationPreference, ConversationPromotion, Message,
+    MessageReaction, CallLog,
     ConversationMembership, CommunityPost, CommunityPostLike, CommunityPostComment,
     CommunityPostCommentLike,
     CommunityPostRepost, CommunityPostSave, CommunityPostReaction, CommunityPostShare,
@@ -36,7 +38,9 @@ from .serializers import (
     CommunityMemberSerializer, CommunityPostSerializer, CommunityPostCommentSerializer,
 )
 from apps.guardians.services import guardian_blocks_new_dms
-from apps.profiles.models import BuddyRelationship, Profile, BuddySearchProfile
+from apps.profiles.models import (
+    BlockRelationship, BuddyRelationship, Profile, BuddySearchProfile,
+)
 from .blocking import is_blocked_pair, is_conversation_blocked, other_participant
 
 
@@ -167,45 +171,112 @@ class ConversationListView(views.APIView):
             # Community chats the viewer belongs to (is_community conversations).
             conversations = Conversation.objects.filter(
                 participants=profile, is_community=True,
-            ).prefetch_related('participants').order_by(
-                db_models.F('last_message_at').desc(nulls_last=True)
             )
-            serializer = ConversationSerializer(conversations, many=True, context={'request': request})
-            return Response({
-                'success': True, 'data': serializer.data, 'message': 'OK',
-                'errors': None, 'pagination': None,
-            })
-        if kind not in ('main', 'buddy'):
-            kind = 'main'
-        conversations = Conversation.objects.filter(
-            participants=request.user.profile,
-            kind=kind,
-        ).prefetch_related('participants').order_by(
-            db_models.F('last_message_at').desc(nulls_last=True)
-        )
-        # Hide DMs where either party has blocked the other.
-        visible = [
-            conv for conv in conversations
-            if not is_conversation_blocked(conv, profile)
-        ]
-        from .models import ConversationPreference
-        prefs = {
-            p.conversation_id: p
-            for p in ConversationPreference.objects.filter(profile=profile)
-        }
-        if request.query_params.get('archived') != 'true':
-            visible = [c for c in visible if not (prefs.get(c.id) and prefs[c.id].is_archived)]
-        # Pinned threads stay at the top of the inbox.
-        visible.sort(
-            key=lambda c: (
-                not bool(prefs.get(c.id) and prefs[c.id].is_pinned),
-                -(c.last_message_at.timestamp() if c.last_message_at else 0),
+        else:
+            if kind not in ('main', 'buddy'):
+                kind = 'main'
+            conversations = Conversation.objects.filter(
+                participants=profile,
+                kind=kind,
             )
+        return self._respond(request, conversations, profile)
+
+    def _respond(self, request, conversations, profile):
+        """One annotated, paginated inbox page.
+
+        The old implementation loaded every conversation, every preference
+        and then walked every message twice to build unread counts and the
+        last-message preview. This keeps the work bounded: blocked DMs and
+        archived threads are filtered in SQL, counts are annotations, and the
+        latest message is a subquery.
+        """
+        blocked_ids = set(
+            BlockRelationship.objects.filter(
+                db_models.Q(blocker=profile) | db_models.Q(blocked=profile),
+            ).values_list('blocked_id', 'flat=True')
+        ) | set(
+            BlockRelationship.objects.filter(
+                db_models.Q(blocker=profile) | db_models.Q(blocked=profile),
+            ).values_list('blocker_id', flat=True)
         )
-        serializer = ConversationSerializer(visible, many=True, context={'request': request})
+        blocked_ids.discard(profile.user_id)
+
+        archived_ids = ConversationPreference.objects.filter(
+            profile=profile, is_archived=True,
+        ).values('conversation_id')
+        if request.query_params.get('archived') == 'true':
+            conversations = conversations.filter(id__in=archived_ids)
+        else:
+            conversations = conversations.exclude(id__in=archived_ids)
+
+        latest = Message.objects.filter(
+            conversation=db_models.OuterRef('pk'), is_deleted=False,
+        ).order_by('-created_at')
+
+        conversations = conversations.annotate(
+            annotated_member_count=db_models.Count('memberships', distinct=True),
+            _unread_count=db_models.Count(
+                'messages',
+                filter=db_models.Q(
+                    messages__is_deleted=False, messages__is_read=False,
+                ) & ~db_models.Q(messages__sender=profile),
+                distinct=True,
+            ),
+            _blocked_participants=db_models.Count(
+                'participants',
+                filter=db_models.Q(participants__user_id__in=blocked_ids),
+                distinct=True,
+            ),
+            _viewer_pinned=db_models.Subquery(
+                ConversationPreference.objects.filter(
+                    conversation=db_models.OuterRef('pk'), profile=profile,
+                ).values('is_pinned')[:1]
+            ),
+            _last_message_body=db_models.Subquery(latest.values('body')[:1]),
+            _last_message_type=db_models.Subquery(latest.values('message_type')[:1]),
+            _last_message_media_url=db_models.Subquery(latest.values('media_url')[:1]),
+            _last_message_sender_name=db_models.Subquery(
+                latest.values('sender__display_name')[:1]
+            ),
+        ).prefetch_related(
+            'participants',
+            db_models.Prefetch(
+                'preferences',
+                queryset=ConversationPreference.objects.filter(profile=profile),
+                to_attr='_viewer_prefs',
+            ),
+            db_models.Prefetch(
+                'memberships',
+                queryset=ConversationMembership.objects.filter(profile=profile),
+                to_attr='_viewer_membership',
+            ),
+            'promotion',
+        ).filter(
+            db_models.Q(is_group=True)
+            | db_models.Q(is_community=True)
+            | db_models.Q(_blocked_participants=0)
+        ).annotate(
+            _pinned_sort=Coalesce('_viewer_pinned', db_models.Value(False)),
+        ).order_by(
+            db_models.F('_pinned_sort').desc(),
+            db_models.F('last_message_at').desc(nulls_last=True),
+            '-created_at',
+        ).distinct()
+
+        paginator = PageNumberPagination()
+        paginator.page_size = 50
+        page = paginator.paginate_queryset(conversations, request)
+        serializer = ConversationSerializer(page, many=True, context={'request': request})
         return Response({
-            'success': True, 'data': serializer.data, 'message': 'OK',
-            'errors': None, 'pagination': None,
+            'success': True,
+            'data': serializer.data,
+            'message': 'OK',
+            'errors': None,
+            'pagination': {
+                'count': paginator.page.paginator.count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            },
         })
 
 
@@ -379,9 +450,14 @@ class MessageListView(views.APIView):
                 messages = messages.filter(message_type='text', media_url='', body__regex=r'https?://')
             elif mapped:
                 messages = messages.filter(message_type=mapped)
+        # Scan a bounded recent window, not the entire thread. `deleted_for`
+        # is a JSON list, so this stays portable across Postgres and SQLite
+        # test databases.
+        viewer_id = str(request.user.profile.user_id)
+        recent = list(messages.order_by('-created_at')[:200])
         messages = [
-            message for message in messages.order_by('-created_at')
-            if str(request.user.profile.user_id) not in (message.deleted_for or [])
+            message for message in recent
+            if viewer_id not in (message.deleted_for or [])
         ][:50]
 
         serializer = MessageSerializer(

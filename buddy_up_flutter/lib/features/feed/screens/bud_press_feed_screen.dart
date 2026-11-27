@@ -541,14 +541,9 @@ void _trackRailInteraction(Post post, String action) {
 Future<void> _reactToPost(WidgetRef ref, Post post) async {
   if (post.userReaction != null) return;
   _trackRailInteraction(post, 'like');
-  try {
-    final raw = await ref
-        .read(feedRepositoryProvider)
-        .react(post.id, const ReactionInput(reactionType: '💪'));
-    ref
-        .read(feedProvider.notifier)
-        .updatePostInList(Post.fromJson(raw['data'] as Map<String, dynamic>));
-  } catch (_) {}
+  // The react endpoint returns reaction_counts (not a Post); the provider
+  // applies the optimistic update and rolls back on failure.
+  await ref.read(feedProvider.notifier).reactTo(post.id, '💪');
 }
 
 Future<void> _savePost(WidgetRef ref, Post post) async {

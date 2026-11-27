@@ -1,9 +1,48 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/messaging.dart';
+import '../../../data/models/post.dart';
 import '../../messaging/providers/messaging_provider.dart'
     show messagingRepositoryProvider;
 
 final communityRepositoryProvider = messagingRepositoryProvider;
+
+/// One aggregated community post with the community it came from, for the
+/// feed's "All" tab ribbon.
+class CommunityFeedEntry {
+  final Post post;
+  final String communityId;
+  final String communityName;
+  final String communityCoverUrl;
+
+  const CommunityFeedEntry({
+    required this.post,
+    required this.communityId,
+    required this.communityName,
+    required this.communityCoverUrl,
+  });
+}
+
+/// Aggregated community feed (All tab). Uses the single
+/// `/communities/posts/` endpoint, matching the web `/feed/communities`
+/// client instead of looping one request per joined community.
+final allCommunityPostsProvider =
+    FutureProvider<List<CommunityFeedEntry>>((ref) async {
+  final raw = await ref
+      .read(communityRepositoryProvider)
+      .getAllCommunityPosts();
+  final data = raw['data'] as List? ?? const <dynamic>[];
+  return <CommunityFeedEntry>[
+    for (final e in data)
+      if (e is Map<String, dynamic>)
+        CommunityFeedEntry(
+          post: Post.fromJson(e),
+          communityId: e['community_id'] as String? ?? '',
+          communityName: e['community_name'] as String? ?? '',
+          communityCoverUrl: e['community_cover_url'] as String? ?? '',
+        ),
+  ];
+});
+
 
 List<Conversation> _parseConvList(dynamic data) => (data as List)
     .map((e) => Conversation.fromJson(e as Map<String, dynamic>))

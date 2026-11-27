@@ -196,6 +196,11 @@ abstract class MessagingRepository {
     @Query('pinned') bool? pinned,
   });
 
+  /// Aggregated community feed (All tab): posts from every joined or public
+  /// community in one call, matching the web `/communities/posts/` endpoint.
+  @GET('/communities/posts/')
+  Future<dynamic> getAllCommunityPosts({@Query('cursor') String? cursor});
+
   @POST('/messaging/communities/{id}/posts/')
   Future<dynamic> createCommunityPost(
     @Path('id') String communityId,

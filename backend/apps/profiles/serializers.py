@@ -1,10 +1,40 @@
 from rest_framework import serializers
-from django.db.models import Q
+from django.db.models import Count, Q
 from .models import (
     Profile, BuddyRelationship, FollowRelationship, BlockRelationship,
     BuddySearchProfile,
 )
 from apps.gyms.models import GymMembership
+
+
+def optimize_profile_queryset(queryset):
+    """Annotate the five profile counters so a list page stays one query.
+
+    Before this, every card ran five ``COUNT`` queries plus four
+    relationship lookups. The counters are distinct because the joins for
+    buddies, follows and gyms multiply each other.
+    """
+    return queryset.annotate(
+        _buddy_count=(
+            Count(
+                'buddy_sent',
+                filter=Q(buddy_sent__status='confirmed'),
+                distinct=True,
+            )
+            + Count(
+                'buddy_received',
+                filter=Q(buddy_received__status='confirmed'),
+                distinct=True,
+            )
+        ),
+        _following_count=Count('following', distinct=True),
+        _follower_count=Count('followers', distinct=True),
+        _gym_count=Count(
+            'gym_memberships',
+            filter=Q(gym_memberships__subscription_active=True),
+            distinct=True,
+        ),
+    )
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -50,18 +80,30 @@ class ProfileSerializer(serializers.ModelSerializer):
         return data
 
     def get_buddy_count(self, obj):
+        annotated = getattr(obj, '_buddy_count', None)
+        if annotated is not None:
+            return annotated
         return BuddyRelationship.objects.filter(
             (Q(from_user=obj) | Q(to_user=obj)),
             status='confirmed'
         ).count()
 
     def get_following_count(self, obj):
+        annotated = getattr(obj, '_following_count', None)
+        if annotated is not None:
+            return annotated
         return FollowRelationship.objects.filter(follower=obj).count()
 
     def get_follower_count(self, obj):
+        annotated = getattr(obj, '_follower_count', None)
+        if annotated is not None:
+            return annotated
         return FollowRelationship.objects.filter(followee=obj).count()
 
     def get_gym_count(self, obj):
+        annotated = getattr(obj, '_gym_count', None)
+        if annotated is not None:
+            return annotated
         return GymMembership.objects.filter(member=obj, subscription_active=True).count()
 
     def get_post_count(self, obj):
@@ -73,45 +115,74 @@ class ProfileSerializer(serializers.ModelSerializer):
             return request.user.profile
         return None
 
-    def get_is_buddy(self, obj):
+    def _relationship_maps(self):
+        """Viewer-to-profile relationship state, built once per serializer.
+
+        Four queries for the whole list instead of four per card.
+        """
+        cached = self.context.get('_profile_relationship_maps')
+        if cached is not None:
+            return cached
         viewer = self._get_request_user()
+        maps = {
+            'viewer': viewer,
+            'buddy_ids': set(),
+            'following_ids': set(),
+            'buddy_status': {},
+            'blocked_ids': set(),
+        }
+        if viewer is not None:
+            for row in BuddyRelationship.objects.filter(
+                Q(from_user=viewer) | Q(to_user=viewer),
+            ).only('from_user_id', 'to_user_id', 'status'):
+                other_id = (
+                    row.to_user_id
+                    if row.from_user_id == viewer.user_id
+                    else row.from_user_id
+                )
+                maps['buddy_status'][other_id] = row.status
+                if row.status == 'confirmed':
+                    maps['buddy_ids'].add(other_id)
+            maps['following_ids'] = set(
+                FollowRelationship.objects.filter(follower=viewer)
+                .values_list('followee_id', flat=True)
+            )
+            for blocker_id, blocked_id in BlockRelationship.objects.filter(
+                Q(blocker=viewer) | Q(blocked=viewer),
+            ).values_list('blocker_id', 'blocked_id'):
+                maps['blocked_ids'].add(
+                    blocked_id if blocker_id == viewer.user_id else blocker_id
+                )
+        self.context['_profile_relationship_maps'] = maps
+        return maps
+
+    def get_is_buddy(self, obj):
+        maps = self._relationship_maps()
+        viewer = maps['viewer']
         if not viewer or viewer == obj:
             return False
-        return BuddyRelationship.objects.filter(
-            (Q(from_user=viewer, to_user=obj) |
-             Q(from_user=obj, to_user=viewer)),
-            status='confirmed'
-        ).exists()
+        return obj.user_id in maps['buddy_ids']
 
     def get_is_following(self, obj):
-        viewer = self._get_request_user()
+        maps = self._relationship_maps()
+        viewer = maps['viewer']
         if not viewer or viewer == obj:
             return False
-        return FollowRelationship.objects.filter(follower=viewer, followee=obj).exists()
+        return obj.user_id in maps['following_ids']
 
     def get_buddy_status(self, obj):
-        viewer = self._get_request_user()
+        maps = self._relationship_maps()
+        viewer = maps['viewer']
         if not viewer or viewer == obj:
             return None
-        try:
-            br = BuddyRelationship.objects.get(
-                (Q(from_user=viewer, to_user=obj) |
-                 Q(from_user=obj, to_user=viewer))
-            )
-            return br.status
-        except BuddyRelationship.DoesNotExist:
-            return None
+        return maps['buddy_status'].get(obj.user_id)
 
     def get_is_blocked(self, obj):
-        viewer = self._get_request_user()
-        if not viewer:
+        maps = self._relationship_maps()
+        viewer = maps['viewer']
+        if not viewer or viewer == obj:
             return False
-        if viewer == obj:
-            return False
-        return BlockRelationship.objects.filter(
-            (Q(blocker=viewer, blocked=obj) |
-             Q(blocker=obj, blocked=viewer))
-        ).exists()
+        return obj.user_id in maps['blocked_ids']
 
     def get_preferences(self, obj):
         prefs = getattr(obj.user, 'preferences', None) or {}

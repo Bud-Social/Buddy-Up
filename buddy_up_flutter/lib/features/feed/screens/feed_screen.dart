@@ -8,15 +8,12 @@ import '../providers/feed_provider.dart';
 import '../widgets/feed_tab_bar.dart';
 import '../widgets/post_card.dart';
 import '../widgets/share_sheet.dart';
-import 'post_composer_screen.dart';
-import '../../community/providers/community_provider.dart';
-import '../../../data/models/messaging.dart';
+import '../widgets/communities_tab.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/emoji_utils.dart';
-import '../../../shared/navigation/app_nav.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../../../data/models/post.dart';
 import '../../onboarding/walkthrough_overlay.dart';
 
@@ -31,7 +28,6 @@ class FeedScreen extends ConsumerStatefulWidget {
 
 class _FeedScreenState extends ConsumerState<FeedScreen> {
   final ScrollController _scrollController = ScrollController();
-  bool _composerExpanded = false;
   bool _feedLoadedTracked = false;
   Timer? _newPostsTimer;
   final Set<String> _knownPostIds = <String>{};
@@ -45,14 +41,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     // inline composer so the long_video draft restores visibly.
     ref.listenManual(composerExpandRequestProvider, (prev, next) {
       if (mounted && next > (prev ?? 0)) {
-        setState(() => _composerExpanded = true);
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            0,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          );
-        }
+        // Share-a-replay stores a draft; the dedicated composer route restores
+        // it. A full-screen composer avoids embedding a Scaffold in the feed.
+        context.push('/create');
       }
     });
     Future.microtask(() {
@@ -183,36 +174,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         },
       );
     }
-    final communitiesAsync = ref.watch(communitiesListProvider);
-    final myCommunities = communitiesAsync.value?.mine ?? [];
-    final hasCommunities = myCommunities.isNotEmpty;
-    final tabs = [
-      'for_you',
-      'following',
-      if (hasCommunities) 'communities',
-      'videos',
-    ];
+    final tabs = ['for_you', 'following', 'communities', 'videos'];
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(LucideIcons.menu),
-          tooltip: 'Menu',
-          onPressed: () => AppNav.open(context),
-        ),
-        title: Image.asset(
-          'assets/logo-dark.png',
-          height: 28,
-          fit: BoxFit.contain,
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.search),
-            tooltip: 'Search',
-            onPressed: () => context.push('/discover'),
-          ),
-        ],
-      ),
+      appBar: const MainAppBar(showLogo: true),
       body: Column(
         children: [
           FeedTabBar(
@@ -222,146 +187,63 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           ),
           Expanded(
             child: state.activeTab == 'communities'
-                ? _buildCommunitiesTab(myCommunities)
+                ? const CommunitiesTab()
                 : Column(
                     children: [
-                      if (_composerExpanded) ...[
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                          child: PostComposerScreen(
-                            communityId: null,
-                            onPostCreated: () =>
-                                setState(() => _composerExpanded = false),
-                          ),
-                        ),
-                      ],
+                      _buildComposerPrompt(),
                       Expanded(child: _buildBody(state, notifier)),
                     ],
                   ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: BuddyColors.green,
-        onPressed: () {
-          setState(() => _composerExpanded = !_composerExpanded);
-          if (_composerExpanded && _scrollController.hasClients) {
-            _scrollController.animateTo(
-              0,
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOut,
-            );
-          }
-        },
-        child: Icon(
-          _composerExpanded ? LucideIcons.x : LucideIcons.edit,
-          color: BuddyColors.black,
-        ),
-      ),
     );
   }
 
-  Widget _buildCommunitiesTab(List<Conversation> communities) {
-    final cs = Theme.of(context).colorScheme;
-    if (communities.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              LucideIcons.users,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No Communities Joined Yet',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Join a community to see posts and connect with peers.',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => context.push('/communities'),
-              child: const Text('Discover Communities'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Your Communities (${communities.length})',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            TextButton(
-              onPressed: () => context.push('/communities'),
-              child: const Text(
-                'View All',
-                style: TextStyle(color: BuddyColors.green),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ...communities.map(
-          (c) => Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            color: cs.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: cs.outlineVariant),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
-              leading: CircleAvatar(
-                radius: 24,
-                backgroundColor: cs.surfaceContainerHighest,
-                backgroundImage: c.groupAvatarUrl.isNotEmpty
-                    ? NetworkImage(c.groupAvatarUrl)
-                    : null,
-                child: c.groupAvatarUrl.isEmpty
-                    ? const Icon(LucideIcons.users, color: BuddyColors.green)
-                    : null,
-              ),
-              title: Text(
-                c.groupName.isEmpty ? 'Community' : c.groupName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                c.description.isNotEmpty
-                    ? c.description
-                    : (c.lastMessage?.body.isNotEmpty == true
-                          ? c.lastMessage!.body
-                          : 'Tap to open community feed & chat'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: cs.onSurface.withValues(alpha: 0.6),
+  /// Web parity: the collapsed composer is a full-width rounded prompt at the
+  /// top of the feed ("Share your workout, meal, or progress..."), not a FAB.
+  Widget _buildComposerPrompt() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => context.push('/create'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: BuddyColors.green.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    LucideIcons.penLine,
+                    size: 16,
+                    color: BuddyColors.green,
+                  ),
                 ),
-              ),
-              trailing: const Icon(
-                LucideIcons.chevronRight,
-                color: BuddyColors.green,
-              ),
-              onTap: () => context.push('/communities/${c.id}'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Share your workout, meal, or progress...',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -378,6 +260,46 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     }
 
     _syncKnownIds(state.posts);
+
+    if (state.posts.isEmpty) {
+      return RefreshIndicator(
+        color: BuddyColors.green,
+        onRefresh: () => notifier.refresh(),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const SizedBox(height: 120),
+            Center(
+              child: Column(
+                children: [
+                  const Icon(LucideIcons.inbox, size: 48, color: BuddyColors.textSecondary),
+                  const SizedBox(height: 12),
+                  Text(
+                    state.activeTab == 'following'
+                        ? 'No posts from people you follow yet'
+                        : 'No posts yet',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    state.activeTab == 'following'
+                        ? 'Follow people to see their posts here.'
+                        : 'Pull to refresh.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return RefreshIndicator(
       color: BuddyColors.green,
@@ -413,6 +335,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(top: 12),
               itemCount:
                   state.posts.length +
                   (state.isLoadingMore ? 1 : 0) +
@@ -514,7 +438,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     }
   }
 
-  void _handleReact(String postId, String reaction) async {
+  void _handleReact(String postId, String reaction) {
+    final notifier = ref.read(feedProvider.notifier);
     if (reaction.isEmpty) {
       // PostCard uses an empty reaction to mean "remove my reaction".
       final post = ref
@@ -524,35 +449,17 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           .firstOrNull;
       final current = post?.userReaction;
       if (current != null) {
-        await ref.read(feedProvider.notifier).reactTo(postId, current);
+        notifier.reactTo(postId, current);
       }
       return;
     }
-    final repo = ref.read(feedRepositoryProvider);
-    try {
-      final raw = await repo.react(
-        postId,
-        ReactionInput(reactionType: toReactionEmoji(reaction)),
-      );
-      final updated = Post.fromJson(raw['data'] as Map<String, dynamic>);
-      ref.read(feedProvider.notifier).updatePostInList(updated);
-    } catch (_) {}
+    // The reaction endpoint returns a reaction_counts map, not a Post, so the
+    // provider owns the optimistic update + rollback (same as the web client).
+    notifier.reactTo(postId, reaction);
   }
 
-  void _handleSave(String postId) async {
-    final repo = ref.read(feedRepositoryProvider);
-    final state = ref.read(feedProvider);
-    final post = state.posts.firstWhere((p) => p.id == postId);
-    try {
-      if (post.isSaved) {
-        await repo.unsave(postId);
-      } else {
-        await repo.save(postId, const SavePayload());
-      }
-      ref
-          .read(feedProvider.notifier)
-          .updatePostInList(post.copyWith(isSaved: !post.isSaved));
-    } catch (_) {}
+  void _handleSave(String postId) {
+    ref.read(feedProvider.notifier).toggleSaveById(postId);
   }
 
   void _handleRepost(String postId) {
@@ -564,9 +471,19 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     final repo = ref.read(feedRepositoryProvider);
     try {
       final raw = await repo.voteOnPoll(postId, {'option_ids': optionIds});
-      if (raw['data'] != null) {
-        final updated = Post.fromJson(raw['data'] as Map<String, dynamic>);
-        ref.read(feedProvider.notifier).updatePostInList(updated);
+      // The vote endpoint returns the refreshed Poll, not the parent Post.
+      final data = raw['data'];
+      if (data is Map<String, dynamic>) {
+        final post = ref
+            .read(feedProvider)
+            .posts
+            .where((p) => p.id == postId)
+            .firstOrNull;
+        if (post != null) {
+          ref
+              .read(feedProvider.notifier)
+              .updatePostInList(post.copyWith(poll: Poll.fromJson(data)));
+        }
       }
     } catch (_) {}
   }

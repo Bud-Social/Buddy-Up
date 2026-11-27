@@ -180,8 +180,37 @@ class EventsFilter {
   final double? lat;
   final double? lng;
   final double? radiusKm;
+  final String query;
+  final String eventType;
+  final bool verifiedOnly;
 
-  const EventsFilter({this.lat, this.lng, this.radiusKm});
+  const EventsFilter({
+    this.lat,
+    this.lng,
+    this.radiusKm,
+    this.query = '',
+    this.eventType = 'all',
+    this.verifiedOnly = false,
+  });
+
+  EventsFilter copyWith({
+    double? lat,
+    double? lng,
+    double? radiusKm,
+    String? query,
+    String? eventType,
+    bool? verifiedOnly,
+    bool clearCoords = false,
+  }) {
+    return EventsFilter(
+      lat: clearCoords ? null : (lat ?? this.lat),
+      lng: clearCoords ? null : (lng ?? this.lng),
+      radiusKm: radiusKm ?? this.radiusKm,
+      query: query ?? this.query,
+      eventType: eventType ?? this.eventType,
+      verifiedOnly: verifiedOnly ?? this.verifiedOnly,
+    );
+  }
 }
 
 final eventsFilterProvider = NotifierProvider<EventsFilterNotifier, EventsFilter>(EventsFilterNotifier.new);
@@ -191,7 +220,26 @@ class EventsFilterNotifier extends Notifier<EventsFilter> {
   EventsFilter build() => const EventsFilter();
 
   void setCoords(double? lat, double? lng) {
-    state = EventsFilter(lat: lat, lng: lng, radiusKm: state.radiusKm);
+    if (lat == null || lng == null) {
+      state = state.copyWith(clearCoords: true);
+    } else {
+      state = state.copyWith(lat: lat, lng: lng);
+    }
+  }
+
+  void setQuery(String value) {
+    if (state.query == value) return;
+    state = state.copyWith(query: value);
+  }
+
+  void setEventType(String value) {
+    if (state.eventType == value) return;
+    state = state.copyWith(eventType: value);
+  }
+
+  void setVerifiedOnly(bool value) {
+    if (state.verifiedOnly == value) return;
+    state = state.copyWith(verifiedOnly: value);
   }
 }
 
@@ -216,6 +264,9 @@ class EventsNotifier extends AsyncNotifier<List<MarketplaceEvent>> {
     final filter = ref.read(eventsFilterProvider);
     final raw = await repo.getEvents(
       scope: scope,
+      query: filter.query.isEmpty ? null : filter.query,
+      eventType: filter.eventType == 'all' ? null : filter.eventType,
+      verified: filter.verifiedOnly ? true : null,
       lat: filter.lat,
       lng: filter.lng,
       radiusKm: filter.radiusKm,

@@ -1,8 +1,11 @@
 from rest_framework import serializers
 from collections import Counter
-from django.db.models import Q
+from django.db.models import Count, Prefetch, Q
 from common.utils import absolute_media_url
-from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, Draft, PostMedia, Sound
+from .models import (
+    Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption,
+    PollVote, Draft, PostMedia, PostRepost, Sound,
+)
 from apps.gyms.models import Gym
 from common.age_gating import CONTENT_RATING_CHOICES
 
@@ -49,6 +52,104 @@ def _staffed_gym_ids(profile):
         return []
 
 
+def _viewer_context(request):
+    """Viewer ids used by post serialization, computed once per request.
+
+    Before this cache, every post re-ran the staffed-gym and following
+    lookups. On a 20-post page that was 40 extra queries before the first
+    reaction/save check.
+    """
+    if request is None:
+        return {'viewer': None, 'staffed_gym_ids': set(), 'followed_ids': set()}
+    cached = getattr(request, '_feed_viewer_ctx', None)
+    if cached is not None:
+        return cached
+    viewer = None
+    try:
+        if request.user.is_authenticated:
+            viewer = request.user.profile
+    except Exception:  # noqa: BLE001
+        viewer = None
+    ctx = {
+        'viewer': viewer,
+        'staffed_gym_ids': set(_staffed_gym_ids(viewer)) if viewer else set(),
+        'followed_ids': set(
+            viewer.following.values_list('followee_id', flat=True)
+        ) if viewer else set(),
+    }
+    request._feed_viewer_ctx = ctx
+    return ctx
+
+
+def optimize_post_queryset(queryset, request):
+    """Attach the counts and viewer rows a post page needs in bulk.
+
+    One annotated query plus a fixed number of prefetches replaces the
+    per-post counts, save/repost checks, reaction scan, reposter ribbon and
+    media lookups that made the feed serializer O(posts) in queries.
+    """
+    ctx = _viewer_context(request)
+    queryset = queryset.select_related(
+        'author', 'gym_tag', 'gym', 'poll',
+    ).prefetch_related(
+        'media__sound',
+        Prefetch(
+            'poll__options',
+            queryset=PollOption.objects.annotate(
+                _vote_count=Count('votes', distinct=True),
+            ),
+            to_attr='_poll_options',
+        ),
+        'reactions',
+    ).annotate(
+        _comment_count=Count('comments', distinct=True),
+        _repost_count=Count(
+            'reposts', filter=Q(reposts__is_deleted=False), distinct=True,
+        ),
+        _save_count=Count('saves', distinct=True),
+    )
+    viewer = ctx['viewer']
+    if viewer is not None:
+        staffed = ctx['staffed_gym_ids']
+        followed = ctx['followed_ids']
+        queryset = queryset.prefetch_related(
+            Prefetch(
+                'poll__votes',
+                queryset=PollVote.objects.filter(voter=viewer),
+                to_attr='_viewer_poll_votes',
+            ),
+            Prefetch(
+                'saves',
+                queryset=Save.objects.filter(
+                    Q(user=viewer) | Q(gym_id__in=staffed),
+                ),
+                to_attr='_viewer_saves',
+            ),
+            Prefetch(
+                'reposts',
+                queryset=PostRepost.objects.filter(is_deleted=False).filter(
+                    Q(profile=viewer) | Q(gym_id__in=staffed),
+                ),
+                to_attr='_viewer_reposts',
+            ),
+            Prefetch(
+                'reposts',
+                queryset=PostRepost.objects.filter(
+                    is_deleted=False, profile_id__in=followed,
+                ).select_related('profile', 'gym'),
+                to_attr='_followed_reposts',
+            ),
+            Prefetch(
+                'reposts',
+                queryset=PostRepost.objects.filter(
+                    is_deleted=False,
+                ).select_related('profile', 'gym'),
+                to_attr='_reposters',
+            ),
+        )
+    return queryset
+
+
 class PollOptionSerializer(serializers.ModelSerializer):
     vote_count = serializers.SerializerMethodField()
     user_voted = serializers.SerializerMethodField()
@@ -58,9 +159,15 @@ class PollOptionSerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'order', 'vote_count', 'user_voted']
 
     def get_vote_count(self, obj):
+        annotated = getattr(obj, '_vote_count', None)
+        if annotated is not None:
+            return annotated
         return obj.votes.count()
 
     def get_user_voted(self, obj):
+        voted_ids = self.context.get('voted_option_ids')
+        if voted_ids is not None:
+            return obj.id in voted_ids
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return False
@@ -68,8 +175,8 @@ class PollOptionSerializer(serializers.ModelSerializer):
 
 
 class PollSerializer(serializers.ModelSerializer):
-    options = PollOptionSerializer(many=True, read_only=True)
-    total_votes = serializers.ReadOnlyField()
+    options = serializers.SerializerMethodField()
+    total_votes = serializers.SerializerMethodField()
     is_closed = serializers.ReadOnlyField()
     user_voted_option_ids = serializers.SerializerMethodField()
 
@@ -78,10 +185,26 @@ class PollSerializer(serializers.ModelSerializer):
         fields = ['id', 'question', 'closes_at', 'allow_multiple', 'min_selections',
                   'max_selections', 'total_votes', 'is_closed', 'options', 'user_voted_option_ids']
 
+    def get_options(self, obj):
+        options = getattr(obj, '_poll_options', None)
+        if options is None:
+            options = obj.options.all()
+        context = {**self.context, 'voted_option_ids': set(self.get_user_voted_option_ids(obj))}
+        return PollOptionSerializer(options, many=True, context=context).data
+
+    def get_total_votes(self, obj):
+        annotated = getattr(obj, '_total_votes', None)
+        if annotated is not None:
+            return annotated
+        return obj.votes.count()
+
     def get_user_voted_option_ids(self, obj):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return []
+        votes = getattr(obj, '_viewer_poll_votes', None)
+        if votes is not None:
+            return [vote.option_id for vote in votes]
         return list(obj.votes.filter(voter=request.user.profile).values_list('option_id', flat=True))
 
 
@@ -235,63 +358,80 @@ class PostSerializer(serializers.ModelSerializer):
         }
 
     def get_reaction_counts(self, obj):
-        counts = Counter(obj.reactions.values_list('reaction_type', flat=True))
+        if 'reactions' in getattr(obj, '_prefetched_objects_cache', {}):
+            keys = [reaction.reaction_type for reaction in obj.reactions.all()]
+        else:
+            keys = obj.reactions.values_list('reaction_type', flat=True)
+        counts = Counter(keys)
         normalized = {}
         for key, value in counts.items():
             normalized[normalize_reaction(key)] = normalized.get(normalize_reaction(key), 0) + value
         return normalized
 
     def get_user_reaction(self, obj):
-        request = self.context.get('request')
-        if not (request and request.user.is_authenticated):
+        ctx = _viewer_context(self.context.get('request'))
+        viewer = ctx['viewer']
+        if viewer is None:
             return None
-        gym_ids = _staffed_gym_ids(request.user.profile)
-        reaction = obj.reactions.filter(
-            Q(author=request.user.profile) | Q(gym_id__in=gym_ids)
-        ).first()
-        return normalize_reaction(reaction.reaction_type) if reaction else None
+        for reaction in obj.reactions.all():
+            if reaction.author_id == viewer.user_id:
+                return normalize_reaction(reaction.reaction_type)
+            if reaction.gym_id and reaction.gym_id in ctx['staffed_gym_ids']:
+                return normalize_reaction(reaction.reaction_type)
+        return None
 
     def get_comment_count(self, obj):
+        annotated = getattr(obj, '_comment_count', None)
+        if annotated is not None:
+            return annotated
         return obj.comments.count()
 
     def get_repost_count(self, obj):
         """Count the PostRepost log rows (reposts are post properties)."""
-        return obj.reposts.count()
+        annotated = getattr(obj, '_repost_count', None)
+        if annotated is not None:
+            return annotated
+        return obj.reposts.filter(is_deleted=False).count()
 
     def get_save_count(self, obj):
+        annotated = getattr(obj, '_save_count', None)
+        if annotated is not None:
+            return annotated
         return obj.saves.count()
 
     def get_is_saved(self, obj):
-        request = self.context.get('request')
-        if not (request and request.user.is_authenticated):
+        ctx = _viewer_context(self.context.get('request'))
+        if ctx['viewer'] is None:
             return False
-        gym_ids = _staffed_gym_ids(request.user.profile)
+        prefetched = getattr(obj, '_viewer_saves', None)
+        if prefetched is not None:
+            return bool(prefetched)
         return obj.saves.filter(
-            Q(user=request.user.profile) | Q(gym_id__in=gym_ids),
+            Q(user=ctx['viewer']) | Q(gym_id__in=ctx['staffed_gym_ids']),
         ).exists()
 
     def get_is_reposted_by_me(self, obj):
-        request = self.context.get('request')
-        if not (request and request.user.is_authenticated):
+        ctx = _viewer_context(self.context.get('request'))
+        if ctx['viewer'] is None:
             return False
-        gym_ids = _staffed_gym_ids(request.user.profile)
+        prefetched = getattr(obj, '_viewer_reposts', None)
+        if prefetched is not None:
+            return bool(prefetched)
         return obj.reposts.filter(
-            Q(profile=request.user.profile) | Q(gym_id__in=gym_ids),
+            Q(profile=ctx['viewer']) | Q(gym_id__in=ctx['staffed_gym_ids']),
             is_deleted=False,
         ).exists()
 
     def get_is_repost(self, obj):
         """True when the viewer follows anyone who reposted this post."""
-        request = self.context.get('request')
-        if not (request and request.user.is_authenticated):
+        ctx = _viewer_context(self.context.get('request'))
+        if ctx['viewer'] is None:
             return False
-        try:
-            viewer = request.user.profile
-        except Exception:  # noqa: BLE001
-            return False
-        followed_ids = set(viewer.following.values_list('followee_id', flat=True))
+        prefetched = getattr(obj, '_followed_reposts', None)
+        if prefetched is not None:
+            return bool(prefetched)
         return obj.reposts.filter(
-            is_deleted=False, profile_id__in=followed_ids,
+            is_deleted=False, profile_id__in=ctx['followed_ids'],
         ).exists()
 
     def get_original_post_data(self, obj):
@@ -300,8 +440,8 @@ class PostSerializer(serializers.ModelSerializer):
             return None
         return {
             'id': str(obj.id),
-            'repost_count': obj.reposts.count(),
-            'comment_count': obj.comments.count(),
+            'repost_count': self.get_repost_count(obj),
+            'comment_count': self.get_comment_count(obj),
         }
 
     def get_poll(self, obj):
@@ -333,25 +473,24 @@ class PostSerializer(serializers.ModelSerializer):
         them twice — once as themselves and once by name.
         """
         request = self.context.get('request')
-        if not obj.reposts.count():
+        ctx = _viewer_context(request)
+        if not self.get_repost_count(obj):
             return []
-        viewer = None
-        try:
-            if request and request.user.is_authenticated:
-                viewer = request.user.profile
-        except Exception:  # noqa: BLE001 — attribution ordering is best-effort
-            viewer = None
-        followed_ids = set()
-        try:
-            if viewer is not None and hasattr(viewer, 'following'):
-                followed_ids = set(viewer.following.values_list('followee_id', flat=True))
-        except Exception:  # noqa: BLE001 — attribution ordering is best-effort
-            pass
-        reposts = list(obj.reposts.filter(is_deleted=False).select_related('profile', 'gym')[:20])
+        viewer = ctx['viewer']
+        followed_ids = ctx['followed_ids']
+        prefetched = getattr(obj, '_reposters', None)
+        if prefetched is not None:
+            reposts = list(prefetched)
+        else:
+            reposts = list(
+                obj.reposts.filter(is_deleted=False)
+                .select_related('profile', 'gym')[:20]
+            )
         if viewer is not None:
             # A profile's primary key is its user, so the repost row's
             # profile id is the user's id.
             reposts = [r for r in reposts if r.profile_id != viewer.user_id]
+        reposts = reposts[:20]
         # TikTok-style attribution: accounts the viewer follows first.
         reposts.sort(key=lambda r: (r.profile_id not in followed_ids, r.created_at))
         rows = []

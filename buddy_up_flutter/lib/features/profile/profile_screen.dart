@@ -9,9 +9,15 @@ import '../../core/auth/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/post.dart';
 import '../../data/models/profile.dart';
+import '../../data/models/live.dart';
+import '../../data/models/gym.dart';
 import '../../data/repositories/profile_repository.dart';
+import '../../data/repositories/live_repository.dart';
+import '../../data/repositories/gym_repository.dart';
 import '../../shared/navigation/app_nav.dart';
+import '../../shared/navigation/main_header.dart';
 import 'widgets/buddy_search_card.dart';
+import 'widgets/achievements_tab.dart';
 import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/button.dart';
 import '../../shared/widgets/error_view.dart';
@@ -39,6 +45,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   List<Post> _reposts = [];
   bool _postsLoading = true;
 
+  List<BuddyLive> _lives = [];
+  List<Gym> _gyms = [];
+  bool _livesLoading = false;
+  bool _gymsLoading = false;
+  bool _livesLoaded = false;
+  bool _gymsLoaded = false;
+  late LiveRepository _liveRepo;
+  late GymRepository _gymRepo;
+
   late final TabController _tabController;
 
   static const _kCoverHeight = 180.0;
@@ -46,15 +61,85 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 8, vsync: this);
+    _tabController.addListener(_onTabChanged);
     _profileRepo = ProfileRepository(ApiClient().dio);
+    _liveRepo = LiveRepository(ApiClient().dio);
+    _gymRepo = GymRepository(ApiClient().dio);
     _loadProfile();
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
+  }
+
+  /// Lazy-load the Lives and Gyms tabs the first time they are selected,
+  /// mirroring the web profile's `activeTab` effects.
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) return;
+    final index = _tabController.index;
+    if (index == 3 && !_livesLoaded) _loadLives();
+    if (index == 4 && !_gymsLoaded) _loadGyms();
+  }
+
+  List<dynamic> _asList(dynamic raw) {
+    if (raw is List) return raw;
+    if (raw is Map) {
+      final results = raw['results'] ?? raw['data'];
+      if (results is List) return results;
+    }
+    return const [];
+  }
+
+  Future<void> _loadLives() async {
+    final p = _profile;
+    if (p == null) return;
+    setState(() => _livesLoading = true);
+    try {
+      final raw = await _liveRepo.getUserLives(p.username, tab: 'all');
+      final list = _asList(raw)
+          .whereType<Map<String, dynamic>>()
+          .map((j) => BuddyLive.fromJson(j))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _lives = list;
+        _livesLoading = false;
+        _livesLoaded = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _livesLoading = false;
+        _livesLoaded = true;
+      });
+    }
+  }
+
+  Future<void> _loadGyms() async {
+    setState(() => _gymsLoading = true);
+    try {
+      final raw = await _gymRepo.getGyms(my: true);
+      final list = _asList(raw)
+          .whereType<Map<String, dynamic>>()
+          .map((j) => Gym.fromJson(j))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _gyms = list;
+        _gymsLoading = false;
+        _gymsLoaded = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _gymsLoading = false;
+        _gymsLoaded = true;
+      });
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -146,6 +231,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   Tab(text: 'Posts (${_posts.length})'),
                   Tab(text: 'Reposts (${_reposts.length})'),
                   Tab(text: 'Saved (${savedAsync.value?.length ?? 0})'),
+                  Tab(text: 'Lives (${_lives.length})'),
+                  Tab(text: 'Gyms (${_gyms.length})'),
+                  const Tab(text: 'Achievements'),
                   const Tab(text: 'Interests'),
                   const Tab(text: 'Shortcuts'),
                 ],
@@ -159,6 +247,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             _buildPostsList(_posts, isReposts: false),
             _buildPostsList(_reposts, isReposts: true),
             _buildSavedTab(),
+            _buildLivesTab(),
+            _buildGymsTab(),
+            const AchievementsTab(),
             _buildInterestsTab(p),
             _buildQuickLinks(),
           ],
@@ -204,6 +295,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         ),
       ),
       actions: [
+        IconButton(
+          icon: const Icon(LucideIcons.search),
+          tooltip: 'Search',
+          onPressed: () => context.go('/discover'),
+        ),
+        const NotificationBellButton(),
         IconButton(
           icon: const Icon(LucideIcons.settings),
           tooltip: 'Settings',
@@ -757,6 +854,191 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   void _openPostDetail(String postId) {
     if (postId.isEmpty) return;
     context.push('/feed/$postId');
+  }
+
+  /// Lives the profile owner has hosted. Mirrors the web profile's Lives tab.
+  Widget _buildLivesTab() {
+    if (_livesLoading) return const PageLoader();
+    if (_lives.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              LucideIcons.radio,
+              size: 36,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'No lives yet',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            BuddyButton(
+              label: 'Start a Live',
+              variant: BuddyButtonVariant.outline,
+              size: BuddyButtonSize.sm,
+              onPressed: () => context.push('/lives'),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: _lives.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, i) {
+        final live = _lives[i];
+        return InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => context.push('/lives/${live.id}'),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.radio, color: BuddyColors.green),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        live.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${live.liveType.replaceAll('_', ' ')} · ${live.status}',
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Gyms the profile owner belongs to. Mirrors the web profile's Gyms tab.
+  Widget _buildGymsTab() {
+    if (_gymsLoading) return const PageLoader();
+    if (_gyms.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              LucideIcons.dumbbell,
+              size: 36,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'No gyms joined yet',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            BuddyButton(
+              label: 'Browse Gyms',
+              variant: BuddyButtonVariant.outline,
+              size: BuddyButtonSize.sm,
+              onPressed: () => context.push('/gyms'),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: _gyms.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, i) {
+        final gym = _gyms[i];
+        return InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => context.push('/gyms/${gym.handle}'),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: BuddyColors.green.withValues(alpha: 0.15),
+                  backgroundImage: gym.logoUrl.isNotEmpty
+                      ? CachedNetworkImageProvider(gym.logoUrl)
+                      : null,
+                  child: gym.logoUrl.isEmpty
+                      ? const Icon(LucideIcons.dumbbell, color: BuddyColors.green)
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        gym.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        [gym.locationCity, gym.locationCountry]
+                            .where((s) => s.isNotEmpty)
+                            .join(', '),
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   /// Saved posts. Reads the endpoint that has always existed but was never

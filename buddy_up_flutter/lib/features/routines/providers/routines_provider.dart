@@ -136,6 +136,32 @@ class RoutinesNotifier extends Notifier<RoutinesState> {
     await _repo.reorder({'ordered_ids': orderedIds});
     await load();
   }
+
+  /// Share a routine as a post or story. Returns the created post's type on
+  /// success, or null when the server refused; [error] carries the reason.
+  Future<String?> shareRoutine(
+    String id, {
+    required bool asStory,
+    required String overlayPosition,
+    required String visibility,
+    required String body,
+    String? mediaUrl,
+  }) async {
+    try {
+      final raw = await _repo.shareRoutine(id, {
+        'as_story': asStory,
+        'overlay_position': overlayPosition,
+        'visibility': visibility,
+        'body': body,
+        if (mediaUrl != null && mediaUrl.isNotEmpty) 'media_url': mediaUrl,
+      });
+      final data = raw is Map ? raw['data'] : null;
+      return data is Map ? '${data['post_type'] ?? (asStory ? 'moment' : 'workout_log')}' : null;
+    } catch (e) {
+      state = state.copyWith(error: 'Could not share the routine');
+      return null;
+    }
+  }
 }
 
 final routinesProvider =

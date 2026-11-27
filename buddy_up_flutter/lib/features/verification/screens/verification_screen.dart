@@ -51,7 +51,16 @@ class VerificationScreen extends ConsumerWidget {
     final documents = ref.watch(verificationDocumentsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Verification')),
+      appBar: AppBar(
+        title: const Text('Verification'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => _newRequest(context, ref),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('New request'),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(myApplicationsProvider);
@@ -218,7 +227,7 @@ class VerificationScreen extends ConsumerWidget {
                     title: 'No verification submissions yet',
                   )
                 else
-                  for (final submission in rows) _submissionCard(context, submission),
+                  for (final submission in rows) _submissionCard(context, ref, submission),
               ],
             ),
             const SizedBox(height: 32),
@@ -226,6 +235,369 @@ class VerificationScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// The web's "New Request" flow: pick a verification type, attach evidence,
+  /// then create and submit. Identity verification keeps its two-step
+  /// ID + selfie wizard because the server refuses to submit an ID draft until
+  /// both `upload_step` calls have completed.
+  Future<void> _newRequest(BuildContext context, WidgetRef ref) async {
+    final notes = TextEditingController();
+    final credentialTitle = TextEditingController();
+    final credentialIssuer = TextEditingController();
+    final credentialId = TextEditingController();
+    final issuedDate = TextEditingController();
+    final scope = TextEditingController();
+    final gymHandle = TextEditingController();
+    var type = 'id';
+    var docType = 'id_card';
+
+    final choice = await showModalBottomSheet<
+        ({String type, String docType, String notes, Map<String, dynamic> credential})>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'New verification request',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Identity checks use an ID photo and a selfie. Professional '
+                    'roles need a credential document.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      color: Theme.of(sheetCtx).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final option in kVerificationTypeChoices)
+                        ChoiceChip(
+                          label: Text(option.label,
+                              style: const TextStyle(fontSize: 11)),
+                          selected: type == option.value,
+                          onSelected: (_) => setSheetState(() {
+                            type = option.value;
+                            docType =
+                                option.value == 'id' ? 'id_card' : 'certification';
+                          }),
+                          selectedColor:
+                              BuddyColors.green.withValues(alpha: 0.2),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (type == 'id') ...[
+                    Text(
+                      'ID document type',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(sheetCtx).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      children: [
+                        for (final option in const [
+                          (value: 'id_card', label: 'National ID'),
+                          (value: 'passport', label: 'Passport'),
+                          (value: 'drivers_license', label: "Driver's licence"),
+                        ])
+                          ChoiceChip(
+                            label: Text(option.label,
+                                style: const TextStyle(fontSize: 11)),
+                            selected: docType == option.value,
+                            onSelected: (_) =>
+                                setSheetState(() => docType = option.value),
+                            selectedColor:
+                                BuddyColors.green.withValues(alpha: 0.2),
+                          ),
+                      ],
+                    ),
+                  ] else ...[
+                    TextField(
+                      controller: credentialTitle,
+                      decoration: const InputDecoration(
+                        labelText: 'Credential title',
+                        hintText: 'e.g. Certified Personal Trainer',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: credentialIssuer,
+                      decoration: const InputDecoration(
+                        labelText: 'Issuer',
+                        hintText: 'e.g. REPs Kenya, ACSM',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: credentialId,
+                      decoration: const InputDecoration(
+                        labelText: 'Credential / registration ID',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: issuedDate,
+                      decoration: const InputDecoration(
+                        labelText: 'Issued date (YYYY-MM-DD)',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: scope,
+                      decoration: const InputDecoration(
+                        labelText: 'Scope of practice',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    if (type == 'gym') ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: gymHandle,
+                        decoration: const InputDecoration(
+                          labelText: 'Gym handle',
+                          hintText: 'e.g. nairobi-iron',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ],
+                  ],
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: notes,
+                    maxLines: 2,
+                    maxLength: 1000,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes for the reviewer (optional)',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      counterText: '',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () {
+                        final credential = <String, dynamic>{
+                          if (credentialTitle.text.trim().isNotEmpty)
+                            'credential_title': credentialTitle.text.trim(),
+                          if (credentialIssuer.text.trim().isNotEmpty)
+                            'credential_issuer': credentialIssuer.text.trim(),
+                          if (credentialId.text.trim().isNotEmpty)
+                            'credential_id': credentialId.text.trim(),
+                          if (issuedDate.text.trim().isNotEmpty)
+                            'issued_date': issuedDate.text.trim(),
+                          if (scope.text.trim().isNotEmpty)
+                            'scope_of_practice': scope.text.trim(),
+                          if (type == 'gym' && gymHandle.text.trim().isNotEmpty)
+                            'gym_handle': gymHandle.text.trim(),
+                        };
+                        Navigator.pop(sheetCtx, (
+                          type: type,
+                          docType: docType,
+                          notes: notes.text.trim(),
+                          credential: credential,
+                        ));
+                      },
+                      child: Text(type == 'id'
+                          ? 'Start ID verification'
+                          : 'Choose evidence & submit'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    notes.dispose();
+    credentialTitle.dispose();
+    credentialIssuer.dispose();
+    credentialId.dispose();
+    issuedDate.dispose();
+    scope.dispose();
+    gymHandle.dispose();
+
+    if (choice == null || !context.mounted) return;
+    if (choice.type == 'id') {
+      await _startIdWizard(context, ref, docType: choice.docType);
+    } else {
+      await _submitCredentialRequest(context, ref, choice);
+    }
+  }
+
+  Future<void> _startIdWizard(
+    BuildContext context,
+    WidgetRef ref, {
+    required String docType,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final repo = ref.read(verificationRepositoryProvider);
+    final picker = ImagePicker();
+    try {
+      final created = await repo.createSubmission({
+        'verification_type': 'id',
+      });
+      final data = created is Map ? created['data'] : created;
+      final id = data is Map ? '${data['id']}' : '';
+      if (id.isEmpty) {
+        throw const FormatException('The server did not return a draft id.');
+      }
+
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Choose a photo of your ID document.')),
+      );
+      final idFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (idFile == null) return;
+      await repo.uploadStep(
+        id,
+        MultipartFile.fromBytes(
+          await File(idFile.path).readAsBytes(),
+          filename: idFile.name,
+        ),
+        'id_document',
+        docType,
+      );
+
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Now take a selfie for the liveness check.')),
+      );
+      var selfie = await picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 85,
+      );
+      selfie ??= await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (selfie == null) return;
+      await repo.uploadStep(
+        id,
+        MultipartFile.fromBytes(
+          await File(selfie.path).readAsBytes(),
+          filename: selfie.name,
+        ),
+        'selfie_liveness',
+        '',
+      );
+
+      await repo.submitSubmission(id);
+      ref.invalidate(verificationSubmissionsProvider);
+      ref.invalidate(verificationDocumentsProvider);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Verification submitted — our team will review it.'),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(apiErrorMessage(
+            e,
+            fallback: 'Could not complete ID verification.',
+          )),
+        ),
+      );
+    }
+  }
+
+  Future<void> _submitCredentialRequest(
+    BuildContext context,
+    WidgetRef ref,
+    ({String type, String docType, String notes, Map<String, dynamic> credential}) choice,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final repo = ref.read(verificationRepositoryProvider);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Uploading evidence and creating the request…')),
+    );
+    try {
+      final uploadRaw = await repo.uploadCredentialFile({
+        'document_type': choice.docType,
+        'file': MultipartFile.fromBytes(
+          await File(picked.path).readAsBytes(),
+          filename: picked.name,
+        ),
+      });
+      final uploadData = uploadRaw is Map ? uploadRaw['data'] : uploadRaw;
+      final documentId =
+          uploadData is Map ? '${uploadData['id'] ?? ''}' : '';
+
+      final created = await repo.createSubmission({
+        'verification_type': choice.type,
+        'notes': choice.notes,
+        if (documentId.isNotEmpty) 'document_ids': [documentId],
+        ...choice.credential,
+      });
+      final data = created is Map ? created['data'] : created;
+      final submissionId = data is Map ? '${data['id'] ?? ''}' : '';
+      if (submissionId.isNotEmpty) {
+        await repo.submitSubmission(submissionId);
+      }
+
+      ref.invalidate(verificationSubmissionsProvider);
+      ref.invalidate(verificationDocumentsProvider);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Verification submitted for review.')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(apiErrorMessage(
+            e,
+            fallback: 'Could not create the verification request.',
+          )),
+        ),
+      );
+    }
   }
 
   Widget _applicationCard(BuildContext context, MyApplication application) {
@@ -332,7 +704,8 @@ class VerificationScreen extends ConsumerWidget {
     );
   }
 
-  Widget _submissionCard(BuildContext context, VerificationSubmission submission) {
+  Widget _submissionCard(
+    BuildContext context, WidgetRef ref, VerificationSubmission submission) {
     final cs = Theme.of(context).colorScheme;
     final tint = submission.isApproved
         ? BuddyColors.green
@@ -414,6 +787,35 @@ class VerificationScreen extends ConsumerWidget {
             _shortDateTime(submission.submittedAt ?? submission.createdAt),
             style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
           ),
+          if (submission.status == 'draft') ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  await ref
+                      .read(verificationRepositoryProvider)
+                      .submitSubmission(submission.id);
+                  ref.invalidate(verificationSubmissionsProvider);
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text('Submitted for review.')),
+                  );
+                } catch (e) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(apiErrorMessage(
+                        e,
+                        fallback: 'Could not submit that request.',
+                      )),
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.send_outlined, size: 14),
+              label: const Text('Submit for review',
+                  style: TextStyle(fontSize: 12)),
+            ),
+          ],
         ],
       ),
     );

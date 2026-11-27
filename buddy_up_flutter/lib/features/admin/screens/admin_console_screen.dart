@@ -100,6 +100,12 @@ class AdminConsoleScreen extends ConsumerWidget {
       icon: Icons.shield_outlined,
     ),
     (
+      route: '/admin/appeals',
+      label: 'Appeals',
+      blurb: 'Moderation appeals awaiting a decision',
+      icon: Icons.gavel_outlined,
+    ),
+    (
       route: '/admin/approvals',
       label: 'Approvals',
       blurb: 'Two-person queue — a ban applies only when approved',
@@ -165,6 +171,12 @@ class AdminConsoleScreen extends ConsumerWidget {
       label: 'Recommendation signals',
       blurb: 'Observed feedback and impressions — no forecast',
       icon: Icons.insights_outlined,
+    ),
+    (
+      route: '/admin/models',
+      label: 'Models',
+      blurb: 'AI registry health — fallback rate, latency and cost per model',
+      icon: Icons.smart_toy_outlined,
     ),
   ];
 

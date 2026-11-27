@@ -33,7 +33,7 @@ from .serializers import (
     PollSerializer, DraftSerializer,
     CommentCreateSerializer, ReactionInputSerializer, RepostSerializer,
     SavePostSerializer, PollCreateSerializer, OptionVoteSerializer,
-    SoundSerializer, SoundCreateSerializer,
+    SoundSerializer, SoundCreateSerializer, optimize_post_queryset,
 )
 from apps.profiles.models import BuddyRelationship, Profile
 from apps.ai.audit import audit_ai_call
@@ -57,13 +57,30 @@ def _page_window(ordered, cursor, size):
     return list(ordered)[idx + 1: idx + 1 + size]
 
 
+def _optimize_page(posts, request):
+    """Re-fetch one page with bulk annotations and prefetches.
+
+    Ranking and video filtering happen on lightweight rows; only the page
+    that is actually serialized pays for counts, reactions, saves, reposts
+    and media. One extra query per page replaces the per-post N+1.
+    """
+    if not posts:
+        return []
+    model = type(posts[0])
+    ids = [post.id for post in posts]
+    by_id = {
+        post.id: post
+        for post in optimize_post_queryset(model.objects.filter(id__in=ids), request)
+    }
+    return [by_id[post.id] for post in posts if post.id in by_id]
+
+
 def _paginate_ordered(request, ordered):
     """Unified pipeline: rank → fetch → serve, paginated by post id.
 
     Every discovery tab routes through here so pagination never silently
     ends while more posts exist in the underlying queryset.
     """
-    user_profile = request.user.profile
     paginator = CursorPagination()
     page_size = paginator.get_page_size(request)
     try:
@@ -75,8 +92,8 @@ def _paginate_ordered(request, ordered):
         }, status=status.HTTP_400_BAD_REQUEST)
     page_posts = window[:page_size]
     has_next = len(window) > page_size
-    deduped = _dedupe_reposts_for_viewer(page_posts, user_profile)
-    serializer = FeedPostSerializer(deduped, many=True, context={'request': request})
+    page_posts = _optimize_page(page_posts, request)
+    serializer = FeedPostSerializer(page_posts, many=True, context={'request': request})
     next_cursor = str(page_posts[-1].id) if (has_next and page_posts) else None
     return Response({
         'success': True,
@@ -84,8 +101,36 @@ def _paginate_ordered(request, ordered):
         'message': 'OK',
         'errors': None,
         'pagination': {
-            'count': len(deduped),
+            'count': len(page_posts),
             'next': _next_link(request, next_cursor) if next_cursor else None,
+            'previous': None,
+        },
+    })
+
+
+def _paginate_queryset(request, queryset):
+    """Cursor-paginate a queryset without materialising the whole table."""
+    from rest_framework.exceptions import NotFound
+    paginator = CursorPagination()
+    try:
+        page = paginator.paginate_queryset(queryset, request)
+    except NotFound:
+        return Response({
+            'success': False, 'data': None,
+            'message': 'Invalid or expired feed cursor.',
+            'errors': {'cursor': ['Invalid or expired feed cursor.']},
+            'pagination': None,
+        }, status=status.HTTP_400_BAD_REQUEST)
+    page = _optimize_page(list(page), request)
+    serializer = FeedPostSerializer(page, many=True, context={'request': request})
+    return Response({
+        'success': True,
+        'data': serializer.data,
+        'message': 'OK',
+        'errors': None,
+        'pagination': {
+            'count': len(page),
+            'next': paginator.get_next_link(),
             'previous': None,
         },
     })
@@ -817,14 +862,14 @@ def _rank_for_you(request, user_profile, queryset, buddy_ids, followed_ids, gym_
         ),
     )[:ai_ranking.POOL_SIZE])
     if not pool:
-        ordered = pinned + list(rest_qs.order_by('-created_at'))
+        ordered = pinned + list(rest_qs.order_by('-created_at')[:ai_ranking.POOL_SIZE])
         return _paginate_ordered(request, ordered)
 
     candidates = ai_ranking.build_candidates(pool, user_profile, buddy_ids, followed_ids, gym_ids)
     ranked = ai_ranking.rank_candidates(str(user_profile.user_id), candidates)
     if ranked is None:
         # AI unavailable: pin first, then pure chronological — same pagination contract.
-        ordered = pinned + list(rest_qs.order_by('-created_at'))
+        ordered = pinned + list(rest_qs.order_by('-created_at')[:ai_ranking.POOL_SIZE])
         return _paginate_ordered(request, ordered)
 
     score_by_id = {c['post_id']: c for c in ranked}
@@ -832,9 +877,13 @@ def _rank_for_you(request, user_profile, queryset, buddy_ids, followed_ids, gym_
         pool,
         key=lambda p: -score_by_id.get(str(p.id), {}).get('ml_score', 0.0),
     )
-    # Everything beyond the ML pool keeps chronological order as a stable tail,
-    # so infinite scroll never hits an empty page while more posts exist.
-    remainder = list(rest_qs.exclude(id__in=[p.id for p in ordered_pool]).order_by('-created_at'))
+    # Keep a bounded chronological tail instead of materialising every
+    # remaining post. The ranked pool is already capped; an unbounded tail
+    # made the feed's memory use proportional to the entire table.
+    remainder = list(
+        rest_qs.exclude(id__in=[p.id for p in ordered_pool])
+        .order_by('-created_at')[:ai_ranking.POOL_SIZE]
+    )
     deduped = _dedupe_reposts_for_viewer(pinned + ordered_pool + remainder, user_profile)
 
     # Persist rank + algorithm context per user for a short window so
@@ -905,11 +954,15 @@ class FeedView(views.APIView):
             ).order_by('-is_pinned', '-rank', '-created_at')
             queryset = _apply_hide_mute_exclusions(queryset, user_profile)
             queryset = gate_mature_queryset(request, queryset)
-            # Video-ness is verified in Python (media_urls is JSON) — keep
-            # the full ranked list so scrolling never runs dry.
+            # Video-ness is verified in Python (media_urls is JSON). Scan a
+            # bounded candidate window rather than every video row in the
+            # table; the cap is generous enough for a long scroll session.
             video_types = ['short_video', 'long_video']
-            videos = [p for p in queryset.filter(post_type__in=video_types)
-                      if any(_looks_like_video(u) for u in (p.media_urls or []))]
+            candidate_cap = max(1000, CursorPagination().get_page_size(request) * 20)
+            videos = [
+                p for p in queryset.filter(post_type__in=video_types)[:candidate_cap]
+                if any(_looks_like_video(u) for u in (p.media_urls or []))
+            ]
             return _paginate_ordered(request, videos)
 
         if tab == 'following':
@@ -966,11 +1019,11 @@ class FeedView(views.APIView):
             if ranked_response is not None:
                 return ranked_response
 
-        # following / nearby land here — all tabs share the same id-cursor
-        # pagination so infinite scroll keeps serving posts while they exist.
+        # following / nearby land here. These are ordinary querysets, so
+        # cursor-paginate in SQL instead of materialising the whole table.
         queryset = _apply_hide_mute_exclusions(queryset, user_profile)
         queryset = gate_mature_queryset(request, queryset)
-        return _paginate_ordered(request, queryset)
+        return _paginate_queryset(request, queryset)
 
 
 # Roles that moderate a gym's own feed. Kept as one tuple because pinning and
@@ -1039,6 +1092,9 @@ class PostDetailView(views.APIView):
         if request.user.is_authenticated:
             _record_post_view(post, request.user.profile)
 
+        post = optimize_post_queryset(
+            Post.objects.filter(id=post.id), request,
+        ).first() or post
         serializer = PostSerializer(post, context={'request': request})
         data = dict(serializer.data)
         if post.moderation_status == 'removed':
@@ -1694,7 +1750,8 @@ class SavedPostsView(views.APIView):
         post_ids = saves.values_list('post_id', flat=True)
         posts = Post.objects.filter(
             id__in=post_ids,
-        ).exclude(moderation_status='removed').select_related('author').order_by('-created_at')
+        ).exclude(moderation_status='removed').order_by('-created_at')
+        posts = optimize_post_queryset(posts, request)
 
         count = posts.count()
         paginator = CursorPagination()

@@ -96,6 +96,9 @@ class ShopSerializer(serializers.ModelSerializer):
         ]
 
     def get_member_count(self, obj):
+        annotated = getattr(obj, '_member_count', None)
+        if annotated is not None:
+            return annotated
         return obj.memberships.count()
 
     def get_cover_url(self, obj):
@@ -263,6 +266,9 @@ class MealPlanSerializer(serializers.ModelSerializer):
                 'verification_status': obj.shop.verification_status}
 
     def get_is_purchased(self, obj):
+        annotated = getattr(obj, '_is_purchased', None)
+        if annotated is not None:
+            return bool(annotated)
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return False
@@ -353,6 +359,9 @@ class TrainingProgrammeSerializer(serializers.ModelSerializer):
                 'verification_status': obj.shop.verification_status}
 
     def get_is_purchased(self, obj):
+        annotated = getattr(obj, '_is_purchased', None)
+        if annotated is not None:
+            return bool(annotated)
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return False

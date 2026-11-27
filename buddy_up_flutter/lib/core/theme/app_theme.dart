@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Web design tokens (tailwind.config.ts) mirrored here so both clients look
 /// the same on every screen.
@@ -259,24 +260,31 @@ ThemeData buildBuddyHighContrastTheme() {
 /// trio the web loads from Google Fonts (`font-display`, `font-heading`,
 /// `font-body`).
 TextTheme _applyWebFonts(TextTheme base) {
-  TextStyle? withFont(TextStyle? style, String fontFamily) =>
-      style?.copyWith(fontFamily: fontFamily);
+  // Use the same actual font providers as the web client. Merely setting
+  // `fontFamily` leaves Flutter silently falling back to Roboto unless the
+  // family is bundled or supplied by GoogleFonts.
+  TextStyle? displayFont(TextStyle? style) =>
+      style == null ? null : GoogleFonts.syne(textStyle: style);
+  TextStyle? headingFont(TextStyle? style) =>
+      style == null ? null : GoogleFonts.plusJakartaSans(textStyle: style);
+  TextStyle? bodyFont(TextStyle? style) =>
+      style == null ? null : GoogleFonts.inter(textStyle: style);
   return base.copyWith(
-    displayLarge: withFont(base.displayLarge, 'Syne'),
-    displayMedium: withFont(base.displayMedium, 'Syne'),
-    displaySmall: withFont(base.displaySmall, 'Syne'),
-    headlineLarge: withFont(base.headlineLarge, 'Syne'),
-    headlineMedium: withFont(base.headlineMedium, 'Syne'),
-    headlineSmall: withFont(base.headlineSmall, 'Syne'),
-    titleLarge: withFont(base.titleLarge, 'Plus Jakarta Sans'),
-    titleMedium: withFont(base.titleMedium, 'Plus Jakarta Sans'),
-    titleSmall: withFont(base.titleSmall, 'Plus Jakarta Sans'),
-    bodyLarge: withFont(base.bodyLarge, 'Inter'),
-    bodyMedium: withFont(base.bodyMedium, 'Inter'),
-    bodySmall: withFont(base.bodySmall, 'Inter'),
-    labelLarge: withFont(base.labelLarge, 'Plus Jakarta Sans'),
-    labelMedium: withFont(base.labelMedium, 'Plus Jakarta Sans'),
-    labelSmall: withFont(base.labelSmall, 'Plus Jakarta Sans'),
+    displayLarge: displayFont(base.displayLarge),
+    displayMedium: displayFont(base.displayMedium),
+    displaySmall: displayFont(base.displaySmall),
+    headlineLarge: displayFont(base.headlineLarge),
+    headlineMedium: displayFont(base.headlineMedium),
+    headlineSmall: displayFont(base.headlineSmall),
+    titleLarge: headingFont(base.titleLarge),
+    titleMedium: headingFont(base.titleMedium),
+    titleSmall: headingFont(base.titleSmall),
+    bodyLarge: bodyFont(base.bodyLarge),
+    bodyMedium: bodyFont(base.bodyMedium),
+    bodySmall: bodyFont(base.bodySmall),
+    labelLarge: headingFont(base.labelLarge),
+    labelMedium: headingFont(base.labelMedium),
+    labelSmall: headingFont(base.labelSmall),
   );
 }
 

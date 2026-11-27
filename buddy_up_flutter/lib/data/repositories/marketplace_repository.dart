@@ -117,6 +117,8 @@ abstract class MarketplaceRepository {
     @Query('upcoming') bool? upcoming,
     @Query('scope') String? scope,
     @Query('q') String? query,
+    @Query('event_type') String? eventType,
+    @Query('verified') bool? verified,
     @Query('lat') double? lat,
     @Query('lng') double? lng,
     @Query('radius_km') double? radiusKm,
@@ -127,6 +129,17 @@ abstract class MarketplaceRepository {
 
   @GET('/marketplace/events/{id}/')
   Future<dynamic> getEvent(@Path('id') String eventId);
+
+  /// Post-event feedback. Attendees read their own submission; organisers
+  /// read the aggregate. The endpoint upserts one row per (event, user).
+  @GET('/marketplace/events/{id}/feedback/')
+  Future<dynamic> getEventFeedback(@Path('id') String eventId);
+
+  @POST('/marketplace/events/{id}/feedback/')
+  Future<dynamic> submitEventFeedback(
+    @Path('id') String eventId,
+    @Body() Map<String, dynamic> data,
+  );
 
   @PUT('/marketplace/events/{id}/')
   Future<dynamic> updateEvent(

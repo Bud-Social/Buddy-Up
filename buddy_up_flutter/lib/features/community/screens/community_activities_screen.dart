@@ -12,11 +12,16 @@ class CommunityActivitiesScreen extends ConsumerWidget {
   final String communityName;
   final bool canManage;
 
+  /// 0 = Events, 1 = Lives, 2 = Schedules. Used when a community tab
+  /// deep-links into the matching activity list.
+  final int initialTab;
+
   const CommunityActivitiesScreen({
     super.key,
     required this.communityId,
     required this.communityName,
     this.canManage = false,
+    this.initialTab = 0,
   });
 
   @override
@@ -25,6 +30,7 @@ class CommunityActivitiesScreen extends ConsumerWidget {
 
     return DefaultTabController(
       length: 3,
+      initialIndex: initialTab.clamp(0, 2),
       child: Scaffold(
         appBar: AppBar(
           title: Text('$communityName · Activities'),

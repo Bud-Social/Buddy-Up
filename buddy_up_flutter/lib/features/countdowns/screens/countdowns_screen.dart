@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../analytics/providers/analytics_provider.dart';
+import '../../feed/providers/feed_provider.dart' show composerExpandRequestProvider;
 import '../models/countdown_models.dart';
 import '../providers/countdown_provider.dart';
 
@@ -25,10 +28,19 @@ class CountdownsScreen extends ConsumerStatefulWidget {
   ConsumerState<CountdownsScreen> createState() => _CountdownsScreenState();
 }
 
+enum _CountdownFilter { all, active, completed, archived }
+
 class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
   String? _creatingTemplateId;
   final TextEditingController _customReasonController = TextEditingController();
   int _targetCount = 0;
+  bool _shareBusy = false;
+  String _shareVisibility = 'public';
+  final TextEditingController _shareCaptionController = TextEditingController();
+  _CountdownFilter _filter = _CountdownFilter.all;
+  String? _historyId;
+  List<CountdownEvent> _history = const [];
+  bool _historyLoading = false;
 
   @override
   void initState() {
@@ -39,6 +51,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
   @override
   void dispose() {
     _customReasonController.dispose();
+    _shareCaptionController.dispose();
     super.dispose();
   }
 
@@ -314,8 +327,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                ref.read(countdownsProvider.notifier).load(isActive: true),
+            onPressed: () => ref.read(countdownsProvider.notifier).load(),
           ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
@@ -328,8 +340,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
               ref.watch(countdownsProvider).countdowns.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: () =>
-                  ref.read(countdownsProvider.notifier).load(isActive: true),
+              onRefresh: () => ref.read(countdownsProvider.notifier).load(),
               child: _buildBody(state),
             ),
       floatingActionButton: FloatingActionButton(
@@ -362,40 +373,79 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
       );
     }
 
-    final active = state.countdowns.where((c) => c.isActive).toList();
-    final completed = state.countdowns.where((c) => !c.isActive).toList();
+    bool matches(UserCountdown c) => switch (_filter) {
+          _CountdownFilter.all => true,
+          _CountdownFilter.active => c.isActive && c.completedAt == null,
+          _CountdownFilter.completed => c.completedAt != null,
+          _CountdownFilter.archived => !c.isActive && c.completedAt == null,
+        };
+
+    final visible = state.countdowns.where(matches).toList();
+    final active = visible
+        .where((c) => c.isActive && c.completedAt == null)
+        .toList();
+    final completed = visible.where((c) => c.completedAt != null).toList();
+    final archived = visible
+        .where((c) => !c.isActive && c.completedAt == null)
+        .toList();
+
+    Widget sectionHeader(String label) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        );
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Active countdowns section
-        if (active.isNotEmpty) ...[
-          Text(
-            'Active',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final filter in _CountdownFilter.values)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(switch (filter) {
+                      _CountdownFilter.all => 'All',
+                      _CountdownFilter.active => 'Active',
+                      _CountdownFilter.completed => 'Completed',
+                      _CountdownFilter.archived => 'Archived',
+                    }),
+                    selected: _filter == filter,
+                    selectedColor: BuddyColors.green.withValues(alpha: 0.2),
+                    onSelected: (_) => setState(() => _filter = filter),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 12),
-          ...active.map((c) => _countdownCard(c, isCompleted: false)),
-          const SizedBox(height: 24),
+        ),
+        const SizedBox(height: 16),
+        if (_filter == _CountdownFilter.all) ...[
+          if (active.isNotEmpty) ...[
+            sectionHeader('Active'),
+            ...active.map(_countdownCard),
+            const SizedBox(height: 24),
+          ],
+          if (completed.isNotEmpty) ...[
+            sectionHeader('Completed'),
+            ...completed.map(_countdownCard),
+            const SizedBox(height: 24),
+          ],
+          if (archived.isNotEmpty) ...[
+            sectionHeader('Archived'),
+            ...archived.map(_countdownCard),
+          ],
+        ] else ...[
+          ...visible.map(_countdownCard),
         ],
-        // Completed countdowns section
-        if (completed.isNotEmpty) ...[
-          Text(
-            'Completed',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...completed.map((c) => _countdownCard(c, isCompleted: true)),
-        ],
-        if (state.countdowns.isEmpty)
+        if (visible.isEmpty)
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -404,7 +454,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                     size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 const SizedBox(height: 16),
                 Text(
-                  'No countdowns yet',
+                  state.countdowns.isEmpty
+                      ? 'No countdowns yet'
+                      : 'Nothing in this view',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 18,
@@ -412,7 +464,10 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Track sobriety, gym attendance, walking days and more.',
+                  state.countdowns.isEmpty
+                      ? 'Track sobriety, gym attendance, walking days and more.'
+                      : 'Try another filter, or start a new countdown.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ],
@@ -422,7 +477,8 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
     );
   }
 
-  Widget _countdownCard(UserCountdown c, {required bool isCompleted}) {
+  Widget _countdownCard(UserCountdown c) {
+    final isCompleted = c.completedAt != null;
     final color = _colorFor(
       c.templateDetail ??
           const CountdownTemplate(code: '', title: '', color: '#6B7280'),
@@ -595,6 +651,53 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
               ],
             ),
             const SizedBox(height: 8),
+            Row(
+              children: [
+                if (isCompleted)
+                  TextButton.icon(
+                    onPressed: ref.watch(countdownsProvider).isLoading
+                        ? null
+                        : () => _recreate(c),
+                    icon: const Icon(Icons.replay, size: 14),
+                    label: const Text('Recreate'),
+                    style: TextButton.styleFrom(
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: BuddyColors.green,
+                      ),
+                    ),
+                  ),
+                TextButton.icon(
+                  onPressed: () => _toggleHistory(c),
+                  icon: const Icon(Icons.history, size: 14),
+                  label: Text(_historyId == c.id ? 'Hide history' : 'History'),
+                  style: TextButton.styleFrom(
+                    textStyle: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                if (isCompleted || c.countdownType == 'manual')
+                  TextButton.icon(
+                    onPressed: ref.watch(countdownsProvider).isLoading ? null : () => _shareCountdown(c),
+                    icon: const Icon(Icons.share, size: 14),
+                    label: const Text('Share'),
+                    style: TextButton.styleFrom(
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: BuddyColors.green,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (_historyId == c.id) _historyPanel(),
+            const SizedBox(height: 8),
             Text(
               'Started ${_formatDate(c.startDate)}',
               style: TextStyle(
@@ -603,6 +706,293 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Load a countdown's stream — the log of every check-in, automatic advance,
+  /// reset and completion. Mirrors the web History disclosure.
+  Future<void> _toggleHistory(UserCountdown c) async {
+    if (_historyId == c.id) {
+      setState(() {
+        _historyId = null;
+        _history = const [];
+      });
+      return;
+    }
+    setState(() {
+      _historyId = c.id;
+      _history = const [];
+      _historyLoading = true;
+    });
+    try {
+      final raw = await ref
+          .read(countdownRepositoryProvider)
+          .listEvents(c.id, limit: 50);
+      final data = raw is Map ? raw['data'] : raw;
+      final events = (data is List ? data : const [])
+          .whereType<Map>()
+          .map((e) => CountdownEvent.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      if (mounted && _historyId == c.id) {
+        setState(() => _history = events);
+      }
+    } catch (_) {
+      if (mounted && _historyId == c.id) {
+        setState(() => _history = const []);
+      }
+    } finally {
+      if (mounted) setState(() => _historyLoading = false);
+    }
+  }
+
+  String _eventLabel(String type) => switch (type) {
+        'create' => 'Created',
+        'checkin' => 'Checked in',
+        'reset' => 'Reset',
+        'auto_advance' => 'Advanced automatically',
+        'complete' => 'Completed',
+        'edit' => 'Edited',
+        _ => type,
+      };
+
+  Widget _historyPanel() {
+    if (_historyLoading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Loading history…',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    if (_history.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'No history yet — check in and it will appear here.',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 12,
+          ),
+        ),
+      );
+    }
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: BuddyColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final event in _history)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _eventLabel(event.eventType),
+                      style: TextStyle(
+                        color: event.eventType == 'reset'
+                            ? Colors.red
+                            : event.eventType == 'complete'
+                                ? BuddyColors.green
+                                : Theme.of(context).colorScheme.onSurface,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${event.countAfter} ${event.unit}',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    event.occurredAt == null
+                        ? ''
+                        : DateFormat('MMM d, HH:mm')
+                            .format(event.occurredAt!.toLocal()),
+                    style: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.7),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Start a fresh run from a completed countdown — the web "Recreate" action.
+  Future<void> _recreate(UserCountdown c) async {
+    final created = await ref.read(countdownsProvider.notifier).create(
+          templateId: c.templateId ?? '',
+          customReason: c.customReason,
+          countdownType: c.countdownType,
+          unit: c.unit,
+          targetCount: c.targetCount,
+        );
+    if (created == null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ref.read(countdownsProvider).error ?? 'Could not recreate that countdown.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// Share a countdown back into the feed — mirrors the web composer hand-off:
+  /// prepare a share draft, then drop the user on the inline composer with it.
+  Future<void> _shareCountdown(UserCountdown c) async {
+    final pct = c.progressPercent;
+    final target = c.targetCount;
+    _shareVisibility = 'public';
+    _shareCaptionController.text = [
+      c.displayReason,
+      target > 0 ? '${c.currentCount} / $target ${c.unit}' : '${c.currentCount} ${c.unit}',
+      'Progress: ${pct.toStringAsFixed(0)}%',
+      '#BuddyUp #Countdown #Streak',
+    ].join('\n');
+    setState(() {});
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: BuddyColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Share countdown',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                c.displayReason,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final v in const ['public', 'buddies', 'private'])
+                    OutlinedButton(
+                      onPressed: _shareBusy ? null : () => setState(() => _shareVisibility = v),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: _shareVisibility == v
+                              ? BuddyColors.green
+                              : Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                        foregroundColor: _shareVisibility == v
+                            ? BuddyColors.green
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      child: Text(
+                        v == 'public' ? 'Public' : v == 'buddies' ? 'Buddies' : 'Private',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _shareCaptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Caption',
+                  hintText: 'Say something about this countdown…',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _shareBusy
+                    ? null
+                    : () async {
+                        setState(() => _shareBusy = true);
+                        try {
+                          await ref
+                              .read(analyticsRepositoryProvider)
+                              .sharePrepare(
+                            {
+                              'kind': 'countdown',
+                              'obj_id': c.id,
+                              'visibility': _shareVisibility,
+                              'body': _shareCaptionController.text,
+                            },
+                          );
+                          if (!mounted) return;
+                          Navigator.of(context).pop<void>();
+                          ref.read(composerExpandRequestProvider.notifier).bump();
+                          context.go('/feed');
+                        } catch (_) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Could not prepare that countdown for sharing.')),
+                            );
+                          }
+                        } finally {
+                          if (mounted) setState(() => _shareBusy = false);
+                        }
+                      },
+                child: _shareBusy
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: BuddyColors.black,
+                        ),
+                      )
+                    : const Text('Share'),
+              ),
+            ],
+          ),
         ),
       ),
     );

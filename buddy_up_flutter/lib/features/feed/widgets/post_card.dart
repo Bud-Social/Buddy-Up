@@ -13,7 +13,6 @@ import '../../../core/utils/profanity.dart';
 import '../../../data/models/post.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/media_gallery.dart';
-import '../../../shared/widgets/reaction_bar.dart';
 import '../../../shared/widgets/toast.dart';
 import '../providers/feed_provider.dart';
 import '../../settings/providers/settings_providers.dart';
@@ -212,12 +211,14 @@ class _PostCardState extends ConsumerState<PostCard> {
     final viewer = ref.watch(authProvider).profile;
     final viewerUserId = viewer?.userId ?? ref.read(authProvider).user?.id;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        border: const Border(
-          bottom: BorderSide(color: BuddyColors.border, width: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+          width: 1,
         ),
       ),
       child: Row(
@@ -240,6 +241,26 @@ class _PostCardState extends ConsumerState<PostCard> {
                     viewerUserId: viewerUserId,
                     gymActor: widget.gymActor,
                   ),
+
+                if (_post.isPinned) ...[
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Text('📌', style: TextStyle(fontSize: 12)),
+                        SizedBox(width: 6),
+                        Text(
+                          'Pinned post',
+                          style: TextStyle(
+                            color: BuddyColors.gold,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 _buildHeader(context),
                 if (_displayBody.isNotEmpty) ...[
@@ -268,21 +289,6 @@ class _PostCardState extends ConsumerState<PostCard> {
                   _buildWorkoutLog(context),
                 ],
                 AiAnalysisCard(analysis: _post.aiAnalysis),
-                const SizedBox(height: 10),
-                _buildActionBar(context, viewer),
-                const SizedBox(height: 8),
-                ReactionBar(
-                  counts: _reactionCounts,
-                  userReaction: _userReaction,
-                  onReact: (r) {
-                    _trackPostInteraction('like');
-                    widget.onReact?.call(_post.id, r);
-                  },
-                  onUnreact: () {
-                    _trackPostInteraction('unlike');
-                    widget.onReact?.call(_post.id, '');
-                  },
-                ),
                 if (_displayGymTagName != null) ...[
                   const SizedBox(height: 6),
                   _buildGymTag(),
@@ -411,6 +417,74 @@ class _PostCardState extends ConsumerState<PostCard> {
     );
   }
 
+  /// Web parity: tap the rail heart for 💪, long-press for the full picker.
+  void _showReactionPicker(BuildContext context) {
+    final current = _userReaction == null ? null : toReactionEmoji(_userReaction!);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: BuddyColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'React',
+                style: TextStyle(
+                  color: Theme.of(ctx).colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  for (final emoji in reactionEmojis)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _trackPostInteraction(
+                          current == emoji ? 'unlike' : 'like',
+                        );
+                        widget.onReact?.call(
+                          _post.id,
+                          current == emoji ? '' : emoji,
+                        );
+                      },
+                      child: Container(
+                        width: 52,
+                        height: 52,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: current == emoji
+                              ? BuddyColors.green.withValues(alpha: 0.15)
+                              : BuddyColors.surfaceRaised,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: current == emoji
+                                ? BuddyColors.green
+                                : Colors.transparent,
+                          ),
+                        ),
+                        child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildActionBar(BuildContext context, final viewer) {
     final idle = Theme.of(context).colorScheme.onSurfaceVariant;
     return SizedBox(
@@ -429,6 +503,7 @@ class _PostCardState extends ConsumerState<PostCard> {
               _trackPostInteraction(liked ? 'unlike' : 'like');
               widget.onReact?.call(_post.id, liked ? '' : '💪');
             },
+            onLongPress: () => _showReactionPicker(context),
           ),
           const SizedBox(height: 12),
           _ActionButton(
@@ -995,14 +1070,22 @@ class _ActionButton extends StatelessWidget {
   final Color? color;
   final String? label;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
-  const _ActionButton({required this.icon, this.color, this.label, this.onTap});
+  const _ActionButton({
+    required this.icon,
+    this.color,
+    this.label,
+    this.onTap,
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
     final tint = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,

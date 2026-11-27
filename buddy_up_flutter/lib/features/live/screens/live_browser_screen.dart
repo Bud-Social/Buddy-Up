@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../providers/live_provider.dart';
 import '../widgets/live_card.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/constants.dart';
-import '../../../shared/navigation/app_nav.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class LiveBrowserScreen extends ConsumerStatefulWidget {
-  const LiveBrowserScreen({super.key});
+  final String? initialCategory;
+
+  const LiveBrowserScreen({super.key, this.initialCategory});
 
   @override
   ConsumerState<LiveBrowserScreen> createState() => _LiveBrowserScreenState();
@@ -24,7 +27,11 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    Future.microtask(() => ref.read(liveBrowserProvider.notifier).browse());
+    Future.microtask(
+      () => ref
+          .read(liveBrowserProvider.notifier)
+          .browse(category: widget.initialCategory),
+    );
   }
 
   @override
@@ -46,20 +53,16 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
     final notifier = ref.read(liveBrowserProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          tooltip: 'Menu',
-          onPressed: () => AppNav.open(context),
-        ),
-        title: const Text('Lives'),
+      appBar: MainAppBar(
+        title: 'Lives',
         actions: [
           IconButton(
-            icon: const Icon(Icons.videocam),
+            icon: const Icon(LucideIcons.video),
             onPressed: () => context.push('/lives/create'),
+            tooltip: 'Go live',
           ),
           IconButton(
-            icon: const Icon(Icons.shuffle),
+            icon: const Icon(LucideIcons.shuffle),
             onPressed: () => context.push('/lives/random-drop'),
             tooltip: 'Random Drop',
           ),
@@ -68,9 +71,54 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
       body: Column(
         children: [
           _buildTabBar(state, notifier),
+          if (state.activeTab == 'replays') _buildReplayScopeSwitcher(state, notifier),
           _buildCategoryChips(state, notifier),
           Expanded(child: _buildBody(state)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildReplayScopeSwitcher(LiveBrowserState state, LiveBrowserNotifier notifier) {
+    if (state.activeTab != 'replays') return const SizedBox.shrink();
+    final scope = state.replayScope;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          _replayScopeChip('All', null, scope != 'mine', () => notifier.setReplayScope(null)),
+          _replayScopeChip('My Replays', 'mine', scope == 'mine', () => notifier.setReplayScope('mine')),
+        ],
+      ),
+    );
+  }
+
+  Widget _replayScopeChip(String label, String? value, bool isActive, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? BuddyColors.green : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isActive ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -117,16 +165,19 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
   }
 
   Widget _buildTabBar(LiveBrowserState state, LiveBrowserNotifier notifier) {
-    final tabs = ['live', 'scheduled', 'replays', 'upcoming'];
-    final labels = ['Live', 'Scheduled', 'Replays', 'Upcoming'];
+    const tabs = <({String key, String label, IconData icon})>[
+      (key: 'live', label: 'Live Now', icon: LucideIcons.radio),
+      (key: 'scheduled', label: 'Upcoming', icon: LucideIcons.calendar),
+      (key: 'replays', label: 'Replays', icon: LucideIcons.play),
+    ];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: List.generate(tabs.length, (i) {
-          final isActive = state.activeTab == tabs[i];
+          final isActive = state.activeTab == tabs[i].key;
           return Expanded(
             child: GestureDetector(
-              onTap: () => notifier.setTab(tabs[i]),
+              onTap: () => notifier.setTab(tabs[i].key),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
@@ -134,14 +185,20 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
                     bottom: BorderSide(color: isActive ? BuddyColors.green : Colors.transparent, width: 2),
                   ),
                 ),
-                child: Text(
-                  labels[i],
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: isActive ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                    fontSize: 13,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(tabs[i].icon, size: 14, color: isActive ? BuddyColors.green : Theme.of(context).colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                    Text(
+                      tabs[i].label,
+                      style: TextStyle(
+                        color: isActive ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -157,13 +214,30 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
       return ErrorView(message: state.error!, onRetry: () => ref.read(liveBrowserProvider.notifier).browse());
     }
     if (state.lives.isEmpty) {
+      final emptyText = switch (state.activeTab) {
+        'live' => 'No live sessions right now',
+        'scheduled' => 'No upcoming lives',
+        'replays' => state.replayScope == 'mine'
+            ? 'No replays saved by you yet'
+            : 'No replays yet',
+        _ => 'No replays yet',
+      };
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.videocam_off, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 12),
-            Text('No lives found', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text(emptyText, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            const SizedBox(height: 8),
+            Text(
+              state.activeTab == 'live'
+                  ? 'Be the first to start a Buddy Live!'
+                  : state.activeTab == 'scheduled'
+                  ? 'Schedule a live session for your community.'
+                  : 'End a live with "Save Replay" to create one.',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 12),
+            ),
           ],
         ),
       );

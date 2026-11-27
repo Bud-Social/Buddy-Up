@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
@@ -25,6 +28,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    Future.microtask(() => ref.read(cartProvider.notifier).loadCart());
   }
 
   @override
@@ -35,42 +39,140 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final cartCount = ref.watch(cartProvider).value?.items.length ?? 0;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Marketplace', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Marketplace',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined),
-            onPressed: () => context.push('/marketplace/cart'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.receipt_long_outlined),
+            icon: const Icon(LucideIcons.package, size: 20),
+            tooltip: 'Orders',
             onPressed: () => context.push('/marketplace/orders'),
           ),
-          // Courier self-service lives here: it is the marketplace's fulfillment
-          // half, and there is nowhere else a buyer-turned-courier would look.
           IconButton(
-            icon: const Icon(Icons.local_shipping_outlined),
-            tooltip: 'Become a courier',
-            onPressed: () => context.push('/marketplace/delivery-personnel'),
+            tooltip: 'Cart',
+            onPressed: () => context.push('/marketplace/cart'),
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(LucideIcons.shoppingBag, size: 20),
+                if (cartCount > 0)
+                  Positioned(
+                    top: -5,
+                    right: -7,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: BuddyColors.green,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '$cartCount',
+                        style: const TextStyle(
+                          color: BuddyColors.black,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          // Courier self-service lives here: it is the marketplace's
+          // fulfillment half, and there is nowhere else a buyer-turned-courier
+          // would look.
+          PopupMenuButton<String>(
+            icon: const Icon(LucideIcons.truck, size: 20),
+            tooltip: 'More',
+            onSelected: (_) => context.push('/marketplace/delivery-personnel'),
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'courier',
+                child: Text('Become a courier'),
+              ),
+            ],
           ),
         ],
       ),
       body: Column(
         children: [
-          TabBar(
-            controller: _tabController,
-            // Stacked icon + label tabs — parity with web P6 (labels always
-            // visible instead of disappearing on narrow screens).
-            tabs: const [
-              Tab(icon: Icon(Icons.event_outlined, size: 18), text: 'Events'),
-              Tab(icon: Icon(Icons.restaurant_menu_outlined, size: 18), text: 'Meal Plans'),
-              Tab(icon: Icon(Icons.fitness_center_outlined, size: 18), text: 'Programmes'),
-              Tab(icon: Icon(Icons.shopping_bag_outlined, size: 18), text: 'Products'),
-            ],
-            indicatorColor: BuddyColors.green,
-            labelColor: BuddyColors.green,
-            unselectedLabelColor: BuddyColors.textSecondary,
+          // Web parity: a rounded surface rail of pill tabs, active pill solid
+          // green with black text — not an underline TabBar.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: cs.surface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: AnimatedBuilder(
+                animation: _tabController,
+                builder: (context, _) {
+                  const tabs = <({IconData icon, String label})>[
+                    (icon: LucideIcons.calendar, label: 'Events'),
+                    (icon: LucideIcons.utensils, label: 'Meal Plans'),
+                    (icon: LucideIcons.dumbbell, label: 'Programmes'),
+                    (icon: LucideIcons.shoppingBag, label: 'Products'),
+                  ];
+                  return Row(
+                    children: [
+                      for (var i = 0; i < tabs.length; i++)
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _tabController.animateTo(i),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(vertical: 7),
+                              decoration: BoxDecoration(
+                                color: _tabController.index == i
+                                    ? BuddyColors.green
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    tabs[i].icon,
+                                    size: 14,
+                                    color: _tabController.index == i
+                                        ? BuddyColors.black
+                                        : cs.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      tabs[i].label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: _tabController.index == i
+                                            ? BuddyColors.black
+                                            : cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
           Expanded(
             child: TabBarView(
@@ -347,6 +449,81 @@ class _EventsTab extends ConsumerStatefulWidget {
 
 class _EventsTabState extends ConsumerState<_EventsTab> {
   String _selectedCategory = 'all';
+  final _searchController = TextEditingController();
+  Timer? _searchDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.text = ref.read(eventsFilterProvider).query;
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      ref.read(eventsFilterProvider.notifier).setQuery(value.trim());
+    });
+  }
+
+  /// Web parity: a pill filter. Active pills fill green (or the supplied
+  /// accent); idle pills are an outlined surface.
+  Widget _pill(
+    BuildContext context, {
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    IconData? icon,
+    Color activeColor = BuddyColors.green,
+    Color? activeText,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? activeColor : cs.surfaceContainerHighest,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 13,
+                color: selected
+                    ? (activeText ?? BuddyColors.black)
+                    : cs.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: selected
+                    ? (activeText ?? BuddyColors.black)
+                    : cs.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _addToCart(MarketplaceEvent event) {
     ref.read(cartProvider.notifier).addToCart('event_ticket', {'event_id': event.id});
@@ -430,26 +607,49 @@ class _EventsTabState extends ConsumerState<_EventsTab> {
                 onPressed: () => context.push('/marketplace/tickets'),
                 child: const Text('My Tickets', style: TextStyle(fontSize: 12)),
               ),
-              TextButton.icon(
-                onPressed: () {
-                  if (filter.lat != null) {
-                    ref.read(eventsFilterProvider.notifier).setCoords(null, null);
-                    ref.read(eventsProvider.notifier).refresh();
-                  } else {
-                    _locate();
-                  }
-                },
-                icon: Icon(
-                  Icons.near_me,
-                  size: 14,
-                  color: filter.lat != null ? BuddyColors.green : null,
-                ),
-                label: Text(
-                  filter.lat != null ? 'Near me ✓' : 'Near me',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ),
             ],
+          ),
+        ),
+        // Web parity: the search box sits under the scope row.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              style: TextStyle(color: cs.onSurface, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Search events...',
+                hintStyle: TextStyle(
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+                  fontSize: 13,
+                ),
+                prefixIcon: Icon(
+                  LucideIcons.search,
+                  size: 16,
+                  color: cs.onSurfaceVariant,
+                ),
+                suffixIcon: filter.query.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: Icon(
+                          LucideIcons.x,
+                          size: 14,
+                          color: cs.onSurfaceVariant,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          ref.read(eventsFilterProvider.notifier).setQuery('');
+                        },
+                      ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 11),
+              ),
+            ),
           ),
         ),
         if (filter.lat != null && geo != null && geo.auto && geo.message != null)
@@ -483,6 +683,54 @@ class _EventsTabState extends ConsumerState<_EventsTab> {
               ],
             ),
           ),
+
+        // Format pills + verified toggle + a real "near me".
+        SizedBox(
+          height: 42,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            children: [
+              for (final format in const [
+                ('all', 'All formats'),
+                ('in_person', 'In person'),
+                ('online', 'Virtual'),
+                ('hybrid', 'Hybrid'),
+              ])
+                _pill(
+                  context,
+                  label: format.$2,
+                  selected: filter.eventType == format.$1,
+                  onTap: () => ref
+                      .read(eventsFilterProvider.notifier)
+                      .setEventType(format.$1),
+                ),
+              _pill(
+                context,
+                label: 'Verified only',
+                selected: filter.verifiedOnly,
+                onTap: () => ref
+                    .read(eventsFilterProvider.notifier)
+                    .setVerifiedOnly(!filter.verifiedOnly),
+              ),
+              _pill(
+                context,
+                label: filter.lat != null ? 'Near me ✓' : 'Near me',
+                selected: filter.lat != null,
+                icon: LucideIcons.locateFixed,
+                onTap: () {
+                  if (filter.lat != null) {
+                    ref
+                        .read(eventsFilterProvider.notifier)
+                        .setCoords(null, null);
+                  } else {
+                    _locate();
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
 
         // Category filter chips
         SizedBox(

@@ -3,13 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/messaging.dart';
-import '../../../data/models/post.dart';
 import '../../feed/widgets/post_card.dart';
 import '../../feed/screens/post_composer_screen.dart';
 import '../providers/community_provider.dart';
+import '../providers/community_activities_provider.dart';
+import '../providers/community_gym_requests_provider.dart';
+import '../widgets/community_post_card.dart';
 import 'community_settings_screen.dart';
 import 'community_members_screen.dart';
 import 'community_activities_screen.dart';
+import '../../../shared/widgets/avatar.dart';
+import '../../../shared/widgets/toast.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Tab kind for community navigation.
@@ -29,37 +33,6 @@ class _CommunityTab {
   String? get id => kind == _CommunityTabKind.all ? null : community?.id;
 }
 
-extension CommunityPostToPost on CommunityPost {
-  Post toPost() {
-    return Post(
-      id: id,
-      authorData: AuthorData(
-        userId: authorId,
-        username: authorData.username,
-        displayName: authorData.displayName.isNotEmpty
-            ? authorData.displayName
-            : authorData.username,
-        avatarUrl: authorData.avatarUrl,
-        verificationStatus: authorData.role,
-      ),
-      body: body,
-      mediaUrls: mediaUrl.isNotEmpty ? [mediaUrl] : const [],
-      reactionCounts: isLiked
-          ? {'heart': likeCount}
-          : (likeCount > 0 ? {'heart': likeCount} : const {}),
-      userReaction: isLiked ? 'heart' : null,
-      commentCount: commentCount,
-      isPinned: isPinned,
-      createdAt: createdAt,
-      viewCount: viewCount,
-      isRepostedByMe: isRepost,
-      repostCount: repostCount,
-      shareCount: shareCount,
-      saveCount: saveCount,
-    );
-  }
-}
-
 class CommunityDetailScreen extends ConsumerStatefulWidget {
   const CommunityDetailScreen({super.key, required this.communityId});
 
@@ -75,6 +48,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
   bool _joining = false;
   List<CommunityDetail> _userCommunities = [];
   int _selectedCommunityTab = 0; // 0 = All, 1+ = individual community
+  final TextEditingController _memberSearchController = TextEditingController();
 
   @override
   void initState() {
@@ -88,6 +62,12 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
       // Pre-load the aggregated feed so the "All" tab has data immediately.
       notifier.loadAllPosts();
     });
+  }
+
+  @override
+  void dispose() {
+    _memberSearchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserCommunities() async {
@@ -630,87 +610,22 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   ],
                 ),
               ),
-              Container(
-                decoration: BoxDecoration(color: cs.surface),
-                child: Row(
-                  children: [
-                    _tabButton(0, 'Feed', detail, canManage),
-                    _tabButton(1, 'Members', detail, canManage),
-                  ],
-                ),
+              _CommunityTabBar(
+                activeIndex: _effectiveTab(canManage),
+                canManage: canManage,
+                memberCount: detail.memberCount,
+                onChanged: (i) => setState(() => _tab = i),
               ),
-              const SizedBox(height: 8),
-              // Community navigation tabs: "All" + individual communities
-              SizedBox(
-                height: 44,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: _tabs.asMap().entries.map((entry) {
-                    final idx = entry.key;
-                    final tab = entry.value;
-                    final isSelected = _selectedCommunityTab == idx;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 10),
-                      child: ChoiceChip(
-                        label: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (tab.kind == _CommunityTabKind.single &&
-                                tab.community?.coverUrl != null)
-                              Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: BuddyColors.surfaceRaised,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: BuddyColors.border),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.network(
-                                    tab.community!.coverUrl,
-                                    width: 20,
-                                    height: 20,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            if (tab.kind == _CommunityTabKind.single &&
-                                tab.community?.coverUrl != null)
-                              const SizedBox(width: 6),
-                            Text(tab.label),
-                          ],
-                        ),
-                        selected: isSelected,
-                        onSelected: (_) =>
-                            setState(() => _selectedCommunityTab = idx),
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected
-                              ? BuddyColors.green
-                              : cs.onSurface.withValues(alpha: 0.7),
-                        ),
-                        backgroundColor: isSelected
-                            ? BuddyColors.green.withValues(alpha: 0.1)
-                            : null,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Expanded(
-                child: _selectedCommunityTab == 0
-                    ? _allCommunitiesTab(state, canManage)
-                    : _selectedCommunity == null
-                    ? const Center(child: Text('Community not found'))
-                    : _singleCommunityTab(
-                        _selectedCommunity!,
-                        state,
-                        canManage,
-                      ),
+                child: switch (_effectiveTab(canManage)) {
+                  1 => _gymRequestsTab(),
+                  2 => _membersTab(detail, canManage),
+                  3 => _eventsTab(detail, canManage),
+                  4 => _schedulesTab(detail, canManage),
+                  5 => _livesTab(detail, canManage),
+                  _ => _feedTab(state, canManage),
+                },
               ),
             ],
           );
@@ -719,41 +634,557 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     );
   }
 
-  Widget _tabButton(
-    int index,
-    String label,
-    CommunityDetail detail,
-    bool canManage,
-  ) {
+  int _effectiveTab(bool canManage) =>
+      (!canManage && _tab == 1) ? 0 : _tab;
+
+  static String _fmtWhen(String? iso) {
+    if (iso == null || iso.isEmpty) return 'No date set';
+    final dt = DateTime.tryParse(iso)?.toLocal();
+    if (dt == null) return 'No date set';
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final hour12 = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '${weekdays[dt.weekday - 1]}, ${dt.day} ${months[dt.month - 1]}, '
+        '$hour12:$minute $ampm';
+  }
+
+  Widget _feedTab(CommunityFeedState state, bool canManage) {
     final cs = Theme.of(context).colorScheme;
-    return Expanded(
-      child: InkWell(
-        onTap: () => setState(() => _tab = index),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: _tab == index ? BuddyColors.green : Colors.transparent,
-                width: 2,
-              ),
-            ),
+    return Column(
+      children: [
+        // Community navigation tabs: "All" + individual communities
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: _tabs.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final tab = entry.value;
+              final isSelected = _selectedCommunityTab == idx;
+              return Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: ChoiceChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (tab.kind == _CommunityTabKind.single &&
+                          tab.community?.coverUrl.isNotEmpty == true)
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: BuddyColors.surfaceRaised,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: BuddyColors.border),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              tab.community!.coverUrl,
+                              width: 20,
+                              height: 20,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      if (tab.kind == _CommunityTabKind.single &&
+                          tab.community?.coverUrl.isNotEmpty == true)
+                        const SizedBox(width: 6),
+                      Text(tab.label),
+                    ],
+                  ),
+                  selected: isSelected,
+                  onSelected: (_) =>
+                      setState(() => _selectedCommunityTab = idx),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? BuddyColors.green
+                        : cs.onSurface.withValues(alpha: 0.7),
+                  ),
+                  backgroundColor: isSelected
+                      ? BuddyColors.green.withValues(alpha: 0.1)
+                      : null,
+                ),
+              );
+            }).toList(),
           ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: _tab == index
-                    ? BuddyColors.green
-                    : cs.onSurface.withValues(alpha: 0.6),
-              ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: _selectedCommunityTab == 0
+              ? _allCommunitiesTab(state, canManage)
+              : _selectedCommunity == null
+              ? const Center(child: Text('Community not found'))
+              : _singleCommunityTab(
+                  _selectedCommunity!,
+                  state,
+                  canManage,
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _membersTab(CommunityDetail detail, bool canManage) {
+    final cs = Theme.of(context).colorScheme;
+    final members = detail.members;
+    final isMember = (detail.myRole ?? detail.membershipRole) != null;
+
+    // The backend hides the roster from non-members, so an empty list on a
+    // community with members means "not yours to see", not "nobody is here".
+    if (members.isEmpty && detail.memberCount > 0 && !isMember) {
+      return _CommunityNotice(
+        icon: LucideIcons.lock,
+        title: '${detail.memberCount} members',
+        body: detail.isPublic
+            ? 'Join this community to see who is here.'
+            : 'This community is private — members are only visible to members.',
+        actionLabel: detail.isPublic ? 'Join community' : null,
+        onAction: detail.isPublic ? _showJoinDialog : null,
+      );
+    }
+
+    final q = _memberSearchController.text.trim().toLowerCase();
+    final filtered = q.isEmpty
+        ? members
+        : members
+              .where(
+                (m) =>
+                    m.displayName.toLowerCase().contains(q) ||
+                    m.username.toLowerCase().contains(q),
+              )
+              .toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: TextField(
+            controller: _memberSearchController,
+            onChanged: (_) => setState(() {}),
+            style: TextStyle(color: cs.onSurface, fontSize: 13),
+            decoration: InputDecoration(
+              hintText: 'Search members…',
+              isDense: true,
+              prefixIcon: Icon(LucideIcons.search, size: 17, color: cs.onSurfaceVariant),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
             ),
           ),
         ),
+        if (canManage)
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: TextButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CommunityMembersScreen(
+                      communityId: widget.communityId,
+                      canManage: true,
+                    ),
+                  ),
+                ),
+                icon: const Icon(LucideIcons.settings2, size: 14),
+                label: const Text('Manage members'),
+              ),
+            ),
+          ),
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Text(
+                    q.isEmpty ? 'No members yet.' : 'No matching members.',
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) => Divider(
+                    height: 1,
+                    color: cs.outlineVariant.withValues(alpha: 0.4),
+                  ),
+                  itemBuilder: (_, i) {
+                    final m = filtered[i];
+                    final name = m.displayName.isNotEmpty ? m.displayName : m.username;
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(vertical: 2),
+                      leading: Avatar(
+                        src: m.avatarUrl.isNotEmpty ? m.avatarUrl : null,
+                        alt: name,
+                        size: AvatarSize.md,
+                      ),
+                      title: Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '@${m.username}${m.role != 'member' ? ' · ${m.role}' : ''}',
+                        style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _gymRequestsTab() {
+    final cs = Theme.of(context).colorScheme;
+    final async = ref.watch(communityGymRequestsProvider(widget.communityId));
+    return async.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: BuddyColors.green),
+      ),
+      error: (e, _) => _CommunityNotice(
+        icon: LucideIcons.alertCircle,
+        title: 'Could not load gym requests',
+        body: 'Check your connection and try again.',
+        actionLabel: 'Retry',
+        onAction: () => ref
+            .read(communityGymRequestsProvider(widget.communityId).notifier)
+            .reload(),
+      ),
+      data: (requests) {
+        if (requests.isEmpty) {
+          return const _CommunityNotice(
+            icon: LucideIcons.dumbbell,
+            title: 'No pending requests',
+            body: 'When a gym asks to link with this community, the request '
+                'appears here for you to approve or decline.',
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            Row(
+              children: [
+                Icon(LucideIcons.dumbbell, size: 12, color: cs.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'GYM REQUESTS TO LINK WITH THIS COMMUNITY',
+                    style: TextStyle(
+                      fontSize: 10,
+                      letterSpacing: 0.4,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            for (final request in requests) ...[
+              _GymRequestCard(
+                request: request,
+                onDecide: (approve) => _decideGymRequest(request, approve),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _decideGymRequest(
+    CommunityGymLinkRequest request,
+    bool approve,
+  ) async {
+    try {
+      await ref
+          .read(communityGymRequestsProvider(widget.communityId).notifier)
+          .decide(request.id, approve);
+      if (mounted) {
+        showToast(
+          context,
+          approve ? '${request.gymName} linked.' : 'Request declined.',
+          type: ToastType.success,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        showToast(context, 'Could not record that decision.',
+            type: ToastType.error);
+      }
+    }
+  }
+
+  Widget _eventsTab(CommunityDetail detail, bool canManage) {
+    final async = ref.watch(communityActivitiesProvider(widget.communityId));
+    return async.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: BuddyColors.green),
+      ),
+      error: (e, _) => _activityError(),
+      data: (state) {
+        final events = state.events.where((e) => !e.isCancelled).toList();
+        return _activitySection(
+          title: 'Events',
+          addLabel: 'Add event',
+          canManage: canManage,
+          onAdd: () => _openActivities(detail.groupName, 0),
+          emptyText: 'No upcoming events.',
+          children: [
+            for (final event in events)
+              _ActivityTile(
+                icon: LucideIcons.calendarDays,
+                color: BuddyColors.green,
+                title: event.title,
+                subtitle: [
+                  _fmtWhen(event.startDatetime),
+                  if (event.location.isNotEmpty) event.location,
+                  if (event.onlineUrl.isNotEmpty) 'online',
+                ].join(' · '),
+                body: event.description.isEmpty ? null : event.description,
+                badges: [
+                  event.eventType.replaceAll('_', ' '),
+                  if (event.isFree) 'Free',
+                  if (event.capacity > 0)
+                    '${event.spotsRemaining ?? event.capacity} spots',
+                ],
+                onDelete: canManage
+                    ? () => _confirmDelete(
+                        'Remove this event?',
+                        () => ref
+                            .read(
+                              communityActivitiesProvider(widget.communityId)
+                                  .notifier,
+                            )
+                            .deleteEvent(event.id),
+                      )
+                    : null,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _schedulesTab(CommunityDetail detail, bool canManage) {
+    final async = ref.watch(communityActivitiesProvider(widget.communityId));
+    return async.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: BuddyColors.green),
+      ),
+      error: (e, _) => _activityError(),
+      data: (state) {
+        return _activitySection(
+          title: 'Schedule',
+          addLabel: 'Add session',
+          canManage: canManage,
+          onAdd: () => _openActivities(detail.groupName, 2),
+          emptyText: 'No sessions scheduled.',
+          children: [
+            for (final slot in state.schedules)
+              _ActivityTile(
+                icon: LucideIcons.clock,
+                color: BuddyColors.electric,
+                title: slot.title.isNotEmpty
+                    ? slot.title
+                    : slot.customActivityType.isNotEmpty
+                    ? slot.customActivityType
+                    : slot.activityType,
+                subtitle: [
+                  _fmtWhen(slot.startTime),
+                  if (slot.recurrence != 'none') slot.recurrence,
+                  if (slot.maxSlots > 0) '${slot.maxSlots} slots',
+                ].join(' · '),
+                body: slot.content.isEmpty ? null : slot.content,
+                onDelete: canManage
+                    ? () => _confirmDelete(
+                        'Remove this session?',
+                        () => ref
+                            .read(
+                              communityActivitiesProvider(widget.communityId)
+                                  .notifier,
+                            )
+                            .deleteSchedule(slot.id),
+                      )
+                    : null,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _livesTab(CommunityDetail detail, bool canManage) {
+    final async = ref.watch(communityActivitiesProvider(widget.communityId));
+    return async.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: BuddyColors.green),
+      ),
+      error: (e, _) => _activityError(),
+      data: (state) {
+        return _activitySection(
+          title: 'Lives',
+          addLabel: 'Schedule a live',
+          canManage: canManage,
+          onAdd: () => _openActivities(detail.groupName, 1),
+          emptyText: 'No lives scheduled.',
+          children: [
+            for (final live in state.lives)
+              _ActivityTile(
+                icon: LucideIcons.radio,
+                color: live.status == 'live'
+                    ? BuddyColors.red
+                    : BuddyColors.green,
+                title: live.title,
+                subtitle: live.status == 'live'
+                    ? 'Live now'
+                    : _fmtWhen(live.scheduledFor),
+                badges: [
+                  if (live.status == 'live') 'LIVE',
+                  live.liveType.replaceAll('_', ' '),
+                ],
+                onDelete: canManage
+                    ? () => _confirmDelete(
+                        'Remove this live?',
+                        () => ref
+                            .read(
+                              communityActivitiesProvider(widget.communityId)
+                                  .notifier,
+                            )
+                            .deleteLive(live.id),
+                      )
+                    : null,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _activityError() {
+    return _CommunityNotice(
+      icon: LucideIcons.alertCircle,
+      title: 'Could not load activities',
+      body: 'Check your connection and try again.',
+      actionLabel: 'Retry',
+      onAction: () =>
+          ref.invalidate(communityActivitiesProvider(widget.communityId)),
+    );
+  }
+
+  Widget _activitySection({
+    required String title,
+    required String addLabel,
+    required bool canManage,
+    required VoidCallback onAdd,
+    required String emptyText,
+    required List<Widget> children,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.6,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ),
+            if (canManage)
+              TextButton.icon(
+                onPressed: onAdd,
+                icon: const Icon(LucideIcons.plus, size: 14),
+                label: Text(addLabel),
+                style: TextButton.styleFrom(
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        if (children.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Center(
+              child: Text(
+                emptyText,
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+              ),
+            ),
+          )
+        else
+          ...children,
+      ],
+    );
+  }
+
+  Future<void> _openActivities(String communityName, int initialTab) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CommunityActivitiesScreen(
+          communityId: widget.communityId,
+          communityName: communityName,
+          canManage: true,
+          initialTab: initialTab,
+        ),
       ),
     );
+    if (mounted) {
+      ref.invalidate(communityActivitiesProvider(widget.communityId));
+    }
+  }
+
+  Future<void> _confirmDelete(
+    String title,
+    Future<void> Function() delete,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove', style: TextStyle(color: BuddyColors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await delete();
+    } catch (_) {
+      if (mounted) {
+        showToast(context, 'Could not remove that.', type: ToastType.error);
+      }
+    }
   }
 
   Widget _singleCommunityTab(
@@ -904,94 +1335,373 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
   }
 }
 
-/// A post card with a community name tag/ribbon above it (used in "All" tab).
-class CommunityPostCardWithTag extends StatelessWidget {
-  final Post post;
-  final String communityName;
-  final String? communityCoverUrl;
-  final void Function(String)? onLike;
-  final void Function(String)? onComment;
-  final void Function(String)? onRepost;
-  final void Function(String)? onSave;
-  final void Function(String)? onShare;
-  final void Function(String, String)? onReact;
-  final void Function(String)? onPin;
-  final void Function(String)? onDelete;
+/// Horizontally scrollable tab rail matching the web CommunityDetail tabs:
+/// Feed · Gym requests · Members · Events · Schedules · Lives.
+class _CommunityTabBar extends StatelessWidget {
+  final int activeIndex;
+  final bool canManage;
+  final int memberCount;
+  final ValueChanged<int> onChanged;
 
-  const CommunityPostCardWithTag({
-    super.key,
-    required this.post,
-    required this.communityName,
-    this.communityCoverUrl,
-    this.onLike,
-    this.onComment,
-    this.onRepost,
-    this.onSave,
-    this.onShare,
-    this.onReact,
-    this.onPin,
+  const _CommunityTabBar({
+    required this.activeIndex,
+    required this.canManage,
+    required this.memberCount,
+    required this.onChanged,
+  });
+
+  static const _tabs = <({int index, String label, IconData icon})>[
+    (index: 0, label: 'Feed', icon: LucideIcons.messagesSquare),
+    (index: 1, label: 'Gym requests', icon: LucideIcons.dumbbell),
+    (index: 2, label: 'Members', icon: LucideIcons.users),
+    (index: 3, label: 'Events', icon: LucideIcons.calendarDays),
+    (index: 4, label: 'Schedules', icon: LucideIcons.clock),
+    (index: 5, label: 'Lives', icon: LucideIcons.radio),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: cs.outlineVariant.withValues(alpha: 0.4),
+          ),
+        ),
+      ),
+      child: SizedBox(
+        height: 46,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          children: [
+            for (final tab in _tabs)
+              if (tab.index != 1 || canManage)
+                InkWell(
+                  onTap: () => onChanged(tab.index),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: activeIndex == tab.index
+                              ? BuddyColors.green
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tab.icon,
+                          size: 15,
+                          color: activeIndex == tab.index
+                              ? BuddyColors.green
+                              : cs.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          tab.label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: activeIndex == tab.index
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: activeIndex == tab.index
+                                ? BuddyColors.green
+                                : cs.onSurfaceVariant,
+                          ),
+                        ),
+                        if (tab.index == 2) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '$memberCount',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Centred empty/error/notice card used by the community tabs.
+class _CommunityNotice extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String body;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _CommunityNotice({
+    required this.icon,
+    required this.title,
+    required this.body,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 34, color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              body,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 14),
+              OutlinedButton(
+                onPressed: onAction,
+                child: Text(actionLabel!),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One event/session/live row — icon tile, title, when, body and badges.
+class _ActivityTile extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final String? body;
+  final List<String> badges;
+  final VoidCallback? onDelete;
+
+  const _ActivityTile({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    this.body,
+    this.badges = const [],
     this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: const EdgeInsets.only(bottom: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: BuddyColors.green.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(6),
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 18, color: color),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (communityCoverUrl != null && communityCoverUrl!.isNotEmpty)
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: BuddyColors.surfaceRaised,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: BuddyColors.border, width: 1),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      communityCoverUrl!,
-                      width: 16,
-                      height: 16,
-                      fit: BoxFit.cover,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                ),
+                if (body != null && body!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    body!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                  ),
+                ],
+                if (badges.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final badge in badges)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            badge,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (onDelete != null)
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: Icon(LucideIcons.trash2, size: 16, color: cs.onSurfaceVariant),
+              onPressed: onDelete,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Community-side review card for a gym→community link request.
+class _GymRequestCard extends StatelessWidget {
+  final CommunityGymLinkRequest request;
+  final ValueChanged<bool> onDecide;
+
+  const _GymRequestCard({required this.request, required this.onDecide});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final meta = [
+      '@${request.gymHandle}',
+      if (request.gymCategory.isNotEmpty) request.gymCategory.replaceAll('_', ' '),
+      if (request.gymMemberCount > 0) '${request.gymMemberCount} members',
+    ].join(' · ');
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Avatar(
+            src: request.gymLogoUrl.isNotEmpty ? request.gymLogoUrl : null,
+            alt: request.gymName,
+            size: AvatarSize.md,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  request.gymName,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: cs.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  meta,
+                  style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Asked by ${request.requestedBy.isNotEmpty ? request.requestedBy : 'the gym owner'}'
+                  '${request.createdAt.isNotEmpty ? ' · ${_CommunityDetailScreenState._fmtWhen(request.createdAt)}' : ''}',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () => onDecide(true),
+                      icon: const Icon(LucideIcons.check, size: 12),
+                      label: const Text('Approve'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: BuddyColors.green,
+                        foregroundColor: BuddyColors.black,
+                        visualDensity: VisualDensity.compact,
+                        textStyle: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: () => onDecide(false),
+                      icon: const Icon(LucideIcons.x, size: 12),
+                      label: const Text('Decline'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: BuddyColors.red,
+                        side: BorderSide(
+                          color: BuddyColors.red.withValues(alpha: 0.3),
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        textStyle: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              if (communityCoverUrl != null && communityCoverUrl!.isNotEmpty)
-                const SizedBox(width: 6),
-              Text(
-                communityName,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: BuddyColors.green,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        PostCard(
-          post: post,
-          onLike: onLike,
-          onComment: onComment,
-          onRepost: onRepost,
-          onSave: onSave,
-          onShare: onShare,
-          onReact: onReact,
-          onPin: onPin,
-          onDelete: onDelete,
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

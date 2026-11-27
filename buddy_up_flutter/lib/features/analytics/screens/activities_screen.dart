@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/main_header.dart';
 import 'activity_tab.dart';
 import 'gps_tracker_screen.dart';
 
@@ -12,12 +14,12 @@ class ActivitiesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Activities'),
+      appBar: MainAppBar(
+        title: 'Activities',
         actions: [
           IconButton(
             tooltip: 'Track activity',
-            icon: const Icon(Icons.play_arrow_rounded),
+            icon: const Icon(LucideIcons.navigation),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => const GpsTrackerScreen(),

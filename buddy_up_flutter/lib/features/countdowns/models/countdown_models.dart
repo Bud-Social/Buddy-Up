@@ -120,6 +120,46 @@ abstract class UpdateUserCountdown with _$UpdateUserCountdown {
       _$UpdateUserCountdownFromJson(json);
 }
 
+/// One entry in a countdown's stream — a check-in, an automatic advance, a
+/// reset or the completion that closed the run. Read-only; the server writes
+/// these as the countdown moves.
+class CountdownEvent {
+  final String id;
+  final String eventType;
+  final int countAfter;
+  final int? elapsedSeconds;
+  final int? runElapsedSeconds;
+  final String unit;
+  final String note;
+  final DateTime? occurredAt;
+
+  const CountdownEvent({
+    required this.id,
+    required this.eventType,
+    required this.countAfter,
+    required this.unit,
+    this.elapsedSeconds,
+    this.runElapsedSeconds,
+    this.note = '',
+    this.occurredAt,
+  });
+
+  factory CountdownEvent.fromJson(Map<String, dynamic> json) {
+    int? asInt(dynamic value) =>
+        value is int ? value : int.tryParse('${value ?? ''}');
+    return CountdownEvent(
+      id: '${json['id'] ?? ''}',
+      eventType: '${json['event_type'] ?? ''}',
+      countAfter: asInt(json['count_after']) ?? 0,
+      elapsedSeconds: asInt(json['elapsed_seconds']),
+      runElapsedSeconds: asInt(json['run_elapsed_seconds']),
+      unit: '${json['unit'] ?? ''}',
+      note: '${json['note'] ?? ''}',
+      occurredAt: DateTime.tryParse('${json['occurred_at'] ?? ''}'),
+    );
+  }
+}
+
 /// Extension with request serialization for UpdateUserCountdown.
 extension UpdateUserCountdownRequest on UpdateUserCountdown {
   Map<String, dynamic> toRequestJson() {

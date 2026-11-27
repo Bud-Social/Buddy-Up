@@ -63,4 +63,12 @@ abstract class RoutineRepository {
     @Path('id') String id,
     @Path('highlight_id') String highlightId,
   );
+
+  /// Share a routine as a feed post or a moment (story). The server builds the
+  /// workout-log metrics from the routine and returns the new post's id/type.
+  @POST('/countdowns/routines/{id}/share/')
+  Future<dynamic> shareRoutine(
+    @Path('id') String id,
+    @Body() Map<String, dynamic> body,
+  );
 }

@@ -15,7 +15,7 @@ from .models import (
 from .buddy_notifications import notify_buddy_request, notify_buddy_accepted, notify_follow
 from .serializers import (
     ProfileSerializer, ProfileUpdateSerializer, OnboardingSerializer,
-    PingMessageSerializer, BuddySearchProfileSerializer,
+    PingMessageSerializer, BuddySearchProfileSerializer, optimize_profile_queryset,
 )
 from .meetup_serializers import (
     BuddyMeetupSerializer, BuddyMeetupCreateSerializer,
@@ -77,7 +77,10 @@ class UserProfileView(generics.RetrieveAPIView):
         return ProfileSerializer
 
     def retrieve(self, request, *args, **kwargs):
-        profile = get_object_or_404(Profile, username=self.kwargs['username'])
+        profile = get_object_or_404(
+            optimize_profile_queryset(Profile.objects.all()),
+            username=self.kwargs['username'],
+        )
 
         blocked = BlockRelationship.objects.filter(
             (Q(blocker=profile) & Q(blocked=request.user.profile if request.user.is_authenticated else None)) |
@@ -684,7 +687,9 @@ class BuddiesListView(generics.ListAPIView):
                 default='from_user_id',
             ), flat=True
         )
-        return Profile.objects.filter(user_id__in=buddy_ids).order_by('username')
+        return optimize_profile_queryset(
+            Profile.objects.filter(user_id__in=buddy_ids).order_by('username')
+        )
 
 
 class FollowersListView(generics.ListAPIView):
@@ -697,7 +702,9 @@ class FollowersListView(generics.ListAPIView):
         follower_ids = FollowRelationship.objects.filter(
             followee=profile
         ).values_list('follower_id', flat=True)
-        return Profile.objects.filter(user_id__in=follower_ids).order_by('username')
+        return optimize_profile_queryset(
+            Profile.objects.filter(user_id__in=follower_ids).order_by('username')
+        )
 
 
 class FollowingListView(generics.ListAPIView):
@@ -710,7 +717,9 @@ class FollowingListView(generics.ListAPIView):
         followee_ids = FollowRelationship.objects.filter(
             follower=profile
         ).values_list('followee_id', flat=True)
-        return Profile.objects.filter(user_id__in=followee_ids).order_by('username')
+        return optimize_profile_queryset(
+            Profile.objects.filter(user_id__in=followee_ids).order_by('username')
+        )
 
 
 class BlockedUsersView(views.APIView):
@@ -720,14 +729,22 @@ class BlockedUsersView(views.APIView):
         blocked_ids = BlockRelationship.objects.filter(
             blocker=request.user.profile
         ).values_list('blocked_id', flat=True)
-        blocked = Profile.objects.filter(user_id__in=blocked_ids)
-        serializer = ProfileSerializer(blocked, many=True, context={'request': request})
+        blocked = optimize_profile_queryset(
+            Profile.objects.filter(user_id__in=blocked_ids).order_by('username')
+        )
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(blocked, request)
+        serializer = ProfileSerializer(page, many=True, context={'request': request})
         return Response({
             'success': True,
             'data': serializer.data,
             'message': 'OK',
             'errors': None,
-            'pagination': None,
+            'pagination': {
+                'count': paginator.page.paginator.count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            },
         })
 
 
@@ -766,6 +783,7 @@ class ProfileSearchView(views.APIView):
             ) | queryset.filter(location_country__icontains=location)
 
         queryset = gate_mature_queryset(request, queryset)
+        queryset = optimize_profile_queryset(queryset)
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request)
         serializer = ProfileSerializer(page, many=True, context={'request': request})
@@ -788,18 +806,26 @@ class PendingBuddyRequestsView(views.APIView):
 
     def get(self, request):
         from .serializers import ProfileSerializer
-        pending = BuddyRelationship.objects.filter(
+        pending_ids = BuddyRelationship.objects.filter(
             to_user=request.user.profile,
             status='pending',
-        ).select_related('from_user')
-        profiles = [br.from_user for br in pending]
-        serializer = ProfileSerializer(profiles, many=True, context={'request': request})
+        ).values_list('from_user_id', flat=True)
+        profiles = optimize_profile_queryset(
+            Profile.objects.filter(user_id__in=pending_ids).order_by('username')
+        )
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(profiles, request)
+        serializer = ProfileSerializer(page, many=True, context={'request': request})
         return Response({
             'success': True,
             'data': serializer.data,
             'message': 'OK',
             'errors': None,
-            'pagination': None,
+            'pagination': {
+                'count': paginator.page.paginator.count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            },
         })
 
 
@@ -828,13 +854,20 @@ class BuddySearchView(views.APIView):
                 db_models.Q(username__icontains=q) | db_models.Q(display_name__icontains=q),
             )
 
-        serializer = ProfileSerializer(queryset, many=True, context={'request': request})
+        queryset = optimize_profile_queryset(queryset.order_by('username'))
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = ProfileSerializer(page, many=True, context={'request': request})
         return Response({
             'success': True,
             'data': serializer.data,
             'message': 'OK',
             'errors': None,
-            'pagination': None,
+            'pagination': {
+                'count': paginator.page.paginator.count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            },
         })
 
 

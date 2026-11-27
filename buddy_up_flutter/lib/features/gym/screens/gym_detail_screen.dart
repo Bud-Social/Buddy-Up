@@ -155,21 +155,50 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
   }
 
   Future<void> _handleGymReact(String postId, String reaction) async {
+    final posts = _gymFeedPosts;
+    if (posts == null) return;
+    final post = posts.where((p) => p.id == postId).firstOrNull;
+    if (post == null) return;
+
     final repo = ref.read(feedRepositoryProvider);
-    if (reaction.isEmpty) {
-      // PostCard signals un-react with an empty reaction.
+    final prev = post.userReaction == null
+        ? null
+        : toReactionEmoji(post.userReaction!);
+    final emoji = reaction.isEmpty ? null : toReactionEmoji(reaction);
+    final counts = Map<String, int>.from(post.reactionCounts);
+
+    // Empty reaction (or tapping the current one) removes the reaction. The
+    // react endpoint returns reaction_counts, not a Post, so update the gym
+    // row optimistically and roll back on failure (same as the web client).
+    if (emoji == null || emoji == prev) {
+      if (prev != null) {
+        counts[prev] = (counts[prev] ?? 1) - 1;
+        if (counts[prev]! <= 0) counts.remove(prev);
+      }
+      _updateGymPost(
+        post.copyWith(userReaction: null, reactionCounts: counts),
+      );
       try {
         await repo.unreact(postId);
-      } catch (_) {}
+      } catch (_) {
+        _updateGymPost(post);
+      }
       return;
     }
+
+    if (prev != null) {
+      counts[prev] = (counts[prev] ?? 1) - 1;
+      if (counts[prev]! <= 0) counts.remove(prev);
+    }
+    counts[emoji] = (counts[emoji] ?? 0) + 1;
+    _updateGymPost(
+      post.copyWith(userReaction: emoji, reactionCounts: counts),
+    );
     try {
-      final raw = await repo.react(
-        postId,
-        ReactionInput(reactionType: toReactionEmoji(reaction)),
-      );
-      _updateGymPost(Post.fromJson(raw['data'] as Map<String, dynamic>));
-    } catch (_) {}
+      await repo.react(postId, ReactionInput(reactionType: emoji));
+    } catch (_) {
+      _updateGymPost(post);
+    }
   }
 
   Future<void> _handleGymSave(String postId) async {
@@ -194,10 +223,17 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
   Future<void> _handleGymPin(String postId) async {
     final posts = _gymFeedPosts;
     if (posts == null || !posts.any((p) => p.id == postId)) return;
+    final post = posts.firstWhere((p) => p.id == postId);
     try {
       final raw = await ref.read(feedRepositoryProvider).pin(postId);
-      final updated = Post.fromJson(raw['data'] as Map<String, dynamic>);
-      _updateGymPost(updated);
+      // Pin returns {'is_pinned': bool}, not the full post.
+      final data = raw['data'];
+      final pinned = data is Map<String, dynamic>
+          ? data['is_pinned'] as bool?
+          : null;
+      if (pinned != null) {
+        _updateGymPost(post.copyWith(isPinned: pinned));
+      }
     } catch (_) {
       // Leave the row as it was; a failed pin is not worth an error dialog.
     }
@@ -296,6 +332,7 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
               pinned: true,
               delegate: _TabBarDelegate(
                 _tabIndex,
+                gym.isReviewsEnabled,
                 (i) => setState(() => _tabIndex = i),
               ),
             ),
@@ -497,21 +534,23 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
   }
 
   Widget _buildTabContent(Gym gym) {
-    switch (_tabIndex) {
-      case 0:
+    final tabs = GymTabBar.tabsFor(gym.isReviewsEnabled);
+    final key = _tabIndex >= 0 && _tabIndex < tabs.length ? tabs[_tabIndex] : 'Feed';
+    switch (key) {
+      case 'Feed':
         return _buildFeedTab(gym);
-      case 1:
+      case 'Schedule':
         return _buildScheduleTab(gym);
-      case 2:
-        return _buildLivesTab(gym);
-      case 3:
-        return _buildMembersTab(gym);
-      case 4:
-        return _buildReviewsTab(gym);
-      case 5:
-        return _buildAboutTab(gym);
-      case 6:
+      case 'Events':
         return _buildEventsTab(gym);
+      case 'Lives':
+        return _buildLivesTab(gym);
+      case 'Members':
+        return _buildMembersTab(gym);
+      case 'Reviews':
+        return _buildReviewsTab(gym);
+      case 'About':
+        return _buildAboutTab(gym);
       default:
         return const SizedBox();
     }
@@ -1412,9 +1451,10 @@ class _GymEventCard extends StatelessWidget {
 
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   final int tabIndex;
+  final bool showReviews;
   final ValueChanged<int> onTabChanged;
 
-  _TabBarDelegate(this.tabIndex, this.onTabChanged);
+  _TabBarDelegate(this.tabIndex, this.showReviews, this.onTabChanged);
 
   @override
   Widget build(
@@ -1424,7 +1464,11 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   ) {
     return Container(
       color: Theme.of(context).colorScheme.surface,
-      child: GymTabBar(activeIndex: tabIndex, onTabChanged: onTabChanged),
+      child: GymTabBar(
+        activeIndex: tabIndex,
+        showReviews: showReviews,
+        onTabChanged: onTabChanged,
+      ),
     );
   }
 
@@ -1435,5 +1479,6 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 44;
 
   @override
-  bool shouldRebuild(covariant _TabBarDelegate old) => old.tabIndex != tabIndex;
+  bool shouldRebuild(_TabBarDelegate old) =>
+      old.tabIndex != tabIndex || old.showReviews != showReviews;
 }

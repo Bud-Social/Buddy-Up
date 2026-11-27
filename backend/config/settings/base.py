@@ -156,6 +156,14 @@ else:
         }
     }
 
+# Database connection handling: reuse connections within a worker instead of
+# opening a new one per request, and verify health so a half-closed pool is
+# recycled rather than accumulating.
+DATABASES['default'].update({
+    'CONN_MAX_AGE': int(os.environ.get('CONN_MAX_AGE', '60')),
+    'CONN_HEALTH_CHECKS': True,
+})
+
 # Redis / Channels
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
 

@@ -66,7 +66,7 @@ class _BuddyUpAppState extends ConsumerState<BuddyUpApp>
   void initState() {
     super.initState();
     _router = buildRouter(ref);
-    ref.listen(authProvider, (_, _) => _router.refresh());
+    ref.listenManual(authProvider, (_, _) => _router.refresh());
     Future.microtask(() => ref.read(themeModeProvider.notifier).load());
     WidgetsBinding.instance.addObserver(this);
     Future.microtask(() {

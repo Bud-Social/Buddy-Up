@@ -64,6 +64,7 @@ class Post(TimestampedModel, SoftDeleteModel):
         db_table = 'feed_post'
         indexes = [
             models.Index(fields=['author', '-created_at']),
+            models.Index(fields=['created_at']),
             models.Index(fields=['post_type']),
             models.Index(fields=['visibility', 'moderation_status']),
             models.Index(fields=['gym_tag', '-created_at']),

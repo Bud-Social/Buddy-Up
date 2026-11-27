@@ -51,4 +51,13 @@ abstract class CountdownRepository {
   /// Server endpoint for automatic signals to advance a countdown.
   @POST('/countdowns/auto-advance/')
   Future<dynamic> autoAdvance(@Body() dynamic data);
+
+  /// A countdown's event stream — every check-in, auto-advance, reset and
+  /// completion, newest first. The endpoint wraps the list in the standard
+  /// `{success, data}` envelope, so this stays untyped and the caller unwraps.
+  @GET('/countdowns/{id}/events/')
+  Future<dynamic> listEvents(
+    @Path('id') String id, {
+    @Query('limit') int? limit,
+  });
 }

@@ -21,6 +21,101 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   int _mediaIndex = 0;
   String? _tier;
 
+  bool _feedbackRequested = false;
+  bool _feedbackLoading = false;
+  bool _fbSubmitting = false;
+  int _fbRating = 0;
+  final Set<String> _fbTags = {};
+  final TextEditingController _fbNote = TextEditingController();
+  Map<String, dynamic>? _ownFeedback;
+  Map<String, dynamic>? _aggregate;
+  String? _fbError;
+
+  @override
+  void dispose() {
+    _fbNote.dispose();
+    super.dispose();
+  }
+
+  bool _isPast(MarketplaceEvent event) {
+    final end = DateTime.tryParse(event.endDatetime);
+    return end != null && end.isBefore(DateTime.now());
+  }
+
+  void _ensureFeedback(MarketplaceEvent event) {
+    if (_feedbackRequested) return;
+    _feedbackRequested = true;
+    Future.microtask(() async {
+      if (!mounted) return;
+      setState(() => _feedbackLoading = true);
+      try {
+        final raw = await ref
+            .read(marketplaceRepositoryProvider)
+            .getEventFeedback(event.id);
+        final data = raw is Map ? raw['data'] : null;
+        if (!mounted) return;
+        setState(() {
+          if (data is Map && data['rating'] is num) {
+            _ownFeedback = Map<String, dynamic>.from(data);
+            _fbRating = (data['rating'] as num).toInt();
+            _fbNote.text = '${data['note'] ?? ''}';
+            final tags = data['tags'];
+            if (tags is List) {
+              _fbTags.addAll(tags.map((t) => '$t'));
+            }
+          } else if (data is Map && data['count'] != null) {
+            _aggregate = Map<String, dynamic>.from(data);
+          }
+          _feedbackLoading = false;
+        });
+      } catch (_) {
+        if (mounted) setState(() => _feedbackLoading = false);
+      }
+    });
+  }
+
+  Future<void> _submitFeedback(String eventId) async {
+    if (_fbRating == 0) {
+      setState(() => _fbError = 'Pick a rating first.');
+      return;
+    }
+    setState(() {
+      _fbSubmitting = true;
+      _fbError = null;
+    });
+    try {
+      final raw = await ref
+          .read(marketplaceRepositoryProvider)
+          .submitEventFeedback(eventId, {
+        'rating': _fbRating,
+        'tags': _fbTags.toList(),
+        'note': _fbNote.text.trim(),
+      });
+      final data = raw is Map ? raw['data'] : null;
+      if (!mounted) return;
+      setState(() {
+        _ownFeedback = data is Map
+            ? Map<String, dynamic>.from(data)
+            : {
+                'rating': _fbRating,
+                'tags': _fbTags.toList(),
+                'note': _fbNote.text.trim(),
+              };
+        _fbSubmitting = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thanks — feedback sent.')),
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _fbSubmitting = false;
+          _fbError = 'Could not submit feedback. Your ticket gates eligibility.';
+        });
+      }
+    }
+  }
+
   List<_MediaItem> _buildMediaList(MarketplaceEvent event) {
     final list = <_MediaItem>[];
     if (event.media.isNotEmpty) {
@@ -51,6 +146,7 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       data: (event) {
         final media = _buildMediaList(event);
         final hasCarousel = media.length > 1;
+        if (event.isRegistered && _isPast(event)) _ensureFeedback(event);
         return Scaffold(
           appBar: AppBar(title: Text(event.title)),
           body: SingleChildScrollView(
@@ -293,6 +389,10 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                         .toList(),
                   ),
                 ],
+                if (event.isRegistered && _isPast(event)) ...[
+                  const SizedBox(height: 16),
+                  _buildFeedbackCard(event),
+                ],
               ],
             ),
           ),
@@ -379,6 +479,167 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
       },
       loading: () => const Scaffold(body: PageLoader()),
       error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
+    );
+  }
+
+  Widget _buildFeedbackCard(MarketplaceEvent event) {
+    final hasOwn = _ownFeedback != null || _fbRating > 0;
+    final aggregateCount = _aggregate?['count'];
+    final aggregateAverage = _aggregate?['average'];
+    const tagOptions = [
+      'vibes',
+      'coaching',
+      'audio',
+      'equipment',
+      'instructor',
+      'value',
+    ];
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: BuddyColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: BuddyColors.green.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(LucideIcons.star, size: 16, color: BuddyColors.gold),
+              SizedBox(width: 8),
+              Text(
+                'How did this event land?',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_feedbackLoading)
+            Row(
+              children: [
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Loading feedback…',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            )
+          else if (hasOwn) ...[
+            Text(
+              'Your rating: ${'★' * _fbRating}${'☆' * (5 - _fbRating)}'
+              ' · ${(_ownFeedback?['note'] ?? _fbNote.text).toString().isEmpty ? '—' : (_ownFeedback?['note'] ?? _fbNote.text)}',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
+            ),
+            if (aggregateCount is num)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  '$aggregateCount attendee${aggregateCount == 1 ? '' : 's'} '
+                  'rated this event'
+                  '${aggregateAverage != null ? ' — avg $aggregateAverage★' : ''}.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+          ] else ...[
+            Row(
+              children: [
+                for (var star = 1; star <= 5; star++)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () => setState(() => _fbRating = star),
+                    child: Padding(
+                      padding: const EdgeInsets.all(3),
+                      child: Icon(
+                        star <= _fbRating
+                            ? Icons.star
+                            : Icons.star_border,
+                        size: 24,
+                        color: star <= _fbRating
+                            ? BuddyColors.gold
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final tag in tagOptions)
+                  FilterChip(
+                    label: Text(tag, style: const TextStyle(fontSize: 10)),
+                    selected: _fbTags.contains(tag),
+                    selectedColor: BuddyColors.green.withValues(alpha: 0.15),
+                    onSelected: (active) => setState(() {
+                      if (active) {
+                        _fbTags.add(tag);
+                      } else {
+                        _fbTags.remove(tag);
+                      }
+                    }),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _fbNote,
+              maxLines: 2,
+              maxLength: 500,
+              style: const TextStyle(fontSize: 12),
+              decoration: const InputDecoration(
+                hintText: 'Coach energy, venue, sound — what worked?',
+                border: OutlineInputBorder(),
+                isDense: true,
+                counterText: '',
+              ),
+            ),
+            if (_fbError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  _fbError!,
+                  style: const TextStyle(color: Colors.red, fontSize: 10),
+                ),
+              ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: _fbSubmitting
+                    ? null
+                    : () => _submitFeedback(event.id),
+                child: _fbSubmitting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Send feedback'),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

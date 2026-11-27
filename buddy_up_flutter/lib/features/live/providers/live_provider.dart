@@ -18,6 +18,7 @@ class LiveBrowserState {
   final List<BuddyLive> lives;
   final String activeTab;
   final String? category;
+  final String? replayScope;
   final bool isLoading;
   final String? cursor;
   final bool hasMore;
@@ -27,6 +28,7 @@ class LiveBrowserState {
     this.lives = const [],
     this.activeTab = 'live',
     this.category,
+    this.replayScope = 'all',
     this.isLoading = false,
     this.cursor,
     this.hasMore = true,
@@ -37,6 +39,7 @@ class LiveBrowserState {
     List<BuddyLive>? lives,
     String? activeTab,
     String? category,
+    String? replayScope,
     bool? isLoading,
     String? cursor,
     bool? hasMore,
@@ -46,6 +49,7 @@ class LiveBrowserState {
       lives: lives ?? this.lives,
       activeTab: activeTab ?? this.activeTab,
       category: category ?? this.category,
+      replayScope: replayScope ?? this.replayScope,
       isLoading: isLoading ?? this.isLoading,
       cursor: cursor ?? this.cursor,
       hasMore: hasMore ?? this.hasMore,
@@ -63,9 +67,10 @@ class LiveBrowserNotifier extends Notifier<LiveBrowserState> {
   Future<void> browse({String? tab, String? category}) async {
     final t = tab ?? state.activeTab;
     final c = category ?? state.category;
+    final mine = t == 'replays' && state.replayScope == 'mine';
     state = state.copyWith(isLoading: true, error: null, activeTab: t, category: c);
     try {
-      final raw = await _repository.browse(tab: t, category: c);
+      final raw = await _repository.browse(tab: t, category: c, mine: mine);
       final pagination = raw['pagination'] as Map<String, dynamic>?;
       state = state.copyWith(
         lives: _parseLiveList(raw['data']),
@@ -85,6 +90,7 @@ class LiveBrowserNotifier extends Notifier<LiveBrowserState> {
         tab: state.activeTab,
         category: state.category,
         cursor: state.cursor,
+        mine: state.activeTab == 'replays' && state.replayScope == 'mine',
       );
       final pagination = raw['pagination'] as Map<String, dynamic>?;
       state = state.copyWith(
@@ -97,14 +103,30 @@ class LiveBrowserNotifier extends Notifier<LiveBrowserState> {
 
   void setTab(String tab) {
     if (tab != state.activeTab) {
-      state = state.copyWith(lives: [], cursor: null, hasMore: true);
+      state = state.copyWith(lives: [], cursor: null, hasMore: true, replayScope: tab == 'replays' ? state.replayScope : 'all');
       browse(tab: tab);
     }
   }
 
+  void setReplayScope(String? scope) {
+    state = state.copyWith(replayScope: scope ?? 'all');
+    if (state.activeTab != 'replays') {
+      state = state.copyWith(activeTab: 'replays');
+    }
+    browse(tab: state.activeTab, category: state.category);
+  }
+
   void setCategory(String? category) {
     if (category != state.category) {
-      state = state.copyWith(lives: [], cursor: null, hasMore: true);
+      // `copyWith` intentionally preserves nullable values when omitted, so
+      // reset the whole browser state here to make the All chip actually
+      // clear the server-side category filter.
+      state = LiveBrowserState(
+        activeTab: state.activeTab,
+        replayScope: state.replayScope,
+        hasMore: true,
+        category: category,
+      );
       browse(category: category);
     }
   }
