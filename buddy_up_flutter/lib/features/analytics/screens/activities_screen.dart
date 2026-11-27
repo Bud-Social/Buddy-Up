@@ -21,17 +21,12 @@ class ActivitiesScreen extends StatelessWidget {
             tooltip: 'Track activity',
             icon: const Icon(LucideIcons.navigation),
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const GpsTrackerScreen(),
-              ),
+              MaterialPageRoute<void>(builder: (_) => const GpsTrackerScreen()),
             ),
           ),
         ],
       ),
-      body: const SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: ActivityTab(),
-      ),
+      body: const ActivityTab(),
       floatingActionButton: FloatingActionButton(
         backgroundColor: BuddyColors.green,
         foregroundColor: Theme.of(context).colorScheme.surface,

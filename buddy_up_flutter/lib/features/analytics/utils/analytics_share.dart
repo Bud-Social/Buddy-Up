@@ -11,7 +11,7 @@ enum ShareOutcome { shared, copied, cancelled, failed }
 /// Deep link into the analytics tab — `/app/analytics` redirects to it on web.
 const String analyticsSharePath = '/app/analytics';
 
-const String buddyUpWebOrigin = 'https://buddyup.app';
+const String buddyUpWebOrigin = 'https://www.buddyupfit.com';
 
 String analyticsShareUrl({String origin = buddyUpWebOrigin}) =>
     '$origin$analyticsSharePath';
@@ -89,15 +89,17 @@ Future<ShareOutcome> shareAnalyticsItem({
       await Clipboard.setData(ClipboardData(text: '$text\n$url'));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sharing unavailable — copied instead.')),
+          const SnackBar(
+            content: Text('Sharing unavailable — copied instead.'),
+          ),
         );
       }
       return ShareOutcome.copied;
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not share this.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Could not share this.')));
       }
       return ShareOutcome.failed;
     }

@@ -104,6 +104,7 @@ _ActivityRecent _$ActivityRecentFromJson(Map<String, dynamic> json) =>
       distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 0,
       avgPace: (json['avg_pace'] as num?)?.toDouble(),
       caloriesBurned: (json['calories_burned'] as num?)?.toDouble(),
+      steps: (json['steps'] as num?)?.toInt() ?? 0,
       route: json['route'] as List<dynamic>? ?? const <dynamic>[],
     );
 
@@ -117,6 +118,7 @@ Map<String, dynamic> _$ActivityRecentToJson(_ActivityRecent instance) =>
       'distance_km': instance.distanceKm,
       'avg_pace': instance.avgPace,
       'calories_burned': instance.caloriesBurned,
+      'steps': instance.steps,
       'route': instance.route,
     };
 

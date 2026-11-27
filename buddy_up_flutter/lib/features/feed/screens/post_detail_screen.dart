@@ -34,6 +34,25 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   String? _replyToCommentId;
   String? _replyToDisplayName;
 
+  static const _builtInStickers = [
+    '💪',
+    '🔥',
+    '🏃',
+    '🏋️',
+    '🚴',
+    '🧘',
+    '🥇',
+    '⚡',
+    '🙌',
+    '👏',
+    '✅',
+    '❤️',
+    '🎯',
+    '💯',
+    '😎',
+    '🤝',
+  ];
+
   /// Comment IDs whose reply threads are expanded inline.
   final Set<String> _expandedReplies = {};
 
@@ -249,18 +268,22 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                 ).colorScheme.onSurfaceVariant,
                               ),
                               onPressed: () async {
-                                final emoji = await showEmojiPickerSheet(context);
+                                final emoji = await showEmojiPickerSheet(
+                                  context,
+                                );
                                 if (emoji == null) return;
                                 final text = _commentController.text;
                                 final sel = _commentController.selection;
-                                final start = sel.start < 0 ? text.length : sel.start;
+                                final start = sel.start < 0
+                                    ? text.length
+                                    : sel.start;
                                 final end = sel.end < 0 ? text.length : sel.end;
                                 _commentController.text =
                                     '${text.substring(0, start)}$emoji${text.substring(end)}';
                                 _commentController.selection =
                                     TextSelection.collapsed(
-                                  offset: start + emoji.length,
-                                );
+                                      offset: start + emoji.length,
+                                    );
                               },
                             ),
                             const SizedBox(width: 6),
@@ -419,11 +442,91 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   Future<void> _showStickerGifPicker(String postId, String type) async {
     Navigator.of(context).pop();
-    final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-      maxWidth: 1024,
-    );
+    if (type == 'sticker') {
+      final selected = await showModalBottomSheet<String>(
+        context: context,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        builder: (sheetContext) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'BuddyUp stickers',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                GridView.count(
+                  crossAxisCount: 8,
+                  shrinkWrap: true,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  children: [
+                    for (final sticker in _builtInStickers)
+                      InkWell(
+                        onTap: () => Navigator.pop(sheetContext, sticker),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              sheetContext,
+                            ).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            sticker,
+                            style: const TextStyle(fontSize: 24),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(sheetContext, '__custom__'),
+                  icon: const Icon(LucideIcons.image),
+                  label: const Text('Make a sticker from a photo'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (selected == null) return;
+      if (selected == '__custom__') {
+        final picked = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 85,
+          maxWidth: 1024,
+        );
+        if (picked != null) {
+          await _submitMediaComment(postId, 'sticker', picked.path);
+        }
+        return;
+      }
+      try {
+        await ref
+            .read(feedRepositoryProvider)
+            .addComment(
+              postId,
+              CommentCreateInput(
+                body: selected,
+                mediaType: 'sticker',
+                stickerPack: 'BuddyUp',
+              ),
+            );
+        ref.invalidate(commentsProvider(widget.postId));
+      } catch (_) {
+        if (mounted) showToast(context, 'Could not send sticker');
+      }
+      return;
+    }
+    // GIF files selected from the device retain their animation and are sent
+    // through the same media endpoint as web-uploaded GIFs.
+    final picked = await _picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
     await _submitMediaComment(postId, type, picked.path);
   }

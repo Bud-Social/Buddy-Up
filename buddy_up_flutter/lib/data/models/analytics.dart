@@ -75,6 +75,7 @@ abstract class ActivityRecent with _$ActivityRecent {
     @JsonKey(name: 'distance_km') @Default(0) double distanceKm,
     @JsonKey(name: 'avg_pace') double? avgPace,
     @JsonKey(name: 'calories_burned') double? caloriesBurned,
+    @Default(0) int steps,
     @Default(<dynamic>[]) List<dynamic> route,
   }) = _ActivityRecent;
 
@@ -260,11 +261,19 @@ abstract class CountdownSummary with _$CountdownSummary {
     @JsonKey(name: 'total_checkins') @Default(0) int totalCheckins,
     @JsonKey(name: 'total_resets') @Default(0) int totalResets,
     @JsonKey(name: 'total_completions') @Default(0) int totalCompletions,
-    @JsonKey(name: 'current_streak_units') @Default(0) double currentStreakUnits,
-    @JsonKey(name: 'longest_streak_units') @Default(0) double longestStreakUnits,
+    @JsonKey(name: 'current_streak_units')
+    @Default(0)
+    double currentStreakUnits,
+    @JsonKey(name: 'longest_streak_units')
+    @Default(0)
+    double longestStreakUnits,
     @JsonKey(name: 'total_streak_days') @Default(0) double totalStreakDays,
-    @JsonKey(name: 'by_countdown') @Default(<CountdownEntry>[]) List<CountdownEntry> byCountdown,
-    @JsonKey(name: 'recent_events') @Default(<CountdownEventEntry>[]) List<CountdownEventEntry> recentEvents,
+    @JsonKey(name: 'by_countdown')
+    @Default(<CountdownEntry>[])
+    List<CountdownEntry> byCountdown,
+    @JsonKey(name: 'recent_events')
+    @Default(<CountdownEventEntry>[])
+    List<CountdownEventEntry> recentEvents,
     @JsonKey(name: 'cadence') @Default(CadenceSummary()) CadenceSummary cadence,
   }) = _CountdownSummary;
 
@@ -300,8 +309,12 @@ abstract class RoutinesSummary with _$RoutinesSummary {
   const factory RoutinesSummary({
     @JsonKey(name: 'active_routines') @Default(0) int activeRoutines,
     @JsonKey(name: 'total_checkins') @Default(0) int totalCheckins,
-    @JsonKey(name: 'by_category') @Default(<RoutineCategoryCount>[]) List<RoutineCategoryCount> byCategory,
-    @JsonKey(name: 'by_tracking') @Default(<RoutineTrackingCount>[]) List<RoutineTrackingCount> byTracking,
+    @JsonKey(name: 'by_category')
+    @Default(<RoutineCategoryCount>[])
+    List<RoutineCategoryCount> byCategory,
+    @JsonKey(name: 'by_tracking')
+    @Default(<RoutineTrackingCount>[])
+    List<RoutineTrackingCount> byTracking,
   }) = _RoutinesSummary;
 
   factory RoutinesSummary.fromJson(Map<String, dynamic> json) =>

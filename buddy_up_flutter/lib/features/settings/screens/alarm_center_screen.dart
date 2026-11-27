@@ -9,6 +9,7 @@ import '../../../data/models/alarm.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/toast.dart';
 import '../providers/alarm_providers.dart';
+import '../services/alarm_sound_cache.dart';
 
 /// Settings → Alarm Center: alarms, custom sounds, buddy shares and
 /// suggestions. Mirrors the web Alarm Center against the same API.
@@ -48,8 +49,10 @@ class AlarmCenterScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('How alarms work',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    const Text(
+                      'How alarms work',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       'Alarms ring anywhere in BuddyUp while the app is open — '
@@ -59,7 +62,9 @@ class AlarmCenterScreen extends ConsumerWidget {
                       'up, and keep a backup alarm on your phone clock for '
                       'mission-critical wake-ups.',
                       style: TextStyle(
-                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -89,8 +94,10 @@ class _AlarmsCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('My alarms',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text(
+              'My alarms',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 8),
             alarms.when(
               loading: () => const Padding(
@@ -100,7 +107,9 @@ class _AlarmsCard extends ConsumerWidget {
               error: (e, _) => Text(
                 apiErrorMessage(e, fallback: 'Could not load your alarms.'),
                 style: TextStyle(
-                    fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               data: (rows) => rows.isEmpty
                   ? const EmptyState(
@@ -113,9 +122,12 @@ class _AlarmsCard extends ConsumerWidget {
                         for (final alarm in rows)
                           ListTile(
                             contentPadding: EdgeInsets.zero,
-                            title: Text(alarm.time,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600)),
+                            title: Text(
+                              alarm.time,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             subtitle: Text(
                               '${formatAlarmDays(alarm.daysMask)}'
                               '${alarm.sound != null ? ' · ${alarm.sound!.name}' : ' · Default sound'}'
@@ -129,16 +141,18 @@ class _AlarmsCard extends ConsumerWidget {
                                   value: alarm.enabled,
                                   onChanged: (value) async {
                                     try {
-                                      await repo.updateAlarm(
-                                          alarm.id, {'enabled': value});
+                                      await repo.updateAlarm(alarm.id, {
+                                        'enabled': value,
+                                      });
                                       ref.invalidate(alarmsProvider);
                                     } catch (e) {
                                       if (context.mounted) {
                                         showToast(
                                           context,
-                                          apiErrorMessage(e,
-                                              fallback:
-                                                  'Failed to update alarm'),
+                                          apiErrorMessage(
+                                            e,
+                                            fallback: 'Failed to update alarm',
+                                          ),
                                           type: ToastType.error,
                                         );
                                       }
@@ -147,8 +161,10 @@ class _AlarmsCard extends ConsumerWidget {
                                 ),
                                 IconButton(
                                   tooltip: 'Delete alarm',
-                                  icon: const Icon(Icons.delete_outline,
-                                      size: 20),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 20,
+                                  ),
                                   onPressed: () async {
                                     try {
                                       await repo.deleteAlarm(alarm.id);
@@ -157,9 +173,10 @@ class _AlarmsCard extends ConsumerWidget {
                                       if (context.mounted) {
                                         showToast(
                                           context,
-                                          apiErrorMessage(e,
-                                              fallback:
-                                                  'Failed to delete alarm'),
+                                          apiErrorMessage(
+                                            e,
+                                            fallback: 'Failed to delete alarm',
+                                          ),
                                           type: ToastType.error,
                                         );
                                       }
@@ -173,9 +190,7 @@ class _AlarmsCard extends ConsumerWidget {
                     ),
             ),
             const Divider(height: 24),
-            _NewAlarmForm(
-                sounds: sounds.asData?.value ?? const <AlarmSound>[],
-              ),
+            _NewAlarmForm(sounds: sounds.asData?.value ?? const <AlarmSound>[]),
           ],
         ),
       ),
@@ -229,14 +244,19 @@ class _NewAlarmFormState extends ConsumerState<_NewAlarmForm> {
       setState(() => _soundId = null);
       ref.invalidate(alarmsProvider);
       if (mounted) {
-        showToast(context, 'Alarm set — sleep tight, champ',
-            type: ToastType.success);
+        showToast(
+          context,
+          'Alarm set — sleep tight, champ',
+          type: ToastType.success,
+        );
       }
     } catch (e) {
       if (mounted) {
-        showToast(context,
-            apiErrorMessage(e, fallback: 'Failed to create alarm'),
-            type: ToastType.error);
+        showToast(
+          context,
+          apiErrorMessage(e, fallback: 'Failed to create alarm'),
+          type: ToastType.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -248,8 +268,10 @@ class _NewAlarmFormState extends ConsumerState<_NewAlarmForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('New alarm',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        const Text(
+          'New alarm',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -285,11 +307,12 @@ class _NewAlarmFormState extends ConsumerState<_NewAlarmForm> {
           children: [
             for (var i = 0; i < 7; i++)
               FilterChip(
-                label: Text(alarmDayLabels[i],
-                    style: const TextStyle(fontSize: 11)),
+                label: Text(
+                  alarmDayLabels[i],
+                  style: const TextStyle(fontSize: 11),
+                ),
                 selected: _days & (1 << i) != 0,
-                onSelected: (_) =>
-                    setState(() => _days = _days ^ (1 << i)),
+                onSelected: (_) => setState(() => _days = _days ^ (1 << i)),
               ),
           ],
         ),
@@ -305,17 +328,18 @@ class _NewAlarmFormState extends ConsumerState<_NewAlarmForm> {
         const SizedBox(height: 8),
         DropdownButtonFormField<String?>(
           initialValue: _soundId,
-          decoration: const InputDecoration(
-              labelText: 'Sound', isDense: true),
+          decoration: const InputDecoration(labelText: 'Sound', isDense: true),
           items: [
             const DropdownMenuItem<String?>(
-                value: null, child: Text('Default sound')),
+              value: null,
+              child: Text('Default sound'),
+            ),
             for (final sound in widget.sounds)
               DropdownMenuItem<String?>(
                 value: sound.id,
-                child: Text(sound.isMine
-                    ? sound.name
-                    : '${sound.name} (shared)'),
+                child: Text(
+                  sound.isMine ? sound.name : '${sound.name} (shared)',
+                ),
               ),
           ],
           onChanged: (value) => setState(() => _soundId = value),
@@ -372,7 +396,9 @@ class _SoundsCardState extends ConsumerState<_SoundsCard> {
     }
     setState(() => _uploading = true);
     try {
-      await ref.read(alarmRepositoryProvider).uploadSound(
+      await ref
+          .read(alarmRepositoryProvider)
+          .uploadSound(
             MultipartFile.fromBytes(bytes, filename: file.name),
             file.name.replaceAll(RegExp(r'\.[^.]+$'), ''),
             'private',
@@ -383,9 +409,11 @@ class _SoundsCardState extends ConsumerState<_SoundsCard> {
       }
     } catch (e) {
       if (mounted) {
-        showToast(context,
-            apiErrorMessage(e, fallback: 'Failed to upload sound'),
-            type: ToastType.error);
+        showToast(
+          context,
+          apiErrorMessage(e, fallback: 'Failed to upload sound'),
+          type: ToastType.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -398,6 +426,52 @@ class _SoundsCardState extends ConsumerState<_SoundsCard> {
     }
   }
 
+  Future<void> _share(AlarmSound sound) async {
+    final recipient = TextEditingController();
+    final id = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Share ${sound.name}'),
+        content: TextField(
+          controller: recipient,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Buddy profile ID or username',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, recipient.text.trim()),
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+    recipient.dispose();
+    if (id == null || id.isEmpty) return;
+    try {
+      await ref.read(alarmRepositoryProvider).shareSound(sound.id, {
+        'recipient_profile_id': id,
+      });
+      if (mounted) {
+        showToast(context, 'Sound sent to your buddy', type: ToastType.success);
+      }
+    } catch (e) {
+      if (mounted) {
+        showToast(
+          context,
+          apiErrorMessage(e, fallback: 'Could not share sound'),
+          type: ToastType.error,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -406,13 +480,17 @@ class _SoundsCardState extends ConsumerState<_SoundsCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('My sounds',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text(
+              'My sounds',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 4),
             Text(
               'Upload a short clip (max 30s, 2 MB). Buddies can also send you theirs.',
-              style:
-                  TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 8),
             widget.sounds.when(
@@ -420,7 +498,9 @@ class _SoundsCardState extends ConsumerState<_SoundsCard> {
               error: (e, _) => Text(
                 apiErrorMessage(e, fallback: 'Could not load your sounds.'),
                 style: TextStyle(
-                    fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               data: (rows) {
                 final mine = rows.where((s) => s.isMine).toList();
@@ -430,7 +510,9 @@ class _SoundsCardState extends ConsumerState<_SoundsCard> {
                     child: Text(
                       'No custom sounds yet — upload your wake-up anthem.',
                       style: TextStyle(
-                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   );
                 }
@@ -439,14 +521,23 @@ class _SoundsCardState extends ConsumerState<_SoundsCard> {
                     for (final sound in mine)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.graphic_eq,
-                            color: BuddyColors.green),
-                        title: Text(sound.name,
-                            style: const TextStyle(fontSize: 14)),
+                        leading: const Icon(
+                          Icons.graphic_eq,
+                          color: BuddyColors.green,
+                        ),
+                        title: Text(
+                          sound.name,
+                          style: const TextStyle(fontSize: 14),
+                        ),
                         subtitle: Text(
                           '${sound.visibility}'
                           '${sound.durationMs > 0 ? ' · ${(sound.durationMs / 1000).round()}s' : ''}',
                           style: const TextStyle(fontSize: 11),
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Share with a buddy',
+                          icon: const Icon(Icons.send_outlined, size: 18),
+                          onPressed: () => _share(sound),
                         ),
                       ),
                   ],
@@ -489,17 +580,25 @@ class _SharesCard extends ConsumerWidget {
     Future<void> respond(AlarmShare share, bool accept) async {
       try {
         await repo.respondToShare(share.id, {'accept': accept});
+        if (accept) {
+          await AlarmSoundCache.cache(share.sound);
+        }
         ref.invalidate(alarmSharesInboxProvider);
         ref.invalidate(alarmSoundsProvider);
         if (context.mounted) {
-          showToast(context, accept ? 'Sound added' : 'Share declined',
-              type: ToastType.success);
+          showToast(
+            context,
+            accept ? 'Sound added' : 'Share declined',
+            type: ToastType.success,
+          );
         }
       } catch (e) {
         if (context.mounted) {
-          showToast(context,
-              apiErrorMessage(e, fallback: 'Failed to respond to share'),
-              type: ToastType.error);
+          showToast(
+            context,
+            apiErrorMessage(e, fallback: 'Failed to respond to share'),
+            type: ToastType.error,
+          );
         }
       }
     }
@@ -510,29 +609,37 @@ class _SharesCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Shared with me',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text(
+              'Shared with me',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 8),
             shares.when(
               loading: () => const SizedBox.shrink(),
               error: (e, _) => Text(
                 apiErrorMessage(e, fallback: 'Could not load shares.'),
                 style: TextStyle(
-                    fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               data: (rows) => rows.isEmpty
                   ? Text(
                       'Nothing shared yet — your buddies are holding out on you.',
                       style: TextStyle(
-                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     )
                   : Column(
                       children: [
                         for (final share in rows)
                           ListTile(
                             contentPadding: EdgeInsets.zero,
-                            title: Text(share.sound.name,
-                                style: const TextStyle(fontSize: 14)),
+                            title: Text(
+                              share.sound.name,
+                              style: const TextStyle(fontSize: 14),
+                            ),
                             subtitle: Text(
                               'from ${share.sender?.displayName ?? share.sender?.username ?? 'a buddy'}',
                               style: const TextStyle(fontSize: 11),
@@ -590,32 +697,41 @@ class _SuggestionsCardState extends ConsumerState<_SuggestionsCard> {
 
   Future<void> _respond(AlarmSuggestion suggestion, String decision) async {
     try {
-      await ref
-          .read(alarmRepositoryProvider)
-          .respondToSuggestion(suggestion.id, {'decision': decision});
+      await ref.read(alarmRepositoryProvider).respondToSuggestion(
+        suggestion.id,
+        {'decision': decision},
+      );
       ref.invalidate(alarmSuggestionsProvider);
       if (mounted) {
         showToast(context, 'Suggestion $decision', type: ToastType.success);
       }
     } catch (e) {
       if (mounted) {
-        showToast(context,
-            apiErrorMessage(e, fallback: 'Failed to respond'),
-            type: ToastType.error);
+        showToast(
+          context,
+          apiErrorMessage(e, fallback: 'Failed to respond'),
+          type: ToastType.error,
+        );
       }
     }
   }
 
   Future<void> _send() async {
     if (_recipient.text.trim().isEmpty || _title.text.trim().isEmpty) {
-      showToast(context, 'Pick a buddy and give your suggestion a title',
-          type: ToastType.error);
+      showToast(
+        context,
+        'Pick a buddy and give your suggestion a title',
+        type: ToastType.error,
+      );
       return;
     }
     final url = _url.text.trim();
     if (url.isNotEmpty && !url.startsWith('http')) {
-      showToast(context, 'Link must start with http:// or https://',
-          type: ToastType.error);
+      showToast(
+        context,
+        'Link must start with http:// or https://',
+        type: ToastType.error,
+      );
       return;
     }
     setState(() => _sending = true);
@@ -636,9 +752,11 @@ class _SuggestionsCardState extends ConsumerState<_SuggestionsCard> {
       }
     } catch (e) {
       if (mounted) {
-        showToast(context,
-            apiErrorMessage(e, fallback: 'Failed to send suggestion'),
-            type: ToastType.error);
+        showToast(
+          context,
+          apiErrorMessage(e, fallback: 'Failed to send suggestion'),
+          type: ToastType.error,
+        );
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -653,27 +771,37 @@ class _SuggestionsCardState extends ConsumerState<_SuggestionsCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Suggestions',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text(
+              'Suggestions',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 8),
             widget.suggestions.when(
               loading: () => const SizedBox.shrink(),
               error: (e, _) => Text(
                 apiErrorMessage(e, fallback: 'Could not load suggestions.'),
                 style: TextStyle(
-                    fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               data: (rows) => rows.isEmpty
-                  ? Text('No suggestions right now.',
+                  ? Text(
+                      'No suggestions right now.',
                       style: TextStyle(
-                          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant))
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    )
                   : Column(
                       children: [
                         for (final suggestion in rows)
                           ListTile(
                             contentPadding: EdgeInsets.zero,
-                            title: Text(suggestion.title,
-                                style: const TextStyle(fontSize: 14)),
+                            title: Text(
+                              suggestion.title,
+                              style: const TextStyle(fontSize: 14),
+                            ),
                             subtitle: Text(
                               [
                                 if (suggestion.note?.isNotEmpty ?? false)
@@ -703,32 +831,42 @@ class _SuggestionsCardState extends ConsumerState<_SuggestionsCard> {
                     ),
             ),
             const Divider(height: 24),
-            const Text('Send a suggestion',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            const Text(
+              'Send a suggestion',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _recipient,
               decoration: const InputDecoration(
-                  labelText: 'Buddy profile ID', isDense: true),
+                labelText: 'Buddy profile ID',
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _title,
               decoration: const InputDecoration(
-                  labelText: 'Title', hintText: 'Try this sunrise alarm',
-                  isDense: true),
+                labelText: 'Title',
+                hintText: 'Try this sunrise alarm',
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _note,
               decoration: const InputDecoration(
-                  labelText: 'Note (optional)', isDense: true),
+                labelText: 'Note (optional)',
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _url,
               decoration: const InputDecoration(
-                  labelText: 'Link (optional, https://…)', isDense: true),
+                labelText: 'Link (optional, https://…)',
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 10),
             SizedBox(

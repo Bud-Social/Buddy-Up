@@ -16,6 +16,7 @@ import '../providers/feed_provider.dart';
 /// Canonical deep link for a post. Video posts land in the fullscreen
 /// player; everything else lands on the post detail route.
 String canonicalPostUrl(Post post, {String origin = ''}) {
+  final resolvedOrigin = origin.isEmpty ? 'https://www.buddyupfit.com' : origin;
   final isVideo =
       post.media.any((m) => m.isVideo) ||
       post.mediaUrls.any((u) {
@@ -24,8 +25,8 @@ String canonicalPostUrl(Post post, {String origin = ''}) {
             lower.endsWith('.mov') ||
             lower.endsWith('.webm');
       });
-  if (isVideo) return '$origin/videos?start=${post.id}';
-  return '$origin/feed/${post.id}';
+  if (isVideo) return '$resolvedOrigin/videos?start=${post.id}';
+  return '$resolvedOrigin/feed/${post.id}';
 }
 
 /// Append the sharer's referral code so opens attribute back to them.

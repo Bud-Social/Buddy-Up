@@ -84,6 +84,7 @@ class _PostCardState extends ConsumerState<PostCard> {
   DateTime? _focusStart;
   String? _trackedPostId;
   bool _viewRecorded = false;
+  bool _showLikeBurst = false;
 
   Post get _post => widget.post;
 
@@ -172,6 +173,16 @@ class _PostCardState extends ConsumerState<PostCard> {
     );
   }
 
+  void _doubleTapLike() {
+    if (_userReaction == null) {
+      widget.onReact?.call(_post.id, '💪');
+    }
+    setState(() => _showLikeBurst = true);
+    Future<void>.delayed(const Duration(milliseconds: 650), () {
+      if (mounted) setState(() => _showLikeBurst = false);
+    });
+  }
+
   void _openPostMenu() {
     final messenger = ScaffoldMessenger.of(context);
     final notifier = ref.read(feedProvider.notifier);
@@ -210,100 +221,126 @@ class _PostCardState extends ConsumerState<PostCard> {
   Widget build(BuildContext context) {
     final viewer = ref.watch(authProvider).profile;
     final viewerUserId = viewer?.userId ?? ref.read(authProvider).user?.id;
+    final workoutRoute = _displayWorkoutLogData?['route'];
     return GestureDetector(
-      onDoubleTap: _userReaction == null
-          ? () => widget.onReact?.call(_post.id, '💪')
-          : null,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outlineVariant,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          textDirection: ref.watch(handednessProvider)
-              ? ui.TextDirection.rtl
-              : ui.TextDirection.ltr,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (_post.isRepostedByMe)
-                    RepostIndicator(
-                      reposters: _post.reposters,
-                      username: 'You',
-                      viewerReposted: true,
-                      viewerAvatarUrl: viewer?.avatarUrl,
-                      viewerDisplayName: viewer?.displayName,
-                      viewerUserId: viewerUserId,
-                      gymActor: widget.gymActor,
-                    ),
-
-                  if (_post.isPinned) ...[
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Text('📌', style: TextStyle(fontSize: 12)),
-                          SizedBox(width: 6),
-                          Text(
-                            'Pinned post',
-                            style: TextStyle(
-                              color: BuddyColors.gold,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  _buildHeader(context),
-                  if (_displayBody.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    _buildBody(context),
-                  ],
-                  if (_displayMediaUrls.isNotEmpty ||
-                      _displayMedia.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    MediaGallery(
-                      urls: _displayMediaUrls,
-                      media: _displayMedia.isEmpty ? null : _displayMedia,
-                      postId: _post.id,
-                    ),
-                  ],
-                  if (_displayPoll != null) ...[
-                    const SizedBox(height: 8),
-                    PollWidget(
-                      poll: _displayPoll!,
-                      postId: _post.id,
-                      onVote: widget.onPollVote,
-                    ),
-                  ],
-                  if (_displayWorkoutLogData != null) ...[
-                    const SizedBox(height: 8),
-                    _buildWorkoutLog(context),
-                  ],
-                  AiAnalysisCard(analysis: _post.aiAnalysis),
-                  if (_displayGymTagName != null) ...[
-                    const SizedBox(height: 6),
-                    _buildGymTag(),
-                  ],
-                ],
+      onDoubleTap: _doubleTapLike,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+                width: 1,
               ),
             ),
-            const SizedBox(width: 8),
-            _buildActionBar(context, viewer),
-          ],
-        ),
+            child: Row(
+              textDirection: ref.watch(handednessProvider)
+                  ? ui.TextDirection.rtl
+                  : ui.TextDirection.ltr,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_post.isRepostedByMe)
+                        RepostIndicator(
+                          reposters: _post.reposters,
+                          username: 'You',
+                          viewerReposted: true,
+                          viewerAvatarUrl: viewer?.avatarUrl,
+                          viewerDisplayName: viewer?.displayName,
+                          viewerUserId: viewerUserId,
+                          gymActor: widget.gymActor,
+                        ),
+
+                      if (_post.isPinned) ...[
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Text('📌', style: TextStyle(fontSize: 12)),
+                              SizedBox(width: 6),
+                              Text(
+                                'Pinned post',
+                                style: TextStyle(
+                                  color: BuddyColors.gold,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      _buildHeader(context),
+                      if (_displayBody.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _buildBody(context),
+                      ],
+                      if (_displayMediaUrls.isNotEmpty ||
+                          _displayMedia.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        MediaGallery(
+                          urls: _displayMediaUrls,
+                          media: _displayMedia.isEmpty ? null : _displayMedia,
+                          postId: _post.id,
+                        ),
+                      ],
+                      if (_displayPoll != null) ...[
+                        const SizedBox(height: 8),
+                        PollWidget(
+                          poll: _displayPoll!,
+                          postId: _post.id,
+                          onVote: widget.onPollVote,
+                        ),
+                      ],
+                      if (_displayWorkoutLogData != null) ...[
+                        const SizedBox(height: 8),
+                        _buildWorkoutLog(context),
+                        if (workoutRoute is List &&
+                            workoutRoute.length >= 2) ...[
+                          const SizedBox(height: 8),
+                          _WorkoutRoutePreview(route: workoutRoute),
+                        ],
+                      ],
+                      AiAnalysisCard(analysis: _post.aiAnalysis),
+                      if (_displayGymTagName != null) ...[
+                        const SizedBox(height: 6),
+                        _buildGymTag(),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildActionBar(context, viewer),
+              ],
+            ),
+          ),
+          IgnorePointer(
+            child: AnimatedOpacity(
+              opacity: _showLikeBurst ? 1 : 0,
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOut,
+              child: AnimatedScale(
+                scale: _showLikeBurst ? 1 : 0.45,
+                duration: const Duration(milliseconds: 420),
+                curve: Curves.elasticOut,
+                child: const Icon(
+                  Icons.favorite,
+                  color: Colors.white,
+                  size: 86,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -406,14 +443,21 @@ class _PostCardState extends ConsumerState<PostCard> {
                 ref.read(feedProvider.notifier).toggleFollowById(_post.id),
           ),
         ],
-        IconButton(
-          icon: const Icon(
-            LucideIcons.ellipsis,
-            color: BuddyColors.textSecondary,
-            size: 20,
+        Semantics(
+          button: true,
+          label: 'Post options',
+          child: GestureDetector(
+            onTap: _openPostMenu,
+            behavior: HitTestBehavior.opaque,
+            child: const Padding(
+              padding: EdgeInsets.all(6),
+              child: Icon(
+                LucideIcons.ellipsis,
+                color: BuddyColors.textSecondary,
+                size: 20,
+              ),
+            ),
           ),
-          tooltip: 'Post options',
-          onPressed: _openPostMenu,
         ),
       ],
     );
@@ -712,13 +756,10 @@ class _PostMenuSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Post live = post;
-    for (final p in ref.watch(feedProvider).posts) {
-      if (p.id == post.id) {
-        live = p;
-        break;
-      }
-    }
+    // The card's widget input is the authoritative snapshot. Reading a second
+    // provider list here can resurrect a stale reaction when a recycled feed
+    // row opens its menu.
+    final live = post;
     final orig = live.isRepost ? live.originalPostData : null;
     final rawReaction = orig?.userReaction ?? live.userReaction;
     final currentEmoji = rawReaction == null
@@ -750,7 +791,8 @@ class _PostMenuSheet extends ConsumerWidget {
             _MenuRow(
               icon: LucideIcons.heart,
               iconColor: isLiked ? BuddyColors.red : null,
-              label: isLiked ? 'Unlike' : 'Like',
+              label: 'Like',
+              subtitle: isLiked ? 'Remove your current reaction' : null,
               onTap: () {
                 Navigator.of(context).pop();
                 notifier.toggleReactionForRow(
@@ -1170,4 +1212,73 @@ class _HeaderFollowButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _WorkoutRoutePreview extends StatelessWidget {
+  const _WorkoutRoutePreview({required this.route});
+
+  final List route;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 130,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: CustomPaint(
+        painter: _RoutePainter(route, Theme.of(context).colorScheme.primary),
+        child: const Center(
+          child: Icon(Icons.route, color: Colors.white54, size: 22),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoutePainter extends CustomPainter {
+  const _RoutePainter(this.route, this.color);
+  final List route;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final values = <Offset>[];
+    for (final point in route) {
+      if (point is! List || point.length < 2) continue;
+      final x = double.tryParse('${point[1]}');
+      final y = double.tryParse('${point[0]}');
+      if (x != null && y != null) values.add(Offset(x, y));
+    }
+    if (values.length < 2) return;
+    final minX = values.map((p) => p.dx).reduce((a, b) => a < b ? a : b);
+    final maxX = values.map((p) => p.dx).reduce((a, b) => a > b ? a : b);
+    final minY = values.map((p) => p.dy).reduce((a, b) => a < b ? a : b);
+    final maxY = values.map((p) => p.dy).reduce((a, b) => a > b ? a : b);
+    final path = Path();
+    for (var i = 0; i < values.length; i++) {
+      final dx = maxX == minX ? .5 : (values[i].dx - minX) / (maxX - minX);
+      final dy = maxY == minY ? .5 : (values[i].dy - minY) / (maxY - minY);
+      final point = Offset(dx * size.width, size.height - dy * size.height);
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RoutePainter oldDelegate) =>
+      oldDelegate.route != route;
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/models/analytics.dart';
 import '../../../../shared/widgets/empty_state.dart';
@@ -34,6 +35,51 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
   final _caloriesController = TextEditingController();
   String _activityType = 'walk';
   bool _isSubmitting = false;
+  Set<String> _savedIds = {};
+  Set<String> _highlightIds = {};
+  String _activityView = 'recent';
+
+  String _activityId(ActivityRecent a) => a.id.isNotEmpty
+      ? a.id
+      : '${a.activityType}:${a.startedAt ?? a.durationSeconds}';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadActivityCollections();
+  }
+
+  Future<void> _loadActivityCollections() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _savedIds = (prefs.getStringList('activity_saved_ids') ?? []).toSet();
+      _highlightIds = (prefs.getStringList('activity_highlight_ids') ?? [])
+          .toSet();
+    });
+  }
+
+  Future<void> _toggleActivityCollection(
+    ActivityRecent a, {
+    required bool highlight,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = _activityId(a);
+    final next = Set<String>.from(highlight ? _highlightIds : _savedIds);
+    next.contains(id) ? next.remove(id) : next.add(id);
+    await prefs.setStringList(
+      highlight ? 'activity_highlight_ids' : 'activity_saved_ids',
+      next.toList(),
+    );
+    if (!mounted) return;
+    setState(() {
+      if (highlight) {
+        _highlightIds = next;
+      } else {
+        _savedIds = next;
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -111,6 +157,31 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
         padding: const EdgeInsets.all(16),
         children: [
           const ActivityQueueBanner(),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'recent',
+                  label: Text('Recent'),
+                  icon: Icon(Icons.history),
+                ),
+                ButtonSegment(
+                  value: 'saved',
+                  label: Text('Saved'),
+                  icon: Icon(Icons.bookmark_outline),
+                ),
+                ButtonSegment(
+                  value: 'highlights',
+                  label: Text('Highlights'),
+                  icon: Icon(Icons.auto_awesome_outlined),
+                ),
+              ],
+              selected: {_activityView},
+              onSelectionChanged: (value) =>
+                  setState(() => _activityView = value.first),
+            ),
+          ),
           // GPS tracker entry — hybrid keyless tracking, parity with web.
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -193,9 +264,26 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
           ],
           if (s.recent.isNotEmpty) ...[
             const SizedBox(height: 16),
-            const SectionHeader(title: 'Recent', icon: Icons.history),
+            SectionHeader(
+              title: switch (_activityView) {
+                'saved' => 'Saved activities',
+                'highlights' => 'Activity highlights',
+                _ => 'Recent',
+              },
+              icon: switch (_activityView) {
+                'saved' => Icons.bookmark,
+                'highlights' => Icons.auto_awesome,
+                _ => Icons.history,
+              },
+            ),
             const SizedBox(height: 8),
-            for (final a in s.recent) _activityTile(a),
+            for (final a in s.recent)
+              if (_activityView == 'recent' ||
+                  (_activityView == 'saved' &&
+                      _savedIds.contains(_activityId(a))) ||
+                  (_activityView == 'highlights' &&
+                      _highlightIds.contains(_activityId(a))))
+                _activityTile(a),
           ],
         ],
       ),
@@ -214,7 +302,8 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
         '${formatNumber(metric.distanceKm, decimals: 1)} km · ${formatDuration(metric.duration.round() * 60)} · ${metric.duration > 0 ? (metric.distanceKm / (metric.duration / 60)).toStringAsFixed(1) : '0.0'} km/h',
       'hike' || 'hiking' =>
         '${formatNumber(metric.distanceKm, decimals: 1)} km · ${formatDuration(metric.duration.round() * 60)} · ${metric.calories.round()} kcal',
-      _ => '${metric.count} sessions · ${formatDuration(metric.duration.round() * 60)} · ${metric.calories.round()} kcal',
+      _ =>
+        '${metric.count} sessions · ${formatDuration(metric.duration.round() * 60)} · ${metric.calories.round()} kcal',
     };
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -224,9 +313,15 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
           backgroundColor: BuddyColors.green.withValues(alpha: 0.14),
           child: Icon(_iconForActivity(key), color: BuddyColors.green),
         ),
-        title: Text(metric.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(
+          metric.label,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
         subtitle: Text(detail, style: TextStyle(color: cs.onSurfaceVariant)),
-        trailing: Text('${metric.count}×', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700)),
+        trailing: Text(
+          '${metric.count}×',
+          style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }
@@ -377,7 +472,9 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${formatNumber(a.distanceKm, decimals: 1)} km · ${formatDuration(a.durationSeconds)}',
+                      '${formatNumber(a.distanceKm, decimals: 1)} km · ${formatDuration(a.durationSeconds)}'
+                      '${a.steps > 0 ? ' · ${a.steps} steps' : ''}'
+                      '${a.avgPace != null ? ' · ${formatPace(a.avgPace)}' : ''}',
                       style: TextStyle(
                         color: cs.onSurface.withValues(alpha: 0.6),
                         fontSize: 12,
@@ -400,6 +497,31 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
                   color: BuddyColors.green,
                   onPressed: () => _share(a, type.label, anchor),
                 ),
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_horiz, size: 18),
+                onSelected: (value) => _toggleActivityCollection(
+                  a,
+                  highlight: value == 'highlight',
+                ),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'saved',
+                    child: Text(
+                      _savedIds.contains(_activityId(a))
+                          ? 'Remove from saved'
+                          : 'Save activity',
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'highlight',
+                    child: Text(
+                      _highlightIds.contains(_activityId(a))
+                          ? 'Remove highlight'
+                          : 'Add to highlights',
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -40,6 +40,14 @@ class PostShareCardRenderer {
       bold: true,
       maxWidth: 900,
     );
+    _drawText(
+      canvas,
+      'Find Your Fitness Family',
+      const Offset(48, 66),
+      fontSize: 17,
+      color: Colors.black.withValues(alpha: 0.72),
+      maxWidth: 900,
+    );
 
     // Author row
     final author = post.authorData;
@@ -80,7 +88,9 @@ class PostShareCardRenderer {
     const mediaRect = Rect.fromLTWH(56, 250, 968, 620);
     final image = await _loadLeadMedia(post);
     canvas.save();
-    canvas.clipRRect(RRect.fromRectAndRadius(mediaRect, const Radius.circular(36)));
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(mediaRect, const Radius.circular(36)),
+    );
     if (image != null) {
       _drawCover(canvas, image, mediaRect);
     } else {
@@ -97,8 +107,15 @@ class PostShareCardRenderer {
     }
     canvas.restore();
 
+    // Workout metrics and route preview
+    final workout = post.workoutLogData;
+    if (workout != null) {
+      _drawWorkoutMetrics(canvas, workout);
+      _drawRoute(canvas, workout['route']);
+    }
+
     // Body
-    if (post.body.trim().isNotEmpty) {
+    if (post.body.trim().isNotEmpty && post.workoutLogData == null) {
       _drawText(
         canvas,
         post.body.trim(),
@@ -115,11 +132,13 @@ class PostShareCardRenderer {
     canvas.drawLine(
       const Offset(56, 1246),
       const Offset(width - 56, 1246),
-      Paint()..color = const Color(0xFF1E262E)..strokeWidth = 2,
+      Paint()
+        ..color = const Color(0xFF1E262E)
+        ..strokeWidth = 2,
     );
     _drawText(
       canvas,
-      'Shared from BuddyUp Fit  •  buddyupfit.com',
+      'BuddyUp Fit Post  •  www.buddyupfit.com',
       const Offset(56, 1272),
       fontSize: 26,
       color: const Color(0xFF9BA69F),
@@ -138,14 +157,114 @@ class PostShareCardRenderer {
 
     final picture = recorder.endRecording();
     final uiImage = await picture.toImage(width.toInt(), height.toInt());
-    final byteData =
-        await uiImage.toByteData(format: ui.ImageByteFormat.png);
+    final byteData = await uiImage.toByteData(format: ui.ImageByteFormat.png);
     final bytes = byteData!.buffer.asUint8List();
 
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/buddyup_card_${post.id}.png');
     await file.writeAsBytes(bytes);
     return file;
+  }
+
+  void _drawWorkoutMetrics(Canvas canvas, Map<String, dynamic> data) {
+    final entries = <String, String>{
+      'Duration': _metric(data, ['duration_minutes', 'duration_seconds']),
+      'Distance': _metric(data, ['distance_km', 'distance_meters']),
+      'Calories': _metric(data, ['calories_burned']),
+      'Avg pace': _metric(data, ['avg_pace']),
+      'Steps': _metric(data, ['steps']),
+      'Sets × reps': '${data['sets'] ?? '-'} × ${data['reps'] ?? '-'}',
+    };
+    final keys = entries.keys.toList();
+    for (var i = 0; i < keys.length; i++) {
+      final x = 56 + (i % 3) * 322.0;
+      final y = 885 + (i ~/ 3) * 62.0;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, y, 300, 48),
+          const Radius.circular(12),
+        ),
+        Paint()..color = BuddyColors.surface,
+      );
+      _drawText(
+        canvas,
+        keys[i],
+        Offset(x + 14, y + 7),
+        fontSize: 16,
+        color: const Color(0xFF9BA69F),
+        maxWidth: 270,
+      );
+      _drawText(
+        canvas,
+        entries[keys[i]]!,
+        Offset(x + 14, y + 25),
+        fontSize: 18,
+        color: Colors.white,
+        bold: true,
+        maxWidth: 270,
+      );
+    }
+  }
+
+  String _metric(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value == null) continue;
+      if (key == 'duration_seconds') {
+        return '${((value as num) / 60).round()} min';
+      }
+      if (key == 'distance_meters') {
+        return '${((value as num) / 1000).toStringAsFixed(1)} km';
+      }
+      if (key == 'calories_burned') return '${(value as num).round()} kcal';
+      return value.toString();
+    }
+    return '-';
+  }
+
+  void _drawRoute(Canvas canvas, dynamic rawRoute) {
+    if (rawRoute is! List || rawRoute.length < 2) return;
+    final points = <Offset>[];
+    for (final item in rawRoute) {
+      if (item is! List || item.length < 2) continue;
+      final lat = double.tryParse('${item[0]}');
+      final lng = double.tryParse('${item[1]}');
+      if (lat != null && lng != null) points.add(Offset(lng, lat));
+    }
+    if (points.length < 2) return;
+    final minX = points.map((p) => p.dx).reduce((a, b) => a < b ? a : b);
+    final maxX = points.map((p) => p.dx).reduce((a, b) => a > b ? a : b);
+    final minY = points.map((p) => p.dy).reduce((a, b) => a < b ? a : b);
+    final maxY = points.map((p) => p.dy).reduce((a, b) => a > b ? a : b);
+    const rect = Rect.fromLTWH(56, 1015, 968, 190);
+    final path = Path();
+    for (var i = 0; i < points.length; i++) {
+      final x =
+          rect.left +
+          (maxX == minX ? 0.5 : (points[i].dx - minX) / (maxX - minX)) *
+              rect.width;
+      final y =
+          rect.bottom -
+          (maxY == minY ? 0.5 : (points[i].dy - minY) / (maxY - minY)) *
+              rect.height;
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(22)),
+      Paint()..color = BuddyColors.surface,
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = BuddyColors.green
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 8
+        ..strokeCap = StrokeCap.round,
+    );
   }
 
   Future<ui.Image?> _loadLeadMedia(Post post) async {
@@ -225,7 +344,8 @@ class PostShareCardRenderer {
     );
     final builder = ui.ParagraphBuilder(paragraphStyle)..pushStyle(style);
     builder.addText(text);
-    final paragraph = builder.build()..layout(ui.ParagraphConstraints(width: maxWidth));
+    final paragraph = builder.build()
+      ..layout(ui.ParagraphConstraints(width: maxWidth));
     final dx = centered ? origin.dx - maxWidth / 2 : origin.dx;
     canvas.drawParagraph(paragraph, Offset(dx, origin.dy));
   }

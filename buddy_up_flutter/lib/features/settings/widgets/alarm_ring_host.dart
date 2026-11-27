@@ -1,13 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/audio/ringtone.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/alarm.dart';
 import '../providers/alarm_providers.dart';
+import '../services/alarm_sound_cache.dart';
 
 /// App-wide alarm scheduler. Wraps the router so an alarm rings no matter
 /// which screen is open; one-off alarms disable themselves after firing.
@@ -22,7 +23,6 @@ class AlarmRingHost extends ConsumerStatefulWidget {
 
 class _AlarmRingHostState extends ConsumerState<AlarmRingHost> {
   Timer? _checkTimer;
-  Timer? _ringTimer;
   Alarm? _ringing;
   Alarm? _snoozedAlarm;
   DateTime? _snoozeAt;
@@ -31,16 +31,12 @@ class _AlarmRingHostState extends ConsumerState<AlarmRingHost> {
   @override
   void initState() {
     super.initState();
-    _checkTimer = Timer.periodic(
-      const Duration(seconds: 20),
-      (_) => _tick(),
-    );
+    _checkTimer = Timer.periodic(const Duration(seconds: 20), (_) => _tick());
   }
 
   @override
   void dispose() {
     _checkTimer?.cancel();
-    _ringTimer?.cancel();
     super.dispose();
   }
 
@@ -89,9 +85,9 @@ class _AlarmRingHostState extends ConsumerState<AlarmRingHost> {
       if (alarm.daysMask == 0) {
         // One-off: consume so it doesn't ring again tomorrow.
         try {
-          await ref
-              .read(alarmRepositoryProvider)
-              .updateAlarm(alarm.id, {'enabled': false});
+          await ref.read(alarmRepositoryProvider).updateAlarm(alarm.id, {
+            'enabled': false,
+          });
           ref.invalidate(alarmsProvider);
         } catch (_) {
           // Best effort — the user can still stop/delete it.
@@ -103,19 +99,25 @@ class _AlarmRingHostState extends ConsumerState<AlarmRingHost> {
 
   void _ring(Alarm alarm) {
     if (!mounted) return;
-    SystemSound.play(SystemSoundType.alert);
-    _ringTimer?.cancel();
-    _ringTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (mounted && _ringing != null) {
-        SystemSound.play(SystemSoundType.alert);
-      }
-    });
     setState(() => _ringing = alarm);
+    final sound = alarm.sound;
+    if (sound != null) {
+      AlarmSoundCache.pathFor(sound.id).then((path) {
+        if (mounted && _ringing?.id == alarm.id) {
+          if (path != null) {
+            Ringtone.playAlarmFile(path);
+          } else {
+            Ringtone.playLoop('alarm', 'assets/ringtones/incoming_ring.wav');
+          }
+        }
+      });
+    } else {
+      Ringtone.playLoop('alarm', 'assets/ringtones/incoming_ring.wav');
+    }
   }
 
   void _stop() {
-    _ringTimer?.cancel();
-    _ringTimer = null;
+    Ringtone.stop('alarm');
     setState(() => _ringing = null);
   }
 
@@ -152,7 +154,9 @@ class _AlarmRingHostState extends ConsumerState<AlarmRingHost> {
                 decoration: BoxDecoration(
                   color: BuddyColors.surfaceRaised,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: BuddyColors.green.withValues(alpha: 0.6)),
+                  border: Border.all(
+                    color: BuddyColors.green.withValues(alpha: 0.6),
+                  ),
                   boxShadow: const [
                     BoxShadow(color: Colors.black54, blurRadius: 18),
                   ],
@@ -172,15 +176,17 @@ class _AlarmRingHostState extends ConsumerState<AlarmRingHost> {
                               Text(
                                 'Alarm · ${_ringing!.time.substring(0, 5)}',
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w700),
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                               Text(
                                 _ringing!.label.isEmpty
                                     ? 'Time to rise and grind'
                                     : _ringing!.label,
                                 style: const TextStyle(
-                                    fontSize: 12,
-                                    color: BuddyColors.textSecondary),
+                                  fontSize: 12,
+                                  color: BuddyColors.textSecondary,
+                                ),
                               ),
                             ],
                           ),

@@ -48,7 +48,9 @@ class CommentTile extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: BuddyColors.surface,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -63,8 +65,10 @@ class CommentTile extends StatelessWidget {
                               children: [
                                 Text(
                                   comment.authorData.displayName,
-                                  style: const TextStyle(
-                                    color: BuddyColors.textPrimary,
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -74,15 +78,24 @@ class CommentTile extends StatelessWidget {
                                     comment.body.isNotEmpty)
                                   Text(
                                     comment.body,
-                                    style: const TextStyle(
-                                      color: BuddyColors.textPrimary,
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
                                       fontSize: 14,
                                     ),
+                                  ),
+                                if (comment.mediaType == 'sticker' &&
+                                    comment.body.isNotEmpty)
+                                  Text(
+                                    comment.body,
+                                    style: const TextStyle(fontSize: 30),
                                   ),
                               ],
                             ),
                           ),
-                          if (comment.mediaType != 'text') ...[
+                          if (comment.mediaType != 'text' &&
+                              (comment.mediaUrl?.isNotEmpty ?? false)) ...[
                             const SizedBox(width: 8),
                             _buildMediaPreview(context),
                           ],

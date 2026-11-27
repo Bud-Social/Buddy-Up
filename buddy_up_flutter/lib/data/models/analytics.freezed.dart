@@ -1130,7 +1130,7 @@ as List<WorkoutRecent>,
 /// @nodoc
 mixin _$ActivityRecent {
 
- String get id;@JsonKey(name: 'activity_type') String get activityType;@JsonKey(name: 'started_at') String? get startedAt;@JsonKey(name: 'duration_seconds') int get durationSeconds;@JsonKey(name: 'distance_meters') double get distanceMeters;@JsonKey(name: 'distance_km') double get distanceKm;@JsonKey(name: 'avg_pace') double? get avgPace;@JsonKey(name: 'calories_burned') double? get caloriesBurned; List<dynamic> get route;
+ String get id;@JsonKey(name: 'activity_type') String get activityType;@JsonKey(name: 'started_at') String? get startedAt;@JsonKey(name: 'duration_seconds') int get durationSeconds;@JsonKey(name: 'distance_meters') double get distanceMeters;@JsonKey(name: 'distance_km') double get distanceKm;@JsonKey(name: 'avg_pace') double? get avgPace;@JsonKey(name: 'calories_burned') double? get caloriesBurned; int get steps; List<dynamic> get route;
 /// Create a copy of ActivityRecent
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1143,16 +1143,16 @@ $ActivityRecentCopyWith<ActivityRecent> get copyWith => _$ActivityRecentCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivityRecent&&(identical(other.id, id) || other.id == id)&&(identical(other.activityType, activityType) || other.activityType == activityType)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.durationSeconds, durationSeconds) || other.durationSeconds == durationSeconds)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&(identical(other.avgPace, avgPace) || other.avgPace == avgPace)&&(identical(other.caloriesBurned, caloriesBurned) || other.caloriesBurned == caloriesBurned)&&const DeepCollectionEquality().equals(other.route, route));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ActivityRecent&&(identical(other.id, id) || other.id == id)&&(identical(other.activityType, activityType) || other.activityType == activityType)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.durationSeconds, durationSeconds) || other.durationSeconds == durationSeconds)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&(identical(other.avgPace, avgPace) || other.avgPace == avgPace)&&(identical(other.caloriesBurned, caloriesBurned) || other.caloriesBurned == caloriesBurned)&&(identical(other.steps, steps) || other.steps == steps)&&const DeepCollectionEquality().equals(other.route, route));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,activityType,startedAt,durationSeconds,distanceMeters,distanceKm,avgPace,caloriesBurned,const DeepCollectionEquality().hash(route));
+int get hashCode => Object.hash(runtimeType,id,activityType,startedAt,durationSeconds,distanceMeters,distanceKm,avgPace,caloriesBurned,steps,const DeepCollectionEquality().hash(route));
 
 @override
 String toString() {
-  return 'ActivityRecent(id: $id, activityType: $activityType, startedAt: $startedAt, durationSeconds: $durationSeconds, distanceMeters: $distanceMeters, distanceKm: $distanceKm, avgPace: $avgPace, caloriesBurned: $caloriesBurned, route: $route)';
+  return 'ActivityRecent(id: $id, activityType: $activityType, startedAt: $startedAt, durationSeconds: $durationSeconds, distanceMeters: $distanceMeters, distanceKm: $distanceKm, avgPace: $avgPace, caloriesBurned: $caloriesBurned, steps: $steps, route: $route)';
 }
 
 
@@ -1163,7 +1163,7 @@ abstract mixin class $ActivityRecentCopyWith<$Res>  {
   factory $ActivityRecentCopyWith(ActivityRecent value, $Res Function(ActivityRecent) _then) = _$ActivityRecentCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'activity_type') String activityType,@JsonKey(name: 'started_at') String? startedAt,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'distance_meters') double distanceMeters,@JsonKey(name: 'distance_km') double distanceKm,@JsonKey(name: 'avg_pace') double? avgPace,@JsonKey(name: 'calories_burned') double? caloriesBurned, List<dynamic> route
+ String id,@JsonKey(name: 'activity_type') String activityType,@JsonKey(name: 'started_at') String? startedAt,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'distance_meters') double distanceMeters,@JsonKey(name: 'distance_km') double distanceKm,@JsonKey(name: 'avg_pace') double? avgPace,@JsonKey(name: 'calories_burned') double? caloriesBurned, int steps, List<dynamic> route
 });
 
 
@@ -1180,7 +1180,7 @@ class _$ActivityRecentCopyWithImpl<$Res>
 
 /// Create a copy of ActivityRecent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? activityType = null,Object? startedAt = freezed,Object? durationSeconds = null,Object? distanceMeters = null,Object? distanceKm = null,Object? avgPace = freezed,Object? caloriesBurned = freezed,Object? route = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? activityType = null,Object? startedAt = freezed,Object? durationSeconds = null,Object? distanceMeters = null,Object? distanceKm = null,Object? avgPace = freezed,Object? caloriesBurned = freezed,Object? steps = null,Object? route = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,activityType: null == activityType ? _self.activityType : activityType // ignore: cast_nullable_to_non_nullable
@@ -1190,7 +1190,8 @@ as int,distanceMeters: null == distanceMeters ? _self.distanceMeters : distanceM
 as double,distanceKm: null == distanceKm ? _self.distanceKm : distanceKm // ignore: cast_nullable_to_non_nullable
 as double,avgPace: freezed == avgPace ? _self.avgPace : avgPace // ignore: cast_nullable_to_non_nullable
 as double?,caloriesBurned: freezed == caloriesBurned ? _self.caloriesBurned : caloriesBurned // ignore: cast_nullable_to_non_nullable
-as double?,route: null == route ? _self.route : route // ignore: cast_nullable_to_non_nullable
+as double?,steps: null == steps ? _self.steps : steps // ignore: cast_nullable_to_non_nullable
+as int,route: null == route ? _self.route : route // ignore: cast_nullable_to_non_nullable
 as List<dynamic>,
   ));
 }
@@ -1276,10 +1277,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'activity_type')  String activityType, @JsonKey(name: 'started_at')  String? startedAt, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'distance_meters')  double distanceMeters, @JsonKey(name: 'distance_km')  double distanceKm, @JsonKey(name: 'avg_pace')  double? avgPace, @JsonKey(name: 'calories_burned')  double? caloriesBurned,  List<dynamic> route)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'activity_type')  String activityType, @JsonKey(name: 'started_at')  String? startedAt, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'distance_meters')  double distanceMeters, @JsonKey(name: 'distance_km')  double distanceKm, @JsonKey(name: 'avg_pace')  double? avgPace, @JsonKey(name: 'calories_burned')  double? caloriesBurned,  int steps,  List<dynamic> route)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ActivityRecent() when $default != null:
-return $default(_that.id,_that.activityType,_that.startedAt,_that.durationSeconds,_that.distanceMeters,_that.distanceKm,_that.avgPace,_that.caloriesBurned,_that.route);case _:
+return $default(_that.id,_that.activityType,_that.startedAt,_that.durationSeconds,_that.distanceMeters,_that.distanceKm,_that.avgPace,_that.caloriesBurned,_that.steps,_that.route);case _:
   return orElse();
 
 }
@@ -1297,10 +1298,10 @@ return $default(_that.id,_that.activityType,_that.startedAt,_that.durationSecond
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'activity_type')  String activityType, @JsonKey(name: 'started_at')  String? startedAt, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'distance_meters')  double distanceMeters, @JsonKey(name: 'distance_km')  double distanceKm, @JsonKey(name: 'avg_pace')  double? avgPace, @JsonKey(name: 'calories_burned')  double? caloriesBurned,  List<dynamic> route)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'activity_type')  String activityType, @JsonKey(name: 'started_at')  String? startedAt, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'distance_meters')  double distanceMeters, @JsonKey(name: 'distance_km')  double distanceKm, @JsonKey(name: 'avg_pace')  double? avgPace, @JsonKey(name: 'calories_burned')  double? caloriesBurned,  int steps,  List<dynamic> route)  $default,) {final _that = this;
 switch (_that) {
 case _ActivityRecent():
-return $default(_that.id,_that.activityType,_that.startedAt,_that.durationSeconds,_that.distanceMeters,_that.distanceKm,_that.avgPace,_that.caloriesBurned,_that.route);case _:
+return $default(_that.id,_that.activityType,_that.startedAt,_that.durationSeconds,_that.distanceMeters,_that.distanceKm,_that.avgPace,_that.caloriesBurned,_that.steps,_that.route);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1317,10 +1318,10 @@ return $default(_that.id,_that.activityType,_that.startedAt,_that.durationSecond
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'activity_type')  String activityType, @JsonKey(name: 'started_at')  String? startedAt, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'distance_meters')  double distanceMeters, @JsonKey(name: 'distance_km')  double distanceKm, @JsonKey(name: 'avg_pace')  double? avgPace, @JsonKey(name: 'calories_burned')  double? caloriesBurned,  List<dynamic> route)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'activity_type')  String activityType, @JsonKey(name: 'started_at')  String? startedAt, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'distance_meters')  double distanceMeters, @JsonKey(name: 'distance_km')  double distanceKm, @JsonKey(name: 'avg_pace')  double? avgPace, @JsonKey(name: 'calories_burned')  double? caloriesBurned,  int steps,  List<dynamic> route)?  $default,) {final _that = this;
 switch (_that) {
 case _ActivityRecent() when $default != null:
-return $default(_that.id,_that.activityType,_that.startedAt,_that.durationSeconds,_that.distanceMeters,_that.distanceKm,_that.avgPace,_that.caloriesBurned,_that.route);case _:
+return $default(_that.id,_that.activityType,_that.startedAt,_that.durationSeconds,_that.distanceMeters,_that.distanceKm,_that.avgPace,_that.caloriesBurned,_that.steps,_that.route);case _:
   return null;
 
 }
@@ -1332,7 +1333,7 @@ return $default(_that.id,_that.activityType,_that.startedAt,_that.durationSecond
 @JsonSerializable()
 
 class _ActivityRecent implements ActivityRecent {
-  const _ActivityRecent({this.id = '', @JsonKey(name: 'activity_type') this.activityType = '', @JsonKey(name: 'started_at') this.startedAt, @JsonKey(name: 'duration_seconds') this.durationSeconds = 0, @JsonKey(name: 'distance_meters') this.distanceMeters = 0, @JsonKey(name: 'distance_km') this.distanceKm = 0, @JsonKey(name: 'avg_pace') this.avgPace, @JsonKey(name: 'calories_burned') this.caloriesBurned, final  List<dynamic> route = const <dynamic>[]}): _route = route;
+  const _ActivityRecent({this.id = '', @JsonKey(name: 'activity_type') this.activityType = '', @JsonKey(name: 'started_at') this.startedAt, @JsonKey(name: 'duration_seconds') this.durationSeconds = 0, @JsonKey(name: 'distance_meters') this.distanceMeters = 0, @JsonKey(name: 'distance_km') this.distanceKm = 0, @JsonKey(name: 'avg_pace') this.avgPace, @JsonKey(name: 'calories_burned') this.caloriesBurned, this.steps = 0, final  List<dynamic> route = const <dynamic>[]}): _route = route;
   factory _ActivityRecent.fromJson(Map<String, dynamic> json) => _$ActivityRecentFromJson(json);
 
 @override@JsonKey() final  String id;
@@ -1343,6 +1344,7 @@ class _ActivityRecent implements ActivityRecent {
 @override@JsonKey(name: 'distance_km') final  double distanceKm;
 @override@JsonKey(name: 'avg_pace') final  double? avgPace;
 @override@JsonKey(name: 'calories_burned') final  double? caloriesBurned;
+@override@JsonKey() final  int steps;
  final  List<dynamic> _route;
 @override@JsonKey() List<dynamic> get route {
   if (_route is EqualUnmodifiableListView) return _route;
@@ -1364,16 +1366,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivityRecent&&(identical(other.id, id) || other.id == id)&&(identical(other.activityType, activityType) || other.activityType == activityType)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.durationSeconds, durationSeconds) || other.durationSeconds == durationSeconds)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&(identical(other.avgPace, avgPace) || other.avgPace == avgPace)&&(identical(other.caloriesBurned, caloriesBurned) || other.caloriesBurned == caloriesBurned)&&const DeepCollectionEquality().equals(other._route, _route));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ActivityRecent&&(identical(other.id, id) || other.id == id)&&(identical(other.activityType, activityType) || other.activityType == activityType)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.durationSeconds, durationSeconds) || other.durationSeconds == durationSeconds)&&(identical(other.distanceMeters, distanceMeters) || other.distanceMeters == distanceMeters)&&(identical(other.distanceKm, distanceKm) || other.distanceKm == distanceKm)&&(identical(other.avgPace, avgPace) || other.avgPace == avgPace)&&(identical(other.caloriesBurned, caloriesBurned) || other.caloriesBurned == caloriesBurned)&&(identical(other.steps, steps) || other.steps == steps)&&const DeepCollectionEquality().equals(other._route, _route));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,activityType,startedAt,durationSeconds,distanceMeters,distanceKm,avgPace,caloriesBurned,const DeepCollectionEquality().hash(_route));
+int get hashCode => Object.hash(runtimeType,id,activityType,startedAt,durationSeconds,distanceMeters,distanceKm,avgPace,caloriesBurned,steps,const DeepCollectionEquality().hash(_route));
 
 @override
 String toString() {
-  return 'ActivityRecent(id: $id, activityType: $activityType, startedAt: $startedAt, durationSeconds: $durationSeconds, distanceMeters: $distanceMeters, distanceKm: $distanceKm, avgPace: $avgPace, caloriesBurned: $caloriesBurned, route: $route)';
+  return 'ActivityRecent(id: $id, activityType: $activityType, startedAt: $startedAt, durationSeconds: $durationSeconds, distanceMeters: $distanceMeters, distanceKm: $distanceKm, avgPace: $avgPace, caloriesBurned: $caloriesBurned, steps: $steps, route: $route)';
 }
 
 
@@ -1384,7 +1386,7 @@ abstract mixin class _$ActivityRecentCopyWith<$Res> implements $ActivityRecentCo
   factory _$ActivityRecentCopyWith(_ActivityRecent value, $Res Function(_ActivityRecent) _then) = __$ActivityRecentCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'activity_type') String activityType,@JsonKey(name: 'started_at') String? startedAt,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'distance_meters') double distanceMeters,@JsonKey(name: 'distance_km') double distanceKm,@JsonKey(name: 'avg_pace') double? avgPace,@JsonKey(name: 'calories_burned') double? caloriesBurned, List<dynamic> route
+ String id,@JsonKey(name: 'activity_type') String activityType,@JsonKey(name: 'started_at') String? startedAt,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'distance_meters') double distanceMeters,@JsonKey(name: 'distance_km') double distanceKm,@JsonKey(name: 'avg_pace') double? avgPace,@JsonKey(name: 'calories_burned') double? caloriesBurned, int steps, List<dynamic> route
 });
 
 
@@ -1401,7 +1403,7 @@ class __$ActivityRecentCopyWithImpl<$Res>
 
 /// Create a copy of ActivityRecent
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? activityType = null,Object? startedAt = freezed,Object? durationSeconds = null,Object? distanceMeters = null,Object? distanceKm = null,Object? avgPace = freezed,Object? caloriesBurned = freezed,Object? route = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? activityType = null,Object? startedAt = freezed,Object? durationSeconds = null,Object? distanceMeters = null,Object? distanceKm = null,Object? avgPace = freezed,Object? caloriesBurned = freezed,Object? steps = null,Object? route = null,}) {
   return _then(_ActivityRecent(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,activityType: null == activityType ? _self.activityType : activityType // ignore: cast_nullable_to_non_nullable
@@ -1411,7 +1413,8 @@ as int,distanceMeters: null == distanceMeters ? _self.distanceMeters : distanceM
 as double,distanceKm: null == distanceKm ? _self.distanceKm : distanceKm // ignore: cast_nullable_to_non_nullable
 as double,avgPace: freezed == avgPace ? _self.avgPace : avgPace // ignore: cast_nullable_to_non_nullable
 as double?,caloriesBurned: freezed == caloriesBurned ? _self.caloriesBurned : caloriesBurned // ignore: cast_nullable_to_non_nullable
-as double?,route: null == route ? _self._route : route // ignore: cast_nullable_to_non_nullable
+as double?,steps: null == steps ? _self.steps : steps // ignore: cast_nullable_to_non_nullable
+as int,route: null == route ? _self._route : route // ignore: cast_nullable_to_non_nullable
 as List<dynamic>,
   ));
 }

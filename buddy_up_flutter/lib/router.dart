@@ -433,10 +433,7 @@ GoRouter buildRouter(WidgetRef ref) {
             path: '/feed/communities',
             builder: (_, _) => const FeedScreen(initialTab: 'communities'),
           ),
-          GoRoute(
-            path: '/discover',
-            builder: (_, _) => const DiscoverScreen(),
-          ),
+          GoRoute(path: '/discover', builder: (_, _) => const DiscoverScreen()),
           GoRoute(path: '/lives', builder: (_, _) => const LiveBrowserScreen()),
           GoRoute(path: '/gyms', builder: (_, _) => const GymListScreen()),
           GoRoute(
@@ -511,13 +508,6 @@ GoRouter buildRouter(WidgetRef ref) {
                 conversationId: conversationId,
                 fromBuddyMessages: true,
               );
-            },
-          ),
-          GoRoute(
-            path: '/:username',
-            builder: (_, state) {
-              final username = state.pathParameters['username'] ?? '';
-              return UserProfileScreen(username: username);
             },
           ),
           GoRoute(
@@ -769,12 +759,16 @@ GoRouter buildRouter(WidgetRef ref) {
           ),
           // Programme activity focus
           GoRoute(
-            path: '/marketplace/programmes/:programmeId/activity/:weekKey/:dayKey/:activityIndex',
+            path:
+                '/marketplace/programmes/:programmeId/activity/:weekKey/:dayKey/:activityIndex',
             builder: (_, state) => ProgrammeActivityFocusScreen(
               programmeId: state.pathParameters['programmeId'] ?? '',
-              weekIndex: int.tryParse(state.pathParameters['weekKey'] ?? '') ?? 0,
+              weekIndex:
+                  int.tryParse(state.pathParameters['weekKey'] ?? '') ?? 0,
               day: state.pathParameters['dayKey'] ?? 'Monday',
-              activityIndex: int.tryParse(state.pathParameters['activityIndex'] ?? '') ?? 0,
+              activityIndex:
+                  int.tryParse(state.pathParameters['activityIndex'] ?? '') ??
+                  0,
             ),
           ),
           GoRoute(
@@ -1058,6 +1052,15 @@ GoRouter buildRouter(WidgetRef ref) {
             builder: (_, state) => ModerationScreen(
               appealActionId: state.uri.queryParameters['action'],
             ),
+          ),
+          // Keep the single-segment username fallback last. Otherwise paths
+          // such as /analytics and /wallet can be rendered as user profiles.
+          GoRoute(
+            path: '/:username',
+            builder: (_, state) {
+              final username = state.pathParameters['username'] ?? '';
+              return UserProfileScreen(username: username);
+            },
           ),
         ],
       ),
@@ -1377,7 +1380,9 @@ class _WebBottomNav extends StatelessWidget {
       height: 68,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        border: const Border(top: BorderSide(color: BuddyColors.border, width: 0.7)),
+        border: const Border(
+          top: BorderSide(color: BuddyColors.border, width: 0.7),
+        ),
       ),
       child: Stack(
         alignment: Alignment.topCenter,
