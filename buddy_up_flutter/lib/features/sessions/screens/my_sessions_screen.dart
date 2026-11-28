@@ -331,7 +331,7 @@ class SessionDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionsAsync = ref.watch(mySessionsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Session Details')),
+      appBar: const MainAppBar(title: 'Session Details'),
       body: sessionsAsync.when(
         data: (sessions) {
           final s = sessions.where((s) => s.id == bookingId).firstOrNull;
@@ -450,7 +450,7 @@ class _SessionReviewScreenState extends ConsumerState<SessionReviewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Write a Review')),
+      appBar: const MainAppBar(title: 'Write a Review'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

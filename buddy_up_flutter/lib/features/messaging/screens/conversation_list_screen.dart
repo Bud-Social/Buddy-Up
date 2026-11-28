@@ -11,7 +11,7 @@ import '../widgets/story_viewer.dart';
 import '../utils/conversation_identity.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/messaging.dart';
-import '../../../shared/navigation/app_nav.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../../../shared/widgets/avatar.dart';
 
 /// Messages surface — four tabs: Messages (real threads), Community threads,
@@ -113,16 +113,8 @@ class _ConversationListScreenState
   Widget build(BuildContext context) {
     final query = _searchController.text.toLowerCase().trim();
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          tooltip: 'Menu',
-          onPressed: () => AppNav.open(context),
-        ),
-        title: Text(
-          _listTab == 'archived' ? 'Archived' : 'Messages',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+      appBar: MainAppBar(
+        title: _listTab == 'archived' ? 'Archived' : 'Messages',
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),

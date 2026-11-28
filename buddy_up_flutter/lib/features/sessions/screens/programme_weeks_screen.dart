@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/session_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/shimmer_loader.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class ProgrammeWeeksScreen extends ConsumerWidget {
   final String programmeId;
@@ -14,7 +15,7 @@ class ProgrammeWeeksScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final weeksAsync = ref.watch(programmeWeeksProvider(programmeId));
     return Scaffold(
-      appBar: AppBar(title: Text(programmeTitle)),
+      appBar: MainAppBar(title: programmeTitle),
       body: weeksAsync.when(
         data: (weeks) {
           final completed = weeks.where((w) => w.isCompleted).length;
@@ -96,7 +97,7 @@ class MyEnrollmentsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final enrollmentsAsync = ref.watch(myEnrollmentsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('My Programmes')),
+      appBar: const MainAppBar(title: 'My Programmes'),
       body: enrollmentsAsync.when(
         data: (enrollments) {
           if (enrollments.isEmpty) {
