@@ -108,7 +108,7 @@ class _ShopManageScreenState extends ConsumerState<ShopManageScreen> {
             ),
             const SizedBox(height: 16),
             switch (_tabIndex) {
-              0 => _OverviewTab(shop: shop),
+              0 => _OverviewTab(shop: shop, canManage: canManage),
               1 => _TeamTab(
                   shop: shop,
                   canManage: canManage,
@@ -231,8 +231,9 @@ class _ShopManageScreenState extends ConsumerState<ShopManageScreen> {
 
 class _OverviewTab extends StatelessWidget {
   final Shop shop;
+  final bool canManage;
 
-  const _OverviewTab({required this.shop});
+  const _OverviewTab({required this.shop, required this.canManage});
 
   @override
   Widget build(BuildContext context) {
@@ -258,6 +259,32 @@ class _OverviewTab extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
+        if (canManage) ...[
+          const RoleSectionTitle('Manage catalogue'),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => context.push('/marketplace/products/create'),
+                icon: const Icon(Icons.inventory_2_outlined, size: 17),
+                label: const Text('Add product'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/marketplace/programmes/create'),
+                icon: const Icon(Icons.fitness_center_outlined, size: 17),
+                label: const Text('Add programme'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/marketplace/meal-plans/create'),
+                icon: const Icon(Icons.restaurant_outlined, size: 17),
+                label: const Text('Add meal plan'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+        ],
         const Row(
           children: [
             Icon(Icons.info_outline, size: 14, color: BuddyColors.textSecondary),
