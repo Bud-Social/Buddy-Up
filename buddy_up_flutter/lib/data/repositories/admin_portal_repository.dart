@@ -330,6 +330,7 @@ abstract class AdminPortalRepository {
 
   @GET('/governance/staff-roles/')
   Future<dynamic> getStaffRoles({
+    @Query('q') String? query,
     @Query('role') String? role,
     @Query('revoked') String? revoked,
     @Query('page') int? page,

@@ -962,6 +962,7 @@ class _AdminPortalRepository implements AdminPortalRepository {
 
   @override
   Future<dynamic> getStaffRoles({
+    String? query,
     String? role,
     String? revoked,
     int? page,
@@ -969,6 +970,7 @@ class _AdminPortalRepository implements AdminPortalRepository {
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
+      r'q': query,
       r'role': role,
       r'revoked': revoked,
       r'page': page,

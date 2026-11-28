@@ -210,6 +210,7 @@ const List<({String value, String label})> kStaffRoleChoices = [
 final staffRolesProvider =
     FutureProvider.family<PortalPage<StaffRole>, PortalQuery>((ref, q) async {
   final raw = await ref.watch(adminPortalRepositoryProvider).getStaffRoles(
+        query: q.text('q'),
         role: q.text('role'),
         revoked: q.text('revoked'),
         page: q.page,

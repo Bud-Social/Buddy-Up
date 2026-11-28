@@ -720,6 +720,16 @@ class StaffRoleTests(GovernanceTestBase):
             status.HTTP_200_OK,
         )
 
+    def test_list_can_search_staff_identity(self):
+        response = self.client.get(f'{PREFIX}/staff-roles/?q={self.requester.email}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['user']['email'], self.requester.email)
+
+        response = self.client.get(f'{PREFIX}/staff-roles/?q=does-not-exist')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['data'], [])
+
     def test_unknown_scope_is_rejected_at_write_time(self):
         """A typo would otherwise be a silent no-op that 403s later."""
         response = self.client.post(

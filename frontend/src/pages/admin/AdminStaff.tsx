@@ -92,6 +92,7 @@ function ScopeChips({ scopes, tone = 'silver' }: { scopes: string[] | null | und
 }
 
 export default function AdminStaff() {
+  const [query, setQuery] = useState('');
   const [role, setRole] = useState('all');
   const [revoked, setRevoked] = useState('active');
   const [revoking, setRevoking] = useState<string | null>(null);
@@ -99,11 +100,12 @@ export default function AdminStaff() {
 
   const filters = useMemo(
     () => ({
+      q: query.trim() || undefined,
       role,
       // `revoked=false` means "not revoked"; `all` means "don't filter".
       revoked: revoked === 'active' ? 'false' : revoked === 'revoked' ? 'true' : undefined,
     }),
-    [role, revoked],
+    [query, role, revoked],
   );
 
   const fetcher = useCallback(
@@ -160,6 +162,7 @@ export default function AdminStaff() {
       </div>
 
       <Card className="p-4 space-y-3">
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by email, username, or name" aria-label="Search staff roles" />
         <FilterChips options={ROLE_OPTIONS} value={role} onChange={setRole} />
         <FilterChips options={REVOKED_OPTIONS} value={revoked} onChange={setRevoked} />
       </Card>

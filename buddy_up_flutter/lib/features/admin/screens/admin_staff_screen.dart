@@ -29,6 +29,7 @@ class AdminStaffScreen extends ConsumerStatefulWidget {
 class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
   String _role = 'all';
   String _revoked = 'all';
+  String _queryText = '';
   int _page = 1;
 
   bool _granting = false;
@@ -39,7 +40,7 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
   String? _pendingRevokeId;
 
   PortalQuery get _query =>
-      PortalQuery.of(_page, {'role': _role, 'revoked': _revoked});
+      PortalQuery.of(_page, {'q': _queryText.trim(), 'role': _role, 'revoked': _revoked});
 
   void _setFilter(void Function() mutate) {
     setState(() {
@@ -97,6 +98,15 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
               _grantPanel(),
             ],
             const SizedBox(height: 14),
+            TextField(
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'Search by email, username, or name',
+                isDense: true,
+              ),
+              onChanged: (value) => _setFilter(() => _queryText = value),
+            ),
+            const SizedBox(height: 12),
             AdminFilterChips(
               value: _role,
               options: const [

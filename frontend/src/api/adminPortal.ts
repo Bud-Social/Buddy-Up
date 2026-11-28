@@ -463,6 +463,7 @@ export interface StaffRoleAssignment {
 }
 
 export interface StaffRoleFilters extends PortalPaginationParams {
+  q?: string;
   role?: string;
   /** `'true'` lists revoked rows too; `'false'` lists only live ones. */
   revoked?: boolean | string;

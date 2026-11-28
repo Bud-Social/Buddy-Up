@@ -34,7 +34,7 @@ import csv
 import logging
 from datetime import timedelta
 
-from django.db import transaction
+from django.db import models as db_models, transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -230,6 +230,15 @@ class StaffRoleListCreateView(GovernanceAuditMixin, GovernanceView):
                     f'Unknown role: {role!r}. Must be one of: {valid}.'
                 )
             queryset = queryset.filter(role=role)
+
+        query = (request.query_params.get('q') or '').strip()
+        if query:
+            queryset = queryset.filter(
+                db_models.Q(user__email__icontains=query)
+                | db_models.Q(user__username__icontains=query)
+                | db_models.Q(user__first_name__icontains=query)
+                | db_models.Q(user__last_name__icontains=query),
+            )
 
         revoked = (request.query_params.get('revoked') or '').strip().lower()
         if revoked in ('true', '1', 'yes'):
