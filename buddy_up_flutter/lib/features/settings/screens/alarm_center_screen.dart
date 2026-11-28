@@ -378,7 +378,7 @@ class _SoundsCard extends ConsumerStatefulWidget {
 class _SoundsCardState extends ConsumerState<_SoundsCard> {
   bool _uploading = false;
 
-  static const int _maxBytes = 2 * 1024 * 1024;
+  static const int _maxBytes = 50 * 1024 * 1024;
 
   Future<void> _upload() async {
     final picked = await FilePicker.pickFiles(type: FileType.audio);
@@ -392,7 +392,7 @@ class _SoundsCardState extends ConsumerState<_SoundsCard> {
       return;
     }
     if (bytes.length > _maxBytes) {
-      _error('Sound file is too big (max 2 MB).');
+      _error('Sound file is too big (max 50 MB).');
       return;
     }
     setState(() => _uploading = true);
@@ -487,7 +487,7 @@ class _SoundsCardState extends ConsumerState<_SoundsCard> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Upload a short clip (max 30s, 2 MB). Buddies can also send you theirs.',
+              'Upload a short clip (max 30s, 50 MB). Buddies can also send you theirs.',
               style: TextStyle(
                 fontSize: 11,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,

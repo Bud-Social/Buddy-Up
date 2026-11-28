@@ -282,7 +282,7 @@ class SoundUploadTests(TestCase):
         self.assertFalse(AlarmSound.objects.exists())
 
     def test_oversized_audio_rejected(self):
-        big = _audio(size=2 * 1024 * 1024 + 1)
+        big = _audio(size=50 * 1024 * 1024 + 1)
         res = self.client.post(
             '/api/v1/alarms/sounds/',
             {'name': 'Big', 'visibility': 'private', 'audio': big},

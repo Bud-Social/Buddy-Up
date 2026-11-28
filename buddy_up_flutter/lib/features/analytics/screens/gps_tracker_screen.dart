@@ -243,8 +243,8 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
   LocationSettings _currentLocationSettings() {
     if (Platform.isAndroid) {
       return AndroidSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 2,
         intervalDuration: const Duration(seconds: 5),
         foregroundNotificationConfig: const ForegroundNotificationConfig(
           notificationTitle: 'BuddyUp is tracking your session',
@@ -256,23 +256,26 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
     }
     if (Platform.isIOS) {
       return AppleSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 2,
         activityType: ActivityType.fitness,
         allowBackgroundLocationUpdates: true,
         showBackgroundLocationIndicator: true,
         pauseLocationUpdatesAutomatically: false,
       );
     }
-    return const LocationSettings(accuracy: LocationAccuracy.high);
+    return const LocationSettings(
+      accuracy: LocationAccuracy.bestForNavigation,
+      distanceFilter: 2,
+    );
   }
 
   LocationSettings _streamLocationSettings() {
     if (Platform.isAndroid) return _currentLocationSettings();
     if (Platform.isIOS) return _currentLocationSettings();
     return const LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 5,
+      accuracy: LocationAccuracy.bestForNavigation,
+      distanceFilter: 2,
     );
   }
 

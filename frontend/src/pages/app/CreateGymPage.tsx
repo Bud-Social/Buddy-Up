@@ -302,6 +302,10 @@ export default function CreateGymPage() {
   // Logo/cover uploads go straight to Cloudinary via the signed-upload
   // manager; the gym row only stores the resulting URLs.
   const uploadBrandingImage = async (file: File, kind: 'logo' | 'cover') => {
+    if (file.size > 50 * 1024 * 1024) {
+      setError('Images must be 50 MB or smaller.');
+      return;
+    }
     if (kind === 'logo') setLogoUploading(true);
     else setCoverUploading(true);
     setError('');

@@ -4,7 +4,7 @@ from apps.profiles.models import Profile
 
 from .models import Alarm, AlarmShare, AlarmSound, AlarmSuggestion, usable_sound_ids
 
-MAX_SOUND_BYTES = 2 * 1024 * 1024  # ~30s cap; also enforced client-side.
+MAX_SOUND_BYTES = 50 * 1024 * 1024  # Product upload ceiling; also enforced client-side.
 
 
 def profile_summary(profile):
@@ -40,7 +40,7 @@ class AlarmSoundSerializer(serializers.ModelSerializer):
         if not content_type.startswith('audio/'):
             raise serializers.ValidationError('Only audio files are allowed.')
         if value.size > MAX_SOUND_BYTES:
-            raise serializers.ValidationError('Audio file too large (max 2 MB).')
+            raise serializers.ValidationError('Audio file too large (max 50 MB).')
         return value
 
     def validate(self, attrs):

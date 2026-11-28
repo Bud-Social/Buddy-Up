@@ -255,7 +255,7 @@ class OnboardingView(views.APIView):
         })
 
 
-MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
 ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
 
 

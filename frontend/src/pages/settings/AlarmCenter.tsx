@@ -18,7 +18,7 @@ import { SectionShell } from './SectionShell';
 // can share them. Re-exported here for existing imports.
 export { DAY_LABELS, formatDays, maskToDays, nextFireDate, toggleDayBit } from '@/lib/alarmSchedule';
 
-const MAX_UPLOAD_BYTES = 2 * 1024 * 1024; // matches the backend cap
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // matches the backend cap
 
 const inputCls =
   'w-full bg-buddy-surface-raised text-sm rounded-lg px-3 py-2 border border-buddy-surface text-buddy-text-primary outline-none';
@@ -268,7 +268,7 @@ export default function AlarmCenter() {
       return;
     }
     if (file.size > MAX_UPLOAD_BYTES) {
-      toast('error', 'Sound file is too big (max 2 MB)');
+      toast('error', 'Sound file is too big (max 50 MB)');
       return;
     }
     const durationMs = await probeAudioDurationMs(file);
@@ -542,7 +542,7 @@ export default function AlarmCenter() {
                   if (f) void handleFilePicked(f);
                 }}
               />
-              <p className="text-[11px] text-buddy-text-secondary">Max {MAX_SOUND_MS / 1000}s and 2 MB — short and punchy wakes you up best.</p>
+              <p className="text-[11px] text-buddy-text-secondary">Max {MAX_SOUND_MS / 1000}s and 50 MB — short and punchy wakes you up best.</p>
             </div>
             <div className="pt-2 border-t border-buddy-surface space-y-2">
               <p className="text-xs font-semibold text-buddy-text-secondary">Record a sound (max {MAX_SOUND_MS / 1000}s)</p>

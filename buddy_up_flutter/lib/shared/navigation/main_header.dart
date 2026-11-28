@@ -117,13 +117,16 @@ class _BrandTitle extends StatelessWidget {
       children: [
         Image.asset('assets/logo-dark.png', height: 28, width: 28),
         const SizedBox(width: 7),
-        Text(
-          label,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.syne(
-            color: Theme.of(context).appBarTheme.foregroundColor,
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.syne(
+              color: Theme.of(context).appBarTheme.foregroundColor,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
       ],
