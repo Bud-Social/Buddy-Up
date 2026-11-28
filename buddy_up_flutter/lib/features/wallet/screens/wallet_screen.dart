@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/wallet_provider.dart';
 import '../../../data/models/wallet.dart';
 import '../../../core/theme/app_theme.dart';
@@ -9,6 +10,7 @@ import '../../../data/repositories/profile_repository.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/input.dart' show BuddyInput;
+import '../../../shared/navigation/main_header.dart';
 
 final _walletProfileRepoProvider = Provider<ProfileRepository>((ref) {
   return ProfileRepository(ApiClient().dio);
@@ -41,12 +43,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Wallet',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
+      appBar: const MainAppBar(title: 'Wallet'),
       body: Column(
         children: [
           _BalanceHeader(),
@@ -106,9 +103,11 @@ class _BalanceHeader extends ConsumerWidget {
             children: [
               Text(
                 '\$${balance.regularTotalFiat.toStringAsFixed(2)}',
-                style: const TextStyle(
+                style: GoogleFonts.syne(
                   fontSize: 32,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
               Text(
