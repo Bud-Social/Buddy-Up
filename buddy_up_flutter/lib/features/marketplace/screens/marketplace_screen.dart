@@ -12,6 +12,7 @@ import '../utils/event_categories.dart';
 // `StockBadge` lives with the detail screen so the grid and the detail page read
 // the product's stock through one set of thresholds.
 import 'product_detail_screen.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class MarketplaceScreen extends ConsumerStatefulWidget {
   const MarketplaceScreen({super.key});
@@ -42,11 +43,8 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
     final cs = Theme.of(context).colorScheme;
     final cartCount = ref.watch(cartProvider).value?.items.length ?? 0;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Marketplace',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+      appBar: MainAppBar(
+        title: 'Marketplace',
         actions: [
           IconButton(
             icon: const Column(

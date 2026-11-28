@@ -9,6 +9,7 @@ import 'my_shops_screen.dart';
 import 'creator_orders_screen.dart';
 import 'creator_services_screen.dart';
 import 'creator_payouts_screen.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class CreatorStudioScreen extends ConsumerStatefulWidget {
   const CreatorStudioScreen({super.key});
@@ -38,8 +39,8 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
     final servicesAsync = ref.watch(creatorServicesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Shop'),
+      appBar: MainAppBar(
+        title: 'Shop',
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,

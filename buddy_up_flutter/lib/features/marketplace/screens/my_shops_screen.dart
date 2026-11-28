@@ -5,6 +5,7 @@ import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
 import '../widgets/gym_link_requests_panel.dart';
+import '../../../shared/navigation/main_header.dart';
 
 /// The seller hub: your shops, plus the gym-link approval queue.
 class MyShopsScreen extends ConsumerStatefulWidget {
@@ -33,9 +34,8 @@ class _MyShopsScreenState extends ConsumerState<MyShopsScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: BuddyColors.surface,
-        title: const Text('My Shops', style: TextStyle(fontWeight: FontWeight.bold)),
+      appBar: MainAppBar(
+        title: 'My Shops',
         actions: [
           IconButton(
             icon: const Icon(Icons.store_outlined, size: 20),
