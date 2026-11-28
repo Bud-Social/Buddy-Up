@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 import { Link } from 'react-router-dom';
-import { Shield, CheckCircle, Clock, Plus } from 'lucide-react';
+import { Shield, CheckCircle, Clock, Plus, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -37,7 +37,7 @@ export default function Verification() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showIdWizard, setShowIdWizard] = useState(false);
   const [selectedType, setSelectedType] = useState('');
-  const [documentUrl, setDocumentUrl] = useState('');
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -63,13 +63,20 @@ export default function Verification() {
   useEffect(() => { fetchSubmissions(); }, []);
 
   const handleSubmit = async () => {
-    if (!selectedType || !documentUrl) {
-      toast('error', 'Please select a verification type and provide a document URL');
+    if (!selectedType || !documentFile) {
+      toast('error', 'Please select a verification type and upload a document');
+      return;
+    }
+    if (documentFile.size > 50 * 1024 * 1024) {
+      toast('error', 'The document must be 50 MB or smaller');
       return;
     }
     setIsSubmitting(true);
     try {
-      const docRes = await verificationApi.uploadDocument(selectedType === 'id' ? 'id_card' : 'certification', documentUrl);
+      const docRes = await verificationApi.uploadCredential(
+        selectedType === 'id' ? 'id_card' : 'certification',
+        documentFile,
+      );
       await verificationApi.createSubmission(selectedType, [docRes.data.id], notes || undefined, {
         credential_title: credentialTitle || undefined,
         credential_issuer: credentialIssuer || undefined,
@@ -81,7 +88,7 @@ export default function Verification() {
       toast('success', 'Verification submission created!');
       setShowSubmitModal(false);
       setSelectedType('');
-      setDocumentUrl('');
+      setDocumentFile(null);
       setNotes('');
       setCredentialTitle('');
       setCredentialIssuer('');
@@ -227,7 +234,20 @@ export default function Verification() {
               ))}
             </div>
           </div>
-          <Input label="Document URL" placeholder="https://..." value={documentUrl} onChange={(e) => setDocumentUrl(e.target.value)} />
+          <div>
+            <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5" htmlFor="verification-document">Supporting document</label>
+            <div className="flex items-center gap-2">
+              <input
+                id="verification-document"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+                className="min-w-0 flex-1 bg-buddy-surface-raised border border-buddy-surface rounded-xl px-3 py-2 text-sm text-buddy-text-secondary file:mr-2 file:rounded-lg file:border-0 file:bg-buddy-green/15 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-buddy-green focus:outline-none focus:border-buddy-green"
+              />
+              <Upload size={17} className="shrink-0 text-buddy-green" />
+            </div>
+            <p className="text-[11px] text-buddy-text-secondary mt-1.5">PDF or image, up to 50 MB.</p>
+          </div>
           {NEEDS_CREDENTIALS.includes(selectedType) && (
             <div className="space-y-3 rounded-xl border border-buddy-surface-raised p-3">
               <p className="text-xs font-medium text-buddy-text-secondary uppercase tracking-wide">Credential Details</p>
