@@ -41,7 +41,7 @@ GYM_DOC_TYPES = {'gym_business_registration', 'gym_proof_of_address', 'gym_other
 
 # Only these extensions are ever copied from a client-supplied upload name;
 # the stored filename itself is always server-generated (uuid-based).
-ALLOWED_UPLOAD_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'}
+ALLOWED_UPLOAD_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.pdf'}
 
 
 def _is_internal_file_ref(file_url):
@@ -175,8 +175,8 @@ class VerificationDocumentUploadView(views.APIView):
         upload = request.FILES.get('file')
         if upload is None:
             return Response({'detail': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
-        if upload.size > 10 * 1024 * 1024:
-            return Response({'detail': 'File too large (max 10 MB).'}, status=status.HTTP_400_BAD_REQUEST)
+        if upload.size > 50 * 1024 * 1024:
+            return Response({'detail': 'File too large (max 50 MB).'}, status=status.HTTP_400_BAD_REQUEST)
 
         document_type = (request.data.get('document_type') or '').strip()
         allowed = ID_DOC_TYPES | CREDENTIAL_DOC_TYPES | GYM_DOC_TYPES
@@ -312,8 +312,8 @@ class VerificationSubmissionViewSet(
         upload = request.FILES.get('file')
         if upload is None:
             return Response({'detail': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
-        if upload.size > 10 * 1024 * 1024:
-            return Response({'detail': 'File too large (max 10 MB).'}, status=status.HTTP_400_BAD_REQUEST)
+        if upload.size > 50 * 1024 * 1024:
+            return Response({'detail': 'File too large (max 50 MB).'}, status=status.HTTP_400_BAD_REQUEST)
 
         if step == 'id_document':
             document_type = request.data.get('document_type', 'id_card')

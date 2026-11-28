@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_error.dart';
@@ -10,6 +12,7 @@ import '../../../shared/widgets/input.dart';
 import '../../../shared/widgets/wizard_widgets.dart';
 import '../../../shared/navigation/business_roles_provider.dart';
 import '../../../shared/navigation/main_header.dart';
+import '../../verification/providers/verification_provider.dart';
 import '../providers/marketplace_provider.dart';
 import '../utils/checkout.dart' show isValidPhone;
 import '../utils/delivery_vehicles.dart';
@@ -50,6 +53,8 @@ class _DeliveryPersonnelScreenState
   final _bioController = TextEditingController();
   final _idDocumentController = TextEditingController();
   final _licenceController = TextEditingController();
+  PlatformFile? _idFile;
+  PlatformFile? _licenceFile;
 
   bool _submitting = false;
   String? _serverError;
@@ -140,13 +145,27 @@ class _DeliveryPersonnelScreenState
   /// straight to `submitted` so it lands in the queue.
   Future<void> _submitApplication() async {
     await _run(() async {
+      String? idUrl;
+      String? licenceUrl;
+      if (_idFile != null) {
+        final raw = await _uploadVerificationFile(_idFile!, 'id_card');
+        idUrl = _documentUrl(raw);
+      }
+      if (_licenceFile != null) {
+        final raw = await _uploadVerificationFile(
+          _licenceFile!,
+          'drivers_license',
+        );
+        licenceUrl = _documentUrl(raw);
+      }
       final raw = await ref
           .read(marketplaceRepositoryProvider)
           .applyAsDeliveryPersonnel({
             ..._basePayload,
             'phone': _phoneController.text.trim(),
-            'id_document_url': _idDocumentController.text.trim(),
-            'licence_document_url': _licenceController.text.trim(),
+            'id_document_url': idUrl ?? _idDocumentController.text.trim(),
+            'licence_document_url':
+                licenceUrl ?? _licenceController.text.trim(),
             'submit': true,
           });
       _application = DeliveryPersonnelApplication.fromJson(
@@ -158,6 +177,42 @@ class _DeliveryPersonnelScreenState
       // server-authoritative and simply hides the entry while approval is
       // still pending.
       await ref.read(businessRolesProvider.notifier).refresh();
+    });
+  }
+
+  Future<dynamic> _uploadVerificationFile(
+    PlatformFile file,
+    String type,
+  ) async {
+    final bytes = await file.readAsBytes();
+    if (bytes.length > 50 * 1024 * 1024) {
+      throw StateError('Verification files must be 50 MB or smaller.');
+    }
+    return ref.read(verificationRepositoryProvider).uploadCredentialFile({
+      'file': MultipartFile.fromBytes(bytes, filename: file.name),
+      'document_type': type,
+    });
+  }
+
+  String? _documentUrl(dynamic raw) {
+    final data = raw is Map ? raw['data'] : null;
+    return data is Map ? data['file_url'] as String? : null;
+  }
+
+  Future<void> _pickDocument({required bool licence}) async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+    );
+    if (result.isEmpty) return;
+    final file = result.first;
+    if (!mounted) return;
+    setState(() {
+      if (licence) {
+        _licenceFile = file;
+      } else {
+        _idFile = file;
+      }
     });
   }
 
@@ -331,18 +386,28 @@ class _DeliveryPersonnelScreenState
           maxLines: 3,
         ),
         const SizedBox(height: 16),
-        WizardTextField(
-          'National ID document URL (optional)',
-          _idDocumentController,
-          hint: 'https://…',
+        _documentPicker(
+          'National ID / passport',
+          _idFile,
+          () => _pickDocument(licence: false),
         ),
         const SizedBox(height: 16),
-        WizardTextField(
-          'Driving licence URL (optional)',
-          _licenceController,
-          hint: 'https://…',
+        _documentPicker(
+          'Driving licence',
+          _licenceFile,
+          () => _pickDocument(licence: true),
         ),
       ],
+    );
+  }
+
+  Widget _documentPicker(String label, PlatformFile? file, VoidCallback pick) {
+    return OutlinedButton.icon(
+      onPressed: pick,
+      icon: const Icon(Icons.upload_file_outlined),
+      label: Text(
+        file == null ? '$label · choose file' : '$label: ${file.name}',
+      ),
     );
   }
 

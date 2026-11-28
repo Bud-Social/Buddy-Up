@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { marketplaceApi, checkoutErrorMessage } from '@/api/marketplace';
 import { RoleDashboardShell } from './roles/RoleShell';
+import { verificationApi } from '@/api/verification';
 
 const VEHICLE_TYPES = ['bicycle', 'motorcycle', 'car', 'van'];
 
@@ -26,18 +27,26 @@ export default function CourierRegister() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [idFile, setIdFile] = useState<File | null>(null);
+  const [licenceFile, setLicenceFile] = useState<File | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
+      const [idDoc, licenceDoc] = await Promise.all([
+        idFile ? verificationApi.uploadCredential('id_card', idFile) : Promise.resolve(null),
+        licenceFile ? verificationApi.uploadCredential('drivers_license', licenceFile) : Promise.resolve(null),
+      ]);
       await marketplaceApi.registerDeliveryPersonnel({
         vehicle_type: vehicleType,
         vehicle_plate: plate.trim() || undefined,
         phone: phone.trim() || undefined,
         service_zones: zones.split(',').map((z) => z.trim()).filter(Boolean),
         is_active: true,
+        id_document_url: idDoc?.data?.file_url || undefined,
+        licence_document_url: licenceDoc?.data?.file_url || undefined,
       });
       setDone(true);
       navigate('/marketplace/delivery', { replace: true });
@@ -91,6 +100,18 @@ export default function CourierRegister() {
               value={zones}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setZones(e.target.value)}
             />
+            <div className="grid sm:grid-cols-2 gap-3">
+              <label className="rounded-xl border border-dashed border-buddy-surface-raised p-3 text-xs text-buddy-text-secondary cursor-pointer hover:border-buddy-green">
+                <span className="block font-medium text-buddy-text-primary">National ID / passport</span>
+                <span className="block mt-1">{idFile?.name || 'Choose file · max 50 MB'}</span>
+                <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setIdFile(e.target.files?.[0] || null)} />
+              </label>
+              <label className="rounded-xl border border-dashed border-buddy-surface-raised p-3 text-xs text-buddy-text-secondary cursor-pointer hover:border-buddy-green">
+                <span className="block font-medium text-buddy-text-primary">Driving licence</span>
+                <span className="block mt-1">{licenceFile?.name || 'Choose file · max 50 MB'}</span>
+                <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setLicenceFile(e.target.files?.[0] || null)} />
+              </label>
+            </div>
           </Card>
 
           {error && (
