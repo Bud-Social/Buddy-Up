@@ -461,6 +461,7 @@ class Product(TimestampedModel):
         max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
     )
     variants = models.JSONField(default=list)      # [{size, color, sku, price_display}, ...]
+    barcode = models.CharField(max_length=64, blank=True, db_index=True)
     affiliate_url = models.URLField()
     price_display = models.CharField(max_length=50, blank=True)
     shop = models.ForeignKey(Shop, null=True, blank=True, on_delete=models.SET_NULL, related_name='products')

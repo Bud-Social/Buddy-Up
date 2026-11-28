@@ -98,6 +98,7 @@ export interface ProductMP {
   image_url: string;
   affiliate_url: string;
   price_display: string;
+  barcode?: string;
   recommended_by: string | null;
   recommender_data: { username: string; display_name: string } | null;
   click_count: number;
@@ -634,6 +635,8 @@ export interface CourierRegistrationPayload {
   station?: string;
   service_zones?: string[];
   is_active?: boolean;
+  id_document_url?: string;
+  licence_document_url?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -916,8 +919,8 @@ export const marketplaceApi = {
   getShopManage: (handle: string) =>
     apiClient.get<ApiResponse<ShopFull>>(`/marketplace/shops/${handle}/`).then((r) => r.data),
 
-  getShopInventory: (handle: string) =>
-    apiClient.get<ApiResponse<ProductMP[]>>(`/marketplace/shops/${handle}/inventory/`).then((r) => r.data),
+  getShopInventory: (handle: string, query?: string) =>
+    apiClient.get<ApiResponse<ProductMP[]>>(`/marketplace/shops/${handle}/inventory/`, { params: query ? { q: query } : undefined }).then((r) => r.data),
 
   adjustShopInventory: (handle: string, productId: string, data: {
     quantity: number; stock_tracking_enabled: boolean; reason?: string;

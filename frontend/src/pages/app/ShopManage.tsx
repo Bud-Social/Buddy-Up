@@ -55,6 +55,7 @@ export default function ShopManage() {
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inventory, setInventory] = useState<ProductMP[]>([]);
   const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [inventoryQuery, setInventoryQuery] = useState('');
 
   const load = useCallback(async () => {
     if (!handle) return;
@@ -77,14 +78,14 @@ export default function ShopManage() {
     if (!handle) return;
     setInventoryLoading(true);
     try {
-      const res = await marketplaceApi.getShopInventory(handle);
+      const res = await marketplaceApi.getShopInventory(handle, inventoryQuery);
       setInventory(res.data || []);
     } catch (e: any) {
       setActionError(e?.response?.data?.message || 'Could not load inventory.');
     } finally {
       setInventoryLoading(false);
     }
-  }, [handle]);
+  }, [handle, inventoryQuery]);
 
   useEffect(() => {
     if (tab === 'inventory') loadInventory();
@@ -268,6 +269,8 @@ export default function ShopManage() {
           loading={inventoryLoading}
           canManage={canManage}
           onRefresh={loadInventory}
+          query={inventoryQuery}
+          onQueryChange={setInventoryQuery}
           onSave={async (product, quantity, tracking, reason) => {
             if (!handle) return;
             await marketplaceApi.adjustShopInventory(handle, product.id, {
@@ -392,12 +395,16 @@ function InventoryPanel({
   loading,
   canManage,
   onRefresh,
+  query,
+  onQueryChange,
   onSave,
 }: {
   products: ProductMP[];
   loading: boolean;
   canManage: boolean;
   onRefresh: () => Promise<void>;
+  query: string;
+  onQueryChange: (value: string) => void;
   onSave: (product: ProductMP, quantity: number, tracking: boolean, reason: string) => Promise<void>;
 }) {
   return (
@@ -411,6 +418,7 @@ function InventoryPanel({
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
         </Button>
       </div>
+      <Input value={query} onChange={(e) => onQueryChange(e.target.value)} placeholder="Search by barcode or product name" aria-label="Search inventory" />
       {loading && <Card className="p-8 text-center"><RefreshCw size={18} className="animate-spin mx-auto text-buddy-green" /></Card>}
       {!loading && products.length === 0 && <Card className="p-8 text-center text-xs text-buddy-text-secondary">No products are attached to this shop yet.</Card>}
       {!loading && products.map((product) => (

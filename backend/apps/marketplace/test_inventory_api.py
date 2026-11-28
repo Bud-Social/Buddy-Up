@@ -54,3 +54,20 @@ class ShopInventoryApiTests(TestCase):
             f'{self.url}{product.id}/', {'quantity': 2}, format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_barcode_or_name_lookup_is_shop_scoped(self):
+        self.product.barcode = '0123456789012'
+        self.product.save(update_fields=['barcode'])
+
+        response = client_for(self.manager).get(f'{self.url}?q=0123456789012')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['barcode'], '0123456789012')
+
+        response = client_for(self.manager).get(f'{self.url}?q=bands')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['data']), 1)
+
+        response = client_for(self.manager).get(f'{self.url}?q=missing')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['data'], [])

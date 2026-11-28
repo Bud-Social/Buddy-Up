@@ -347,24 +347,40 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-class _InventoryTab extends ConsumerWidget {
+class _InventoryTab extends ConsumerStatefulWidget {
   final String handle;
   final bool canManage;
 
   const _InventoryTab({required this.handle, required this.canManage});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final inventory = ref.watch(shopInventoryProvider(handle));
+  ConsumerState<_InventoryTab> createState() => _InventoryTabState();
+}
+
+class _InventoryTabState extends ConsumerState<_InventoryTab> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final inventory = ref.watch(shopInventoryProvider((handle: widget.handle, query: _query)));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const RoleSectionTitle('Inventory'),
         Text(
-          canManage
+          widget.canManage
               ? 'Update stock quantities with an audit reason. Checkout reservations remain server-controlled.'
               : 'Current stock levels for this shop.',
           style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.qr_code_scanner),
+            hintText: 'Search by barcode or product name',
+            isDense: true,
+          ),
+          onChanged: (value) => setState(() => _query = value),
         ),
         const SizedBox(height: 10),
         inventory.when(
@@ -380,10 +396,10 @@ class _InventoryTab extends ConsumerWidget {
                     for (final product in products)
                       _InventoryRow(
                         product: product,
-                        canManage: canManage,
+                        canManage: widget.canManage,
                         onSave: (quantity, tracking, reason) async {
                           await ref.read(shopManageActionsProvider).adjustInventory(
-                                handle,
+                                widget.handle,
                                 product.id,
                                 quantity: quantity,
                                 trackingEnabled: tracking,

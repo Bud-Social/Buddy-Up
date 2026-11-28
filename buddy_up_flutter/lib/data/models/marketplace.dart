@@ -282,6 +282,7 @@ abstract class MarketplaceProduct with _$MarketplaceProduct {
     @JsonKey(name: 'image_url') required String imageUrl,
     @JsonKey(name: 'affiliate_url') required String affiliateUrl,
     @JsonKey(name: 'price_display') required String priceDisplay,
+    @Default('') String barcode,
     @JsonKey(name: 'content_rating') @Default('general') String contentRating,
     @JsonKey(name: 'recommended_by') String? recommendedBy,
     @JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,

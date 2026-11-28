@@ -2041,9 +2041,10 @@ class _MarketplaceRepository implements MarketplaceRepository {
   }
 
   @override
-  Future<dynamic> getShopInventory(String handle) async {
+  Future<dynamic> getShopInventory(String handle, [String? query]) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{r'q': query};
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<dynamic>(

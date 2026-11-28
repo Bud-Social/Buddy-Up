@@ -379,7 +379,7 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'name', 'brand', 'description', 'category', 'content_rating',
-                   'image_url', 'affiliate_url', 'price_display',
+                   'image_url', 'affiliate_url', 'price_display', 'barcode',
                    'recommended_by', 'recommender_data', 'shop_data', 'click_count',
                    'average_rating', 'review_count',
                    'stock_quantity', 'stock_tracking_enabled', 'supplement_registration_number',
@@ -549,6 +549,7 @@ class CreateProductSerializer(serializers.Serializer):
     content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     affiliate_url = serializers.URLField()
     price_display = serializers.CharField(required=False, allow_blank=True, max_length=50)
+    barcode = serializers.CharField(required=False, allow_blank=True, max_length=64)
     stock_quantity = serializers.IntegerField(min_value=0, required=False, default=0)
     stock_tracking_enabled = serializers.BooleanField(required=False, default=False)
     supplement_registration_number = serializers.CharField(required=False, allow_blank=True, max_length=100)
@@ -572,6 +573,7 @@ class UpdateProductSerializer(serializers.Serializer):
     content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     affiliate_url = serializers.URLField(required=False)
     price_display = serializers.CharField(required=False, allow_blank=True, max_length=50)
+    barcode = serializers.CharField(required=False, allow_blank=True, max_length=64)
     is_active = serializers.BooleanField(required=False)
     shop_id = serializers.UUIDField(required=False, allow_null=True)
     stock_quantity = serializers.IntegerField(min_value=0, required=False)

@@ -490,7 +490,13 @@ class ShopInventoryView(views.APIView):
         shop, error = self._shop(handle, request)
         if error:
             return error
-        products = Product.objects.filter(shop=shop).select_related('recommended_by').order_by('name')
+        query = (request.query_params.get('q') or '').strip()
+        products = Product.objects.filter(shop=shop).select_related('recommended_by')
+        if query:
+            products = products.filter(
+                db_models.Q(barcode__iexact=query) | db_models.Q(name__icontains=query),
+            )
+        products = products.order_by('name')
         return Response(_api_ok(
             ProductSerializer(products, many=True, context={'request': request}).data,
             'OK',
