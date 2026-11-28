@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/gym.dart';
 import '../providers/gym_provider.dart';
 import '../widgets/verified_gym_badge.dart';
+import '../../../shared/navigation/main_header.dart';
 
 /// Every gym the signed-in user owns or co-owns, with a route to its
 /// management console. The single "My Gym" link in the drawer only ever
@@ -57,8 +58,8 @@ class _MyGymsScreenState extends ConsumerState<MyGymsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Gyms'),
+      appBar: MainAppBar(
+        title: 'My Gyms',
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: BuddyColors.green),

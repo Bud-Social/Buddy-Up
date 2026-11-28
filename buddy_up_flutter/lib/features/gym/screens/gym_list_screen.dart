@@ -12,7 +12,7 @@ import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/toast.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/navigation/app_nav.dart';
+import '../../../shared/navigation/main_header.dart';
 
 /// Gyms browser — mirrors the web `Gyms.tsx` surface:
 /// Discover / My Gyms, format tabs, city + ordering, near-me radius and
@@ -92,13 +92,8 @@ class _GymListScreenState extends ConsumerState<GymListScreen> {
     final categoriesAsync = ref.watch(gymCategoriesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(LucideIcons.menu),
-          tooltip: 'Menu',
-          onPressed: () => AppNav.open(context),
-        ),
-        title: const Text('Gyms'),
+      appBar: MainAppBar(
+        title: 'Gyms',
         actions: [
           TextButton.icon(
             onPressed: () => context.push('/gyms/create'),

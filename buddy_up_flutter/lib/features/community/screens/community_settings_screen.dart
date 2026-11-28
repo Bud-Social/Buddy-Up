@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../messaging/providers/messaging_provider.dart';
 import '../providers/community_provider.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class CommunitySettingsScreen extends ConsumerStatefulWidget {
   final String communityId;
@@ -158,8 +159,8 @@ class _CommunitySettingsScreenState
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Community Settings'),
+      appBar: MainAppBar(
+        title: 'Community Settings',
         actions: [
           TextButton(
             onPressed: _isSaving ? null : _save,

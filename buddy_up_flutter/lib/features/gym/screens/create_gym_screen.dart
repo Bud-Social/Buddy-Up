@@ -4,6 +4,7 @@ import '../providers/gym_provider.dart';
 import '../../../data/models/gym.dart';
 import '../../../shared/widgets/input.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class CreateGymScreen extends ConsumerStatefulWidget {
   const CreateGymScreen({super.key});
@@ -97,8 +98,8 @@ class _CreateGymScreenState extends ConsumerState<CreateGymScreen> {
     final categoriesAsync = ref.watch(gymCategoriesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Gym'),
+      appBar: MainAppBar(
+        title: 'Create Gym',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
