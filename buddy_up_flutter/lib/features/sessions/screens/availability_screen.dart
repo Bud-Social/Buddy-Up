@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/input.dart' show BuddyInput;
 import '../../../shared/widgets/shimmer_loader.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class AvailabilityScreen extends ConsumerStatefulWidget {
   const AvailabilityScreen({super.key});
@@ -85,7 +86,7 @@ class _AvailabilityScreenState extends ConsumerState<AvailabilityScreen> {
     final availAsync = ref.watch(myAvailabilityProvider);
     final dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return Scaffold(
-      appBar: AppBar(title: const Text('My Availability')),
+      appBar: const MainAppBar(title: 'My Availability'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

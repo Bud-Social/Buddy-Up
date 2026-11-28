@@ -11,6 +11,7 @@ import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/input.dart';
 import '../../shared/widgets/toast.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../shared/navigation/main_header.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   final Profile profile;
@@ -147,8 +148,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Profile'),
+      appBar: MainAppBar(
+        title: 'Edit Profile',
         actions: [
           TextButton(
             onPressed: _save,

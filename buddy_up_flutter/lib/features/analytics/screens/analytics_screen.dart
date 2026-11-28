@@ -13,6 +13,7 @@ import 'report_tab.dart';
 import 'countdowns_tab.dart';
 import 'gps_tracker_screen.dart';
 import '../widgets/activity_queue_banner.dart';
+import '../../../shared/navigation/main_header.dart';
 
 const List<({String key, String label})> _periods = [
   (key: 'week', label: 'Week'),
@@ -62,8 +63,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Analytics'),
+      appBar: MainAppBar(
+        title: 'Analytics',
         actions: [
           PopupMenuButton<String>(
             color: Theme.of(context).colorScheme.surface,

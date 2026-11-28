@@ -10,6 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/shimmer_loader.dart';
 import '../../settings/providers/moderation_provider.dart' show kModerationNoticeTypes;
+import '../../../shared/navigation/main_header.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -316,8 +317,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
+      appBar: MainAppBar(
+        title: 'Notifications',
         actions: [
           IconButton(
             icon: const Icon(Icons.done_all),

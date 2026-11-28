@@ -8,6 +8,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/shimmer_loader.dart';
 import '../providers/schedule_provider.dart';
+import '../../../shared/navigation/main_header.dart';
 
 /// Everything with a date, in one place.
 ///
@@ -23,7 +24,7 @@ class ScheduleScreen extends ConsumerWidget {
     final schedule = ref.watch(scheduleProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Schedule')),
+      appBar: const MainAppBar(title: 'Schedule'),
       body: schedule.when(
         loading: () => const ShimmerList(),
         error: (e, _) => ErrorView(
