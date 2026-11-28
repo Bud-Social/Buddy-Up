@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/page_loader.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../../feed/providers/feed_provider.dart';
 
 /// Per-post performance for the signed-in creator: views, interactions,
@@ -25,6 +26,7 @@ class _CreatorInsightsScreenState
   String? _error;
   List<Map<String, dynamic>> _items = const [];
   Map<String, int> _totals = const {};
+  int _focusedIndex = 0;
 
   @override
   void initState() {
@@ -108,8 +110,13 @@ class _CreatorInsightsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final focusItems = [..._items]
+      ..sort((a, b) => ((b['views'] as num?) ?? 0).compareTo((a['views'] as num?) ?? 0));
+    final focused = focusItems.isEmpty
+        ? null
+        : focusItems[_focusedIndex.clamp(0, focusItems.length - 1)];
     return Scaffold(
-      appBar: AppBar(title: const Text('Creator Insights')),
+      appBar: const MainAppBar(title: 'Creator Insights'),
       body: _loading
           ? const PageLoader()
           : _error != null
@@ -142,6 +149,63 @@ class _CreatorInsightsScreenState
                             ],
                           ),
                           const SizedBox(height: 16),
+                          if (focused != null) ...[
+                            Text(
+                              'Focus post',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Turn the rail to inspect one post at a time.',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              height: 76,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: focusItems.length,
+                                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                                itemBuilder: (_, index) {
+                                  final item = focusItems[index];
+                                  final selected = index == _focusedIndex.clamp(0, focusItems.length - 1);
+                                  final media = item['media_url'] as String? ?? '';
+                                  return GestureDetector(
+                                    onTap: () => setState(() => _focusedIndex = index),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 180),
+                                      width: 68,
+                                      height: 68,
+                                      padding: EdgeInsets.all(selected ? 3 : 1),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                        border: Border.all(
+                                          color: selected ? BuddyColors.green : Theme.of(context).colorScheme.outlineVariant,
+                                          width: selected ? 3 : 1,
+                                        ),
+                                      ),
+                                      child: ClipOval(
+                                        child: media.isNotEmpty
+                                            ? Image.network(media, fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(LucideIcons.image))
+                                            : const Icon(LucideIcons.image, color: BuddyColors.green),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            _FocusedPostCard(item: focused, formatDuration: _formatDuration),
+                            const SizedBox(height: 16),
+                          ],
                           for (final item in _items)
                             Card(
                               color: BuddyColors.surface,
@@ -231,6 +295,86 @@ class _Total extends StatelessWidget {
           Text(
             label,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FocusedPostCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final String Function(num) formatDuration;
+
+  const _FocusedPostCard({required this.item, required this.formatDuration});
+
+  String _count(String key) => '${item[key] ?? 0}';
+
+  @override
+  Widget build(BuildContext context) {
+    final media = item['media_url'] as String? ?? '';
+    final cs = Theme.of(context).colorScheme;
+    final metrics = [
+      ('Views', _count('views')),
+      ('Likes', _count('likes')),
+      ('Comments', _count('comments')),
+      ('Reposts', _count('reposts')),
+      ('Saves', _count('saves')),
+      ('Focus', formatDuration((item['avg_focus_ms'] as num?) ?? 0)),
+    ];
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      color: cs.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 190,
+            child: media.isNotEmpty
+                ? Image.network(media, fit: BoxFit.cover, errorBuilder: (_, _, _) => const Center(child: Icon(LucideIcons.image, size: 40)))
+                : const Center(child: Text('💪', style: TextStyle(fontSize: 46))),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  (item['body'] as String?)?.isNotEmpty == true
+                      ? item['body'] as String
+                      : 'Focused post',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 10),
+                GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 1.9,
+                  children: [
+                    for (final metric in metrics)
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(metric.$1, style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
+                            Text(metric.$2, style: const TextStyle(color: BuddyColors.green, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),

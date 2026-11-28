@@ -54,6 +54,7 @@ export default function CreatorInsightsPage() {
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>('views');
   const [ascending, setAscending] = useState(false);
+  const [focusedPostId, setFocusedPostId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +99,14 @@ export default function CreatorInsightsPage() {
       .slice(0, 3),
     [allItems],
   );
+
+  useEffect(() => {
+    if (topPosts.length > 0 && !topPosts.some((post) => post.post_id === focusedPostId)) {
+      setFocusedPostId(topPosts[0].post_id);
+    }
+  }, [topPosts, focusedPostId]);
+
+  const focusedPost = topPosts.find((post) => post.post_id === focusedPostId) ?? topPosts[0];
 
   if (items === null && !error) {
     return (
@@ -164,6 +173,78 @@ export default function CreatorInsightsPage() {
       {/* Top posts */}
       {topPosts.length > 0 && (
         <section>
+          <div className="mb-3">
+            <h2 className="font-heading font-semibold">Focus post</h2>
+            <p className="text-xs text-buddy-text-secondary mt-0.5">
+              Turn the carousel to inspect one post at a time.
+            </p>
+          </div>
+          <Card className="p-4 mb-4">
+            <div className="relative flex items-center justify-center min-h-24 overflow-hidden">
+              <div className="absolute inset-x-0 top-1/2 h-px bg-buddy-surface-raised" />
+              <div className="relative flex items-center justify-center gap-3 sm:gap-6 overflow-x-auto max-w-full px-8 py-2 snap-x">
+                {topPosts.map((post, index) => {
+                  const selected = post.post_id === focusedPost?.post_id;
+                  const meta = postTypeMeta(post.post_type);
+                  const Icon = meta.icon;
+                  return (
+                    <button
+                      key={post.post_id}
+                      type="button"
+                      aria-label={`Focus post ${index + 1}`}
+                      aria-pressed={selected}
+                      onClick={() => setFocusedPostId(post.post_id)}
+                      className={`snap-center shrink-0 w-16 h-16 rounded-full border-4 transition-all flex items-center justify-center overflow-hidden bg-buddy-surface-raised ${selected ? 'border-buddy-green scale-110 shadow-[0_0_0_5px_rgba(0,200,150,0.14)]' : 'border-buddy-surface text-buddy-text-secondary opacity-70 hover:opacity-100'}`}
+                    >
+                      {post.media_url ? (
+                        <img src={post.media_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Icon size={22} className={selected ? 'text-buddy-green' : ''} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </Card>
+          {focusedPost && (
+            <Card className="overflow-hidden mb-5 border-buddy-green/20">
+              <div className="grid md:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
+                <div className="aspect-video md:aspect-auto min-h-48 bg-buddy-surface-raised flex items-center justify-center">
+                  {focusedPost.media_url ? (
+                    focusedPost.post_type?.includes('video') ? (
+                      <video src={focusedPost.media_url} poster={focusedPost.poster_url || undefined} className="w-full h-full object-cover" controls muted playsInline />
+                    ) : (
+                      <img src={focusedPost.media_url} alt="Focused post" className="w-full h-full object-cover" />
+                    )
+                  ) : (
+                    <span className="text-5xl">💪</span>
+                  )}
+                </div>
+                <div className="p-4 space-y-3">
+                  <div>
+                    <Badge variant="green" label={`Focus · ${postTypeMeta(focusedPost.post_type).label}`} />
+                    <p className="text-sm mt-2 line-clamp-3">{focusedPost.body || '(no caption)'}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      ['Views', formatCount(num(focusedPost.views))],
+                      ['Likes', formatCount(num(focusedPost.likes))],
+                      ['Comments', formatCount(num(focusedPost.comments))],
+                      ['Reposts', formatCount(num(focusedPost.reposts))],
+                      ['Saves', formatCount(num(focusedPost.saves))],
+                      ['Focus', formatDuration(num(focusedPost.avg_focus_ms))],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-lg bg-buddy-surface-raised px-2.5 py-2">
+                        <p className="text-[10px] text-buddy-text-secondary">{label}</p>
+                        <p className="font-display font-bold text-buddy-green tabular-nums">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-heading font-semibold">Top posts</h2>
             <span className="text-xs text-buddy-text-secondary">Ranked by views</span>
