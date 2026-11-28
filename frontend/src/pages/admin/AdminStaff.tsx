@@ -25,7 +25,7 @@ import {
   StatusBadge,
 } from './shared';
 import { formatDate, shortId, text } from './format';
-import { usePortalAction, usePortalList } from './usePortalList';
+import { useDebounced, usePortalAction, usePortalList } from './usePortalList';
 
 /**
  * Staff roles and their effective scopes.
@@ -97,15 +97,16 @@ export default function AdminStaff() {
   const [revoked, setRevoked] = useState('active');
   const [revoking, setRevoking] = useState<string | null>(null);
   const action = usePortalAction();
+  const debouncedQuery = useDebounced(query);
 
   const filters = useMemo(
     () => ({
-      q: query.trim() || undefined,
+      q: debouncedQuery.trim() || undefined,
       role,
       // `revoked=false` means "not revoked"; `all` means "don't filter".
       revoked: revoked === 'active' ? 'false' : revoked === 'revoked' ? 'true' : undefined,
     }),
-    [query, role, revoked],
+    [debouncedQuery, role, revoked],
   );
 
   const fetcher = useCallback(

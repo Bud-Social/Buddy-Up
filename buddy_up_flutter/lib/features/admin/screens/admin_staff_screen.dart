@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -38,6 +40,7 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
   String? _error;
   String? _notice;
   String? _pendingRevokeId;
+  Timer? _searchTimer;
 
   PortalQuery get _query =>
       PortalQuery.of(_page, {'q': _queryText.trim(), 'role': _role, 'revoked': _revoked});
@@ -49,6 +52,20 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
       _error = null;
       _notice = null;
     });
+  }
+
+  void _onSearchChanged(String value) {
+    _searchTimer?.cancel();
+    _searchTimer = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      _setFilter(() => _queryText = value);
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -104,7 +121,7 @@ class _AdminStaffScreenState extends ConsumerState<AdminStaffScreen> {
                 hintText: 'Search by email, username, or name',
                 isDense: true,
               ),
-              onChanged: (value) => _setFilter(() => _queryText = value),
+              onChanged: _onSearchChanged,
             ),
             const SizedBox(height: 12),
             AdminFilterChips(
