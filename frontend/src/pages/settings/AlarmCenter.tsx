@@ -95,10 +95,13 @@ function BuddyPicker({
   onChange: (v: string) => void;
   label: string;
 }) {
-  const matched = buddies.some((b) => b.user_id === value);
+  // Older/partially failed profile responses may omit the list. Settings must
+  // remain usable in that case, so treat a missing collection as empty.
+  const safeBuddies = Array.isArray(buddies) ? buddies : [];
+  const matched = safeBuddies.some((b) => b.user_id === value);
   return (
     <div className="space-y-2">
-      {buddies.length > 0 ? (
+      {safeBuddies.length > 0 ? (
         <select
           aria-label={label}
           value={matched ? value : ''}
@@ -106,7 +109,7 @@ function BuddyPicker({
           className={inputCls}
         >
           <option value="">Choose a buddy…</option>
-          {buddies.map((b) => (
+          {safeBuddies.map((b) => (
             <option key={b.user_id} value={b.user_id}>
               {b.display_name} (@{b.username})
             </option>
@@ -185,11 +188,11 @@ export default function AlarmCenter() {
     ])
       .then(([a, s, inboxShares, sugs, buddyList]) => {
         if (cancelled) return;
-        setAlarms(a);
-        setSounds(s);
-        setInbox(inboxShares);
-        setSuggestions(sugs);
-        setBuddies(buddyList);
+        setAlarms(Array.isArray(a) ? a : []);
+        setSounds(Array.isArray(s) ? s : []);
+        setInbox(Array.isArray(inboxShares) ? inboxShares : []);
+        setSuggestions(Array.isArray(sugs) ? sugs : []);
+        setBuddies(Array.isArray(buddyList) ? buddyList : []);
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
