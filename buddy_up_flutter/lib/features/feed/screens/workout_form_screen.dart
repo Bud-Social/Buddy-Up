@@ -10,6 +10,7 @@ import '../../analytics/utils/workout_types.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/main_header.dart';
 
 const List<int> _timerPresets = [15, 30, 45, 60];
 
@@ -300,7 +301,7 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
     final specs = workoutTypesOrLocal(ref.watch(workoutTypesProvider));
     final spec = specs.specFor(_workoutType);
     return Scaffold(
-      appBar: AppBar(title: const Text('Start workout')),
+      appBar: const MainAppBar(title: 'Start workout'),
       body: _isAnalyzing
           ? const PageLoader()
           : _error != null

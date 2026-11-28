@@ -16,6 +16,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/emoji_utils.dart';
 import '../../../data/models/post.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   final String postId;
@@ -69,7 +70,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final commentsAsync = ref.watch(commentsProvider(widget.postId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Post')),
+      appBar: const MainAppBar(title: 'Post'),
       body: postAsync.when(
         loading: () => const PageLoader(),
         error: (e, _) => ErrorView(

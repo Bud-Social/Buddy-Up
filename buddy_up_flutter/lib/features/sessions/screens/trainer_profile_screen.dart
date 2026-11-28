@@ -10,6 +10,7 @@ import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/shimmer_loader.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class TrainerProfileScreen extends ConsumerWidget {
   final String username;
@@ -20,7 +21,7 @@ class TrainerProfileScreen extends ConsumerWidget {
     final trainerAsync = ref.watch(trainerProvider(username));
     final reviewsAsync = ref.watch(trainerReviewsProvider(username));
     return Scaffold(
-      appBar: AppBar(title: const Text('Trainer Profile')),
+      appBar: const MainAppBar(title: 'Trainer Profile'),
       body: trainerAsync.when(
         data: (trainer) => SingleChildScrollView(
           padding: const EdgeInsets.all(16),

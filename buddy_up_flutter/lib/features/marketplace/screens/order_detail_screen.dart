@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../data/models/marketplace.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -84,7 +85,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Order Details')),
+      appBar: const MainAppBar(title: 'Order Details'),
       body: orderAsync.when(
         data: (order) => ListView(
           padding: const EdgeInsets.all(16),

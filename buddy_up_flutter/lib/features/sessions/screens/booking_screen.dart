@@ -6,6 +6,7 @@ import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/input.dart' show BuddyInput;
 import '../../../shared/widgets/shimmer_loader.dart';
 import '../../../core/cache/with_cache.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class BookingScreen extends ConsumerStatefulWidget {
   final String trainerUsername;
@@ -78,7 +79,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   Widget build(BuildContext context) {
     final availAsync = ref.watch(trainerAvailabilityProvider(widget.trainerUsername));
     return Scaffold(
-      appBar: AppBar(title: const Text('Book Session')),
+      appBar: const MainAppBar(title: 'Book Session'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
