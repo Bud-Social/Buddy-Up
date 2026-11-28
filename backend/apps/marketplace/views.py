@@ -28,7 +28,7 @@ from .models import (
     MealPlan, MealPlanPurchase, MealPlanReview,
     TrainingProgramme, TrainingProgrammePurchase, TrainingProgrammeReview,
     ProgrammeActivityProgress,
-    Product, ProductReview, MarketplaceEvent, EventMedia, EventTicket,
+    Product, ProductReview, InventoryAdjustment, MarketplaceEvent, EventMedia, EventTicket,
     Cart, CartItem, DiscountCode, DiscountUsage,
     Order, OrderItem, OrderFulfillment, InventoryReservation,
     CreatorPayoutSetup,
@@ -46,6 +46,7 @@ from .serializers import (
     TrainingProgrammeSerializer, TrainingProgrammeReviewSerializer,
     UpdateTrainingProgrammeSerializer, UpdateMealPlanSerializer,
     ProductSerializer, ProductReviewSerializer, UpdateProductSerializer, CreateProductSerializer,
+    InventoryAdjustmentSerializer,
     MarketplaceEventSerializer, EventMediaSerializer,
     EventTicketSerializer, CreateMealPlanSerializer, CreateTrainingProgrammeSerializer,
     CreateEventSerializer, ReviewInputSerializer,
@@ -472,6 +473,66 @@ class ShopDetailView(views.APIView):
         shop.is_active = False
         shop.save(update_fields=['is_active'])
         return Response({'success': True, 'data': None, 'message': 'Shop deactivated.', 'errors': None, 'pagination': None})
+
+
+class ShopInventoryView(views.APIView):
+    """Shop-scoped inventory with an auditable operator-only write path."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _shop(self, handle, request):
+        shop = get_object_or_404(Shop, handle=handle, is_active=True)
+        if not shop.memberships.filter(profile=request.user.profile, role__in=('owner', 'manager')).exists():
+            return shop, _api_error('Only shop owners and managers can manage inventory.', 403)
+        return shop, None
+
+    def get(self, request, handle):
+        shop, error = self._shop(handle, request)
+        if error:
+            return error
+        products = Product.objects.filter(shop=shop).select_related('recommended_by').order_by('name')
+        return Response(_api_ok(
+            ProductSerializer(products, many=True, context={'request': request}).data,
+            'OK',
+        ))
+
+    @transaction.atomic
+    def patch(self, request, handle, product_id):
+        shop, error = self._shop(handle, request)
+        if error:
+            return error
+        product = get_object_or_404(
+            Product.objects.select_for_update(), id=product_id, shop=shop,
+        )
+        serializer = InventoryAdjustmentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        previous = product.stock_quantity
+        quantity = data['quantity']
+        product.stock_quantity = quantity
+        if 'stock_tracking_enabled' in data:
+            product.stock_tracking_enabled = data['stock_tracking_enabled']
+        product.save(update_fields=['stock_quantity', 'stock_tracking_enabled', 'updated_at'])
+        adjustment = InventoryAdjustment.objects.create(
+            product=product,
+            shop=shop,
+            actor=request.user.profile,
+            previous_quantity=previous,
+            quantity=quantity,
+            delta=quantity - previous,
+            reason=data.get('reason', '').strip(),
+        )
+        return Response(_api_ok({
+            'product': ProductSerializer(product, context={'request': request}).data,
+            'adjustment': {
+                'id': str(adjustment.id),
+                'previous_quantity': previous,
+                'quantity': quantity,
+                'delta': quantity - previous,
+                'reason': adjustment.reason,
+                'created_at': adjustment.created_at,
+            },
+        }, 'Inventory updated.'))
 
 
 class ShopMembershipView(views.APIView):

@@ -2,20 +2,21 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Store, ExternalLink, ShieldCheck, UserCog, UserMinus, UserPlus,
-  ChevronRight, BadgeCheck, AlertCircle, Dumbbell,
+  ChevronRight, BadgeCheck, AlertCircle, Dumbbell, Package, RefreshCw,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { Input } from '@/components/ui/Input';
-import { marketplaceApi, type ShopFull, type ShopMember } from '@/api/marketplace';
+import { marketplaceApi, type ProductMP, type ShopFull, type ShopMember } from '@/api/marketplace';
 import { GymLinkRequestsPanel } from '@/components/marketplace/GymLinkRequestsPanel';
 import { RoleDashboardShell, RoleSectionTitle } from './roles/RoleShell';
 
-type Tab = 'overview' | 'team' | 'gym-links';
+type Tab = 'overview' | 'inventory' | 'team' | 'gym-links';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
+  { key: 'inventory', label: 'Inventory' },
   { key: 'team', label: 'Team' },
   { key: 'gym-links', label: 'Gym requests' },
 ];
@@ -52,6 +53,8 @@ export default function ShopManage() {
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviteRole, setInviteRole] = useState<'manager' | 'staff'>('staff');
   const [inviteBusy, setInviteBusy] = useState(false);
+  const [inventory, setInventory] = useState<ProductMP[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
 
   const load = useCallback(async () => {
     if (!handle) return;
@@ -70,10 +73,27 @@ export default function ShopManage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const loadInventory = useCallback(async () => {
+    if (!handle) return;
+    setInventoryLoading(true);
+    try {
+      const res = await marketplaceApi.getShopInventory(handle);
+      setInventory(res.data || []);
+    } catch (e: any) {
+      setActionError(e?.response?.data?.message || 'Could not load inventory.');
+    } finally {
+      setInventoryLoading(false);
+    }
+  }, [handle]);
+
+  useEffect(() => {
+    if (tab === 'inventory') loadInventory();
+  }, [tab, loadInventory]);
+
   const members = shop?.members ?? [];
   const myRole = shop?.my_role ?? null;
   const isOwner = myRole === 'owner';
-  const canManage = isOwner;
+  const canManage = isOwner || myRole === 'manager';
 
   const counts = members.reduce((acc: Record<string, number>, m) => {
     acc[m.role] = (acc[m.role] || 0) + 1;
@@ -174,7 +194,7 @@ export default function ShopManage() {
     >
       {!canManage && (
         <div className="bg-buddy-orange/10 border border-buddy-orange/20 text-buddy-orange text-xs rounded-xl px-3 py-2">
-          Only the shop owner can make changes here.
+          Only shop owners and managers can make changes here.
           <span className="block text-[10px] opacity-80 mt-0.5">You are signed in as {myRole ?? 'an observer'}.</span>
         </div>
       )}
@@ -240,6 +260,25 @@ export default function ShopManage() {
             <ChevronRight size={14} className="text-buddy-text-secondary shrink-0" />
           </button>
         </section>
+      )}
+
+      {tab === 'inventory' && (
+        <InventoryPanel
+          products={inventory}
+          loading={inventoryLoading}
+          canManage={canManage}
+          onRefresh={loadInventory}
+          onSave={async (product, quantity, tracking, reason) => {
+            if (!handle) return;
+            await marketplaceApi.adjustShopInventory(handle, product.id, {
+              quantity,
+              stock_tracking_enabled: tracking,
+              ...(reason.trim() ? { reason: reason.trim() } : {}),
+            });
+            setNotice(`${product.name} inventory updated.`);
+            await loadInventory();
+          }}
+        />
       )}
 
       {tab === 'team' && (
@@ -345,5 +384,85 @@ export default function ShopManage() {
         </section>
       )}
     </RoleDashboardShell>
+  );
+}
+
+function InventoryPanel({
+  products,
+  loading,
+  canManage,
+  onRefresh,
+  onSave,
+}: {
+  products: ProductMP[];
+  loading: boolean;
+  canManage: boolean;
+  onRefresh: () => Promise<void>;
+  onSave: (product: ProductMP, quantity: number, tracking: boolean, reason: string) => Promise<void>;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <RoleSectionTitle>Inventory</RoleSectionTitle>
+          <p className="text-[11px] text-buddy-text-secondary">Stock updates are audited with before/after quantities and the operator.</p>
+        </div>
+        <Button size="sm" variant="ghost" onClick={onRefresh} disabled={loading} aria-label="Refresh inventory">
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+        </Button>
+      </div>
+      {loading && <Card className="p-8 text-center"><RefreshCw size={18} className="animate-spin mx-auto text-buddy-green" /></Card>}
+      {!loading && products.length === 0 && <Card className="p-8 text-center text-xs text-buddy-text-secondary">No products are attached to this shop yet.</Card>}
+      {!loading && products.map((product) => (
+        <InventoryRow key={product.id} product={product} canManage={canManage} onSave={onSave} />
+      ))}
+    </section>
+  );
+}
+
+function InventoryRow({
+  product,
+  canManage,
+  onSave,
+}: {
+  product: ProductMP;
+  canManage: boolean;
+  onSave: (product: ProductMP, quantity: number, tracking: boolean, reason: string) => Promise<void>;
+}) {
+  const [quantity, setQuantity] = useState(String(product.stock_quantity ?? 0));
+  const [tracking, setTracking] = useState(Boolean(product.stock_tracking_enabled));
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const tone = !tracking ? 'text-buddy-text-secondary' : Number(quantity) === 0 ? 'text-buddy-red' : Number(quantity) <= 5 ? 'text-buddy-gold' : 'text-buddy-green';
+
+  const save = async () => {
+    const parsed = Number(quantity);
+    if (!Number.isInteger(parsed) || parsed < 0) { setError('Enter a whole number of zero or more.'); return; }
+    setBusy(true); setError('');
+    try { await onSave(product, parsed, tracking, reason); setReason(''); }
+    catch (e: any) { setError(e?.response?.data?.message || 'Could not update stock.'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <Card className="p-3 space-y-2">
+      <div className="flex items-center gap-3">
+        <Package size={18} className="text-buddy-green shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold truncate">{product.name}</p>
+          <p className={`text-[11px] ${tone}`}>{tracking ? `${quantity || 0} in stock` : 'Stock tracking off'}</p>
+        </div>
+        {canManage && <label className="text-[11px] text-buddy-text-secondary flex items-center gap-1.5"><input type="checkbox" checked={tracking} onChange={(e) => setTracking(e.target.checked)} /> Track</label>}
+      </div>
+      {canManage && (
+        <div className="flex flex-wrap gap-2 items-end">
+          <Input label="Quantity" type="number" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="w-28" />
+          <Input label="Reason (optional)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Received shipment" className="flex-1 min-w-40" />
+          <Button size="sm" onClick={save} isLoading={busy}>Save stock</Button>
+        </div>
+      )}
+      {error && <p className="text-[11px] text-buddy-red" role="alert">{error}</p>}
+    </Card>
   );
 }

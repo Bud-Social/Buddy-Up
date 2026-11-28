@@ -140,6 +140,16 @@ final shopManageProvider = FutureProvider.family<Shop, String>((ref, handle) asy
   return Shop.fromJson(raw['data'] as Map<String, dynamic>);
 });
 
+final shopInventoryProvider = FutureProvider.family<List<MarketplaceProduct>, String>((ref, handle) async {
+  final raw = await ref.watch(marketplaceRepositoryProvider).getShopInventory(handle);
+  final data = raw['data'];
+  if (data is! List) return const [];
+  return data
+      .whereType<Map<String, dynamic>>()
+      .map(MarketplaceProduct.fromJson)
+      .toList();
+});
+
 final shopManageActionsProvider = Provider<ShopManageActions>((ref) => ShopManageActions(ref));
 
 class ShopManageActions {
@@ -159,6 +169,26 @@ class ShopManageActions {
     await _ref.read(marketplaceRepositoryProvider).removeShopMember(handle, {
       'username': username,
     });
+    _ref.invalidate(shopManageProvider(handle));
+  }
+
+  Future<void> adjustInventory(
+    String handle,
+    String productId, {
+    required int quantity,
+    required bool trackingEnabled,
+    String reason = '',
+  }) async {
+    await _ref.read(marketplaceRepositoryProvider).adjustShopInventory(
+      handle,
+      productId,
+      {
+        'quantity': quantity,
+        'stock_tracking_enabled': trackingEnabled,
+        if (reason.trim().isNotEmpty) 'reason': reason.trim(),
+      },
+    );
+    _ref.invalidate(shopInventoryProvider(handle));
     _ref.invalidate(shopManageProvider(handle));
   }
 }

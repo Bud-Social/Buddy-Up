@@ -587,6 +587,12 @@ class UpdateProductSerializer(serializers.Serializer):
     fulfillment_details = serializers.DictField(required=False)
 
 
+class InventoryAdjustmentSerializer(serializers.Serializer):
+    quantity = serializers.IntegerField(min_value=0)
+    stock_tracking_enabled = serializers.BooleanField(required=False)
+    reason = serializers.CharField(required=False, allow_blank=True, max_length=200)
+
+
 class TrainingProgrammeReviewSerializer(serializers.ModelSerializer):
     buyer_data = serializers.SerializerMethodField()
 

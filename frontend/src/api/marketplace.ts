@@ -916,6 +916,16 @@ export const marketplaceApi = {
   getShopManage: (handle: string) =>
     apiClient.get<ApiResponse<ShopFull>>(`/marketplace/shops/${handle}/`).then((r) => r.data),
 
+  getShopInventory: (handle: string) =>
+    apiClient.get<ApiResponse<ProductMP[]>>(`/marketplace/shops/${handle}/inventory/`).then((r) => r.data),
+
+  adjustShopInventory: (handle: string, productId: string, data: {
+    quantity: number; stock_tracking_enabled: boolean; reason?: string;
+  }) =>
+    apiClient.patch<ApiResponse<{ product: ProductMP; adjustment: {
+      previous_quantity: number; quantity: number; delta: number; reason: string; created_at: string;
+    } }>>(`/marketplace/shops/${handle}/inventory/${productId}/`, data).then((r) => r.data),
+
   addShopMember: (handle: string, username: string, role: 'owner' | 'manager' | 'staff') =>
     apiClient.post<ApiResponse<ShopMember>>(`/marketplace/shops/${handle}/members/`, { username, role }).then((r) => r.data),
 

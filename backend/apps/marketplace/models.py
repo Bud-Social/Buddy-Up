@@ -490,6 +490,26 @@ class Product(TimestampedModel):
         ]
 
 
+class InventoryAdjustment(TimestampedModel):
+    """Audited stock change made by an authorised shop operator."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='inventory_adjustments')
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='inventory_adjustments')
+    actor = models.ForeignKey('profiles.Profile', on_delete=models.PROTECT, related_name='inventory_adjustments')
+    previous_quantity = models.PositiveIntegerField()
+    quantity = models.PositiveIntegerField()
+    delta = models.IntegerField()
+    reason = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_inventory_adjustment'
+        indexes = [
+            models.Index(fields=['shop', '-created_at']),
+            models.Index(fields=['product', '-created_at']),
+        ]
+
+
 class ProductReview(TimestampedModel):
     """One review from a buyer for each purchased product line."""
     purchase = models.OneToOneField('OrderItem', on_delete=models.CASCADE, related_name='product_review')

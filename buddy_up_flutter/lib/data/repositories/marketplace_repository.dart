@@ -405,4 +405,14 @@ abstract class MarketplaceRepository {
     @Path('handle') String handle,
     @Body() Map<String, dynamic> body,
   );
+
+  @GET('/marketplace/shops/{handle}/inventory/')
+  Future<dynamic> getShopInventory(@Path('handle') String handle);
+
+  @PATCH('/marketplace/shops/{handle}/inventory/{productId}/')
+  Future<dynamic> adjustShopInventory(
+    @Path('handle') String handle,
+    @Path('productId') String productId,
+    @Body() Map<String, dynamic> data,
+  );
 }

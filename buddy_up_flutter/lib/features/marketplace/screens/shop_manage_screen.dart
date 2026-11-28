@@ -24,7 +24,7 @@ class ShopManageScreen extends ConsumerStatefulWidget {
 
   const ShopManageScreen({super.key, required this.handle, this.initialTab});
 
-  static const tabs = ['Overview', 'Team', 'Gym requests'];
+  static const tabs = ['Overview', 'Inventory', 'Team', 'Gym requests'];
 
   @override
   ConsumerState<ShopManageScreen> createState() => _ShopManageScreenState();
@@ -32,9 +32,9 @@ class ShopManageScreen extends ConsumerStatefulWidget {
 
 class _ShopManageScreenState extends ConsumerState<ShopManageScreen> {
   late int _tabIndex = widget.initialTab == 'team'
-      ? 1
+      ? 2
       : widget.initialTab == 'gym-links'
-          ? 2
+          ? 3
           : 0;
   String? _actionError;
   String? _notice;
@@ -109,7 +109,8 @@ class _ShopManageScreenState extends ConsumerState<ShopManageScreen> {
             const SizedBox(height: 16),
             switch (_tabIndex) {
               0 => _OverviewTab(shop: shop, canManage: canManage),
-              1 => _TeamTab(
+              1 => _InventoryTab(handle: shop.handle, canManage: canManage),
+              2 => _TeamTab(
                   shop: shop,
                   canManage: canManage,
                   busyKey: _busyKey,
@@ -343,6 +344,169 @@ class _StatTile extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _InventoryTab extends ConsumerWidget {
+  final String handle;
+  final bool canManage;
+
+  const _InventoryTab({required this.handle, required this.canManage});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final inventory = ref.watch(shopInventoryProvider(handle));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const RoleSectionTitle('Inventory'),
+        Text(
+          canManage
+              ? 'Update stock quantities with an audit reason. Checkout reservations remain server-controlled.'
+              : 'Current stock levels for this shop.',
+          style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+        ),
+        const SizedBox(height: 10),
+        inventory.when(
+          loading: () => const PageLoader(fullScreen: false),
+          error: (error, _) => RoleNotice(
+            message: 'Could not load inventory: $error',
+            isError: true,
+          ),
+          data: (products) => products.isEmpty
+              ? const RoleCard(child: Text('No products are attached to this shop yet.'))
+              : Column(
+                  children: [
+                    for (final product in products)
+                      _InventoryRow(
+                        product: product,
+                        canManage: canManage,
+                        onSave: (quantity, tracking, reason) async {
+                          await ref.read(shopManageActionsProvider).adjustInventory(
+                                handle,
+                                product.id,
+                                quantity: quantity,
+                                trackingEnabled: tracking,
+                                reason: reason,
+                              );
+                        },
+                      ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InventoryRow extends StatefulWidget {
+  final MarketplaceProduct product;
+  final bool canManage;
+  final Future<void> Function(int quantity, bool tracking, String reason) onSave;
+
+  const _InventoryRow({required this.product, required this.canManage, required this.onSave});
+
+  @override
+  State<_InventoryRow> createState() => _InventoryRowState();
+}
+
+class _InventoryRowState extends State<_InventoryRow> {
+  bool _busy = false;
+  String? _error;
+
+  @override
+  Widget build(BuildContext context) {
+    final product = widget.product;
+    final color = !product.stockTrackingEnabled
+        ? BuddyColors.textSecondary
+        : product.stockQuantity == 0
+            ? BuddyColors.red
+            : product.stockQuantity <= 5
+                ? BuddyColors.gold
+                : BuddyColors.green;
+    return RoleCard(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(product.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 3),
+                Text(
+                  product.stockTrackingEnabled ? '${product.stockQuantity} in stock' : 'Stock tracking off',
+                  style: TextStyle(fontSize: 12, color: color),
+                ),
+                if (_error != null)
+                  Text(_error!, style: const TextStyle(fontSize: 11, color: BuddyColors.red)),
+              ],
+            ),
+          ),
+          if (widget.canManage)
+            OutlinedButton(
+              onPressed: _busy ? null : _edit,
+              child: Text(_busy ? 'Saving…' : 'Edit'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _edit() async {
+    final quantity = TextEditingController(text: '${widget.product.stockQuantity}');
+    final reason = TextEditingController();
+    var tracking = widget.product.stockTrackingEnabled;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Update ${widget.product.name}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: quantity,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Quantity'),
+              ),
+              TextField(
+                controller: reason,
+                maxLength: 200,
+                decoration: const InputDecoration(labelText: 'Reason (optional)'),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: tracking,
+                title: const Text('Track stock'),
+                onChanged: (value) => setDialogState(() => tracking = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Save')),
+          ],
+        ),
+      ),
+    );
+    if (result != true || !mounted) return;
+    final parsed = int.tryParse(quantity.text.trim());
+    if (parsed == null || parsed < 0) {
+      setState(() => _error = 'Enter a whole number of zero or more.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave(parsed, tracking, reason.text);
+    } catch (error) {
+      if (mounted) setState(() => _error = '$error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }
 
