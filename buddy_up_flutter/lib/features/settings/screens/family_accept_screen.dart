@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/navigation/main_header.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -92,7 +93,7 @@ class _FamilyAcceptScreenState extends ConsumerState<FamilyAcceptScreen> {
         queryParameters: {'token': _token ?? ''},
       ).toString();
       return Scaffold(
-        appBar: AppBar(title: const Text('Accept Family Invite')),
+        appBar: const MainAppBar(title: 'Accept Family Invite'),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -141,7 +142,7 @@ class _FamilyAcceptScreenState extends ConsumerState<FamilyAcceptScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Accept Family Invite')),
+        appBar: const MainAppBar(title: 'Accept Family Invite'),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
