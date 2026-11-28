@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BadgeCheck, ClipboardList, Hourglass, Loader, Plus, RefreshCw, ShieldQuestion } from 'lucide-react';
+import { BadgeCheck, ClipboardList, Hourglass, Loader, RefreshCw, ShieldQuestion, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -95,7 +95,7 @@ export default function CategoryApplication() {
   const [scope, setScope] = useState('');
   const [gymHandle, setGymHandle] = useState('');
   const [notes, setNotes] = useState('');
-  const [documentUrl, setDocumentUrl] = useState('');
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentIds, setDocumentIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -126,17 +126,20 @@ export default function CategoryApplication() {
   const blocked = missing.length > 0 || documentIds.length === 0 || (needsGym && !gymHandle.trim());
 
   const attachDocument = useCallback(async () => {
-    const url = documentUrl.trim();
-    if (!url) return;
+    if (!documentFile) return;
+    if (documentFile.size > 50 * 1024 * 1024) {
+      setFormError('Each supporting document must be 50 MB or smaller.');
+      return;
+    }
     setFormError('');
     try {
-      const res = await verificationApi.uploadDocument('certification', url);
+      const res = await verificationApi.uploadCredential('certification', documentFile);
       if (res.data?.id) setDocumentIds((ids) => [...ids, res.data.id]);
-      setDocumentUrl('');
+      setDocumentFile(null);
     } catch {
-      setFormError('That document could not be stored. Check the URL and try again.');
+      setFormError('That document could not be uploaded. Check the file and try again.');
     }
-  }, [documentUrl]);
+  }, [documentFile]);
 
   const submit = useCallback(async () => {
     setSubmitting(true);
@@ -260,23 +263,23 @@ export default function CategoryApplication() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5" htmlFor="doc-url">Supporting document</label>
+              <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5" htmlFor="doc-file">Supporting document</label>
               <div className="flex gap-2">
                 <input
-                  id="doc-url"
-                  value={documentUrl}
-                  onChange={(e) => setDocumentUrl(e.target.value)}
-                  placeholder="https://… (your certificate scan)"
-                  className="flex-1 bg-buddy-surface-raised border border-buddy-surface rounded-xl px-3 py-2 text-sm placeholder:text-buddy-text-secondary focus:outline-none focus:border-buddy-green"
+                  id="doc-file"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+                  className="min-w-0 flex-1 bg-buddy-surface-raised border border-buddy-surface rounded-xl px-3 py-2 text-sm text-buddy-text-secondary file:mr-2 file:rounded-lg file:border-0 file:bg-buddy-green/15 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-buddy-green focus:outline-none focus:border-buddy-green"
                 />
-                <Button variant="outline" size="sm" disabled={!documentUrl.trim()} onClick={attachDocument}>
-                  <Plus size={14} className="mr-1" /> Attach
+                <Button variant="outline" size="sm" disabled={!documentFile} onClick={attachDocument}>
+                  <Upload size={14} className="mr-1" /> Upload
                 </Button>
               </div>
               <p className="text-[11px] text-buddy-text-secondary mt-1.5">
                 {documentIds.length
                   ? `${documentIds.length} document(s) attached.`
-                  : 'At least one document is required — a credential number with nothing behind it cannot be reviewed.'}
+                  : 'PDF or image, up to 50 MB. At least one document is required for review.'}
               </p>
             </div>
 
