@@ -23,6 +23,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _brandController = TextEditingController();
+  final _barcodeController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _imageUrlController = TextEditingController();
   final _affiliateUrlController = TextEditingController();
@@ -48,6 +49,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
   void dispose() {
     _nameController.dispose();
     _brandController.dispose();
+    _barcodeController.dispose();
     _descriptionController.dispose();
     _imageUrlController.dispose();
     _affiliateUrlController.dispose();
@@ -69,6 +71,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
           _existing = data;
           _nameController.text = (data['name'] ?? '') as String;
           _brandController.text = (data['brand'] ?? '') as String;
+          _barcodeController.text = (data['barcode'] ?? '') as String;
           _descriptionController.text = (data['description'] ?? '') as String;
           _imageUrlController.text = (data['image_url'] ?? '') as String;
           _affiliateUrlController.text = (data['affiliate_url'] ?? '') as String;
@@ -101,6 +104,8 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
     final data = <String, dynamic>{
       'name': _nameController.text.trim(),
       'brand': _brandController.text.trim(),
+      if (_barcodeController.text.trim().isNotEmpty)
+        'barcode': _barcodeController.text.trim(),
       'description': _descriptionController.text.trim(),
       'category': _category,
       'affiliate_url': _affiliateUrlController.text.trim(),
@@ -185,6 +190,16 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                       decoration: const InputDecoration(labelText: 'Brand *'),
                       validator: (v) =>
                           (v == null || v.trim().isEmpty) ? 'Brand is required.' : null,
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _barcodeController,
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Barcode (optional)',
+                        hintText: 'EAN, UPC, or shop barcode',
+                      ),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(

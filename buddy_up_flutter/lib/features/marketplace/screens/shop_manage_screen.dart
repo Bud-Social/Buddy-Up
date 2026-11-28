@@ -450,6 +450,8 @@ class _InventoryRowState extends State<_InventoryRow> {
               children: [
                 Text(product.name, style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 3),
+                if (product.barcode.isNotEmpty)
+                  Text('Barcode: ${product.barcode}', style: const TextStyle(fontSize: 10, color: BuddyColors.textSecondary)),
                 Text(
                   product.stockTrackingEnabled ? '${product.stockQuantity} in stock' : 'Stock tracking off',
                   style: TextStyle(fontSize: 12, color: color),

@@ -23,6 +23,7 @@ export default function CreateProduct() {
     shop_id: '',
     name: '',
     brand: '',
+    barcode: '',
     description: '',
     category: 'supplement',
     image_url: '',
@@ -52,6 +53,7 @@ export default function CreateProduct() {
           shop_id: p.shop_data?.id || '',
           name: p.name,
           brand: p.brand || '',
+          barcode: p.barcode || '',
           description: p.description || '',
           category: p.category || 'supplement',
           image_url: p.image_url || '',
@@ -85,6 +87,7 @@ export default function CreateProduct() {
         shop_id: form.shop_id || undefined,
         name: form.name,
         brand: form.brand,
+        barcode: form.barcode.trim() || undefined,
         description: form.description,
         category: form.category,
         image_url: form.image_url || undefined,
@@ -162,6 +165,12 @@ export default function CreateProduct() {
                   <label className="text-sm font-semibold mb-1.5 block">Brand</label>
                   <Input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="e.g. Optimum Nutrition" className="bg-buddy-black" />
                 </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold mb-1.5 block">Barcode (Optional)</label>
+                <Input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} placeholder="EAN, UPC, or shop barcode" className="bg-buddy-black" inputMode="numeric" />
+                <p className="text-[10px] text-buddy-text-secondary mt-1">Use this code to find the product quickly in shop inventory.</p>
               </div>
 
               <div>

@@ -459,6 +459,7 @@ function InventoryRow({
         <Package size={18} className="text-buddy-green shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold truncate">{product.name}</p>
+          {product.barcode && <p className="text-[10px] text-buddy-text-secondary">Barcode: {product.barcode}</p>}
           <p className={`text-[11px] ${tone}`}>{tracking ? `${quantity || 0} in stock` : 'Stock tracking off'}</p>
         </div>
         {canManage && <label className="text-[11px] text-buddy-text-secondary flex items-center gap-1.5"><input type="checkbox" checked={tracking} onChange={(e) => setTracking(e.target.checked)} /> Track</label>}
