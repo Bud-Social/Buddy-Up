@@ -13,6 +13,7 @@ import '../../../data/models/verification.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../feed/providers/feed_provider.dart' show apiClientProvider;
 import '../providers/verification_provider.dart';
+import '../../../shared/navigation/main_header.dart';
 
 /// `DOCUMENT_TYPES` on `VerificationDocument`.
 ///
@@ -51,8 +52,8 @@ class VerificationScreen extends ConsumerWidget {
     final documents = ref.watch(verificationDocumentsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Verification'),
+      appBar: MainAppBar(
+        title: 'Verification',
         actions: [
           TextButton.icon(
             onPressed: () => _newRequest(context, ref),

@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/verification.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/input.dart' show BuddyInput;
+import '../../../shared/navigation/main_header.dart';
 import '../providers/verification_provider.dart';
 
 /// `POST /api/v1/verification/category-applications/` — apply for an elevated
@@ -172,7 +173,7 @@ class _CategoryApplicationScreenState
     final documents = ref.watch(attachableDocumentsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Apply for a role')),
+      appBar: const MainAppBar(title: 'Apply for a role'),
       body: Form(
         key: _formKey,
         child: ListView(
