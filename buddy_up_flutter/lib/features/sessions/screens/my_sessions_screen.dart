@@ -9,6 +9,7 @@ import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/input.dart' show BuddyInput;
 import '../../../shared/widgets/shimmer_loader.dart';
 import '../../marketplace/providers/marketplace_provider.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class MySessionsScreen extends StatelessWidget {
   const MySessionsScreen({super.key});
@@ -18,8 +19,8 @@ class MySessionsScreen extends StatelessWidget {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Sessions & Orders'),
+        appBar: MainAppBar(
+          title: 'Sessions & Orders',
           actions: [
             IconButton(
               tooltip: 'Schedule',

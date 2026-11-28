@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/page_loader.dart';
+import '../../../shared/navigation/main_header.dart';
 
 /// The cart owns quantities and the discount code — nothing else.
 ///
@@ -41,7 +42,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget build(BuildContext context) {
     final cartAsync = ref.watch(cartProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Cart')),
+      appBar: const MainAppBar(title: 'Cart'),
       body: cartAsync.when(
         data: (cart) {
           if (cart == null || cart.items.isEmpty) {

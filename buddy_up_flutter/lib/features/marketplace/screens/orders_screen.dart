@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../../../data/models/marketplace.dart';
 
 /// Where an order card should land.
@@ -31,7 +32,7 @@ class OrdersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ordersAsync = ref.watch(ordersProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('My Orders')),
+      appBar: const MainAppBar(title: 'My Orders'),
       body: ordersAsync.when(
         data: (orders) => orders.isEmpty
             ? Center(
