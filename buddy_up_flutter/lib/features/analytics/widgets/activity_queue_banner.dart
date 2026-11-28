@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../../../core/auth/auth_provider.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -11,20 +14,42 @@ class ActivityQueueBanner extends ConsumerStatefulWidget {
   const ActivityQueueBanner({super.key});
 
   @override
-  ConsumerState<ActivityQueueBanner> createState() => _ActivityQueueBannerState();
+  ConsumerState<ActivityQueueBanner> createState() =>
+      _ActivityQueueBannerState();
 }
 
-class _ActivityQueueBannerState extends ConsumerState<ActivityQueueBanner> {
+class _ActivityQueueBannerState extends ConsumerState<ActivityQueueBanner>
+    with WidgetsBindingObserver {
   bool _syncing = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      if (results.any((result) => result != ConnectivityResult.none)) {
+        _syncNow();
+      }
+    });
     Future.microtask(() {
       if (!mounted) return;
       final ownerId = ref.read(authProvider).user?.id;
       ref.read(activityQueueServiceProvider).refreshCount(ownerId);
+      _syncNow();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _syncNow();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _connectivitySub?.cancel();
+    super.dispose();
   }
 
   Future<void> _syncNow() async {
@@ -69,10 +94,7 @@ class _ActivityQueueBannerState extends ConsumerState<ActivityQueueBanner> {
                   count == 1
                       ? '1 activity is saved on this device. It uploads when you reconnect.'
                       : '$count activities are saved on this device. They upload when you reconnect.',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: BuddyColors.gold,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: BuddyColors.gold),
                 ),
               ),
               TextButton(

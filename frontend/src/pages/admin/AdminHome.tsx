@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Bike, Building2, CreditCard, Dumbbell, LayoutDashboard, RadioTower,
+  Bike, Building2, CreditCard, Dumbbell, KeyRound, LayoutDashboard, RadioTower,
   ShieldCheck, ShoppingCart, TrendingUp, Users, UsersRound, ChevronRight,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
@@ -40,6 +40,7 @@ const PROBES: Probe[] = [
   { key: 'stations', label: 'Stations', to: '/admin/stations', icon: RadioTower, load: () => adminPortalApi.getStations({ page_size: 1 }) },
   { key: 'delivery', label: 'Delivery', to: '/admin/delivery', icon: Bike, load: () => adminPortalApi.getDeliveryPersonnel({ page_size: 1 }) },
   { key: 'wallet', label: 'Transactions', to: '/admin/wallet', icon: CreditCard, load: () => adminPortalApi.getTransactions({ page_size: 1 }) },
+  { key: 'staff', label: 'Staff roles', to: '/admin/staff-roles', icon: KeyRound, load: () => adminPortalApi.getStaffRoles({ page_size: 1 }) },
 ];
 
 const QUEUES = [
