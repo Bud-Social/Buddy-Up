@@ -15,6 +15,7 @@ import '../providers/gym_provider.dart';
 import '../widgets/gym_insights_tabs.dart';
 import '../widgets/gym_posts_tab.dart';
 import '../../feed/widgets/gym_actor_identity.dart';
+import '../../feed/screens/post_composer_screen.dart';
 
 
 /// Gym management.
@@ -159,12 +160,7 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
         'Open the online coaching programme surface for this gym.',
         '/marketplace/programmes',
       ),
-      'Announce': () => _managementActionTab(
-        context,
-        'Announce',
-        'Post an announcement to this gym community.',
-        '/marketplace/creator-studio',
-      ),
+      'Announce': () => _announceTab(context),
       'Setup': () => _managementActionTab(
         context,
         'Setup',
@@ -264,6 +260,39 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _announceTab(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const RoleSectionTitle('Gym announcement'),
+        Text(
+          'Compose an update as ${gym.name}. It will appear on the gym feed and can include the same media, polls, and activity details as a normal post.',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 13,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => PostComposerScreen(
+                gymId: gym.id,
+                gymName: gym.name,
+                onPostCreated: () {
+                  if (mounted) setState(() => _notice = 'Gym announcement posted.');
+                },
+              ),
+            ),
+          ),
+          icon: const Icon(Icons.edit_outlined),
+          label: const Text('Compose as gym'),
+        ),
+      ],
     );
   }
 
