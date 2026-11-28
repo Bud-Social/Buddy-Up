@@ -47,6 +47,11 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
   void initState() {
     super.initState();
     _loadActivityCollections();
+    if (widget.summary == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(analyticsSummaryProvider.notifier).load();
+      });
+    }
   }
 
   Future<void> _loadActivityCollections() async {
@@ -141,12 +146,28 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
 
   @override
   Widget build(BuildContext context) {
-    final s = widget.summary;
+    final summaryState = ref.watch(analyticsSummaryProvider);
+    final s = widget.summary ?? summaryState.summary?.activity;
     if (s == null) {
-      return const EmptyState(
-        icon: Icons.directions_run,
-        title: 'No activity data',
-      );
+      return summaryState.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const EmptyState(
+                    icon: Icons.directions_run,
+                    title: 'No activity data',
+                  ),
+                  if (summaryState.error != null)
+                    FilledButton(
+                      onPressed: () =>
+                          ref.read(analyticsSummaryProvider.notifier).refresh(),
+                      child: const Text('Retry'),
+                    ),
+                ],
+              ),
+            );
     }
 
     final cs = Theme.of(context).colorScheme;

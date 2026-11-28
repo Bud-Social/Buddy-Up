@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../../analytics/providers/analytics_provider.dart';
-import '../../feed/providers/feed_provider.dart' show composerExpandRequestProvider;
+import '../../feed/providers/feed_provider.dart'
+    show composerExpandRequestProvider;
 import '../models/countdown_models.dart';
 import '../providers/countdown_provider.dart';
 
@@ -57,8 +59,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
 
   Color _colorFor(CountdownTemplate template) =>
       _templateColors[template.code] ??
-      Color(int.tryParse(template.color.replaceAll('#', '0xFF')) ??
-          0xFF6366f1);
+      Color(int.tryParse(template.color.replaceAll('#', '0xFF')) ?? 0xFF6366f1);
 
   String _formatDate(String? iso) {
     if (iso == null || iso.isEmpty) return '';
@@ -153,8 +154,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                 const SizedBox(height: 16),
                 if (_creatingTemplateId != null &&
                     templates.any(
-                      (t) => t.id == _creatingTemplateId &&
-                          t.code == 'custom',
+                      (t) => t.id == _creatingTemplateId && t.code == 'custom',
                     ))
                   _customField(),
                 const SizedBox(height: 16),
@@ -179,17 +179,22 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                         decoration: InputDecoration(
                           hintText: '0 = no target',
                           hintStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(
-                              alpha: 0.5,
-                            ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.5),
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: BuddyColors.border),
+                            borderSide: const BorderSide(
+                              color: BuddyColors.border,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: BuddyColors.border),
+                            borderSide: const BorderSide(
+                              color: BuddyColors.border,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -219,7 +224,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                       child: OutlinedButton(
                         onPressed: isLoading ? null : () => Navigator.pop(ctx),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant,
                           side: const BorderSide(color: BuddyColors.border),
                           minimumSize: const Size(double.infinity, 44),
                         ),
@@ -232,40 +239,42 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                         onPressed: _creatingTemplateId == null || isLoading
                             ? null
                             : () async {
-                              final t = templates.firstWhere(
-                                (x) => x.id == _creatingTemplateId,
-                                orElse: () => templates.first,
-                              );
-                              final custom = t.code == 'custom'
-                                  ? _customReasonController.text.trim()
-                                  : null;
-                              if (t.code == 'custom' && custom!.isEmpty) {
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Please enter a custom reason',
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
+                                final t = templates.firstWhere(
+                                  (x) => x.id == _creatingTemplateId,
+                                  orElse: () => templates.first,
                                 );
-                                return;
-                              }
-                              Navigator.pop(ctx);
-                              await ref
-                                  .read(countdownsProvider.notifier)
-                                  .create(
-                                    templateId: _creatingTemplateId!,
-                                    customReason: custom,
-                                    targetCount: _targetCount,
+                                final custom = t.code == 'custom'
+                                    ? _customReasonController.text.trim()
+                                    : null;
+                                if (t.code == 'custom' && custom!.isEmpty) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please enter a custom reason',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                      backgroundColor: Colors.red,
+                                    ),
                                   );
-                              _customReasonController.clear();
-                              _targetCount = 0;
-                              setState(() => _creatingTemplateId = null);
-                            },
+                                  return;
+                                }
+                                Navigator.pop(ctx);
+                                await ref
+                                    .read(countdownsProvider.notifier)
+                                    .create(
+                                      templateId: _creatingTemplateId!,
+                                      customReason: custom,
+                                      targetCount: _targetCount,
+                                    );
+                                _customReasonController.clear();
+                                _targetCount = 0;
+                                setState(() => _creatingTemplateId = null);
+                              },
                         style: FilledButton.styleFrom(
                           backgroundColor: BuddyColors.green,
-                          foregroundColor: Theme.of(context).colorScheme.surface,
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.surface,
                           minimumSize: const Size(double.infinity, 44),
                         ),
                         child: isLoading
@@ -298,7 +307,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
       decoration: InputDecoration(
         hintText: 'e.g. Days without coffee',
         hintStyle: TextStyle(
-          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -321,9 +332,8 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Countdowns & Streaks'),
-        centerTitle: false,
+      appBar: MainAppBar(
+        title: 'Countdowns & Streaks',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -331,12 +341,15 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
-            onPressed: ref.watch(countdownsProvider).isLoading ? null : _showCreateSheet,
+            onPressed: ref.watch(countdownsProvider).isLoading
+                ? null
+                : _showCreateSheet,
             tooltip: 'New countdown',
           ),
         ],
       ),
-      body: ref.watch(countdownsProvider).isLoading &&
+      body:
+          ref.watch(countdownsProvider).isLoading &&
               ref.watch(countdownsProvider).countdowns.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -344,7 +357,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
               child: _buildBody(state),
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: ref.watch(countdownsProvider).isLoading ? null : _showCreateSheet,
+        onPressed: ref.watch(countdownsProvider).isLoading
+            ? null
+            : _showCreateSheet,
         backgroundColor: BuddyColors.green,
         foregroundColor: Theme.of(context).colorScheme.surface,
         child: const Icon(Icons.add),
@@ -374,11 +389,11 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
     }
 
     bool matches(UserCountdown c) => switch (_filter) {
-          _CountdownFilter.all => true,
-          _CountdownFilter.active => c.isActive && c.completedAt == null,
-          _CountdownFilter.completed => c.completedAt != null,
-          _CountdownFilter.archived => !c.isActive && c.completedAt == null,
-        };
+      _CountdownFilter.all => true,
+      _CountdownFilter.active => c.isActive && c.completedAt == null,
+      _CountdownFilter.completed => c.completedAt != null,
+      _CountdownFilter.archived => !c.isActive && c.completedAt == null,
+    };
 
     final visible = state.countdowns.where(matches).toList();
     final active = visible
@@ -390,16 +405,16 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
         .toList();
 
     Widget sectionHeader(String label) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        );
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -450,8 +465,11 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.timer_outlined,
-                    size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                Icon(
+                  Icons.timer_outlined,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   state.countdowns.isEmpty
@@ -468,7 +486,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                       ? 'Track sobriety, gym attendance, walking days and more.'
                       : 'Try another filter, or start a new countdown.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -532,7 +552,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                         Text(
                           c.templateDetail!.description,
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                           maxLines: 1,
@@ -608,7 +630,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                 if (!isCompleted && c.countdownType == 'manual') ...[
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: ref.watch(countdownsProvider).isLoading ? null : () => _checkIn(c),
+                      onPressed: ref.watch(countdownsProvider).isLoading
+                          ? null
+                          : () => _checkIn(c),
                       icon: const Icon(Icons.check_circle, size: 16),
                       label: const Text('Check in'),
                       style: OutlinedButton.styleFrom(
@@ -623,11 +647,15 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                 ],
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: ref.watch(countdownsProvider).isLoading ? null : () => _edit(c),
+                    onPressed: ref.watch(countdownsProvider).isLoading
+                        ? null
+                        : () => _edit(c),
                     icon: const Icon(Icons.edit, size: 16),
                     label: const Text('Edit'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                      foregroundColor: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant,
                       side: const BorderSide(color: BuddyColors.border),
                       minimumSize: const Size(double.infinity, 36),
                       padding: EdgeInsets.zero,
@@ -637,7 +665,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: ref.watch(countdownsProvider).isLoading ? null : () => _reset(c),
+                    onPressed: ref.watch(countdownsProvider).isLoading
+                        ? null
+                        : () => _reset(c),
                     icon: const Icon(Icons.refresh, size: 16),
                     label: const Text('Reset'),
                     style: OutlinedButton.styleFrom(
@@ -683,7 +713,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                 const Spacer(),
                 if (isCompleted || c.countdownType == 'manual')
                   TextButton.icon(
-                    onPressed: ref.watch(countdownsProvider).isLoading ? null : () => _shareCountdown(c),
+                    onPressed: ref.watch(countdownsProvider).isLoading
+                        ? null
+                        : () => _shareCountdown(c),
                     icon: const Icon(Icons.share, size: 14),
                     label: const Text('Share'),
                     style: TextButton.styleFrom(
@@ -701,7 +733,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
             Text(
               'Started ${_formatDate(c.startDate)}',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                 fontSize: 11,
               ),
             ),
@@ -748,14 +782,14 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
   }
 
   String _eventLabel(String type) => switch (type) {
-        'create' => 'Created',
-        'checkin' => 'Checked in',
-        'reset' => 'Reset',
-        'auto_advance' => 'Advanced automatically',
-        'complete' => 'Completed',
-        'edit' => 'Edited',
-        _ => type,
-      };
+    'create' => 'Created',
+    'checkin' => 'Checked in',
+    'reset' => 'Reset',
+    'auto_advance' => 'Advanced automatically',
+    'complete' => 'Completed',
+    'edit' => 'Edited',
+    _ => type,
+  };
 
   Widget _historyPanel() {
     if (_historyLoading) {
@@ -815,8 +849,8 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                         color: event.eventType == 'reset'
                             ? Colors.red
                             : event.eventType == 'complete'
-                                ? BuddyColors.green
-                                : Theme.of(context).colorScheme.onSurface,
+                            ? BuddyColors.green
+                            : Theme.of(context).colorScheme.onSurface,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -833,13 +867,13 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                   Text(
                     event.occurredAt == null
                         ? ''
-                        : DateFormat('MMM d, HH:mm')
-                            .format(event.occurredAt!.toLocal()),
+                        : DateFormat(
+                            'MMM d, HH:mm',
+                          ).format(event.occurredAt!.toLocal()),
                     style: TextStyle(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant
-                          .withValues(alpha: 0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                       fontSize: 11,
                     ),
                   ),
@@ -853,7 +887,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
 
   /// Start a fresh run from a completed countdown — the web "Recreate" action.
   Future<void> _recreate(UserCountdown c) async {
-    final created = await ref.read(countdownsProvider.notifier).create(
+    final created = await ref
+        .read(countdownsProvider.notifier)
+        .create(
           templateId: c.templateId ?? '',
           customReason: c.customReason,
           countdownType: c.countdownType,
@@ -864,7 +900,8 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            ref.read(countdownsProvider).error ?? 'Could not recreate that countdown.',
+            ref.read(countdownsProvider).error ??
+                'Could not recreate that countdown.',
           ),
           backgroundColor: Colors.red,
         ),
@@ -880,7 +917,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
     _shareVisibility = 'public';
     _shareCaptionController.text = [
       c.displayReason,
-      target > 0 ? '${c.currentCount} / $target ${c.unit}' : '${c.currentCount} ${c.unit}',
+      target > 0
+          ? '${c.currentCount} / $target ${c.unit}'
+          : '${c.currentCount} ${c.unit}',
       'Progress: ${pct.toStringAsFixed(0)}%',
       '#BuddyUp #Countdown #Streak',
     ].join('\n');
@@ -922,7 +961,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                 children: [
                   for (final v in const ['public', 'buddies', 'private'])
                     OutlinedButton(
-                      onPressed: _shareBusy ? null : () => setState(() => _shareVisibility = v),
+                      onPressed: _shareBusy
+                          ? null
+                          : () => setState(() => _shareVisibility = v),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
                           color: _shareVisibility == v
@@ -934,7 +975,11 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                             : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       child: Text(
-                        v == 'public' ? 'Public' : v == 'buddies' ? 'Buddies' : 'Private',
+                        v == 'public'
+                            ? 'Public'
+                            : v == 'buddies'
+                            ? 'Buddies'
+                            : 'Private',
                         style: const TextStyle(fontSize: 12),
                       ),
                     ),
@@ -958,22 +1003,26 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                         try {
                           await ref
                               .read(analyticsRepositoryProvider)
-                              .sharePrepare(
-                            {
-                              'kind': 'countdown',
-                              'obj_id': c.id,
-                              'visibility': _shareVisibility,
-                              'body': _shareCaptionController.text,
-                            },
-                          );
+                              .sharePrepare({
+                                'kind': 'countdown',
+                                'obj_id': c.id,
+                                'visibility': _shareVisibility,
+                                'body': _shareCaptionController.text,
+                              });
                           if (!mounted) return;
                           Navigator.of(context).pop<void>();
-                          ref.read(composerExpandRequestProvider.notifier).bump();
+                          ref
+                              .read(composerExpandRequestProvider.notifier)
+                              .bump();
                           context.go('/feed');
                         } catch (_) {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Could not prepare that countdown for sharing.')),
+                              const SnackBar(
+                                content: Text(
+                                  'Could not prepare that countdown for sharing.',
+                                ),
+                              ),
                             );
                           }
                         } finally {
@@ -1021,7 +1070,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
         title: const Text('Reset countdown?'),
         content: Text(
           'This will set your progress back to zero.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         actions: [
           TextButton(
@@ -1090,7 +1141,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
               decoration: InputDecoration(
                 hintText: c.displayReason,
                 hintStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1121,17 +1174,15 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                   width: 100,
                   child: TextField(
                     controller: TextEditingController(
-                      text: c.targetCount > 0
-                          ? c.targetCount.toString()
-                          : '',
+                      text: c.targetCount > 0 ? c.targetCount.toString() : '',
                     ),
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       hintText: '0 = no target',
                       hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(
-                          alpha: 0.5,
-                        ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -1167,7 +1218,9 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(ctx),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                      foregroundColor: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant,
                       side: const BorderSide(color: BuddyColors.border),
                       minimumSize: const Size(double.infinity, 44),
                     ),
@@ -1180,25 +1233,25 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                     onPressed: ref.watch(countdownsProvider).isLoading
                         ? null
                         : () async {
-                          final reason = _customReasonController.text.trim();
-                          await ref
-                              .read(countdownsProvider.notifier)
-                              .update(
-                                c.id,
-                                UpdateUserCountdown(
-                                  customReason: reason.isNotEmpty
-                                      ? reason
-                                      : null,
-                                  targetCount: _targetCount > 0
-                                      ? _targetCount
-                                      : null,
-                                ),
-                              );
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          _customReasonController.clear();
-                          _targetCount = 0;
-                          setState(() => _creatingTemplateId = null);
-                        },
+                            final reason = _customReasonController.text.trim();
+                            await ref
+                                .read(countdownsProvider.notifier)
+                                .update(
+                                  c.id,
+                                  UpdateUserCountdown(
+                                    customReason: reason.isNotEmpty
+                                        ? reason
+                                        : null,
+                                    targetCount: _targetCount > 0
+                                        ? _targetCount
+                                        : null,
+                                  ),
+                                );
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            _customReasonController.clear();
+                            _targetCount = 0;
+                            setState(() => _creatingTemplateId = null);
+                          },
                     style: FilledButton.styleFrom(
                       backgroundColor: BuddyColors.green,
                       foregroundColor: Theme.of(context).colorScheme.surface,

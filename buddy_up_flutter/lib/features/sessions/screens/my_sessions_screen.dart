@@ -23,7 +23,13 @@ class MySessionsScreen extends StatelessWidget {
           actions: [
             IconButton(
               tooltip: 'Schedule',
-              icon: const Icon(Icons.event_note_outlined),
+              icon: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.event_note_outlined, size: 20),
+                  Text('Schedule', style: TextStyle(fontSize: 9)),
+                ],
+              ),
               onPressed: () => context.push('/schedule'),
             ),
           ],

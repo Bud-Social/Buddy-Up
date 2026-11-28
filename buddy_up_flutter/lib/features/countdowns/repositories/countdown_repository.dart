@@ -11,7 +11,7 @@ abstract class CountdownRepository {
 
   /// List active countdown templates offered to all users.
   @GET('/countdowns/templates/')
-  Future<List<CountdownTemplate>> listTemplates();
+  Future<dynamic> listTemplates();
 
   /// Seed default countdown templates (staff only).
   @POST('/countdowns/templates/seed/')
@@ -19,7 +19,7 @@ abstract class CountdownRepository {
 
   /// List the authenticated user's countdowns.
   @GET('/countdowns/')
-  Future<List<UserCountdown>> listCountdowns({@Query('is_active') bool? isActive});
+  Future<dynamic> listCountdowns({@Query('is_active') bool? isActive});
 
   /// Create a new countdown.
   @POST('/countdowns/')

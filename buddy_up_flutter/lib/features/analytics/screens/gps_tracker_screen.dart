@@ -7,8 +7,10 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../../../core/auth/auth_provider.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../shared/navigation/main_header.dart';
 import '../providers/analytics_provider.dart';
 import '../services/activity_checkpoint_service.dart';
+import '../widgets/activity_route_map.dart';
 
 /// Hybrid cross-platform activity tracker (Flutter parity with web).
 ///
@@ -170,9 +172,11 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       final isPermanent = permission == LocationPermission.deniedForever;
-      setState(() => _error = isPermanent
-          ? 'Location denied forever. Enable it in Settings to track a session.'
-          : 'Location permission denied.');
+      setState(
+        () => _error = isPermanent
+            ? 'Location denied forever. Enable it in Settings to track a session.'
+            : 'Location permission denied.',
+      );
       return;
     }
 
@@ -187,11 +191,15 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
     }
 
     _positionSub?.cancel();
-    _positionSub = Geolocator.getPositionStream(
-      locationSettings: _streamLocationSettings(),
-    ).listen(_onPosition, onError: (Object e) {
-      if (mounted) setState(() => _error = 'GPS error: $e');
-    });
+    _positionSub =
+        Geolocator.getPositionStream(
+          locationSettings: _streamLocationSettings(),
+        ).listen(
+          _onPosition,
+          onError: (Object e) {
+            if (mounted) setState(() => _error = 'GPS error: $e');
+          },
+        );
 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -200,8 +208,10 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
 
     // Checkpoint the live session every 10s so an OS kill cannot lose it.
     _checkpointTimer?.cancel();
-    _checkpointTimer =
-        Timer.periodic(const Duration(seconds: 10), (_) => _saveCheckpoint());
+    _checkpointTimer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _saveCheckpoint(),
+    );
 
     setState(() => _tracking = true);
     _saveCheckpoint();
@@ -212,15 +222,17 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
     if (ownerId == null || (!_tracking && _elapsedS == 0 && _route.isEmpty)) {
       return;
     }
-    _checkpoints.saveNow(ActivityCheckpoint(
-      ownerId: ownerId,
-      activityType: _activityType,
-      startedAt: _startedAt,
-      elapsedS: _elapsedS,
-      distanceM: _distanceM,
-      route: List<List<dynamic>>.from(_route),
-      lastUpdatedMs: DateTime.now().millisecondsSinceEpoch,
-    ));
+    _checkpoints.saveNow(
+      ActivityCheckpoint(
+        ownerId: ownerId,
+        activityType: _activityType,
+        startedAt: _startedAt,
+        elapsedS: _elapsedS,
+        distanceM: _distanceM,
+        route: List<List<dynamic>>.from(_route),
+        lastUpdatedMs: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
   }
 
   /// Settings that keep the GPS alive when the screen is off/locked.
@@ -258,7 +270,10 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
   LocationSettings _streamLocationSettings() {
     if (Platform.isAndroid) return _currentLocationSettings();
     if (Platform.isIOS) return _currentLocationSettings();
-    return const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 5);
+    return const LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 5,
+    );
   }
 
   void _onPosition(Position pos) {
@@ -300,27 +315,29 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
     setState(() => _saving = true);
     try {
       final distanceKm = _distanceM / 1000.0;
-      final created = await ref
-          .read(analyticsLogProvider.notifier)
-          .logActivity({
-            'activity_type': _activityType,
-            'source': 'gps',
-            'duration_seconds': _elapsedS,
-            'distance_meters': _distanceM,
-            'avg_pace': distanceKm > 0 ? _elapsedS / distanceKm : null,
-            'avg_speed_kmh': _elapsedS > 0
-                ? double.parse((distanceKm / (_elapsedS / 3600)).toStringAsFixed(1))
-                : null,
-            'calories_burned': _estimateCalories(),
-            'steps': _activityType == 'walk'
-                ? (_distanceM / 0.76).round()
-                : null,
-            'route': _route,
-            'started_at': _startedAt,
-          });
+      final created = await ref.read(analyticsLogProvider.notifier).logActivity(
+        {
+          'activity_type': _activityType,
+          'source': 'gps',
+          'duration_seconds': _elapsedS,
+          'distance_meters': _distanceM,
+          'avg_pace': distanceKm > 0 ? _elapsedS / distanceKm : null,
+          'avg_speed_kmh': _elapsedS > 0
+              ? double.parse(
+                  (distanceKm / (_elapsedS / 3600)).toStringAsFixed(1),
+                )
+              : null,
+          'calories_burned': _estimateCalories(),
+          'steps': _activityType == 'walk' ? (_distanceM / 0.76).round() : null,
+          'route': _route,
+          'started_at': _startedAt,
+        },
+      );
       if (created == null) {
-        setState(() =>
-            _error = 'Failed to save activity. Your session is still here — try again.');
+        setState(
+          () => _error =
+              'Failed to save activity. Your session is still here — try again.',
+        );
         return;
       }
       final queued = created['queued'] == true;
@@ -340,7 +357,9 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
                     label: 'Share',
                     onPressed: () async {
                       try {
-                        await ref.read(analyticsRepositoryProvider).shareActivity('activity', activityId, {});
+                        await ref
+                            .read(analyticsRepositoryProvider)
+                            .shareActivity('activity', activityId, {});
                       } catch (_) {}
                     },
                   )
@@ -377,6 +396,13 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
     return kmh.toStringAsFixed(1);
   }
 
+  int get _steps {
+    if (_activityType == 'cycle') return 0;
+    return (_distanceM / (_activityType == 'run' ? 1.05 : 0.76)).round();
+  }
+
+  String get _caloriesText => _estimateCalories().round().toString();
+
   String get _elapsedText {
     final h = _elapsedS ~/ 3600;
     final m = (_elapsedS % 3600) ~/ 60;
@@ -390,18 +416,13 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
     // Cold starts restore the token before the profile, so retry the resume
     // prompt once the signed-in account is known.
     final auth = ref.watch(authProvider);
-    if (!_resumeOffered &&
-        (auth.profile?.userId ?? auth.user?.id) != null) {
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _maybeOfferResume());
+    if (!_resumeOffered && (auth.profile?.userId ?? auth.user?.id) != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeOfferResume());
     }
     final isCycle = _activityType == 'cycle';
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Track Activity'),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-      ),
+      appBar: const MainAppBar(title: 'Track Activity'),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -412,9 +433,10 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
                 segments: [
                   for (final t in _types)
                     ButtonSegment(
-                        value: t.key,
-                        label: Text(t.label),
-                        icon: Icon(t.icon, size: 16)),
+                      value: t.key,
+                      label: Text(t.label),
+                      icon: Icon(t.icon, size: 16),
+                    ),
                 ],
                 selected: {_activityType},
                 onSelectionChanged: _tracking
@@ -426,8 +448,10 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
               // GPS status chip — parity with the web tracker.
               Center(
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: (_gpsFix ? BuddyColors.green : BuddyColors.gold)
                         .withValues(alpha: .12),
@@ -464,7 +488,10 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
                         ? 'Lock the screen and GPS keeps working — allow "Always" location for best results.'
                         : 'Screen can lock — GPS keeps running in a pinned notification.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10.5),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 10.5,
+                    ),
                   ),
                 ),
               const SizedBox(height: 20),
@@ -474,15 +501,18 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
                 _elapsedText,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                  fontWeight: FontWeight.w800,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
               const SizedBox(height: 20),
               Row(
                 children: [
-                  _stat('Distance', '${(_distanceM / 1000).toStringAsFixed(2)} km'),
+                  _stat(
+                    'Distance',
+                    '${(_distanceM / 1000).toStringAsFixed(2)} km',
+                  ),
                   _stat(
                     isCycle ? 'Speed' : 'Pace',
                     isCycle ? '${_speedText}km/h' : _paceText,
@@ -490,6 +520,18 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
                   _stat('Points', '${_route.length}'),
                 ],
               ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _stat('Steps', _activityType == 'cycle' ? '—' : '$_steps'),
+                  _stat('Calories', '$_caloriesText kcal'),
+                  _stat('Avg speed', '$_speedText km/h'),
+                ],
+              ),
+              if (_route.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                ActivityRouteMap(route: _route, height: 190),
+              ],
 
               if (_error != null)
                 Padding(
@@ -497,8 +539,10 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
                   child: Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style:
-                        const TextStyle(color: BuddyColors.red, fontSize: 13),
+                    style: const TextStyle(
+                      color: BuddyColors.red,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
 
@@ -510,23 +554,33 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
                   Column(
                     children: [
                       FilledButton.icon(
-                        onPressed:
-                            _saving ? null : () => _stopAndSave(save: true),
+                        onPressed: _saving
+                            ? null
+                            : () => _stopAndSave(save: true),
                         style: FilledButton.styleFrom(
-                            backgroundColor: BuddyColors.green),
+                          backgroundColor: BuddyColors.green,
+                        ),
                         icon: _saving
                             ? const SizedBox(
                                 width: 14,
                                 height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.save_outlined,
-                                color: Colors.black),
-                        label: const Text('Save Activity',
-                            style: TextStyle(color: Colors.black)),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.save_outlined,
+                                color: Colors.black,
+                              ),
+                        label: const Text(
+                          'Save Activity',
+                          style: TextStyle(color: Colors.black),
+                        ),
                       ),
                       TextButton(
-                        onPressed:
-                            _saving ? null : () => _stopAndSave(save: false),
+                        onPressed: _saving
+                            ? null
+                            : () => _stopAndSave(save: false),
                         child: const Text('Discard session'),
                       ),
                     ],
@@ -535,18 +589,25 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
                   FilledButton.icon(
                     onPressed: _saving ? null : () => _start(),
                     style: FilledButton.styleFrom(
-                        backgroundColor: BuddyColors.green),
+                      backgroundColor: BuddyColors.green,
+                    ),
                     icon: const Icon(Icons.play_arrow, color: Colors.black),
-                    label: const Text('Start',
-                        style: TextStyle(color: Colors.black)),
+                    label: const Text(
+                      'Start',
+                      style: TextStyle(color: Colors.black),
+                    ),
                   )
               else
                 Row(
                   children: [
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: _saving ? null : () => _stopAndSave(save: false),
-                        style: FilledButton.styleFrom(backgroundColor: BuddyColors.red),
+                        onPressed: _saving
+                            ? null
+                            : () => _stopAndSave(save: false),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: BuddyColors.red,
+                        ),
                         icon: const Icon(Icons.stop),
                         label: const Text('Stop'),
                       ),
@@ -561,7 +622,10 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
                             ? const SizedBox(
                                 width: 14,
                                 height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2))
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
                             : const Icon(Icons.save_outlined),
                         label: const Text('Save Activity'),
                       ),
@@ -576,18 +640,25 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen>
   }
 
   Widget _stat(String label, String value) => Expanded(
-        child: Column(
-          children: [
-            Text(value,
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.onSurface)),
-            const SizedBox(height: 2),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          ],
+    child: Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
-      );
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    ),
+  );
 }

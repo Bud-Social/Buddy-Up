@@ -11,6 +11,7 @@ import '../../../data/models/routine.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/page_loader.dart';
+import '../../../shared/navigation/main_header.dart';
 import '../providers/routines_provider.dart';
 import '../utils/routine_share_card.dart';
 
@@ -30,11 +31,18 @@ class RoutinesScreen extends ConsumerStatefulWidget {
 
 class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
   bool _reorderMode = false;
+  String _view = 'active';
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(routinesProvider.notifier).load());
+    Future.microtask(() async {
+      final notifier = ref.read(routinesProvider.notifier);
+      await notifier.load();
+      for (final routine in ref.read(routinesProvider).routines) {
+        await notifier.loadCheckIns(routine.id);
+      }
+    });
   }
 
   @override
@@ -42,8 +50,8 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
     final state = ref.watch(routinesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_reorderMode ? 'Reorder routines' : 'Routines'),
+      appBar: MainAppBar(
+        title: _reorderMode ? 'Reorder routines' : 'Routines',
         actions: [
           if (state.routines.length > 1)
             IconButton(
@@ -78,7 +86,7 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                       subtitle: 'Create your first routine — even “10 push-ups '
                           'every morning” counts.',
                     )
-                  : _reorderMode
+                      : _reorderMode
                       ? _buildReorderList(state.routines)
                       : RefreshIndicator(
                       onRefresh: () =>
@@ -88,8 +96,21 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                         children: [
                           _SummaryBar(routines: state.routines),
                           const SizedBox(height: 12),
+                          SegmentedButton<String>(
+                            segments: const [
+                              ButtonSegment(value: 'active', label: Text('Active'), icon: Icon(Icons.play_circle_outline)),
+                              ButtonSegment(value: 'past', label: Text('Past'), icon: Icon(Icons.history)),
+                              ButtonSegment(value: 'notes', label: Text('Logs & notes'), icon: Icon(Icons.notes_outlined)),
+                            ],
+                            selected: {_view},
+                            onSelectionChanged: (value) => setState(() => _view = value.first),
+                          ),
+                          const SizedBox(height: 12),
+                          if (_view == 'notes')
+                            _RoutineLogs(state: state)
+                          else ...[
                           const _QuickAdd(),
-                          for (final routine in state.routines)
+                          for (final routine in state.routines.where((r) => _view == 'active' ? r.isActive : !r.isActive))
                             _RoutineCard(
                               routine: routine,
                               onEdit: () => context.push(
@@ -99,6 +120,7 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                               onHighlights: () => _showHighlights(routine),
                               onShare: () => _showShare(routine),
                             ),
+                          ],
                         ],
                       ),
                     ),
@@ -939,6 +961,61 @@ class _SummaryBar extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _RoutineLogs extends StatelessWidget {
+  final RoutinesState state;
+
+  const _RoutineLogs({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <({Routine routine, RoutineCheckIn log})>[];
+    for (final routine in state.routines) {
+      for (final log in state.checkIns[routine.id] ?? const <RoutineCheckIn>[]) {
+        rows.add((routine: routine, log: log));
+      }
+    }
+    rows.sort((a, b) => b.log.occurredAt.compareTo(a.log.occurredAt));
+    if (rows.isEmpty) {
+      return const EmptyState(
+        icon: Icons.notes_outlined,
+        title: 'No routine logs yet',
+        subtitle: 'Check in to a routine and your notes will appear here.',
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Check-in history',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (final row in rows)
+          Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: BuddyColors.green,
+                child: Icon(Icons.check, color: Colors.black),
+              ),
+              title: Text(row.routine.displayName),
+              subtitle: Text(
+                [
+                  if (row.log.value != null) '${row.log.value} ${row.routine.unit}',
+                  if (row.log.note.isNotEmpty) row.log.note,
+                  row.log.occurredAt,
+                ].join(' · '),
+              ),
+            ),
+          ),
       ],
     );
   }

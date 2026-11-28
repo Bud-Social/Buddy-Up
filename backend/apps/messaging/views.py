@@ -215,6 +215,18 @@ class ConversationListView(views.APIView):
             conversation=db_models.OuterRef('pk'), is_deleted=False,
         ).order_by('-created_at')
 
+        # A blocked pair must disappear from the DM inbox, but a blocked
+        # member must not hide a group/community conversation from everyone
+        # else. Apply the exclusion only to one-to-one conversations; this is
+        # also clearer and avoids relying on an aggregate alias in a HAVING
+        # clause, which behaved differently across Django/database versions.
+        if blocked_ids:
+            conversations = conversations.exclude(
+                is_group=False,
+                is_community=False,
+                participants__id__in=blocked_ids,
+            )
+
         conversations = conversations.annotate(
             annotated_member_count=db_models.Count('memberships', distinct=True),
             _unread_count=db_models.Count(
@@ -222,11 +234,6 @@ class ConversationListView(views.APIView):
                 filter=db_models.Q(
                     messages__is_deleted=False, messages__is_read=False,
                 ) & ~db_models.Q(messages__sender=profile),
-                distinct=True,
-            ),
-            _blocked_participants=db_models.Count(
-                'participants',
-                filter=db_models.Q(participants__user_id__in=blocked_ids),
                 distinct=True,
             ),
             _viewer_pinned=db_models.Subquery(
@@ -253,10 +260,6 @@ class ConversationListView(views.APIView):
                 to_attr='_viewer_membership',
             ),
             'promotion',
-        ).filter(
-            db_models.Q(is_group=True)
-            | db_models.Q(is_community=True)
-            | db_models.Q(_blocked_participants=0)
         ).annotate(
             _pinned_sort=Coalesce('_viewer_pinned', db_models.Value(False)),
         ).order_by(

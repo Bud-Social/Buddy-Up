@@ -20,12 +20,12 @@ class _CountdownRepository implements CountdownRepository {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<List<CountdownTemplate>> listTemplates() async {
+  Future<dynamic> listTemplates() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<List<CountdownTemplate>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -35,19 +35,8 @@ class _CountdownRepository implements CountdownRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<List<dynamic>>(_options);
-    late List<CountdownTemplate> _value;
-    try {
-      _value = _result.data!
-          .map(
-            (dynamic i) =>
-                CountdownTemplate.fromJson(i as Map<String, dynamic>),
-          )
-          .toList();
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
@@ -73,13 +62,13 @@ class _CountdownRepository implements CountdownRepository {
   }
 
   @override
-  Future<List<UserCountdown>> listCountdowns({bool? isActive}) async {
+  Future<dynamic> listCountdowns({bool? isActive}) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'is_active': isActive};
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<List<UserCountdown>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -89,16 +78,8 @@ class _CountdownRepository implements CountdownRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<List<dynamic>>(_options);
-    late List<UserCountdown> _value;
-    try {
-      _value = _result.data!
-          .map((dynamic i) => UserCountdown.fromJson(i as Map<String, dynamic>))
-          .toList();
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 

@@ -49,7 +49,13 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
         ),
         actions: [
           IconButton(
-            icon: const Icon(LucideIcons.package, size: 20),
+            icon: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(LucideIcons.package, size: 20),
+                Text('Orders', style: TextStyle(fontSize: 9)),
+              ],
+            ),
             tooltip: 'Orders',
             onPressed: () => context.push('/marketplace/orders'),
           ),
@@ -59,7 +65,13 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                const Icon(LucideIcons.shoppingBag, size: 20),
+                const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(LucideIcons.shoppingBag, size: 20),
+                    Text('Cart', style: TextStyle(fontSize: 9)),
+                  ],
+                ),
                 if (cartCount > 0)
                   Positioned(
                     top: -5,
@@ -89,7 +101,13 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
           // fulfillment half, and there is nowhere else a buyer-turned-courier
           // would look.
           PopupMenuButton<String>(
-            icon: const Icon(LucideIcons.truck, size: 20),
+            icon: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(LucideIcons.truck, size: 20),
+                Text('Courier', style: TextStyle(fontSize: 9)),
+              ],
+            ),
             tooltip: 'More',
             onSelected: (_) => context.push('/marketplace/delivery-personnel'),
             itemBuilder: (context) => const [

@@ -47,12 +47,29 @@ class CountdownsNotifier extends Notifier<CountdownsState> {
 
   CountdownRepository get _repository => ref.read(countdownRepositoryProvider);
 
+  List<Map<String, dynamic>> _listPayload(dynamic raw) {
+    final value = raw is Map<String, dynamic> ? raw['data'] : raw;
+    if (value is! List) return const [];
+    return [
+      for (final item in value)
+        if (item is Map<String, dynamic>) item,
+    ];
+  }
+
   /// Fetch templates and the user's countdowns.
   Future<void> load({bool? isActive}) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final templates = await _repository.listTemplates();
-      final countdowns = await _repository.listCountdowns(isActive: isActive);
+      final templatePayload = await _repository.listTemplates();
+      final countdownPayload = await _repository.listCountdowns(
+        isActive: isActive,
+      );
+      final templates = _listPayload(
+        templatePayload,
+      ).map(CountdownTemplate.fromJson).toList();
+      final countdowns = _listPayload(
+        countdownPayload,
+      ).map(UserCountdown.fromJson).toList();
       state = CountdownsState(
         templates: templates,
         countdowns: countdowns,
@@ -188,6 +205,7 @@ class CountdownsNotifier extends Notifier<CountdownsState> {
   void clearError() => state = state.copyWith(clearError: true);
 }
 
-final countdownsProvider = NotifierProvider<CountdownsNotifier, CountdownsState>(
-  CountdownsNotifier.new,
-);
+final countdownsProvider =
+    NotifierProvider<CountdownsNotifier, CountdownsState>(
+      CountdownsNotifier.new,
+    );

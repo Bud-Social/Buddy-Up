@@ -13,23 +13,27 @@ final routineRepositoryProvider = Provider<RoutineRepository>((ref) {
 
 class RoutinesState {
   final List<Routine> routines;
+  final Map<String, List<RoutineCheckIn>> checkIns;
   final bool isLoading;
   final String? error;
 
   const RoutinesState({
     this.routines = const [],
+    this.checkIns = const {},
     this.isLoading = false,
     this.error,
   });
 
   RoutinesState copyWith({
     List<Routine>? routines,
+    Map<String, List<RoutineCheckIn>>? checkIns,
     bool? isLoading,
     String? error,
     bool clearError = false,
   }) {
     return RoutinesState(
       routines: routines ?? this.routines,
+      checkIns: checkIns ?? this.checkIns,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
     );
@@ -64,6 +68,20 @@ class RoutinesNotifier extends Notifier<RoutinesState> {
       state = RoutinesState(routines: _parse(raw), isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: 'Could not load routines');
+    }
+  }
+
+  Future<void> loadCheckIns(String routineId) async {
+    try {
+      final raw = await _repo.getCheckIns(routineId, limit: '50');
+      final value = raw is Map ? raw['data'] : raw;
+      final list = value is List ? value : (value is Map ? value['results'] : null);
+      final parsed = list is List
+          ? list.whereType<Map>().map((e) => RoutineCheckIn.fromJson(Map<String, dynamic>.from(e))).toList()
+          : <RoutineCheckIn>[];
+      state = state.copyWith(checkIns: {...state.checkIns, routineId: parsed});
+    } catch (_) {
+      // Logs are supplemental; the routine remains usable when offline.
     }
   }
 

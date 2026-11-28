@@ -170,7 +170,13 @@ class _RepostIndicatorState extends State<RepostIndicator>
 
   Widget _buildStackedAvatars(BuildContext context, List<ReposterData> people) {
     final gymActor = widget.gymActor;
-    final viewerSlot = gymActor != null || (widget.viewerAvatarUrl ?? '').isNotEmpty;
+    // Keep a slot for the viewer whenever the repost state is active, even if
+    // an older feed payload has not included an avatar URL yet. Avatar then
+    // falls back to the viewer's initial instead of disappearing on a light
+    // surface or during the optimistic update.
+    final viewerSlot = gymActor != null ||
+        widget.viewerReposted ||
+        (widget.viewerAvatarUrl ?? '').isNotEmpty;
     // Skip a backend echo of the viewer — the animated slot below owns it.
     // Compare ids first (what the server sends); fall back to the avatar
     // for payloads that predate the id comparison on the web.
@@ -233,7 +239,10 @@ class _RepostIndicatorState extends State<RepostIndicator>
                   duration: const Duration(milliseconds: 200),
                   child: Container(
                     key: const ValueKey('viewer-repost-avatar'),
+                    width: 24,
+                    height: 24,
                     decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       shape: BoxShape.circle,
                       border: Border.all(color: BuddyColors.green, width: 1.5),
                     ),

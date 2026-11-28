@@ -137,6 +137,7 @@ class ShareSheet extends ConsumerStatefulWidget {
 
 class _ShareSheetState extends ConsumerState<ShareSheet> {
   bool _busy = false;
+  double? _downloadProgress;
   bool _copied = false;
   String? _error;
   List<_Sharer> _sharers = const [];
@@ -200,9 +201,14 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
   }
 
   Future<void> _downloadCard() async {
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _downloadProgress = 0.05;
+    });
     try {
+      if (mounted) setState(() => _downloadProgress = 0.25);
       final file = await _buildCard();
+      if (mounted) setState(() => _downloadProgress = 0.75);
       // Android/iOS keep app-document files private. Opening the native share
       // sheet gives the user the platform's real Save to device/gallery action
       // while retaining the generated PNG as an offline app copy.
@@ -210,6 +216,7 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
         ShareParams(files: [XFile(file.path)], subject: 'BuddyUp Fit card'),
       );
       if (mounted) {
+        setState(() => _downloadProgress = 1);
         showToast(
           context,
           'Choose Save to keep the card on your device.',
@@ -225,7 +232,12 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _downloadProgress = null;
+        });
+      }
     }
   }
 
@@ -302,6 +314,24 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
               ),
             ),
             const SizedBox(height: 8),
+            if (_downloadProgress != null) ...[
+              LinearProgressIndicator(
+                value: _downloadProgress,
+                minHeight: 3,
+                color: BuddyColors.green,
+                backgroundColor: BuddyColors.surfaceRaised,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _downloadProgress! < 0.75
+                    ? 'Preparing download…'
+                    : 'Opening save options…',
+                style: const TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
             SizedBox(
               height: 72,
               child: ListView.separated(
