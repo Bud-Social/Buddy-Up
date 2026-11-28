@@ -1469,6 +1469,7 @@ class AccountEventChoiceIntegrityTests(SimpleTestCase):
 class GoogleSignInTests(TestCase):
     """A Google-verified email must not strand a new user on the login screen."""
 
+    @override_settings(SOCIAL_AUTH_GOOGLE_OAUTH2_KEY='test-google-client-id')
     @patch('apps.accounts.views.id_token.verify_oauth2_token')
     def test_new_verified_google_account_signs_in_immediately(self, verify):
         verify.return_value = {

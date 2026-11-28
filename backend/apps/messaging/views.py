@@ -195,7 +195,7 @@ class ConversationListView(views.APIView):
         blocked_ids = set(
             BlockRelationship.objects.filter(
                 db_models.Q(blocker=profile) | db_models.Q(blocked=profile),
-            ).values_list('blocked_id', 'flat=True')
+            ).values_list('blocked_id', flat=True)
         ) | set(
             BlockRelationship.objects.filter(
                 db_models.Q(blocker=profile) | db_models.Q(blocked=profile),
