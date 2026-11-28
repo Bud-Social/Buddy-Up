@@ -281,6 +281,13 @@ class _OverviewTab extends StatelessWidget {
                 icon: const Icon(Icons.restaurant_outlined, size: 17),
                 label: const Text('Add meal plan'),
               ),
+              OutlinedButton.icon(
+                onPressed: () => context.push(
+                  '/marketplace/events/create?shop=${Uri.encodeComponent(shop.handle)}',
+                ),
+                icon: const Icon(Icons.event_outlined, size: 17),
+                label: const Text('Add event'),
+              ),
             ],
           ),
           const SizedBox(height: 10),
