@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'dart:async';
 import '../providers/live_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class RandomDropScreen extends ConsumerStatefulWidget {
   const RandomDropScreen({super.key});
@@ -111,7 +112,7 @@ class _RandomDropScreenState extends ConsumerState<RandomDropScreen>
     final activities = ['cardio', 'strength', 'yoga', 'hiit', 'dance', 'boxing', 'meditation', 'running', 'cycling'];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Random Drop')),
+      appBar: const MainAppBar(title: 'Random Drop'),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),

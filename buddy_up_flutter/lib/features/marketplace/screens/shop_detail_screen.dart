@@ -5,6 +5,7 @@ import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class ShopDetailScreen extends ConsumerWidget {
   final String handle;
@@ -288,7 +289,7 @@ class ShopDetailScreen extends ConsumerWidget {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
-        appBar: AppBar(title: const Text('Shop')),
+        appBar: const MainAppBar(title: 'Shop'),
         body: Center(child: Text('Error: $e')),
       ),
     );

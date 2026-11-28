@@ -7,6 +7,7 @@ import '../../../data/models/marketplace.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/page_loader.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class ProgrammeDetailScreen extends ConsumerWidget {
   final String programmeId;
@@ -298,7 +299,7 @@ class ProgrammeDetailScreen extends ConsumerWidget {
       ),
       loading: () => const Scaffold(body: PageLoader()),
       error: (e, _) => Scaffold(
-        appBar: AppBar(title: const Text('Programme')),
+        appBar: const MainAppBar(title: 'Programme'),
         body: Center(child: Text('$e')),
       ),
     );

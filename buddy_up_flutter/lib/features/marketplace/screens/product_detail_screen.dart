@@ -7,6 +7,7 @@ import '../../../data/models/marketplace.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/page_loader.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -37,7 +38,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final soldOut = product.stockTrackingEnabled && product.stockQuantity == 0;
 
     return Scaffold(
-      appBar: AppBar(title: Text(product.name)),
+        appBar: MainAppBar(title: product.name),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         child: Column(

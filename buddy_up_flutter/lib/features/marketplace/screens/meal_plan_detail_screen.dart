@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/page_loader.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../shared/navigation/main_header.dart';
 
 class MealPlanDetailScreen extends ConsumerWidget {
   final String planId;
@@ -15,7 +16,7 @@ class MealPlanDetailScreen extends ConsumerWidget {
     final planAsync = ref.watch(mealPlanDetailProvider(planId));
     return planAsync.when(
       data: (plan) => Scaffold(
-        appBar: AppBar(title: Text(plan.title)),
+        appBar: MainAppBar(title: plan.title),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(

@@ -9,6 +9,7 @@ import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../data/models/marketplace.dart';
+import '../../../shared/navigation/main_header.dart';
 
 enum _TicketTab { all, active, used, refunded, cancelled }
 
@@ -31,7 +32,7 @@ class _EventTicketsScreenState extends ConsumerState<EventTicketsScreen> {
   Widget build(BuildContext context) {
     final ticketsAsync = ref.watch(myTicketsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('My Tickets')),
+      appBar: const MainAppBar(title: 'My Tickets'),
       body: ticketsAsync.when(
         data: (tickets) {
           final visible = tickets
